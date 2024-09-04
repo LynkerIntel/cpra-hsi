@@ -1,0 +1,3 @@
+veg_raster_path: "/Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/mp_2023_final_2018_lulc_Clip_reclassed/mp_2023_final_2018_lulc_Clip_reclassed.tif"
+x_dim: 10 # logical index for coarsening (i.e # of pixels)
+y_dim: 10 # logical index for coarsening (i.e # of pixels)

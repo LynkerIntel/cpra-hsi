@@ -1,6 +1,8 @@
 import xarray as xr
 import numpy as np
 import yaml
+import geopandas as gpd
+import pandas as pd
 
 
 def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArray:
@@ -42,12 +44,22 @@ def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArra
     return result
 
 
-def generate_pct_cover_arrays(data_array: xr.DataArray, **kwargs) -> xr.Dataset:
-    """ """
-    veg_types = [1, 2, 3]
+def generate_pct_cover_arrays(
+    data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs
+) -> None:
+    """iterate vegetation types, merge all arrays, serialize to NetCDF.
+
+    Desired kwargs are pased to `xr.coarsen` on each call.
+
+    :param (xr.DataArray) data_array: input array
+    :return: None
+    """
+
+    veg_types = veg_keys["Value"].values
     veg_arrays = []
 
-    for i in veg_types:
+    for n, i in enumerate(veg_types):
+        print(f"processing veg type: {i}, (number {n} out of {len(veg_types)})")
         new_da = coarsen_and_reduce(data_array, veg_type=i, **kwargs)
         new_da = new_da.rename(f"pct_cover_{i}")
         veg_arrays.append(new_da)
@@ -55,11 +67,19 @@ def generate_pct_cover_arrays(data_array: xr.DataArray, **kwargs) -> xr.Dataset:
     ds_out = xr.merge(veg_arrays)
     # add to dataset?
     # save individual layers?
-    return ds_out
+    ds_out.to_netcdf("./pct_cover.nc")
+
+
+def read_veg_key(path: str) -> pd.DataFrame:
+    """load vegetation class names from database file"""
+    dbf = gpd.read_file(path)
+    # fix dtype
+    dbf["Value"] = dbf["Value"].astype(int)
+    return dbf
 
 
 if __name__ == "__main__":
-    CONFIG_PATH = "../VegProcessor/veg_config.yaml"
+    CONFIG_PATH = "./VegProcessor/veg_config.yaml"
     # Load the YAML configuration file
     with open(CONFIG_PATH, "r") as file:
         config = yaml.safe_load(file)
@@ -68,6 +88,7 @@ if __name__ == "__main__":
     veg_raster_path = config.pop("veg_raster_path")
     x_dim_coarsen = config.pop("x_dim")
     y_dim_coarsen = config.pop("y_dim")
+    veg_keys_path = config.pop("veg_keys_path")
 
     # load veg raster
     ds = xr.open_dataset(
@@ -77,4 +98,7 @@ if __name__ == "__main__":
     # subset to dataarray
     da = ds["band_data"]["band" == 0]
 
-    out = generate_pct_cover_arrays(da, x=10, y=10, boundary="trim")
+    # load veg keys
+    veg_keys_df = read_veg_key(veg_keys_path)
+    # create .nc with layers for each veg class
+    generate_pct_cover_arrays(da, veg_keys=veg_keys_df, x=10, y=10, boundary="trim")

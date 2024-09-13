@@ -49,7 +49,8 @@ def generate_pct_cover(
 ) -> None:
     """iterate vegetation types, merge all arrays, serialize to NetCDF.
 
-    Desired kwargs are pased to `xr.coarsen` on each call.
+    The creates a pct cover .nc for each veg types list in the veg_keys
+    dataframe.
 
     :param (xr.DataArray) data_array: input array
     :param (pd.DataFrame) veg_keys: df with veg types. Must
@@ -74,6 +75,9 @@ def generate_pct_cover(
 
 def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
     """Generate pct cover for combinations of veg types
+
+    Uses `coarsen_and_reduce` with an intermediate array with bools
+    for desired veg type.
 
     :param (xr.DataArray) data_array: input array; must include x,y dims
     :param (list) veg_types: List of veg types to consider as "True"

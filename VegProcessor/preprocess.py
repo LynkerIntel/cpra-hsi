@@ -35,9 +35,9 @@ def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArra
         :return (np.ndarray): coarsened chunk
         """
         # Sum over the provided axis
-        count_ones = (block == veg_type).sum(axis=axis)
+        count = (block == veg_type).sum(axis=axis)
         total_cells = block.shape[axis[0]] * block.shape[axis[1]]
-        return (count_ones / total_cells) * 100
+        return (count / total_cells) * 100
 
     result = da.coarsen(**kwargs).reduce(_count_vegtype_and_calculate_percentage)
 

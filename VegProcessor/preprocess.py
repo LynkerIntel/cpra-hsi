@@ -44,7 +44,7 @@ def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArra
     return result
 
 
-def generate_pct_cover_arrays(
+def generate_pct_cover(
     data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs
 ) -> None:
     """iterate vegetation types, merge all arrays, serialize to NetCDF.
@@ -52,7 +52,11 @@ def generate_pct_cover_arrays(
     Desired kwargs are pased to `xr.coarsen` on each call.
 
     :param (xr.DataArray) data_array: input array
-    :return: None
+    :param (pd.DataFrame) veg_keys: df with veg types. Must
+        include col with title "Values". This could be generalized
+        to a list in future.
+
+    :return: None, output is .nc file
     """
 
     veg_types = veg_keys["Value"].values
@@ -65,9 +69,23 @@ def generate_pct_cover_arrays(
         veg_arrays.append(new_da)
 
     ds_out = xr.merge(veg_arrays)
-    # add to dataset?
-    # save individual layers?
     ds_out.to_netcdf("./pct_cover.nc")
+
+
+def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
+    """Generate pct cover for combinations of veg types
+
+    :param (xr.DataArray) data_array: input array; must include x,y dims
+    :param (list) veg_types: List of veg types to consider as "True"
+        for percent cover
+
+    :return: None, output is .nc file
+    """
+    # create new binary var with tuple of dims, data
+    da["binary"] = (["x", "y"], np.isin(da, veg_types))
+    # run coarsen w/ True as valid veg type
+    da_out = coarsen_and_reduce(da=da["binary"], veg_type=True, **kwargs)
+    da_out.to_netcdf("./pct_cover.nc")
 
 
 def read_veg_key(path: str) -> pd.DataFrame:
@@ -100,5 +118,5 @@ if __name__ == "__main__":
 
     # load veg keys
     veg_keys_df = read_veg_key(veg_keys_path)
-    # create .nc with layers for each veg class
-    generate_pct_cover_arrays(da, veg_keys=veg_keys_df, x=10, y=10, boundary="trim")
+    # create .nc with layers for each veg class, dims must be passed to .coarsen
+    generate_pct_cover(da, veg_keys=veg_keys_df, x=10, y=10, boundary="trim")

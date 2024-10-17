@@ -59,7 +59,6 @@ def generate_pct_cover(
 
     :return: None, output is .nc file
     """
-
     veg_types = veg_keys["Value"].values
     veg_arrays = []
 
@@ -77,7 +76,8 @@ def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
     """Generate pct cover for combinations of veg types
 
     Uses `coarsen_and_reduce` with an intermediate array with bools
-    for desired veg type.
+    for desired veg type. TODO: update code to separate CLI methdods,
+    i.e. `python module.py` from imported module.
 
     :param (xr.DataArray) data_array: input array; must include x,y dims
     :param (list) veg_types: List of veg types to consider as "True"

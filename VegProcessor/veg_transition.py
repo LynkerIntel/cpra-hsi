@@ -114,6 +114,13 @@ class VegTransition:
             self.maturity,
         )
 
+        # repeat for all necessary state vars
+        # self.veg_type = veg_logic.veg_logic(
+        #     self.dem,
+        #     self.pct_mast_hard,
+        #     self.maturity,
+        # )
+
         # TODO: update for actual timestep, assuming year now
         self.maturity += 1
 

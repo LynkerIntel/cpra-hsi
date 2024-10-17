@@ -131,13 +131,17 @@ class AlligatorHSI:
             mask_2 = (self.v2_avg_water_depth_rlt_marsh_surface >= -0.55) & (
                 self.v2_avg_water_depth_rlt_marsh_surface <= 0.15
             )
-            si_2[mask_2] = (2.25 * self.v2_avg_water_depth_rlt_marsh_surface) + 1.3375
+            si_2[mask_2] = (
+                2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_2]
+            ) + 1.3375
 
             # condition 3 (OR)
             mask_3 = (self.v2_avg_water_depth_rlt_marsh_surface > -0.15) & (
                 self.v2_avg_water_depth_rlt_marsh_surface < 0.25
             )
-            si_2[mask_3] = (-2.25 * self.v2_avg_water_depth_rlt_marsh_surface) + 0.6625
+            si_2[mask_3] = (
+                -2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_3]
+            ) + 0.6625
 
         return si_2
 

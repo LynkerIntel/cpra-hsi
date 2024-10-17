@@ -60,8 +60,6 @@ class VegTransition:
             self.H,
             self.alpha,
             self.beta,
-            self.gamma,
-            self.delta,
         )
 
         # Load veg base and use as template to create arrays for the main state variables
@@ -155,6 +153,7 @@ class VegTransition:
             self.simulation_duration,
             self.simulation_time_step,
         )
+
         for _ in range(steps):
             self.step(self.simulation_time_step)
 

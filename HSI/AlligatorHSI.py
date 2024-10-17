@@ -93,6 +93,7 @@ class AlligatorHSI:
             si_1 = np.ones(self._shape)
 
         else:
+            self._logger.info("Running SI 1")
             # Create an array to store the results
             si_1 = np.zeros(self._shape)
 
@@ -119,6 +120,7 @@ class AlligatorHSI:
             si_2 = np.ones(self._shape)
 
         else:
+            self._logger.info("Running SI 2")
             si_2 = np.zeros(self._shape)
 
             # condition 1 (OR)

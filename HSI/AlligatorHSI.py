@@ -166,11 +166,6 @@ class AlligatorHSI:
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
-        # # Ensure indices are between 0 and 1
-        # temp_suit = np.clip(self.temperature_suitability, 0, 1)
-        # precip_suit = np.clip(self.precipitation_suitability, 0, 1)
-        # elev_suit = np.clip(self.elevation_suitability, 0, 1)
-
         hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** 1 / 5
 
         # Quality control check: Ensure combined_score is between 0 and 1

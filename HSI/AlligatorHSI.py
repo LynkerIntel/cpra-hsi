@@ -89,9 +89,7 @@ class AlligatorHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is open water."""
         if self.v1_pct_open_water is None:
-            self._logger.info(
-                "Pct open water data not provided. Setting temperature suitability index to 1."
-            )
+            self._logger.info("Pct open water data not provided. Setting index to 1.")
             si_1 = np.ones(self._shape)
 
         else:
@@ -116,7 +114,7 @@ class AlligatorHSI:
         """Mean annual water depth relative to the marsh surface."""
         if self.v2_avg_water_depth_rlt_marsh_surface is None:
             self._logger.info(
-                "avg annual water depth relative to marsh surface data not provided. Setting temperature suitability index to 1."
+                "avg annual water depth relative to marsh surface data not provided. Setting index to 1."
             )
             si_2 = np.ones(self._shape)
 
@@ -129,7 +127,7 @@ class AlligatorHSI:
         """Proportion of cell covered by habitat types."""
         if self.v3_pct_cell_covered_by_habitat_types is None:
             self._logger.info(
-                "Pct habitat types data not provided. Setting temperature suitability index to 1."
+                "Pct habitat types data not provided. Setting index to 1."
             )
             suitability = np.ones(self._shape)
 
@@ -141,9 +139,7 @@ class AlligatorHSI:
     def calculate_si_4(self) -> np.ndarray:
         """Edge."""
         if self.v4_edge is None:
-            self._logger.info(
-                "Edge data not provided. Setting temperature suitability index to 1."
-            )
+            self._logger.info("Edge data not provided. Setting index to 1.")
             suitability = np.ones(self._shape)
 
         else:
@@ -155,7 +151,7 @@ class AlligatorHSI:
         """Mean annual salinity."""
         if self.v5_mean_annual_salinity is None:
             self._logger.info(
-                "mean annual salinity data not provided. Setting temperature suitability index to 1."
+                "mean annual salinity data not provided. Setting index to 1."
             )
             suitability = np.ones(self._shape)
 

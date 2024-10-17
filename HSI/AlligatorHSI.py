@@ -119,7 +119,25 @@ class AlligatorHSI:
             si_2 = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+            si_2 = np.zeros(self._shape)
+
+            # condition 1 (OR)
+            mask_1 = (self.v2_avg_water_depth_rlt_marsh_surface <= -0.55) | (
+                self.v2_avg_water_depth_rlt_marsh_surface >= 0.25
+            )
+            si_2[mask_1] = 0.1
+
+            # condition 2 (AND)
+            mask_2 = (self.v2_avg_water_depth_rlt_marsh_surface >= -0.55) & (
+                self.v2_avg_water_depth_rlt_marsh_surface <= 0.15
+            )
+            si_2[mask_2] = (2.25 * self.v2_avg_water_depth_rlt_marsh_surface) + 1.3375
+
+            # condition 3 (OR)
+            mask_3 = (self.v2_avg_water_depth_rlt_marsh_surface > -0.15) & (
+                self.v2_avg_water_depth_rlt_marsh_surface < 0.25
+            )
+            si_2[mask_3] = (-2.25 * self.v2_avg_water_depth_rlt_marsh_surface) + 0.6625
 
         return si_2
 

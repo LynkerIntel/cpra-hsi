@@ -1,0 +1,19 @@
+# config.yaml
+
+raster_data:
+  dem_path: "tmp/loc/data.tif" # str
+  veg_base_raster: "veg_60m_fake/path/file.tif" #str
+
+initial_conditions:
+  P0: 50 # made up dummy vars
+  H0: 5 # made up dummy vars
+
+parameters:
+  alpha: 0.1 # made up dummy vars
+  beta: 0.02 # made up dummy vars
+  gamma: 0.3 # made up dummy vars
+  delta: 0.015 # made up dummy vars
+
+simulation:
+  duration: 200
+  time_step: 0.01

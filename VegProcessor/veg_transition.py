@@ -60,8 +60,6 @@ class VegTransition:
             self.H,
             self.alpha,
             self.beta,
-            self.gamma,
-            self.delta,
         )
 
         # Load veg base and use as template to create arrays for the main state variables
@@ -114,6 +112,13 @@ class VegTransition:
             self.maturity,
         )
 
+        # repeat for all necessary state vars
+        # self.veg_type = veg_logic.veg_logic(
+        #     self.dem,
+        #     self.pct_mast_hard,
+        #     self.maturity,
+        # )
+
         # TODO: update for actual timestep, assuming year now
         self.maturity += 1
 
@@ -127,7 +132,7 @@ class VegTransition:
 
         # Log the current state using lazy formatting
         self._logger.debug(
-            "Time: %.2f, Prey Population: %.2f, Predator Population: %.2f",
+            "Time: %.2f, var1: %.2f, var2: %.2f",
             self.time,
             self.P,
             self.H,
@@ -148,6 +153,7 @@ class VegTransition:
             self.simulation_duration,
             self.simulation_time_step,
         )
+
         for _ in range(steps):
             self.step(self.simulation_time_step)
 

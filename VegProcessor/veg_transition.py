@@ -134,7 +134,7 @@ class VegTransition:
 
         # Log the current state using lazy formatting
         self._logger.debug(
-            "Time: %.2f, Prey Population: %.2f, Predator Population: %.2f",
+            "Time: %.2f, var1: %.2f, var2: %.2f",
             self.time,
             self.P,
             self.H,

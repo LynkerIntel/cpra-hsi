@@ -76,12 +76,14 @@ class AlligatorHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _determine_shape(self):
+    def _determine_shape(self) -> tuple:
         """Determine the shape of the environmental variable arrays."""
         # Iterate over instance attributes and return the shape of the first non None numpy array
         for name, value in vars(self).items():
             if value is not None and isinstance(value, np.ndarray):
-                self._logger.info("Using attribute %s as shape for output", name)
+                self._logger.info(
+                    "Using attribute %s as shape for output: %s", name, value.shape
+                )
                 return value.shape
 
         raise ValueError("At least one S.I. raster input must be provided.")
@@ -95,7 +97,7 @@ class AlligatorHSI:
         else:
             self._logger.info("Running SI 1")
             # Create an array to store the results
-            si_1 = np.zeros(self._shape)
+            si_1 = np.full(self._shape, 999)
 
             # condition 1
             mask_1 = self.v1_pct_open_water < 0.2
@@ -109,6 +111,9 @@ class AlligatorHSI:
             mask_3 = self.v1_pct_open_water > 0.4
             si_1[mask_3] = ((-1.667 * self.v1_pct_open_water[mask_3]) / 100) + 1.667
 
+            if 999 in si_1:
+                raise ValueError("Unhandled condition in SI logic!")
+
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -121,7 +126,7 @@ class AlligatorHSI:
 
         else:
             self._logger.info("Running SI 2")
-            si_2 = np.zeros(self._shape)
+            si_2 = np.full(self._shape, 999)
 
             # condition 1 (OR)
             mask_1 = (self.v2_avg_water_depth_rlt_marsh_surface <= -0.55) | (
@@ -144,6 +149,9 @@ class AlligatorHSI:
             si_2[mask_3] = (
                 -2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_3]
             ) + 0.6625
+
+            if 999 in si_2:
+                raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 

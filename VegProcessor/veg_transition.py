@@ -35,17 +35,13 @@ class VegTransition:
         self.dem_path = config["raster_data"].get("dem_path")
         self.veg_base_path = config["raster_data"].get("veg_base_raster")
 
-        # Extract initial state variables from config
-        self.P = config["initial_conditions"].get("P0", 40)
-        self.H = config["initial_conditions"].get("H0", 9)
-
-        # Extract parameters from config
+        # Extract initial state variables (dummy vars) from config
         self.alpha = config["parameters"].get("alpha", 0.1)
         self.beta = config["parameters"].get("beta", 0.02)
 
         # simulation parameters
-        self.simulation_duration = config["simulation"].get("duration", 200)
-        self.simulation_time_step = config["simulation"].get("time_step", 0.01)
+        self.simulation_duration = config["simulation"].get("duration")
+        self.simulation_time_step = config["simulation"].get("time_step")
 
         # Time
         self.time = 0
@@ -55,11 +51,11 @@ class VegTransition:
 
         # Log the initialization using lazy formatting
         self._logger.info(
-            "Initialized model with P0=%s, H0=%s, alpha=%s, beta=%s, gamma=%s, delta=%s",
-            self.P,
-            self.H,
-            self.alpha,
-            self.beta,
+            "Initialized model with P0=%s, H0=%s, alpha=%s, beta=%s,
+            self.dummy_var,
+            self.dummy_var,
+            self.dummy_var,
+            self.dummy_var,
         )
 
         # Load veg base and use as template to create arrays for the main state variables
@@ -68,12 +64,12 @@ class VegTransition:
         # create empty arrays for state variables, based on x, y dims of veg type base raster
         template = np.zeros((self.veg_type.ny, self.veg_type.nx))
 
-        self.veg_type = template
-        self.maturity = template
-        self.dem = template
-        self.pct_mast_hard = template
-        self.pct_mast_soft = template
-        self.pct_no_mast = template
+        #self.veg_type = template
+        #self.maturity = template
+        #self.dem = template
+        #self.pct_mast_hard = template
+        #self.pct_mast_soft = template
+        #self.pct_no_mast = template
 
     def _setup_logger(self, log_level):
         """Set up the logger for the class."""
@@ -97,13 +93,6 @@ class VegTransition:
 
     def step(self, dt=0.01):
         """Advance the transition model by one step."""
-        # Calculate the rates of change (DUMMY VARS)
-        dP = (self.alpha * self.P - self.beta * self.P * self.H) * dt
-        dH = (self.delta * self.P * self.H - self.gamma * self.H) * dt
-
-        # Update the state variables (DUMMY VARS)
-        self.P += dP
-        self.H += dH
 
         # example of how to call veg logic module
         self.veg_type = veg_logic.veg_logic(
@@ -113,11 +102,18 @@ class VegTransition:
         )
 
         # repeat for all necessary state vars
-        # self.veg_type = veg_logic.veg_logic(
-        #     self.dem,
-        #     self.pct_mast_hard,
-        #     self.maturity,
-        # )
+        self.pct_mast_hard = veg_logic.veg_logic(
+            self.dem,
+            self.maturity,
+            self.dummy_var,
+        )
+
+        # repeat for all necessary state vars
+        self.pct_mast_soft = veg_logic.veg_logic(
+            self.dem,
+            self.maturity,
+            self.dummy_var,
+        )
 
         # TODO: update for actual timestep, assuming year now
         self.maturity += 1
@@ -134,8 +130,8 @@ class VegTransition:
         self._logger.debug(
             "Time: %.2f, var1: %.2f, var2: %.2f",
             self.time,
-            self.P,
-            self.H,
+            self.dummy_var,
+            self.dummy_var,
         )
 
     def run(self):

@@ -15,7 +15,7 @@ class VegTransition:
         arrays for state variables. State variables are:
 
         self.veg_type
-        self.maturity
+        self.maturity 
         self.elevation
         self.pct_mast_hard
         self.pct_mast_soft
@@ -25,9 +25,6 @@ class VegTransition:
         - config_file (str): Path to configuration YAML
         - log_level (int): Level of vebosity for logging.
         """
-        # Set up the logger
-        self._setup_logger(log_level)
-
         with open(config_file, "r") as file:
             config = yaml.safe_load(file)
 
@@ -49,6 +46,10 @@ class VegTransition:
         # Store history for analysis
         self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
+
+        # Set up the logger
+        self._setup_logger(log_level)
+
         # Log the initialization using lazy formatting
         self._logger.info(
             "Initialized model with P0=%s, H0=%s, alpha=%s, beta=%s,
@@ -64,12 +65,14 @@ class VegTransition:
         # create empty arrays for state variables, based on x, y dims of veg type base raster
         template = np.zeros((self.veg_type.ny, self.veg_type.nx))
 
-        #self.veg_type = template
-        #self.maturity = template
-        #self.dem = template
-        #self.pct_mast_hard = template
-        #self.pct_mast_soft = template
-        #self.pct_no_mast = template
+        self.dem # = load dem
+        self.wse # = load wse
+
+        self.veg_type = template
+        self.maturity = template
+        self.pct_mast_hard = template
+        self.pct_mast_soft = template
+        self.pct_no_mast = template
 
     def _setup_logger(self, log_level):
         """Set up the logger for the class."""
@@ -95,25 +98,18 @@ class VegTransition:
         """Advance the transition model by one step."""
 
         # example of how to call veg logic module
-        self.veg_type = veg_logic.veg_logic(
+        self.zone_v = veg_logic.zone_v(
             self.dem,
-            self.pct_mast_hard,
-            self.maturity,
+            self.wse,
         )
 
         # repeat for all necessary state vars
-        self.pct_mast_hard = veg_logic.veg_logic(
+        self.zone_iv = veg_logic.zone_iv(
             self.dem,
-            self.maturity,
-            self.dummy_var,
+            self.wse
         )
 
-        # repeat for all necessary state vars
-        self.pct_mast_soft = veg_logic.veg_logic(
-            self.dem,
-            self.maturity,
-            self.dummy_var,
-        )
+
 
         # TODO: update for actual timestep, assuming year now
         self.maturity += 1

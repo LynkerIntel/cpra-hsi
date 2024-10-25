@@ -101,7 +101,7 @@ def read_veg_key(path: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    CONFIG_PATH = "./VegProcessor/veg_config.yaml"
+    CONFIG_PATH = "./VegProcessor/preprocess_config.yaml"
     # Load the YAML configuration file
     with open(CONFIG_PATH, "r") as file:
         config = yaml.safe_load(file)

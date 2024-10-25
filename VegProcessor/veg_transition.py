@@ -8,7 +8,6 @@ import veg_logic
 
 class VegTransition:
     """The Vegetation Transition Model."""
-
     def __init__(self, config_file, log_level=logging.INFO):
         """
         Initialize by setting up logger, loading resource paths, and creating empty
@@ -151,14 +150,22 @@ class VegTransition:
 
         self._logger.info("Simulation complete")
 
-    def load_dem(self):
-        """ """
+    def load_dem(self) -> np.ndarray:
+        """Load project domain DEM. 
+        """
         # self.dem = load
         raise NotImplementedError
 
-    def load_veg_base_raster(self):
+    def load_landcover(self) -> np.ndarray:
+        """This method will load the landcover dataset, which may
+        be needed? 
+        """
+        raise NotImplementedError
+    
+    def load_veg_base(self) -> np.ndaray:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
+
         """
         ds = xr.open_dataset(self.veg_base_path)
         self.veg_type = ds["veg"]

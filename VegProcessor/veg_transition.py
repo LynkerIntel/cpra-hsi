@@ -182,15 +182,6 @@ class VegTransition:
         """Load salinity raster data (if available.)
         """
         #raise NotImplementedError
-    
-        # salinity
-        # From Jenneke:
-
-        # If 60m pixel is saline marsh then set salinity to 18;
-        # Else if pixel is brackish marsh then set salinity to 8;
-        # Else if pixel is intermediate marsh then set salinity to 3.5;
-        # Else set salinity to 1.
-    
         if self.salinity_path:
             self.salinity = # load
             self._logger.info('Loaded salinity from raster')

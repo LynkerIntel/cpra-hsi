@@ -103,7 +103,7 @@ class AlligatorHSI:
             mask_1 = self.v1_pct_open_water < 0.2
             si_1[mask_1] = ((4.5 * self.v1_pct_open_water[mask_1]) / 100) + 0.1
 
-            # condition 2
+            # condition 2 (AND)
             mask_2 = (self.v1_pct_open_water >= 0.2) & (self.v1_pct_open_water <= 0.4)
             si_1[mask_2] = 1
 
@@ -142,7 +142,7 @@ class AlligatorHSI:
                 2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_2]
             ) + 1.3375
 
-            # condition 3 (OR)
+            # condition 3 (AND)
             mask_3 = (self.v2_avg_water_depth_rlt_marsh_surface > -0.15) & (
                 self.v2_avg_water_depth_rlt_marsh_surface < 0.25
             )
@@ -185,12 +185,26 @@ class AlligatorHSI:
             self._logger.info(
                 "mean annual salinity data not provided. Setting index to 1."
             )
-            suitability = np.ones(self._shape)
+            s1_5 = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+            self._logger.info("Running SI 5")
+            # Create an array to store the results
+            si_5 = np.full(self._shape, 999)
 
-        return suitability
+            # condition 1 (AND)
+            mask_1 = (self.v5_mean_annual_salinity >= 0.0) & (self.v5_mean_annual_salinity <= 10.0) #RHS=ppt
+            si_5[mask_1] = 1.0 + (-0.1 * self.v5_mean_annual_salinity[mask_1])
+
+            # condition 2
+            mask_2 = self.v5_mean_annual_salinity > 10.0
+            si_5[mask_2] = 0.0
+
+            # JG Note: conditions assume v5 values >=0.0
+            if 999 in si_1:
+                raise ValueError("Unhandled condition in SI logic!")
+
+        return si_5
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""

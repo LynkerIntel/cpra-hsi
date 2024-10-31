@@ -100,13 +100,13 @@ class CrawfishHSI:
             mask_1 = self.v1_mean_annual_salinity <= 1.5
             si_1[mask_1] = 1.0
 
-            # condition 2
+            # condition 2 (AND)
             mask_2 = (self.v1_mean_annual_salinity > 1.5) & (self.v1_mean_annual_salinity <= 3.0)
-            si_1[mask_2] = 1.5 - (0.333 * self_v1_mean_annual_salinity[mask_2])
+            si_1[mask_2] = 1.5 - (0.333 * self.v1_mean_annual_salinity[mask_2])
 
-            # condition 3
+            # condition 3 (AND)
             mask_3 = (self.v1_mean_annual_salinity > 3.0) & (self.v1_mean_annual_salinity <= 6.0)
-            si_1[mask_3] = 1.0 - (0.167 * self_v1_mean_annual_salinity[mask_3])
+            si_1[mask_3] = 1.0 - (0.167 * self.v1_mean_annual_salinity[mask_3])
 
             # condition 4
             mask_4 = self.v1_mean_annual_salinity > 6.0
@@ -141,7 +141,7 @@ class CrawfishHSI:
             )
             si_2[mask_2] = 0.02174 * self.v2_mean_water_depth_jan_aug[mask_2]
 
-            # condition 3 
+            # condition 3 (AND)
             mask_3 = (self.v2_mean_water_depth_jan_aug > 46.0) & (
                 self.v2_mean_water_depth_jan_aug <= 91.0
             )

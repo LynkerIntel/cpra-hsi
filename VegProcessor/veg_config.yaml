@@ -2,7 +2,8 @@
 
 raster_data:
   dem_path: "tmp/loc/data.tif" # str
-  veg_base_raster: "veg_60m_fake/path/file.tif" #str
+  veg_base_raster: "/Users/dillonragar/data/tmp/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
+  veg_keys: "/Users/dillonragar/data/tmp/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   salinity_raster: #str (optional)
 
 initial_conditions:

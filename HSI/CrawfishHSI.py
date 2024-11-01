@@ -18,7 +18,14 @@ class CrawfishHSI:
     # init with None to be distinct from np.nan
     v1_mean_annual_salinity: np.ndarray = None
     v2_mean_water_depth_jan_aug: np.ndarray = None
-    v3_pct_cell_covered_by_habitat_types: np.ndarray = None
+    #v3_pct_cell_covered_by_habitat_types: np.ndarray = None
+    v3a_pct_cell_swamp_bottomland_hardwood: np.ndarray = None
+    v3b_pct_cell_fresh_marsh: np.ndarray = None
+    v3c_pct_cell_open_water: np.ndarry = None
+    v3d_pct_cell_intermediate_marsh: np.ndarry = None
+    v3e_pct_cell_brackish_marsh: np.ndarry = None
+    v3f_pct_cell_saline_marsh: np.ndarray = None
+    v3g_pct_cell_bare_ground: np.ndarray = None
     v4_mean_water_depth_sept_dec: np.ndarray = None
 
     # Species-specific parameters (example values)
@@ -168,7 +175,21 @@ class CrawfishHSI:
             si_3 = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+            self._logger.info("Running SI 3")
+            si_3 = np.full(self._shape, 999)
+
+            si_3 = [(1.0 * v3a_pct_cell_swamp_bottomland_hardwood) + 
+            (0.85 * v3b_pct_cell_fresh_marsh) + 
+            (0.75 * v3c_pct_cell_open_water) + 
+            (0.6 * v3d_pct_cell_intermediate_marsh) +
+            (0.2 * v3e_pct_cell_brackish_marsh) +
+            (0.0 * v3f_pct_cell_saline_marsh) + 
+            (0.0 * v3g_pct_cell_bare_ground)] # why even include v3f & g? 
+
+            if 999 in si_3:
+                raise ValueError("Unhandled condition in SI logic!")
+            
+            #return NotImplementedError
 
         return si_3
 

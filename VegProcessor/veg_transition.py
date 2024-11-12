@@ -64,32 +64,23 @@ class VegTransition:
         # Set up the logger
         self._setup_logger(log_level)
 
-        # # Log the initialization using lazy formatting
-        # self._logger.info(
-        #     "Initialized model with P0=%s, H0=%s, alpha=%s, beta=%s,
-        #     self.dummy_var,
-        #     self.dummy_var,
-        #     self.dummy_var,
-        #     self.dummy_var,
-        # )
-
         # Load veg base and use as template to create arrays for the main state variables
-        self.veg_type = self.load_veg_initial_raster()
-        self.veg_keys = self.load_veg_keys()
+        self.veg_type = self._load_veg_initial_raster()
+        self.veg_keys = self._load_veg_keys()
 
         # self.zone_v = self.veg_type[self.veg_type == 23]
 
         # create empty arrays for state variables, based on x, y dims of veg type base raster
         # template = np.zeros((self.veg_type.ny, self.veg_type.nx))
 
-        self.dem = self.load_dem()
+        self.dem = self._load_dem()
 
         # load raster if provided, default values if not
         # self.load_salinity()
 
         self.wse = None
-        # self.veg_type = template
-        # self.maturity = template
+        self.maturity = np.ones_like(self.dem["band_data"].to_numpy())
+        self.water_depth = None
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
@@ -116,36 +107,36 @@ class VegTransition:
 
     def step(self, date):
         """Advance the transition model by one step."""
+        # get existing veg types
+        veg_type_in = self.veg_type
+
         # calculate depth
-        self.wse = self.load_wse_timestep(date=date, variable_name="WSE_MEAN")
-        self.depth = self.get_depth()
+        self.wse = self._load_wse_timestep(date=date, variable_name="WSE_MEAN")
+        self.water_depth = self.get_depth()
+        self._logger.info("Created depth for %s", date)
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type = veg_logic.zone_v(self.veg_type, self.depth)
-        self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
-        # self.new_veg_3
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
+        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # combine all zones into new timestep
         # must first ensure that there are no overlapping
         # values. Need a good QC method here.
         # self.veg_type = self.new_veg_1 + self.new_veg_2
 
-        self.create_new_veg_arrays()
-
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
+        self._calculate_maturity(veg_type_in)
 
-        # TODO: update for actual timestep, assuming year now
-        self.maturity += dt
-
-        # Update time
-        self.time += dt
-
-        # Record the new state
-        self.history["P"].append(self.P)
-        self.history["H"].append(self.H)
-        self.history["time"].append(self.time)
+        # Save all state variable arrays
 
         self._logger.debug(
             "Time: %.2f, var1: %.2f, var2: %.2f",
@@ -175,13 +166,13 @@ class VegTransition:
 
         self._logger.info("Simulation complete")
 
-    def load_dem(self) -> xr.Dataset:
+    def _load_dem(self) -> xr.Dataset:
         """Load project domain DEM."""
         dem = xr.open_dataset(self.dem_path)
         self._logger.info("Loaded DEM")
         return dem
 
-    def load_wse_timestep(
+    def _load_wse_timestep(
         self,
         date: str,
         variable_name: str = "WSE_MEAN",
@@ -232,9 +223,22 @@ class VegTransition:
 
         return da
 
-    def get_depth(self):
+    def _get_depth(self):
         """Calculate water depth from DEM and Water Surface Elevation."""
         return self.wse - self.dem
+
+    def _calculate_maturity(self, veg_type_in: np.ndarray):
+        """
+        +1 maturity for pixels without vegetation changes.
+        """
+        # TODO: Need to create mask for only Zone II to V pixels.
+        self._logger.info("WARNING, need to mask to zone II to V pixels.")
+
+        # get inverse of "equals" element comparison,
+        # i.e. True where elements are different
+        mask = ~np.equal(veg_type_in, self.veg_type)
+        self.maturity[mask] += 1
+        self._logger.info("Maturity incremented for unchanged veg types")
 
     def load_landcover(self) -> np.ndarray:
         """This method will load the landcover dataset, which may
@@ -242,7 +246,7 @@ class VegTransition:
         """
         raise NotImplementedError
 
-    def load_veg_initial_raster(self):
+    def _load_veg_initial_raster(self):
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
 
@@ -250,14 +254,14 @@ class VegTransition:
         da = xr.open_dataarray(self.veg_base_path)
         return da
 
-    def load_veg_keys(self) -> pd.DataFrame:
+    def _load_veg_keys(self) -> pd.DataFrame:
         """load vegetation class names from database file"""
         dbf = gpd.read_file(self.veg_keys_path)
         # fix dtype
         dbf["Value"] = dbf["Value"].astype(int)
         return dbf
 
-    def load_salinity(self):
+    def _load_salinity(self):
         """Load salinity raster data (if available.)"""
         # raise NotImplementedError
         if self.salinity_path:

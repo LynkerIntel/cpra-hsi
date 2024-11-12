@@ -4,6 +4,10 @@ import xarray as xr
 import numpy as np
 import geopandas as gpd
 import pandas as pd
+import glob
+import os
+from typing import Optional
+import rioxarray
 
 import veg_logic
 import hydro_logic
@@ -38,6 +42,7 @@ class VegTransition:
 
         # fetch raster data paths
         self.dem_path = config["raster_data"].get("dem_path")
+        self.wse_directory_path = config["raster_data"].get("wse_directory_path")
         self.veg_base_path = config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = config["raster_data"].get("veg_keys")
         self.salinity_path = config["raster_data"].get("salinity_raster")
@@ -78,13 +83,11 @@ class VegTransition:
         # template = np.zeros((self.veg_type.ny, self.veg_type.nx))
 
         self.dem = self.load_dem()
-        self.wse  # = load wse
-        # caluculate depth
-        self.depth = self.get_depth(self.dem, self.wse)
 
         # load raster if provided, default values if not
         # self.load_salinity()
 
+        self.wse = None
         # self.veg_type = template
         # self.maturity = template
         # self.pct_mast_hard = template
@@ -111,20 +114,22 @@ class VegTransition:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def step(self, dt=1):
+    def step(self, date):
         """Advance the transition model by one step."""
-        # calculate inundation
+        # calculate depth
+        self.wse = self.load_wse_timestep(date=date, variable_name="WSE_MEAN")
+        self.depth = self.get_depth()
 
-        # example of how to call veg logic module
+        # veg_type array is iteratively updated, for each zone
         self.veg_type = veg_logic.zone_v(self.veg_type, self.depth)
         self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
-        self.new_veg_3
+        # self.new_veg_3
 
         # combine all zones into new timestep
         # must first ensure that there are no overlapping
         # values. Need a good QC method here.
-        self.veg_type = self.new_veg_1 + self.new_veg_2
+        # self.veg_type = self.new_veg_1 + self.new_veg_2
 
         self.create_new_veg_arrays()
 
@@ -176,12 +181,60 @@ class VegTransition:
         self._logger.info("Loaded DEM")
         return dem
 
-    def load_wse(self) -> xr.Dataset:
-        """Load water surface elevation.
-
-        this method will need to load for an entire year?
+    def load_wse_timestep(
+        self,
+        date: str,
+        variable_name: str = "WSE_MEAN",
+        date_format: str = "%Y_%m_%d",
+    ) -> Optional[xr.DataArray]:
         """
-        raise NotImplementedError
+        Load a single timestep from a folder of .tif files as an xarray.DataArray.
+
+        The .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
+        followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
+        locate the file corresponding to the specified date and load it as a DataArray.
+
+        Parameters
+        ----------
+        folder_path : str
+            Path to the folder containing the .tif files.
+        date : str
+            The date for the timestep to load, formatted according to `date_format`.
+        variable_name : str, optional
+            The name of the variable to use in the DataArray.
+        date_format : str, optional
+            Format string for parsing dates from file names, default is "%Y_%m_%d".
+            Adjust based on your file naming convention.
+
+        Returns
+        -------
+        xr.DataArray or None
+            An xarray.DataArray with the raster data for the specified timestep,
+            or None if the file is not found.
+        """
+        # Format the date into the specified date_format to match the file names
+        date_str = pd.to_datetime(date).strftime(date_format)
+
+        # Construct the expected filename pattern
+        expected_filename = f"{variable_name}_{date_str}.tif"
+        file_path = os.path.join(self.wse_directory_path, expected_filename)
+
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            self._logger.info("File not found: %s", file_path)
+            return None
+
+        # Load the .tif file as a DataArray
+        da = rioxarray.open_rasterio(file_path).squeeze(dim="band")
+
+        # Rename the variable and add the time coordinate
+        da = da.rename(variable_name).expand_dims(time=[pd.to_datetime(date)])
+
+        return da
+
+    def get_depth(self):
+        """Calculate water depth from DEM and Water Surface Elevation."""
+        return self.wse - self.dem
 
     def load_landcover(self) -> np.ndarray:
         """This method will load the landcover dataset, which may

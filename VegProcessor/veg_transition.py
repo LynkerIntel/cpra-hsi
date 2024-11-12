@@ -8,6 +8,7 @@ import glob
 import os
 from typing import Optional
 import rioxarray
+from datetime import datetime
 
 import veg_logic
 import hydro_logic
@@ -18,6 +19,9 @@ class VegTransition:
 
     Vegetation zones are calculated independenlty (slower) for
     better model interperability and quality control.
+
+    two dimensinal np.ndarray are used as default dtype, with xr.Dataset for cases
+    where time series arrays are needed.
     """
 
     def __init__(self, config_file, log_level=logging.INFO):
@@ -47,16 +51,12 @@ class VegTransition:
         self.veg_keys_path = config["raster_data"].get("veg_keys")
         self.salinity_path = config["raster_data"].get("salinity_raster")
 
-        # Extract initial state variables (dummy vars) from config
-        self.alpha = config["parameters"].get("alpha", 0.1)
-        self.beta = config["parameters"].get("beta", 0.02)
-
-        # simulation parameters
-        self.simulation_duration = config["simulation"].get("duration")
-        self.simulation_time_step = config["simulation"].get("time_step")
+        # simulation
+        self.start_date = config["simulation"].get("start_date")
+        self.end_date = config["simulation"].get("end_date")
 
         # Time
-        self.time = 0
+        # self.time = 0
 
         # Store history for analysis
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
@@ -107,12 +107,13 @@ class VegTransition:
 
     def step(self, date):
         """Advance the transition model by one step."""
-        # get existing veg types
+        wy = date.year
+        # copy existing veg types
         veg_type_in = self.veg_type
 
         # calculate depth
-        self.wse = self._load_wse_timestep(date=date, variable_name="WSE_MEAN")
-        self.water_depth = self.get_depth()
+        self.wse = self._load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.water_depth = self._get_depth()
         self._logger.info("Created depth for %s", date)
 
         # veg_type array is iteratively updated, for each zone
@@ -145,24 +146,21 @@ class VegTransition:
             self.dummy_var,
         )
 
-    def run(self):
+    def run(self, start_date, end_date):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
         """
-        # load data
-
-        # create numpy base array
-
         # run model forwards
-        steps = int(self.simulation_duration / self.simulation_time_step)
+        # steps = int(self.simulation_duration / self.simulation_time_step)
         self._logger.info(
-            "Starting simulation for %s time units with time step %s",
-            self.simulation_duration,
-            self.simulation_time_step,
+            "Starting simulation at %s. Period: %s - %s",
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            self.start_date,
+            self.end_date,
         )
 
-        for _ in range(steps):
-            self.step(self.simulation_time_step)
+        for timestep in pd.date_range(self.start_date, self.end_date, freq="y"):
+            self.step(timestep)
 
         self._logger.info("Simulation complete")
 
@@ -172,59 +170,137 @@ class VegTransition:
         self._logger.info("Loaded DEM")
         return dem
 
-    def _load_wse_timestep(
+    # def _load_wse_timestep(
+    #     self,
+    #     date: str,
+    #     variable_name: str = "WSE_MEAN",
+    #     date_format: str = "%Y_%m_%d",
+    # ) -> Optional[xr.DataArray]:
+    #     """
+    #     Load a single timestep from a folder of .tif files as an xarray.DataArray.
+
+    #     The .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
+    #     followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
+    #     locate the file corresponding to the specified date and load it as a DataArray.
+
+    #     Parameters
+    #     ----------
+    #     folder_path : str
+    #         Path to the folder containing the .tif files.
+    #     date : str
+    #         The date for the timestep to load, formatted according to `date_format`.
+    #     variable_name : str, optional
+    #         The name of the variable to use in the DataArray.
+    #     date_format : str, optional
+    #         Format string for parsing dates from file names, default is "%Y_%m_%d".
+    #         Adjust based on your file naming convention.
+
+    #     Returns
+    #     -------
+    #     xr.DataArray or None
+    #         An xarray.DataArray with the raster data for the specified timestep,
+    #         or None if the file is not found.
+    #     """
+    #     # Format the date into the specified date_format to match the file names
+    #     date_str = pd.to_datetime(date).strftime(date_format)
+
+    #     # Construct the expected filename pattern
+    #     expected_filename = f"{variable_name}_{date_str}.tif"
+    #     file_path = os.path.join(self.wse_directory_path, expected_filename)
+
+    #     # Check if the file exists
+    #     if not os.path.exists(file_path):
+    #         self._logger.info("File not found: %s", file_path)
+    #         return None
+
+    #     # Load the .tif file as a DataArray
+    #     da = rioxarray.open_rasterio(file_path).squeeze(dim="band")
+
+    #     # Rename the variable and add the time coordinate
+    #     da = da.rename(variable_name).expand_dims(time=[pd.to_datetime(date)])
+
+    #     return da
+
+    def _load_wse_wy(
         self,
-        date: str,
+        water_year: int,
         variable_name: str = "WSE_MEAN",
         date_format: str = "%Y_%m_%d",
-    ) -> Optional[xr.DataArray]:
+    ) -> Optional[xr.Dataset]:
         """
-        Load a single timestep from a folder of .tif files as an xarray.DataArray.
+        Load .tif files corresponding to a specific water year into an xarray.Dataset.
 
-        The .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
+        Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
         followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
-        locate the file corresponding to the specified date and load it as a DataArray.
+        automatically extract the timestamps and assign them to a 'time' dimension in the resulting
+        xarray.Dataset, but only for files within the specified water year.
 
         Parameters
         ----------
         folder_path : str
             Path to the folder containing the .tif files.
-        date : str
-            The date for the timestep to load, formatted according to `date_format`.
+        water_year : int
+            The water year to filter files by. Files from October 1 of the previous year
+            to September 30 of this year will be loaded.
         variable_name : str, optional
-            The name of the variable to use in the DataArray.
+            The name of the variable to use in the dataset.
         date_format : str, optional
             Format string for parsing dates from file names, default is "%Y_%m_%d".
             Adjust based on your file naming convention.
 
         Returns
         -------
-        xr.DataArray or None
-            An xarray.DataArray with the raster data for the specified timestep,
-            or None if the file is not found.
+        xr.Dataset or None
+            An xarray.Dataset with the raster data from each .tif file within the water year,
+            stacked along a 'time' dimension, with the specified variable name.
+            Returns None if no files are found for the specified water year.
         """
-        # Format the date into the specified date_format to match the file names
-        date_str = pd.to_datetime(date).strftime(date_format)
+        tif_files = sorted(glob.glob(os.path.join(self.wse_directory_path, "*.tif")))
+        start_date = pd.to_datetime(f"{water_year - 1}-10-01")
+        end_date = pd.to_datetime(f"{water_year}-09-30")
 
-        # Construct the expected filename pattern
-        expected_filename = f"{variable_name}_{date_str}.tif"
-        file_path = os.path.join(self.wse_directory_path, expected_filename)
+        selected_files = []
+        time_stamps = []
 
-        # Check if the file exists
-        if not os.path.exists(file_path):
-            self._logger.info("File not found: %s", file_path)
+        for f in tif_files:
+            date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(".tif", "")
+            file_date = pd.to_datetime(date_str, format=date_format)
+
+            if start_date <= file_date <= end_date:
+                selected_files.append(f)
+                time_stamps.append(file_date)
+
+        if not selected_files:
+            print(f"No files found for water year {water_year}.")
             return None
 
-        # Load the .tif file as a DataArray
-        da = rioxarray.open_rasterio(file_path).squeeze(dim="band")
+        # Preprocess function to remove the 'band' dimension
+        def preprocess(da):
+            return da.squeeze(dim="band").expand_dims(
+                time=[time_stamps[selected_files.index(da.encoding["source"])]]
+            )
 
-        # Rename the variable and add the time coordinate
-        da = da.rename(variable_name).expand_dims(time=[pd.to_datetime(date)])
+        # Load selected files into a single Dataset with open_mfdataset
+        xr_dataset = xr.open_mfdataset(
+            selected_files,
+            concat_dim="time",
+            combine="nested",
+            parallel=True,
+            preprocess=preprocess,
+        )
 
-        return da
+        # rename
+        xr_dataset = xr_dataset.rename(
+            {list(xr_dataset.data_vars.keys())[0]: variable_name}
+        )
 
-    def _get_depth(self):
-        """Calculate water depth from DEM and Water Surface Elevation."""
+        return xr_dataset
+
+    def _get_depth(self) -> xr.Dataset:
+        """Calculate water depth from DEM and Water Surface Elevation.
+
+        TODO: update to work for all timesteps in Dataset
+        """
         return self.wse - self.dem
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):

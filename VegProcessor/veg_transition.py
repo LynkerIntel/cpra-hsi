@@ -77,7 +77,7 @@ class VegTransition:
         # create empty arrays for state variables, based on x, y dims of veg type base raster
         # template = np.zeros((self.veg_type.ny, self.veg_type.nx))
 
-        self.dem  # = load dem
+        self.dem = self.load_dem()
         self.wse  # = load wse
         # caluculate depth
         self.depth = self.get_depth(self.dem, self.wse)
@@ -170,9 +170,17 @@ class VegTransition:
 
         self._logger.info("Simulation complete")
 
-    def load_dem(self) -> np.ndarray:
+    def load_dem(self) -> xr.Dataset:
         """Load project domain DEM."""
-        # self.dem = load
+        dem = xr.open_dataset(self.dem_path)
+        self._logger.info("Loaded DEM")
+        return dem
+
+    def load_wse(self) -> xr.Dataset:
+        """Load water surface elevation.
+
+        this method will need to load for an entire year?
+        """
         raise NotImplementedError
 
     def load_landcover(self) -> np.ndarray:

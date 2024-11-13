@@ -67,19 +67,13 @@ class VegTransition:
         # Load veg base and use as template to create arrays for the main state variables
         self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
-
-        # self.zone_v = self.veg_type[self.veg_type == 23]
-
-        # create empty arrays for state variables, based on x, y dims of veg type base raster
-        # template = np.zeros((self.veg_type.ny, self.veg_type.nx))
-
         self.dem = self._load_dem()
 
         # load raster if provided, default values if not
         # self.load_salinity()
 
         self.wse = None
-        self.maturity = np.ones_like(self.dem["band_data"].to_numpy())
+        self.maturity = np.ones_like(self.dem)
         self.water_depth = None
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -117,7 +111,7 @@ class VegTransition:
         self._logger.info("Created depth for %s", date)
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
+        # self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
@@ -166,9 +160,11 @@ class VegTransition:
 
     def _load_dem(self) -> xr.Dataset:
         """Load project domain DEM."""
-        dem = xr.open_dataset(self.dem_path)
+        ds = xr.open_dataset(self.dem_path)
+        ds = ds.squeeze(drop="band_data")
+        da = ds.to_dataarray(dim="band")
         self._logger.info("Loaded DEM")
-        return dem
+        return da.to_numpy()
 
     # def _load_wse_timestep(
     #     self,
@@ -255,7 +251,11 @@ class VegTransition:
             stacked along a 'time' dimension, with the specified variable name.
             Returns None if no files are found for the specified water year.
         """
-        tif_files = sorted(glob.glob(os.path.join(self.wse_directory_path, "*.tif")))
+        # tif_files = sorted(glob.glob(os.path.join(self.wse_directory_path, "*.tif")))
+        tif_files = sorted(
+            glob.glob(os.path.join(self.wse_directory_path, "**/*.tif"), recursive=True)
+        )
+
         start_date = pd.to_datetime(f"{water_year - 1}-10-01")
         end_date = pd.to_datetime(f"{water_year}-09-30")
 
@@ -271,7 +271,7 @@ class VegTransition:
                 time_stamps.append(file_date)
 
         if not selected_files:
-            print(f"No files found for water year {water_year}.")
+            self._logger.error("No files found for water year: %s", water_year)
             return None
 
         # Preprocess function to remove the 'band' dimension
@@ -310,10 +310,17 @@ class VegTransition:
         # TODO: Need to create mask for only Zone II to V pixels.
         self._logger.info("WARNING, need to mask to zone II to V pixels.")
 
+        # print(veg_type_in)
+        # print(self.veg_type)
+
         # get inverse of "equals" element comparison,
         # i.e. True where elements are different
-        mask = ~np.equal(veg_type_in, self.veg_type)
-        self.maturity[mask] += 1
+        # OR if both elements are nan
+        equal_mask = np.equal(veg_type_in, self.veg_type) | (
+            np.isnan(veg_type_in) & np.isnan(self.veg_type)
+        )
+
+        self.maturity[~equal_mask] += 1
         self._logger.info("Maturity incremented for unchanged veg types")
 
     def load_landcover(self) -> np.ndarray:
@@ -322,13 +329,13 @@ class VegTransition:
         """
         raise NotImplementedError
 
-    def _load_veg_initial_raster(self):
+    def _load_veg_initial_raster(self) -> np.ndarray:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
-
         """
         da = xr.open_dataarray(self.veg_base_path)
-        return da
+        da = da.squeeze(drop="band")
+        return da.to_numpy()
 
     def _load_veg_keys(self) -> pd.DataFrame:
         """load vegetation class names from database file"""

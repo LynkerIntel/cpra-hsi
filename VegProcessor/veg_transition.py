@@ -64,16 +64,17 @@ class VegTransition:
         # Set up the logger
         self._setup_logger(log_level)
 
+        self.dem = self._load_dem()
+        # print(self.dem.shape)
         # Load veg base and use as template to create arrays for the main state variables
         self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
-        self.dem = self._load_dem()
 
         # load raster if provided, default values if not
         # self.load_salinity()
 
         self.wse = None
-        self.maturity = np.ones_like(self.dem)
+        self.maturity = np.ones_like(self.dem)  # should maturity iterate from 0?
         self.water_depth = None
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -134,12 +135,12 @@ class VegTransition:
 
         # Save all state variable arrays
 
-        self._logger.debug(
-            "Time: %.2f, var1: %.2f, var2: %.2f",
-            self.time,
-            self.dummy_var,
-            self.dummy_var,
-        )
+        # self._logger.debug(
+        #     "Time: %.2f, var1: %.2f, var2: %.2f",
+        #     self.time,
+        #     self.dummy_var,
+        #     self.dummy_var,
+        # )
 
     def run(self, start_date, end_date):
         """
@@ -159,13 +160,14 @@ class VegTransition:
 
         self._logger.info("Simulation complete")
 
-    def _load_dem(self) -> xr.Dataset:
+    def _load_dem(self) -> np.ndarray:
         """Load project domain DEM."""
         ds = xr.open_dataset(self.dem_path)
         ds = ds.squeeze(drop="band_data")
         da = ds.to_dataarray(dim="band")
         self._logger.info("Loaded DEM")
-        return da.to_numpy()
+        # TODO: where is extra dim coming from? i.e. da[0] is needed!
+        return da[0].to_numpy()
 
     # def _load_wse_timestep(
     #     self,
@@ -297,7 +299,9 @@ class VegTransition:
 
         return xr_dataset
 
-    def _reproject_match_to_dem(self, ds: xr.Dataset) -> xr.Dataset:
+    def _reproject_match_to_dem(
+        self, ds: xr.Dataset | xr.DataArray
+    ) -> xr.Dataset | xr.DataArray:
         """
         Temporary fix to match WSE model output to 60m DEM grid.
         """
@@ -305,7 +309,7 @@ class VegTransition:
         ds_dem = ds_dem.squeeze(drop="band_data")
         da_dem = ds_dem.to_dataarray(dim="band")
 
-        self._logger.warning("reprojecting WSE to match DEM. TEMPFIX!")
+        self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds)
         return ds.rio.reproject_match(da_dem)
 
     def _get_depth(self) -> xr.Dataset:
@@ -349,6 +353,9 @@ class VegTransition:
         """
         da = xr.open_dataarray(self.veg_base_path)
         da = da.squeeze(drop="band")
+
+        da = self._reproject_match_to_dem(da)
+
         return da.to_numpy()
 
     def _load_veg_keys(self) -> pd.DataFrame:

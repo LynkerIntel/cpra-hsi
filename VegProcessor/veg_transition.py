@@ -330,8 +330,8 @@ class VegTransition:
         # create a boolean array where True indicates elements are different
         # Use np.isnan to handle NaN values specifically (they don't indicate
         # a veg transition has occurred)
-        diff_mask = (veg_type_in != self.veg_type.shape) & ~(
-            np.isnan(veg_type_in) & np.isnan(self.veg_type.shape)
+        diff_mask = (veg_type_in != self.veg_type) & ~(
+            np.isnan(veg_type_in) & np.isnan(self.veg_type)
         )
 
         self.maturity[diff_mask] += 1

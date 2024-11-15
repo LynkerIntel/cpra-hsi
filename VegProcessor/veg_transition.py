@@ -112,7 +112,7 @@ class VegTransition:
         self.water_depth = self._get_depth()
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
+        # self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
@@ -323,17 +323,18 @@ class VegTransition:
         # TODO: Need to create mask for only Zone II to V pixels.
         self._logger.warning("need to mask to zone II to V pixels.")
 
-        # print(veg_type_in)
-        # print(self.veg_type)
+        # Ensure both arrays have the same shape
+        if veg_type_in.shape != self.veg_type.shape:
+            raise ValueError("Input arrays must have the same shape.")
 
-        # get inverse of "equals" element comparison,
-        # i.e. True where elements are different
-        # OR if both elements are nan
-        equal_mask = np.equal(veg_type_in, self.veg_type) | (
-            np.isnan(veg_type_in) & np.isnan(self.veg_type)
+        # create a boolean array where True indicates elements are different
+        # Use np.isnan to handle NaN values specifically (they don't indicate
+        # a veg transition has occurred)
+        diff_mask = (veg_type_in != self.veg_type.shape) & ~(
+            np.isnan(veg_type_in) & np.isnan(self.veg_type.shape)
         )
 
-        self.maturity[~equal_mask] += 1
+        self.maturity[diff_mask] += 1
         self._logger.info("Maturity incremented for unchanged veg types")
 
     def load_landcover(self) -> np.ndarray:

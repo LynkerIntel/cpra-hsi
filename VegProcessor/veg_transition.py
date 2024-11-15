@@ -101,17 +101,18 @@ class VegTransition:
 
     def step(self, date):
         """Advance the transition model by one step."""
+        self._logger.info("starting timestap: %s", date)
         wy = date.year
         # copy existing veg types
         veg_type_in = self.veg_type
 
         # calculate depth
         self.wse = self._load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
-        self._logger.info("Created depth for %s", date)
 
         # veg_type array is iteratively updated, for each zone
-        # self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
+        self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
@@ -296,11 +297,23 @@ class VegTransition:
 
         return xr_dataset
 
+    def _reproject_match_to_dem(self, ds: xr.Dataset) -> xr.Dataset:
+        """
+        Temporary fix to match WSE model output to 60m DEM grid.
+        """
+        ds_dem = xr.open_dataset(self.dem_path)
+        ds_dem = ds_dem.squeeze(drop="band_data")
+        da_dem = ds_dem.to_dataarray(dim="band")
+
+        self._logger.warning("reprojecting WSE to match DEM. TEMPFIX!")
+        return ds.rio.reproject_match(da_dem)
+
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
         TODO: update to work for all timesteps in Dataset
         """
+        self._logger.info("Creating depth")
         return self.wse - self.dem
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
@@ -308,7 +321,7 @@ class VegTransition:
         +1 maturity for pixels without vegetation changes.
         """
         # TODO: Need to create mask for only Zone II to V pixels.
-        self._logger.info("WARNING, need to mask to zone II to V pixels.")
+        self._logger.warning("need to mask to zone II to V pixels.")
 
         # print(veg_type_in)
         # print(self.veg_type)

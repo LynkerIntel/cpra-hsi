@@ -19,8 +19,10 @@ def zone_v(
     GS inundation >20%
 
     Zone V = 15
+    Zone IV = 16 (valid transition)
 
     Params:
+        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
@@ -48,15 +50,14 @@ def zone_v(
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = condition_2_pct > 0.2
 
-    # Combined transition condition
     transition_mask = np.logical_and(condition_1, condition_2)
     combined_mask = np.logical_and(type_mask, transition_mask)
 
-    # Apply transitions
+    # apply transition
     veg_type[combined_mask] = 16
 
-    # Deferred Plotting
     if plot:
+        # this might be cleaned up or simplified,
         plotting.np_arr(veg_type_input, "Input - Zone V")
         plotting.np_arr(
             np.where(type_mask, veg_type, np.nan),

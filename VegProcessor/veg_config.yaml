@@ -2,7 +2,7 @@
 
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults/WY2006_+2ft_SLR" # must be unzipped
+  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   salinity_raster: #str (optional)
@@ -11,12 +11,7 @@ initial_conditions:
   P0: 50 # made up dummy vars
   H0: 5 # made up dummy vars
 
-parameters:
-  alpha: 0.1 # made up dummy vars
-  beta: 0.02 # made up dummy vars
-  gamma: 0.3 # made up dummy vars
-  delta: 0.015 # made up dummy vars
-
 simulation:
-  duration: 200
-  time_step: 1
+  start_date: "2020-10-01"
+  end_data: "2023-09-30"
+

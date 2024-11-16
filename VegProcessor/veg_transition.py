@@ -55,6 +55,9 @@ class VegTransition:
         self.start_date = config["simulation"].get("start_date")
         self.end_date = config["simulation"].get("end_date")
 
+        # Pretty-print the configuration
+        config_pretty = yaml.dump(config, default_flow_style=False, sort_keys=False)
+
         # Time
         # self.time = 0
 
@@ -63,6 +66,12 @@ class VegTransition:
 
         # Set up the logger
         self._setup_logger(log_level)
+
+        # Pretty-print the configuration
+        config_pretty = yaml.dump(config, default_flow_style=False, sort_keys=False)
+
+        # Log the configuration
+        self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
         self.dem = self._load_dem()
         # print(self.dem.shape)
@@ -113,7 +122,13 @@ class VegTransition:
         self.water_depth = self._get_depth()
 
         # veg_type array is iteratively updated, for each zone
-        # self.veg_type = veg_logic.zone_v(self.veg_type, self.water_depth)
+        self.veg_type = veg_logic.zone_v(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            date,
+            plot=True,
+        )
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
@@ -309,7 +324,7 @@ class VegTransition:
         ds_dem = ds_dem.squeeze(drop="band_data")
         da_dem = ds_dem.to_dataarray(dim="band")
 
-        self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds)
+        # self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds.variables)
         return ds.rio.reproject_match(da_dem)
 
     def _get_depth(self) -> xr.Dataset:

@@ -1,45 +1,86 @@
 import numpy as np
 import xarray as xr
+import datetime
+
+import plotting
 
 
-def zone_v(veg_type: np.ndarray, depth: xr.Dataset) -> np.ndarray:
+def zone_v(
+    logger,
+    veg_type: np.ndarray,
+    water_depth: xr.Dataset,
+    date: datetime.date,
+    plot: bool = False,
+) -> np.ndarray:
     """Calculate transition for Zone V
 
     MAR, APRIL, MAY, or JUNE
     inundation depth <= 0, AND
     GS inundation >20%
 
+    Zone V = 15
+
     Params:
-        - zone_v (np.ndarray): array of current zone_v locations, with np.nan elsewhere
-        - inundation (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
+        - veg_type (np.ndarray): array of current vegetation types.
+        - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
+        - date (datetime.date): Date to derive year for filtering.
+        - plot (bool): If True, plots the array before and after transformation.
 
     Returns:
-        - arr (np.ndarray): Output array of new values contining valid transitions,
-            so this output array contains are mix of old zone v pixels and new values.
+        - np.ndarray: Modified vegetation type array with updated transitions.
     """
-    #return NotImplementedError
+    veg_type_input = veg_type.copy()
+    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
 
-    # initialize return array with no changes
-    veg_out = veg_type.copy()
+    # Subset for veg type Zone V (value 15)
+    type_mask = veg_type == 15
 
-    # subset to veg type v
-    veg_v = veg_type[veg_type == int]
+    # Condition 1: MAR, APR, MAY inundation depth <= 0
+    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-05"))
+    condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time")
 
-    # # create mask for depth condition
-    mask_depth = depth.sel(slice=mar to june) <= 0
+    # Condition 2: Growing Season (GS) inundation > 20%
+    filtered_2 = water_depth.sel(
+        time=slice(growing_season["start"], growing_season["end"])
+    )
+    # Note: this assumes time is serially complete
+    condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
+    condition_2 = condition_2_pct > 0.2
 
-    # # create mask for temporal condition
-    # inundation_gs = depth.sel(slice=growing season)
-    # inundation_gs[inundation_gs != 0]
+    # Combined transition condition
+    transition_mask = np.logical_and(condition_1, condition_2)
+    combined_mask = np.logical_and(type_mask, transition_mask)
 
-    # # create mask where both conditions are true
-    # change_mask = # &
+    # Apply transitions
+    veg_type[combined_mask] = 16
 
-    # if change:
-    #     arr[mask] = habitat int
+    # Deferred Plotting
+    if plot:
+        plotting.np_arr(veg_type_input, "Input - Zone V")
+        plotting.np_arr(
+            np.where(type_mask, veg_type, np.nan),
+            "Veg Type Mask (Zone V)",
+        )
+        plotting.np_arr(
+            np.where(condition_1, veg_type, np.nan),
+            "Condition 1 (Inundation Depth <= 0)",
+        )
+        plotting.np_arr(
+            np.where(condition_2, veg_type, np.nan),
+            "Condition 2 (GS Inundation > 20%)",
+        )
+        plotting.np_arr(
+            np.where(combined_mask, veg_type, np.nan),
+            "Combined Mask (All Conditions Met)",
+        )
+        plotting.np_arr(
+            veg_type,
+            "Output - Updated Veg Types",
+        )
 
-    # return arr
+    logger.info("Finished Zone V transitions.")
+    return veg_type
 
 
 def zone_iv(arg1, arg2, arg3) -> np.ndarray:

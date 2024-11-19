@@ -30,8 +30,10 @@ def zone_v(
         - plot (bool): If True, plots the array before and after transformation.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions.
+        - np.ndarray: Modified vegetation type array with updated transitions
+            for pixels starting as Zone V
     """
+    # clone input for later plotting
     veg_type_input = veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
 
@@ -53,14 +55,20 @@ def zone_v(
     transition_mask = np.logical_and(condition_1, condition_2)
     combined_mask = np.logical_and(type_mask, transition_mask)
 
+    assert transition_mask.shape == combined_mask.shape == veg_type_input.shape
+
     # apply transition
     veg_type[combined_mask] = 16
 
     if plot:
-        # this might be cleaned up or simplified,
+        # this might be cleaned up or simplified.
+        # plotting code should be careful to use
+        # veg_type_input, when showing the input
+        # array, and veg_type, when showing the
+        # output array
         plotting.np_arr(veg_type_input, "Input - Zone V")
         plotting.np_arr(
-            np.where(type_mask, veg_type, np.nan),
+            type_mask,
             "Veg Type Mask (Zone V)",
         )
         plotting.np_arr(
@@ -72,7 +80,7 @@ def zone_v(
             "Condition 2 (GS Inundation > 20%)",
         )
         plotting.np_arr(
-            np.where(combined_mask, veg_type, np.nan),
+            np.where(combined_mask, veg_type_input, np.nan),
             "Combined Mask (All Conditions Met)",
         )
         plotting.np_arr(
@@ -81,12 +89,32 @@ def zone_v(
         )
 
     logger.info("Finished Zone V transitions.")
+
+    # only return pixels that started as Zone V
+    # by inverting the original mask
+    veg_type[~type_mask] = np.nan
     return veg_type
 
 
-def zone_iv(arg1, arg2, arg3) -> np.ndarray:
-    """ """
-    return NotImplementedError
+def zone_iv(
+    logger,
+    veg_type: np.ndarray,
+    water_depth: xr.Dataset,
+    date: datetime.date,
+    plot: bool = False,
+) -> np.ndarray:
+    """
+    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <20%
+    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation ≥ 35%
+
+    Zone IV: 16
+    Zone III: 17
+    """
+    veg_type_input = veg_type.copy()
+    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+
+    # Subset for veg type Zone IV (value 16)
+    type_mask = veg_type == 16
 
 
 def zone_iii(arg1, arg2, arg3) -> np.ndarray:

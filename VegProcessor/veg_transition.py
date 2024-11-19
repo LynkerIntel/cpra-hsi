@@ -123,34 +123,24 @@ class VegTransition:
         self.water_depth = self._get_depth()
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type_v = veg_logic.zone_v(
+        self.veg_type_1 = veg_logic.zone_v(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
             plot=True,
         )
-        # self.veg_type_iv = veg_logic.zone_iv(
-        #     self._logger,
-        #     self.veg_type_in,
-        #     self.water_depth,
-        #     date,
-        #     plot=True,
-        # )
+        self.veg_type_2 = veg_logic.zone_iv(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            date,
+            plot=True,
+        )
 
         # etc, etc, etc
 
         # rebuild full array,from 999 to check for unhandled conditions
-
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
-        # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # combine all zones into new timestep
         # must first ensure that there are no overlapping
@@ -159,7 +149,8 @@ class VegTransition:
 
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
-        self._calculate_maturity(veg_type_in)
+        # CURRENTLY HAS BUG
+        # self._calculate_maturity(veg_type_in)
 
         # Save all state variable arrays
 

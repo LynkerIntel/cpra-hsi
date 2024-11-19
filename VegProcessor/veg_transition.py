@@ -12,6 +12,7 @@ from datetime import datetime
 
 import veg_logic
 import hydro_logic
+import plotting
 
 
 class VegTransition:
@@ -83,7 +84,7 @@ class VegTransition:
         # self.load_salinity()
 
         self.wse = None
-        self.maturity = np.ones_like(self.dem)  # should maturity iterate from 0?
+        self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
         self.water_depth = None
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -111,7 +112,7 @@ class VegTransition:
 
     def step(self, date):
         """Advance the transition model by one step."""
-        self._logger.info("starting timestap: %s", date)
+        self._logger.info("starting timestep: %s", date)
         wy = date.year
         # copy existing veg types
         veg_type_in = self.veg_type
@@ -122,13 +123,25 @@ class VegTransition:
         self.water_depth = self._get_depth()
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type = veg_logic.zone_v(
+        self.veg_type_v = veg_logic.zone_v(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
             plot=True,
         )
+        # self.veg_type_iv = veg_logic.zone_iv(
+        #     self._logger,
+        #     self.veg_type_in,
+        #     self.water_depth,
+        #     date,
+        #     plot=True,
+        # )
+
+        # etc, etc, etc
+
+        # rebuild full array,from 999 to check for unhandled conditions
+
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
 
         # self.veg_type = veg_logic.zone_iv(self.veg_type, self.depth)
@@ -183,57 +196,6 @@ class VegTransition:
         self._logger.info("Loaded DEM")
         # TODO: where is extra dim coming from? i.e. da[0] is needed!
         return da[0].to_numpy()
-
-    # def _load_wse_timestep(
-    #     self,
-    #     date: str,
-    #     variable_name: str = "WSE_MEAN",
-    #     date_format: str = "%Y_%m_%d",
-    # ) -> Optional[xr.DataArray]:
-    #     """
-    #     Load a single timestep from a folder of .tif files as an xarray.DataArray.
-
-    #     The .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
-    #     followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
-    #     locate the file corresponding to the specified date and load it as a DataArray.
-
-    #     Parameters
-    #     ----------
-    #     folder_path : str
-    #         Path to the folder containing the .tif files.
-    #     date : str
-    #         The date for the timestep to load, formatted according to `date_format`.
-    #     variable_name : str, optional
-    #         The name of the variable to use in the DataArray.
-    #     date_format : str, optional
-    #         Format string for parsing dates from file names, default is "%Y_%m_%d".
-    #         Adjust based on your file naming convention.
-
-    #     Returns
-    #     -------
-    #     xr.DataArray or None
-    #         An xarray.DataArray with the raster data for the specified timestep,
-    #         or None if the file is not found.
-    #     """
-    #     # Format the date into the specified date_format to match the file names
-    #     date_str = pd.to_datetime(date).strftime(date_format)
-
-    #     # Construct the expected filename pattern
-    #     expected_filename = f"{variable_name}_{date_str}.tif"
-    #     file_path = os.path.join(self.wse_directory_path, expected_filename)
-
-    #     # Check if the file exists
-    #     if not os.path.exists(file_path):
-    #         self._logger.info("File not found: %s", file_path)
-    #         return None
-
-    #     # Load the .tif file as a DataArray
-    #     da = rioxarray.open_rasterio(file_path).squeeze(dim="band")
-
-    #     # Rename the variable and add the time coordinate
-    #     da = da.rename(variable_name).expand_dims(time=[pd.to_datetime(date)])
-
-    #     return da
 
     def _load_wse_wy(
         self,
@@ -312,6 +274,7 @@ class VegTransition:
             {list(xr_dataset.data_vars.keys())[0]: variable_name}
         )
 
+        self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
         return xr_dataset
 
     def _reproject_match_to_dem(
@@ -340,7 +303,7 @@ class VegTransition:
         +1 maturity for pixels without vegetation changes.
         """
         # TODO: Need to create mask for only Zone II to V pixels.
-        self._logger.warning("need to mask to zone II to V pixels.")
+        # self._logger.warning("need to mask to zone II to V pixels.")
 
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
@@ -370,7 +333,7 @@ class VegTransition:
         da = da.squeeze(drop="band")
 
         da = self._reproject_match_to_dem(da)
-
+        self._logger.info("Loaded initial vegetation raster")
         return da.to_numpy()
 
     def _load_veg_keys(self) -> pd.DataFrame:
@@ -378,6 +341,7 @@ class VegTransition:
         dbf = gpd.read_file(self.veg_keys_path)
         # fix dtype
         dbf["Value"] = dbf["Value"].astype(int)
+        self._logger.info("Loaded Vegetation Keys")
         return dbf
 
     def _load_salinity(self):

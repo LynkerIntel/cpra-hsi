@@ -2,22 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# def np_arr(arr, title):
-#     """
-#     Plot 2D numpy arrays
-#     """
-#     n_valid = np.sum(~np.isnan(arr))
-
-#     plt.imshow(arr, cmap="viridis")
-#     # plt.title(title)
-#     # not a type (title hacking)
-#     plt.suptitle(title, fontsize=12, y=1)
-#     plt.title(f"Count of non-nan elements: {n_valid}", fontsize=8)
-
-#     plt.colorbar()
-#     plt.show()
-
-
 def np_arr(arr, title):
     """
     Plot 2D numpy arrays and their histogram using fixed bins (2-26).
@@ -31,8 +15,20 @@ def np_arr(arr, title):
     # Create a figure with two subplots
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
+    # Check unique values in the array
+    unique_values = np.unique(arr[~np.isnan(arr)])
+
+    # Determine colormap and scaling
+    if len(unique_values) == 1:
+        cmap = "gray"  # Use black (grayscale) colormap
+        unique_value = unique_values[0]
+        vmin, vmax = unique_value, unique_value
+    else:
+        cmap = "viridis"
+        vmin, vmax = None, None  # Default scaling
+
     # Plot the 2D array
-    im = axes[0].imshow(arr, cmap="viridis")
+    im = axes[0].imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
     axes[0].set_title(f"{title}\nCount of non-NaN elements: {n_valid}", fontsize=10)
     fig.colorbar(im, ax=axes[0], orientation="vertical")
 
@@ -50,12 +46,12 @@ def np_arr(arr, title):
         axes[1].set_title("Histogram (Empty for Boolean Arrays)", fontsize=10)
         axes[1].axis("off")
     else:
-        # Use fixed bins from 2 to 26
+        # Use fixed bins from 2 to 26, corresponding to vegetation types
         flattened = arr[~np.isnan(arr)].flatten()  # Ignore NaN values
         bins = np.arange(2, 27)  # Integers from 2 to 26
         axes[1].hist(flattened, bins=bins, color="blue", alpha=0.7, align="left")
         axes[1].set_title("Histogram of Array Values", fontsize=10)
-        axes[1].set_xlabel("Value")
+        axes[1].set_xlabel("Vegetation Type")
         axes[1].set_ylabel("Frequency")
         axes[1].set_xticks(bins[:-1])  # Align x-axis ticks with bin centers
 

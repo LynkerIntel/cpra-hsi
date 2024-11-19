@@ -21,6 +21,9 @@ def zone_v(
     Zone V = 15
     Zone IV = 16 (valid transition)
 
+    `to_numpy()` is used after xarray operations in order to stack and combined masks as
+    np.ndarrays.
+
     Params:
         - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
@@ -40,9 +43,9 @@ def zone_v(
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
 
-    # Condition 1: MAR, APR, MAY inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-05"))
-    condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time")
+    # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0
+    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation > 20%
     filtered_2 = water_depth.sel(
@@ -50,12 +53,10 @@ def zone_v(
     )
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = condition_2_pct > 0.2
+    condition_2 = (condition_2_pct > 0.2).to_numpy()
 
-    transition_mask = np.logical_and(condition_1, condition_2)
-    combined_mask = np.logical_and(type_mask, transition_mask)
-
-    assert transition_mask.shape == combined_mask.shape == veg_type_input.shape
+    stacked_masks = np.stack((type_mask, condition_1, condition_2))
+    combined_mask = np.logical_and.reduce(stacked_masks)
 
     # apply transition
     veg_type[combined_mask] = 16
@@ -115,6 +116,21 @@ def zone_iv(
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
+
+    # Condition 1: MAR, APR, MAY inundation depth <= 0
+    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time")
+
+    # Condition 2: Growing Season (GS) inundation > 20%
+    filtered_2 = water_depth.sel(
+        time=slice(growing_season["start"], growing_season["end"])
+    )
+    # get pct duration of inundation (i.e. depth > 0)
+    # Note: this assumes time is serially complete
+    condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
+    condition_2 = condition_2_pct < 0.2
+
+    return arr
 
 
 def zone_iii(arg1, arg2, arg3) -> np.ndarray:

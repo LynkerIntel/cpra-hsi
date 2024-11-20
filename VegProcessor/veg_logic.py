@@ -49,12 +49,11 @@ def zone_v(
 
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
-    # Set other veg types to nan
-    # veg_type[~type_mask] = np.nan
-    # veg_type_input[~type_mask] = np.nan
+
+    # these should be combined eventually
     veg_type = np.where(type_mask, veg_type, np.nan)
-    nan_count = nan_count = np.sum(np.isnan(veg_type))
-    print(f"input nan count: {nan_count}")
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
@@ -85,8 +84,8 @@ def zone_v(
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
-    nan_count = nan_count = np.sum(np.isnan(veg_type))
-    print(f"output nan count: {nan_count}")
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
 
     if plot:
         # this might be cleaned up or simplified.
@@ -515,7 +514,7 @@ def zone_ii(
 
     # update valid transition types
     veg_type[combined_mask_iii] = 17
-    veg_type[combined_mask_fresh_shrub] = 19  # broken
+    veg_type[combined_mask_fresh_shrub] = 19
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
@@ -725,4 +724,185 @@ def fresh_shrub(
         )
 
     logger.info("Finished transitions with input type: Fresh Shrub")
+    return veg_type
+
+
+@qc_output
+def fresh_shrub(
+    logger,
+    veg_type: np.ndarray,
+    water_depth: xr.Dataset,
+    salinity: np.ndarray,
+    date: datetime.date,
+    plot: bool = False,
+) -> np.ndarray:
+    """Calculate transition for pixels starting as Fresh Marsh
+
+
+    Condition_1: GS Inundation == 100% TIME
+    Condition_2: mean GS depth > 20cm
+    Condition_3: mean ANNUAL salinity >= 2ppt
+    Condition_4: APR:SEP inundation < 30% TIME
+    Condition_5: MAR, APR, MAY, JUNE inundation <= 0
+    Condition_6: ANNUAL inundation > 80% TIME
+
+    Zone IV: 16
+    Zone III: 17
+    Zone II: 18
+    Fresh Shrub: 19
+    Fresh Marsh: 20
+
+
+    Params:
+        - logger: pass main logger to this function
+        - veg_type (np.ndarray): array of current vegetation types.
+        - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
+            created from water surface elevation and the domain DEM.
+        - salinity (np.ndarray): array of salinity, from HH model OR defaults.
+        - date (datetime.date): Date to derive year for filtering.
+        - plot (bool): If True, plots the array before and after transformation.
+
+    Returns:
+        - np.ndarray: Modified vegetation type array with updated transitions
+            for pixels starting as Fresh Marsh
+    """
+    logger.info("Starting transitions with input type: Fresh Shrub")
+    description = "Input Veg Type: Fresh Shrub"
+    # clone input
+    veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
+    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+
+    # Subset for veg type Zone II (value 18)
+    type_mask = veg_type == 19
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type_input = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
+
+    # Condition_1: GS Inundation == 100% TIME
+    filtered_1 = water_depth.sel(
+        time=slice(growing_season["start"], growing_season["end"])
+    )
+    condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
+    condition_1 = (condition_1_pct == 1).to_numpy()
+
+    # Condition_2: MEAN GS depth > 20cm
+    condition_2 = (filtered_1["WSE_MEAN"].mean(dim="time") > 0.2).to_numpy()
+
+    # Condition_3: mean ANNUAL salinity >= 2ppt
+    # TODO: when monthly inputs are available, this will need
+    # to accept monthly values for defaults and model output
+    condition_3 = salinity >= 2
+
+    # Condition_4: APR:SEP inundation < 30% TIME
+    filtered_2 = water_depth.sel(time=slice(f"{date.year}-04", f"{date.year}-09"))
+    condition_4_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
+    condition_4 = (condition_4_pct >= 0.4).to_numpy()
+
+    # Condition_5: MAR, APR, MAY, JUNE inundation <= 0
+    filtered_3 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    condition_5 = (filtered_3["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+
+    # Condition_6: ANNUAL inundation > 80% TIME
+    condition_6_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    condition_6 = (condition_6_pct > 0.8).to_numpy()
+
+    # get pixels that meet Water criteria
+    # Use logical AND to find locations where all arrays are True
+    stacked_mask_water = np.stack((condition_1, condition_2))
+    combined_mask_water = np.logical_and.reduce(stacked_mask_water)
+
+    # get pixels that meet Intermediate Marsh criteria
+    stacked_masks_intermediate_marsh = np.stack(
+        (
+            ~combined_mask_water,
+            condition_3,
+        )
+    )
+    combined_mask_intermediate_marsh = np.logical_and.reduce(
+        stacked_masks_intermediate_marsh
+    )
+
+    # get pixels that meet Fresh Shrub criteria
+    stacked_masks_fresh_shrub = np.stack(
+        (
+            ~combined_mask_water,
+            ~combined_mask_intermediate_marsh,
+            condition_4,
+        )
+    )
+    combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
+
+    # get pixels that meet Zone II criteria
+    stacked_masks_zone_ii = np.stack(
+        (
+            ~combined_mask_water,
+            ~combined_mask_intermediate_marsh,
+            ~combined_mask_fresh_shrub,
+            condition_5,
+            condition_6,
+        )
+    )
+    combined_mask_zone_ii = np.logical_and.reduce(stacked_masks_zone_ii)
+
+    # update valid transition types
+    veg_type[combined_mask_water] = 26
+    veg_type[combined_mask_intermediate_marsh] = 21
+    veg_type[combined_mask_fresh_shrub] = 19
+    veg_type[combined_mask_zone_ii] = 18
+
+    # reapply mask, because depth conditions don't include type
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
+
+    # if plot:
+    # # plotting code should be careful to use
+    # # veg_type_input, when showing the input
+    # # array, and veg_type, when showing the
+    # # output array
+    # plotting.np_arr(
+    #     veg_type_input,
+    #     "Input - Fresh Shrub",
+    #     # description,
+    # )
+    # plotting.np_arr(
+    #     type_mask,
+    #     "Veg Type Mask (Fresh Shrub)",
+    #     # description,
+    # )
+    # plotting.np_arr(
+    #     np.where(condition_1, veg_type_input, np.nan),
+    #     "Condition 1: inundation depth <= 0",
+    #     description,
+    # )
+    # plotting.np_arr(
+    #     np.where(condition_2, veg_type_input, np.nan),
+    #     "Condition 2: Annual inundation >= 80% TIME",
+    #     description,
+    # )
+    # plotting.np_arr(
+    #     np.where(condition_3, veg_type_input, np.nan),
+    #     "Condition 3: Growing Season (GS) inundation >= 40%",
+    #     description,
+    # )
+    # plotting.np_arr(
+    #     np.where(combined_mask_ii, veg_type_input, np.nan),
+    #     "Combined Mask (All Conditions Met) -> Zone II",
+    #     description,
+    # )
+    # plotting.np_arr(
+    #     np.where(combined_mask_fresh_marsh, veg_type_input, np.nan),
+    #     "Combined Mask (All Conditions Met) -> Fresh Marsh",
+    #     description,
+    # )
+    # plotting.np_arr(
+    #     veg_type,
+    #     "Output - Updated Veg Types",
+    #     description,
+    # )
+
+    logger.info("Finished transitions with input type: Fresh Marsh")
     return veg_type

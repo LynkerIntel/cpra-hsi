@@ -164,7 +164,14 @@ class VegTransition:
             date,
             # plot=True,
         )
-
+        self.veg_type_6 = veg_logic.fresh_marsh(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            self.salinity,
+            date,
+            # plot=True,
+        )
         # etc, etc, etc
 
         # rebuild full array,from 999 to check for unhandled conditions

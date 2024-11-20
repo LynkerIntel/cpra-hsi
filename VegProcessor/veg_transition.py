@@ -137,6 +137,20 @@ class VegTransition:
             date,
             plot=True,
         )
+        self.veg_type_3 = veg_logic.zone_iii(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            date,
+            plot=True,
+        )
+        self.veg_type_4 = veg_logic.zone_ii(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            date,
+            plot=True,
+        )
 
         # etc, etc, etc
 
@@ -284,7 +298,7 @@ class VegTransition:
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
-        TODO: update to work for all timesteps in Dataset
+        TODO: check units !
         """
         self._logger.info("Creating depth")
         return self.wse - self.dem

@@ -728,7 +728,7 @@ def fresh_shrub(
 
 
 @qc_output
-def fresh_shrub(
+def fresh_marsh(
     logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,

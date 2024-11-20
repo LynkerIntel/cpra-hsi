@@ -71,3 +71,26 @@ def find_nan_to_true_values(array1, array2, lookup_array):
     values = lookup_array[indices]
 
     return values
+
+
+def has_overlapping_non_nan(stack):
+    """
+    Check if a stack of 2D arrays has any overlapping non-NaN values.
+
+    Parameters:
+    - stack (np.ndarray): A 3D NumPy array where each "layer" is a 2D array.
+
+    Returns:
+    - bool: True if there are overlapping non-NaN values, False otherwise.
+    """
+    if stack.ndim != 3:
+        raise ValueError("Input must be a 3D array (stack of 2D arrays).")
+
+    # Create a mask where values are not NaN
+    non_nan_mask = ~np.isnan(stack)
+
+    # Sum the mask along the stacking axis (axis=0)
+    overlap_count = np.sum(non_nan_mask, axis=0)
+
+    # Check if any position has overlap (count > 1)
+    return np.any(overlap_count > 1)

@@ -13,6 +13,7 @@ from datetime import datetime
 import veg_logic
 import hydro_logic
 import plotting
+import testing
 
 
 class VegTransition:
@@ -81,12 +82,11 @@ class VegTransition:
         self.veg_keys = self._load_veg_keys()
 
         # load raster if provided, default values if not
-        # self.load_salinity()
+        self._load_salinity()
 
         self.wse = None
         self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
         self.water_depth = None
-        self.salinity = None
 
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -172,10 +172,20 @@ class VegTransition:
             date,
             # plot=True,
         )
-        # etc, etc, etc
 
         # rebuild full array,from 999 to check for unhandled conditions
+        stacked_veg = np.stack(
+            (
+                self.veg_type_1,
+                self.veg_type_2,
+                self.veg_type_3,
+                self.veg_type_4,
+                self.veg_type_5,
+                self.veg_type_6,
+            )
+        )
 
+        testing.has_overlapping_non_nan(stacked_veg)
         # combine all zones into new timestep
         # must first ensure that there are no overlapping
         # values. Need a good QC method here.

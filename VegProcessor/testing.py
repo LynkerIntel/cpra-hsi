@@ -1,15 +1,16 @@
 import numpy as np
 import functools
+from typing import Callable, List, Tuple
 
 
-def qc_output(func):
+def qc_output(func: Callable) -> Callable:
     """
     Decorator to check if the output array differs from the input array.
     Logs a message if no changes are detected.
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: np.ndarray, **kwargs) -> np.ndarray:
         # Expecting the veg_type array to be the second argument (args[1])
         veg_type_input = args[1].copy()  # Copy the input array to compare later
 
@@ -25,8 +26,13 @@ def qc_output(func):
     return wrapper
 
 
-def check_mask_overlap(masks):
-    """Checks if independent masks have overlapping True pixels."""
+def check_mask_overlap(masks: List[np.ndarray]) -> None:
+    """
+    Checks if independent masks have overlapping True pixels.
+
+    Parameters:
+    - masks: List of 2D NumPy boolean arrays to check for overlap.
+    """
     # Stack arrays and test for overlap
     qc_stacked = np.stack(masks)
 
@@ -38,18 +44,21 @@ def check_mask_overlap(masks):
         )
 
 
-def find_nan_to_true_values(array1, array2, lookup_array):
+def find_nan_to_true_values(
+    array1: np.ndarray, array2: np.ndarray, lookup_array: np.ndarray
+) -> Tuple[np.ndarray, Tuple[np.ndarray, ...]]:
     """
     Finds the values in a lookup array at locations where array1 changes from NaN to True in array2.
 
     Parameters:
-    - array1: NumPy array (can contain NaN values)
-    - array2: NumPy boolean array (should be of the same shape as array1)
-    - lookup_array: NumPy array of the same shape as array1 and array2 to look up values
+    - array1: NumPy array (can contain NaN values).
+    - array2: NumPy boolean array (should be of the same shape as array1).
+    - lookup_array: NumPy array of the same shape as array1 and array2 to look up values.
 
     Returns:
-    - values: Array of values from lookup_array at the identified locations
-    - indices: Tuple of arrays representing the indices where the change occurs
+    - Tuple containing:
+      - Array of values from lookup_array at the identified locations.
+      - Indices tuple of arrays representing the indices where the change occurs.
     """
     # Ensure the arrays have the same shape
     if not (array1.shape == array2.shape == lookup_array.shape):
@@ -70,10 +79,10 @@ def find_nan_to_true_values(array1, array2, lookup_array):
     # Use the indices to look up values in the lookup_array
     values = lookup_array[indices]
 
-    return values
+    return values, indices
 
 
-def has_overlapping_non_nan(stack):
+def has_overlapping_non_nan(stack: np.ndarray) -> np.bool:
     """
     Check if a stack of 2D arrays has any overlapping non-NaN values.
 

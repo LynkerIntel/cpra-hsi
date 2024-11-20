@@ -3,7 +3,9 @@ import xarray as xr
 import datetime
 
 import plotting
-from testing import qc_output
+from testing import qc_output, find_nan_to_true_values
+
+import matplotlib.pyplot as plt
 
 
 @qc_output
@@ -40,12 +42,19 @@ def zone_v(
     """
     logger.info("Starting transitions with input type: Zone V")
     description = "Input Veg Type: Zone V"
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
 
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
+    # Set other veg types to nan
+    # veg_type[~type_mask] = np.nan
+    # veg_type_input[~type_mask] = np.nan
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    nan_count = nan_count = np.sum(np.isnan(veg_type))
+    print(f"input nan count: {nan_count}")
 
     # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
@@ -62,8 +71,22 @@ def zone_v(
     stacked_masks = np.stack((type_mask, condition_1, condition_2))
     combined_mask = np.logical_and.reduce(stacked_masks)
 
+    if np.logical_and(np.isnan(veg_type), combined_mask).any():
+        logger.warning(
+            "Logical error: Pixels that were masked by the veg_type mask "
+            "have been identified as True in the combined mask. "
+            "Check inputs."
+        )
+
     # apply transition
     veg_type[combined_mask] = 16
+    # reapply mask, because depth conditions don't include type
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    logger.info("Output veg types: %s", np.unique(veg_type))
+
+    nan_count = nan_count = np.sum(np.isnan(veg_type))
+    print(f"output nan count: {nan_count}")
 
     if plot:
         # this might be cleaned up or simplified.
@@ -103,10 +126,6 @@ def zone_v(
         )
 
     logger.info("Finished transitions with input type: Zone V")
-
-    # only return pixels that started as Zone V
-    # by inverting the original mask
-    veg_type[~type_mask] = np.nan
     return veg_type
 
 
@@ -146,6 +165,14 @@ def zone_iv(
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
+    # Set other veg types to nan
+    # veg_type[~type_mask] = 999
+    # veg_type_input[~type_mask] = 999
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type_input = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
@@ -165,11 +192,11 @@ def zone_iv(
     condition_3 = (condition_3_pct >= 0.35).to_numpy()
 
     # get pixels that meet zone v criteria
-    stacked_masks_v = np.stack((type_mask, condition_1, condition_2))
+    stacked_masks_v = np.stack((condition_1, condition_2))
     combined_mask_v = np.logical_and.reduce(stacked_masks_v)
 
     # get pixels that meet zone III criteria
-    stacked_masks_iii = np.stack((type_mask, condition_1, condition_3))
+    stacked_masks_iii = np.stack((~combined_mask_v, condition_1, condition_3))
     combined_mask_iii = np.logical_and.reduce(stacked_masks_iii)
 
     # ensure there is no overlap between
@@ -184,6 +211,13 @@ def zone_iv(
     # update valid transition types
     veg_type[combined_mask_v] = 15
     veg_type[combined_mask_iii] = 17
+    # reapply mask, because depth conditions don't include type.
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
+
+    logger.info("Output veg types: %s", np.unique(veg_type))
 
     if plot:
         # plotting code should be careful to use
@@ -273,12 +307,15 @@ def zone_iii(
 
     # Subset for veg type Zone III (value 17)
     type_mask = veg_type == 17
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type_input = np.where(type_mask, veg_type, np.nan)
 
-    # Condition 1: MAR, APR, MAY inundation % TIME <= 0
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
+
+    # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
-    # TODO: spec indicates <= 0, but time cannot be less than 0%
-    # Need to verify if this is supposed to be TIME or DEPTH
     condition_1 = (condition_1_pct == 0).to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 15%
@@ -295,11 +332,11 @@ def zone_iii(
     condition_3 = (condition_3_pct >= 0.8).to_numpy()
 
     # get pixels that meet zone iv criteria
-    stacked_masks_iv = np.stack((type_mask, condition_1, condition_2))
+    stacked_masks_iv = np.stack((condition_1, condition_2))
     combined_mask_iv = np.logical_and.reduce(stacked_masks_iv)
 
     # get pixels that meet zone II criteria
-    stacked_masks_ii = np.stack((type_mask, condition_1, condition_3))
+    stacked_masks_ii = np.stack((~combined_mask_iv, condition_1, condition_3))
     combined_mask_ii = np.logical_and.reduce(stacked_masks_ii)
 
     # ensure there is no overlap between
@@ -314,6 +351,13 @@ def zone_iii(
     # update valid transition types
     veg_type[combined_mask_iv] = 16
     veg_type[combined_mask_ii] = 18
+    # reapply mask, because depth conditions don't include type
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    logger.info("Output veg types: %s", np.unique(veg_type))
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
 
     if plot:
         # plotting code should be careful to use
@@ -404,6 +448,11 @@ def zone_ii(
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 18
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type_input = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
@@ -431,15 +480,22 @@ def zone_ii(
     condition_5 = (water_depth["WSE_MEAN"] <= 0.1).all(dim="time").to_numpy()
 
     # get pixels that meet zone iii criteria
-    stacked_masks_iii = np.stack((type_mask, condition_1, condition_2))
+    stacked_masks_iii = np.stack((condition_1, condition_2))
     combined_mask_iii = np.logical_and.reduce(stacked_masks_iii)
 
     # get pixels that meet fresh shrub criteria
-    stacked_masks_fresh_shrub = np.stack((type_mask, condition_3))
+    stacked_masks_fresh_shrub = np.stack((~combined_mask_iii, condition_3))
     combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
 
     # get pixels that meet fresh marsh criteria
-    stacked_masks_fresh_marsh = np.stack((type_mask, condition_4, condition_5))
+    stacked_masks_fresh_marsh = np.stack(
+        (
+            ~combined_mask_iii,
+            ~combined_mask_fresh_shrub,
+            condition_4,
+            condition_5,
+        )
+    )
     combined_mask_fresh_marsh = np.logical_and.reduce(stacked_masks_fresh_marsh)
 
     # Stack arrays and test for overlap
@@ -459,8 +515,15 @@ def zone_ii(
 
     # update valid transition types
     veg_type[combined_mask_iii] = 17
-    veg_type[combined_mask_fresh_shrub] = 19
+    veg_type[combined_mask_fresh_shrub] = 19  # broken
     veg_type[combined_mask_fresh_marsh] = 20
+    # reapply mask, because depth conditions don't include type
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    logger.info("Output veg types: %s", np.unique(veg_type))
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
 
     if plot:
         # plotting code should be careful to use
@@ -558,6 +621,11 @@ def fresh_shrub(
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 19
+    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type_input = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
@@ -578,11 +646,13 @@ def fresh_shrub(
     condition_3 = (condition_3_pct >= 0.4).to_numpy()
 
     # get pixels that meet zone ii criteria
-    stacked_masks_ii = np.stack((type_mask, condition_1, condition_2))
+    # Use logical AND to find locations where all arrays are True
+    stacked_masks_ii = np.stack((condition_1, condition_2))
     combined_mask_ii = np.logical_and.reduce(stacked_masks_ii)
 
     # get pixels that meet fresh marsh criteria
-    stacked_masks_fresh_marsh = np.stack((type_mask, condition_3))
+    # inverse mask to ensure no overlap
+    stacked_masks_fresh_marsh = np.stack((~combined_mask_ii, condition_3))
     combined_mask_fresh_marsh = np.logical_and.reduce(stacked_masks_fresh_marsh)
 
     # Stack arrays and test for overlap
@@ -602,6 +672,11 @@ def fresh_shrub(
     # update valid transition types
     veg_type[combined_mask_ii] = 18
     veg_type[combined_mask_fresh_marsh] = 20
+    # reapply mask, because depth conditions don't include type
+    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type))
+    logger.info("Output NaN count: %d", nan_count)
 
     if plot:
         # plotting code should be careful to use

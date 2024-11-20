@@ -122,34 +122,45 @@ class VegTransition:
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
+        # temporary bug fixing subset
+        # self.veg_type = self.veg_type[200:275, 200:275]
+        # self.water_depth = self.water_depth.isel(x=slice(200, 275), y=slice(200, 275))
+
         # veg_type array is iteratively updated, for each zone
         self.veg_type_1 = veg_logic.zone_v(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_2 = veg_logic.zone_iv(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_3 = veg_logic.zone_iii(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_4 = veg_logic.zone_ii(
             self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            plot=True,
+            # plot=True,
+        )
+        self.veg_type_5 = veg_logic.fresh_shrub(
+            self._logger,
+            self.veg_type,
+            self.water_depth,
+            date,
+            # plot=True,
         )
 
         # etc, etc, etc

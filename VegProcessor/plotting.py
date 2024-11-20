@@ -31,7 +31,7 @@ def np_arr(arr, title, veg_type_desc=""):
     # Plot the 2D array
     im = axes[0].imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
     axes[0].set_title(
-        f"{title}\n{veg_type_desc}\nCount of non-NaN elements: {n_valid}",
+        f"{title}\n{veg_type_desc}",
         fontsize=10,
     )
     fig.colorbar(im, ax=axes[0], orientation="vertical")

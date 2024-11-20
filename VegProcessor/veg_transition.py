@@ -57,6 +57,9 @@ class VegTransition:
         self.start_date = config["simulation"].get("start_date")
         self.end_date = config["simulation"].get("end_date")
 
+        # output
+        self.output_base_dir = config["output"].get("output_base")
+
         # Pretty-print the configuration
         config_pretty = yaml.dump(config, default_flow_style=False, sort_keys=False)
 
@@ -74,6 +77,9 @@ class VegTransition:
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
+
+        # setup output dir
+        # self.create_output_dirs()
 
         self.dem = self._load_dem()
         # print(self.dem.shape)
@@ -173,7 +179,6 @@ class VegTransition:
             # plot=True,
         )
 
-        # rebuild full array,from 999 to check for unhandled conditions
         stacked_veg = np.stack(
             (
                 self.veg_type_1,
@@ -185,18 +190,19 @@ class VegTransition:
             )
         )
 
-        testing.has_overlapping_non_nan(stacked_veg)
-        # combine all zones into new timestep
-        # must first ensure that there are no overlapping
-        # values. Need a good QC method here.
-        # self.veg_type = self.new_veg_1 + self.new_veg_2
+        if testing.has_overlapping_non_nan(stacked_veg):
+            self._logger.warning("New vegetation stacked array has overlapping values.")
+
+        # combine all zones into new full array
+        self.veg_type = np.nansum(stacked_veg, axis=0)
 
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
         # CURRENTLY HAS BUG
-        # self._calculate_maturity(veg_type_in)
+        self._calculate_maturity(veg_type_in)
 
-        # Save all state variable arrays
+        # serialize state variables: veg_type, maturity, mast %
+        # self.save_state_vars()
 
         # self._logger.debug(
         #     "Time: %.2f, var1: %.2f, var2: %.2f",
@@ -204,8 +210,9 @@ class VegTransition:
         #     self.dummy_var,
         #     self.dummy_var,
         # )
+        self._logger.info("completed timestep: %s", date)
 
-    def run(self, start_date, end_date):
+    def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
         """
@@ -217,8 +224,10 @@ class VegTransition:
             self.start_date,
             self.end_date,
         )
+        simulation_period = pd.date_range(self.start_date, self.end_date, freq="y")
+        self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
-        for timestep in pd.date_range(self.start_date, self.end_date, freq="y"):
+        for timestep in simulation_period:
             self.step(timestep)
 
         self._logger.info("Simulation complete")
@@ -342,7 +351,7 @@ class VegTransition:
 
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
-            raise ValueError("Input arrays must have the same shape.")
+            raise ValueError("Timestep input and output array have different shapes!")
 
         # create a boolean array where True indicates elements are different
         # Use np.isnan to handle NaN values specifically (they don't indicate
@@ -388,3 +397,17 @@ class VegTransition:
         else:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
             self._logger.info("Creating salinity from habitat defaults")
+
+    def create_output_dirs(self):
+        """Create an output location for state variables, model config,
+        input data, and QC plots.
+        """
+        return NotImplemented
+
+    def _save_state_vars(self):
+        """The method will save state variables after each timestep.
+
+        This method should also include the config, input data, and QC plots.
+
+        """
+        return NotImplemented

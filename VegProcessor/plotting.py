@@ -2,13 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def np_arr(arr, title):
+def np_arr(arr, title, veg_type_desc=""):
     """
     Plot 2D numpy arrays and their histogram using fixed bins (2-26).
 
     Parameters:
         arr (np.ndarray): 2D numpy array to be plotted.
         title (str): Title for the plot.
+        veg_type_desc (str): Description of the input vegetation type to be included in the plot title.
     """
     n_valid = np.sum(~np.isnan(arr))
 
@@ -29,7 +30,10 @@ def np_arr(arr, title):
 
     # Plot the 2D array
     im = axes[0].imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
-    axes[0].set_title(f"{title}\nCount of non-NaN elements: {n_valid}", fontsize=10)
+    axes[0].set_title(
+        f"{title}\n{veg_type_desc}\nCount of non-NaN elements: {n_valid}",
+        fontsize=10,
+    )
     fig.colorbar(im, ax=axes[0], orientation="vertical")
 
     # Check if the array is boolean
@@ -50,7 +54,10 @@ def np_arr(arr, title):
         flattened = arr[~np.isnan(arr)].flatten()  # Ignore NaN values
         bins = np.arange(2, 27)  # Integers from 2 to 26
         axes[1].hist(flattened, bins=bins, color="blue", alpha=0.7, align="left")
-        axes[1].set_title("Histogram of Array Values", fontsize=10)
+        axes[1].set_title(
+            f"Histogram of Array Values\n{veg_type_desc}",
+            fontsize=10,
+        )
         axes[1].set_xlabel("Vegetation Type")
         axes[1].set_ylabel("Frequency")
         axes[1].set_xticks(bins[:-1])  # Align x-axis ticks with bin centers

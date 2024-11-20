@@ -772,8 +772,8 @@ def fresh_marsh(
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
 
-    # Subset for veg type Zone II (value 18)
-    type_mask = veg_type == 19
+    # Subset for veg type Fresh Marsh (value 20)
+    type_mask = veg_type == 20
     veg_type = np.where(type_mask, veg_type, np.nan)
     veg_type_input = np.where(type_mask, veg_type, np.nan)
 
@@ -858,51 +858,61 @@ def fresh_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # # plotting code should be careful to use
-    # # veg_type_input, when showing the input
-    # # array, and veg_type, when showing the
-    # # output array
-    # plotting.np_arr(
-    #     veg_type_input,
-    #     "Input - Fresh Shrub",
-    #     # description,
-    # )
-    # plotting.np_arr(
-    #     type_mask,
-    #     "Veg Type Mask (Fresh Shrub)",
-    #     # description,
-    # )
-    # plotting.np_arr(
-    #     np.where(condition_1, veg_type_input, np.nan),
-    #     "Condition 1: inundation depth <= 0",
-    #     description,
-    # )
-    # plotting.np_arr(
-    #     np.where(condition_2, veg_type_input, np.nan),
-    #     "Condition 2: Annual inundation >= 80% TIME",
-    #     description,
-    # )
-    # plotting.np_arr(
-    #     np.where(condition_3, veg_type_input, np.nan),
-    #     "Condition 3: Growing Season (GS) inundation >= 40%",
-    #     description,
-    # )
-    # plotting.np_arr(
-    #     np.where(combined_mask_ii, veg_type_input, np.nan),
-    #     "Combined Mask (All Conditions Met) -> Zone II",
-    #     description,
-    # )
-    # plotting.np_arr(
-    #     np.where(combined_mask_fresh_marsh, veg_type_input, np.nan),
-    #     "Combined Mask (All Conditions Met) -> Fresh Marsh",
-    #     description,
-    # )
-    # plotting.np_arr(
-    #     veg_type,
-    #     "Output - Updated Veg Types",
-    #     description,
-    # )
+    if plot:
+        # plotting code should be careful to use
+        # veg_type_input, when showing the input
+        # array, and veg_type, when showing the
+        # output array
+        plotting.np_arr(
+            veg_type_input,
+            "Input - Fresh Marsh",
+            # description,
+        )
+        plotting.np_arr(
+            type_mask,
+            "Veg Type Mask (Fresh Marsh)",
+            # description,
+        )
+        # plotting.np_arr(
+        #     np.where(condition_1, veg_type_input, np.nan),
+        #     "Condition_1: GS Inundation == 100% TIME",
+        #     description,
+        # )
+        # plotting.np_arr(
+        #     np.where(condition_2, veg_type_input, np.nan),
+        #     "Condition 2: mean GS depth > 20cm",
+        #     description,
+        # )
+        # plotting.np_arr(
+        #     np.where(condition_3, veg_type_input, np.nan),
+        #     "Condition 3: Growing Season (GS) inundation >= 40%",
+        #     description,
+        # )
+        plotting.np_arr(
+            np.where(combined_mask_water, veg_type_input, np.nan),
+            "Combined Mask (All Conditions Met) -> Water",
+            description,
+        )
+        plotting.np_arr(
+            np.where(combined_mask_intermediate_marsh, veg_type_input, np.nan),
+            "Combined Mask (All Conditions Met) -> Intermediate Marsh",
+            description,
+        )
+        plotting.np_arr(
+            np.where(combined_mask_fresh_shrub, veg_type_input, np.nan),
+            "Combined Mask (All Conditions Met) -> Fresh Shrub",
+            description,
+        )
+        plotting.np_arr(
+            np.where(combined_mask_zone_ii, veg_type_input, np.nan),
+            "Combined Mask (All Conditions Met) -> Zone II",
+            description,
+        )
+        plotting.np_arr(
+            veg_type,
+            "Output - Updated Veg Types",
+            description,
+        )
 
     logger.info("Finished transitions with input type: Fresh Marsh")
     return veg_type

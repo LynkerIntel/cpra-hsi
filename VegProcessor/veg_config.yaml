@@ -7,11 +7,13 @@ raster_data:
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   salinity_raster: #str (optional)
 
-initial_conditions:
-  P0: 50 # made up dummy vars
-  H0: 5 # made up dummy vars
+# initial_conditions:
+#   P0: 50 # made up dummy vars
+#   H0: 5 # made up dummy vars
 
 simulation:
-  start_date: "2020-10-01"
-  end_data: "2023-09-30"
+  start_date: "2021-10-01"
+  end_date: "2023-09-30"
 
+output:
+  output_base: "/Users/dillonragar/data/cpra/"

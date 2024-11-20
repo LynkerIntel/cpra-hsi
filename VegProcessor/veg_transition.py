@@ -86,6 +86,8 @@ class VegTransition:
         self.wse = None
         self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
         self.water_depth = None
+        self.salinity = None
+
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
@@ -364,9 +366,8 @@ class VegTransition:
         """Load salinity raster data (if available.)"""
         # raise NotImplementedError
         if self.salinity_path:
-            self.salinity = None
+            # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
-
             self._logger.info("Creating salinity from habitat defaults")

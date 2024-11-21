@@ -6,11 +6,14 @@ import plotting
 from testing import qc_output, find_nan_to_true_values
 
 import matplotlib.pyplot as plt
+import logging
+
+# Configure the logger in VegTransition
+logger = logging.getLogger("VegTransition")
 
 
 @qc_output
 def zone_v(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     date: datetime.date,
@@ -130,7 +133,6 @@ def zone_v(
 
 @qc_output
 def zone_iv(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     date: datetime.date,
@@ -270,7 +272,6 @@ def zone_iv(
 
 @qc_output
 def zone_iii(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     date: datetime.date,
@@ -410,7 +411,6 @@ def zone_iii(
 
 @qc_output
 def zone_ii(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     date: datetime.date,
@@ -581,7 +581,6 @@ def zone_ii(
 
 @qc_output
 def fresh_shrub(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     date: datetime.date,
@@ -729,7 +728,6 @@ def fresh_shrub(
 
 @qc_output
 def fresh_marsh(
-    logger,
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     salinity: np.ndarray,

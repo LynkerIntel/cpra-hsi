@@ -4,6 +4,7 @@ import xarray as xr
 import numpy as np
 import geopandas as gpd
 import pandas as pd
+import shutil
 import glob
 import os
 from typing import Optional
@@ -14,6 +15,7 @@ import veg_logic
 import hydro_logic
 import plotting
 import testing
+import utils
 
 
 class VegTransition:
@@ -43,25 +45,30 @@ class VegTransition:
         - config_file (str): Path to configuration YAML
         - log_level (int): Level of vebosity for logging.
         """
+        self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.config_path = config_file
+
         with open(config_file, "r") as file:
-            config = yaml.safe_load(file)
+            self.config = yaml.safe_load(file)
 
         # fetch raster data paths
-        self.dem_path = config["raster_data"].get("dem_path")
-        self.wse_directory_path = config["raster_data"].get("wse_directory_path")
-        self.veg_base_path = config["raster_data"].get("veg_base_raster")
-        self.veg_keys_path = config["raster_data"].get("veg_keys")
-        self.salinity_path = config["raster_data"].get("salinity_raster")
+        self.dem_path = self.config["raster_data"].get("dem_path")
+        self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
+        self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
         # simulation
-        self.start_date = config["simulation"].get("start_date")
-        self.end_date = config["simulation"].get("end_date")
+        self.start_date = self.config["simulation"].get("start_date")
+        self.end_date = self.config["simulation"].get("end_date")
 
         # output
-        self.output_base_dir = config["output"].get("output_base")
+        self.output_base_dir = self.config["output"].get("output_base")
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(config, default_flow_style=False, sort_keys=False)
+        config_pretty = yaml.dump(
+            self.config, default_flow_style=False, sort_keys=False
+        )
 
         # Time
         # self.time = 0
@@ -73,13 +80,15 @@ class VegTransition:
         self._setup_logger(log_level)
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(config, default_flow_style=False, sort_keys=False)
+        config_pretty = yaml.dump(
+            self.config, default_flow_style=False, sort_keys=False
+        )
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
         # setup output dir
-        # self.create_output_dirs()
+        self.create_output_dirs()
 
         self.dem = self._load_dem()
         # print(self.dem.shape)
@@ -121,6 +130,8 @@ class VegTransition:
     def step(self, date):
         """Advance the transition model by one step."""
         self._logger.info("starting timestep: %s", date)
+        self._create_timestep_dir(date)
+
         wy = date.year
         # copy existing veg types
         veg_type_in = self.veg_type
@@ -136,47 +147,41 @@ class VegTransition:
 
         # veg_type array is iteratively updated, for each zone
         self.veg_type_1 = veg_logic.zone_v(
-            self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            # plot=True,
+            plot=True,
         )
         self.veg_type_2 = veg_logic.zone_iv(
-            self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            # plot=True,
+            plot=True,
         )
         self.veg_type_3 = veg_logic.zone_iii(
-            self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            # plot=True,
+            plot=True,
         )
         self.veg_type_4 = veg_logic.zone_ii(
-            self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            # plot=True,
+            plot=True,
         )
         self.veg_type_5 = veg_logic.fresh_shrub(
-            self._logger,
             self.veg_type,
             self.water_depth,
             date,
-            # plot=True,
+            plot=True,
         )
         self.veg_type_6 = veg_logic.fresh_marsh(
-            self._logger,
             self.veg_type,
             self.water_depth,
             self.salinity,
             date,
-            # plot=True,
+            plot=True,
         )
 
         stacked_veg = np.stack(
@@ -202,14 +207,9 @@ class VegTransition:
         self._calculate_maturity(veg_type_in)
 
         # serialize state variables: veg_type, maturity, mast %
-        # self.save_state_vars()
+        self._logger.info("saving state variables for timestep.")
+        self._save_state_vars(date)
 
-        # self._logger.debug(
-        #     "Time: %.2f, var1: %.2f, var2: %.2f",
-        #     self.time,
-        #     self.dummy_var,
-        #     self.dummy_var,
-        # )
         self._logger.info("completed timestep: %s", date)
 
     def run(self):
@@ -402,12 +402,50 @@ class VegTransition:
         """Create an output location for state variables, model config,
         input data, and QC plots.
         """
-        return NotImplemented
+        output_dir_name = f"VegOut_{self.sim_start_time}"
 
-    def _save_state_vars(self):
+        # Combine base directory and new directory name
+        self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
+        # Create the directory if it does not exist
+        os.makedirs(self.output_dir_path, exist_ok=True)
+        self._logger.info("Created output directory at %s", self.output_dir_path)
+
+        # Create the 'run-input' subdirectory
+        run_input_dir = os.path.join(self.output_dir_path, "run-input")
+        os.makedirs(run_input_dir, exist_ok=True)
+        self._logger.info("Created 'run-input' directory at %s", run_input_dir)
+
+        # Copy the config YAML file to 'run-input'
+        # config_file_path = (
+        #     self.config_file_path
+        # )  # Assuming config_file_path is an attribute
+        if os.path.exists(self.config_path):
+            shutil.copy(self.config_path, run_input_dir)
+            self._logger.info(
+                "Copied config YAML file from %s to %s", self.config_path, run_input_dir
+            )
+        else:
+            self._logger.warning("Config file not found at %s", self.config_path)
+
+    def _save_state_vars(self, date):
         """The method will save state variables after each timestep.
 
         This method should also include the config, input data, and QC plots.
 
         """
-        return NotImplemented
+        template = self.water_depth.isel({"time": 0})  # subset to first month
+        # add pct mast, maturity
+        new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+
+        self.veg_out_ds = utils.create_dataset_from_template(template, new_variables)
+        print(self.veg_out_ds)
+
+        # self.veg_out_ds['veg_type'].to_
+
+    def _create_timestep_dir(self, date):
+        """ """
+        self.timestep_output_dir = os.path.join(
+            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
+        )
+        os.makedirs(self.timestep_output_dir, exist_ok=True)
+        os.makedirs(self.timestep_output_dir + "/figs", exist_ok=True)

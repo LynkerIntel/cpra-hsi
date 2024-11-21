@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 
 # Function to create a new dataset based on a template
@@ -10,7 +11,9 @@ def create_dataset_from_template(template, new_variables):
     Parameters:
         - template (xr.Dataset): The template dataset.
         - new_variables (dict): Dictionary defining new variables.
-          Keys are variable names, values are tuples (dims, data, attrs).
+          Keys are variable names, values are tuples (data, attrs).
+          - `data`: NumPy array of the same shape as the template's data variables.
+          - `attrs`: Metadata for the variable.
 
     Returns:
         - xr.Dataset: A new dataset based on the template.
@@ -22,9 +25,18 @@ def create_dataset_from_template(template, new_variables):
     # Create a new dataset
     new_ds = xr.Dataset(coords=coords)
 
-    # Add new variables
-    for var_name, (dims, data, attrs) in new_variables.items():
-        new_ds[var_name] = xr.DataArray(data, dims=dims, attrs=attrs)
+    # Validate and add new variables
+    for var_name, (data, attrs) in new_variables.items():
+        # Check that the shape matches the template
+        if data.shape != template["WSE_MEAN"].shape:
+            raise ValueError(
+                f"Shape of variable '{var_name}' ({data.shape}) does not match "
+                f"the template shape ({template['WSE_MEAN'].shape})."
+            )
+        # Add the variable
+        new_ds[var_name] = xr.DataArray(
+            data, dims=template["WSE_MEAN"].dims, attrs=attrs
+        )
 
     # Optionally, copy global attributes from the template
     new_ds.attrs = template.attrs
@@ -32,10 +44,10 @@ def create_dataset_from_template(template, new_variables):
     return new_ds
 
 
-# # Define new variables to add
+# # Define new variables to add (NumPy arrays must match the shape of the template)
 # new_variables = {
-#     "precipitation": (("time", "lat", "lon"), np.random.rand(5, 4, 3), {"units": "mm/day"}),
-#     "humidity": (("time", "lat", "lon"), np.random.rand(5, 4, 3), {"units": "%"}),
+#     "precipitation": (np.random.rand(5, 4, 3), {"units": "mm/day"}),
+#     "humidity": (np.random.rand(5, 4, 3), {"units": "%"}),
 # }
 
 # # Create the new dataset

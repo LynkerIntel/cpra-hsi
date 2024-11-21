@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 import datetime
+import os
 
 import plotting
 from testing import qc_output, find_nan_to_true_values
@@ -44,8 +45,13 @@ def zone_v(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Zone V
     """
-    logger.info("Starting transitions with input type: Zone V")
-    description = "Input Veg Type: Zone V"
+    veg_name = "Zone V"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
@@ -163,8 +169,14 @@ def zone_iv(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Zone IV
     """
-    logger.info("Starting transitions with input type: Zone IV")
-    description = "Input Veg Type: Zone IV"
+    veg_name = "Zone IV"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
@@ -299,8 +311,14 @@ def zone_iii(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Zone III
     """
-    logger.info("Starting transitions with input type: Zone III")
-    description = "Input Veg Type: Zone III"
+    veg_name = "Zone III"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
@@ -433,8 +451,14 @@ def zone_ii(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Zone II
     """
-    logger.info("Starting transitions with input type: Zone II")
-    description = "Input Veg Type: Zone II"
+    veg_name = "Zone II"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
@@ -600,8 +624,14 @@ def fresh_shrub(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Fresh Shrub
     """
-    logger.info("Starting transitions with input type: Fresh Shrub")
-    description = "Input Veg Type: Fresh Shrub"
+    veg_name = "Fresh Shrub"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
@@ -749,8 +779,14 @@ def fresh_marsh(
         - np.ndarray: Modified vegetation type array with updated transitions
             for pixels starting as Fresh Marsh
     """
-    logger.info("Starting transitions with input type: Fresh Shrub")
-    description = "Input Veg Type: Fresh Shrub"
+    veg_name = "Fresh Marsh"
+    logger.info("Starting transitions with input type: %s", veg_name)
+    description = f"Input Veg Type: {veg_name}"
+    timestep_output_dir = (
+        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    )
+    os.makedirs(timestep_output_dir, exist_ok=True)
+
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}

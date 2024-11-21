@@ -157,30 +157,35 @@ class VegTransition:
         self.veg_type_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             date,
             plot=True,
         )
         self.veg_type_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             date,
             plot=True,
         )
         self.veg_type_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             date,
             plot=True,
         )
         self.veg_type_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             date,
             plot=True,
         )
         self.veg_type_6 = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             self.salinity,
             date,
             plot=True,

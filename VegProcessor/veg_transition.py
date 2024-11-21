@@ -24,8 +24,9 @@ class VegTransition:
     Vegetation zones are calculated independenlty (slower) for
     better model interperability and quality control.
 
-    two dimensinal np.ndarray are used as default dtype, with xr.Dataset for cases
-    where time series arrays are needed.
+    Notes: two dimensinal np.ndarray are used as default, with xr.Dataset for cases
+    where time series arrays are needed. vegetation numpy arrays are dtype float32,
+    because int types have limited interoperability with the np.nan type, which is needed.
     """
 
     def __init__(self, config_file, log_level=logging.INFO):
@@ -149,6 +150,7 @@ class VegTransition:
         self.veg_type_1 = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
+            self.timestep_output_dir,
             date,
             plot=True,
         )

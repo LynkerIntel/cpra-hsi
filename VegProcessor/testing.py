@@ -26,22 +26,22 @@ def qc_output(func: Callable) -> Callable:
     return wrapper
 
 
-def check_mask_overlap(masks: List[np.ndarray]) -> None:
-    """
-    Checks if independent masks have overlapping True pixels.
+# def check_mask_overlap(masks: List[np.ndarray]) -> None:
+#     """
+#     Checks if independent masks have overlapping True pixels.
 
-    Parameters:
-    - masks: List of 2D NumPy boolean arrays to check for overlap.
-    """
-    # Stack arrays and test for overlap
-    qc_stacked = np.stack(masks)
+#     Parameters:
+#     - masks: List of 2D NumPy boolean arrays to check for overlap.
+#     """
+#     # Stack arrays and test for overlap
+#     qc_stacked = np.stack(masks)
 
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+#     if np.logical_and.reduce(qc_stacked).any():
+#         logger.warning(
+#             "Valid transition pixels have overlap, indicating"
+#             "that some pixels are passing for both veg types"
+#             "but should be either. Check inputs."
+#         )
 
 
 def find_nan_to_true_values(
@@ -103,3 +103,24 @@ def has_overlapping_non_nan(stack: np.ndarray) -> np.bool:
 
     # Check if any position has overlap (count > 1)
     return np.any(overlap_count > 1)
+
+
+def common_true_locations(stack):
+    """
+    Check if any two 2D arrays in a 3D stack have overlapping `True` values.
+
+    Parameters:
+    stack (np.ndarray): A 3D boolean array (a stack of 2D boolean arrays).
+
+    Returns:
+    bool: True if any two 2D arrays in the stack have overlapping `True` values,
+          otherwise False.
+    """
+    if stack.ndim != 3:
+        raise ValueError("Input must be a 3D stack of 2D arrays.")
+
+    # Sum the stack along the first axis (layer-wise summation)
+    overlap_sum = np.sum(stack, axis=0)
+
+    # Check if any position has a value > 1, indicating overlap
+    return np.any(overlap_sum > 1)

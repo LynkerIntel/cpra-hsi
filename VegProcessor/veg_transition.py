@@ -149,10 +149,6 @@ class VegTransition:
             ch.setFormatter(formatter)
             fh.setFormatter(formatter)
 
-            # Add handlers to logger
-            self._logger.addHandler(ch)
-            self._logger.addHandler(fh)
-
         # Add a custom filter to inject the timestep
         filter_instance = _TimestepFilter(self)
         self._logger.addFilter(filter_instance)
@@ -491,12 +487,6 @@ class VegTransition:
 
         self.maturity[diff_mask] += 1
         self._logger.info("Maturity incremented for unchanged veg types")
-
-    def load_landcover(self) -> np.ndarray:
-        """This method will load the landcover dataset, which may
-        be needed?
-        """
-        raise NotImplementedError
 
     def _load_veg_initial_raster(self) -> np.ndarray:
         """This method will load the base veg raster, from which the model will iterate forwards,

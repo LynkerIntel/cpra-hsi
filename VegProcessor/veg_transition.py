@@ -1,5 +1,6 @@
 import logging
 import yaml
+import subprocess
 import xarray as xr
 import numpy as np
 import geopandas as gpd
@@ -87,6 +88,7 @@ class VegTransition:
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
+        self._get_git_commit_hash()
 
         # setup output dir
         self.create_output_dirs()
@@ -140,6 +142,24 @@ class VegTransition:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
+
+    def _get_git_commit_hash(self):
+        """Retrieve the current Git commit hash for the repository."""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=os.path.dirname(
+                    self.config_path
+                ),  # Ensure it's run in the repo directory
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            result = result.stdout.strip()
+            self._logger.info(f"Model code version from git: {result}")
+        except subprocess.CalledProcessError as e:
+            self._logger.warning("Unable to fetch Git commit hash: %s", e)
+            return "unknown"
 
     def step(self, date):
         """Advance the transition model by one step."""

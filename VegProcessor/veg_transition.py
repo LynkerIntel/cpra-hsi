@@ -265,7 +265,9 @@ class VegTransition:
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
-        self.veg_type = np.full_like(self.veg_type_1, np.nan)  # Initialize with NaN
+        self.veg_type = np.full_like(
+            self.veg_type_update_1, np.nan
+        )  # Initialize with NaN
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 

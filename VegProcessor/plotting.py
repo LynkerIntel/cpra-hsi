@@ -87,10 +87,13 @@ def np_arr(
 
         # Save the figure
         fig.savefig(file_path, dpi=300)
+        plt.close(plt.gcf())
         logger.info(f"Saved plot to {file_path}")
 
     if showplot:
         plt.show()
+
+    plt.close()
 
 
 def sum_changes(

@@ -9,7 +9,7 @@ import shutil
 import glob
 import os
 from typing import Optional
-import rioxarray
+import rioxarray  # used for tif output
 from datetime import datetime
 
 import veg_logic
@@ -80,6 +80,8 @@ class VegTransition:
 
         # Set up the logger
         self._setup_logger(log_level)
+        self.current_timestep = None  # set in step() method
+        self.timestep_output_dir = None  # set in step() method
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
@@ -130,18 +132,19 @@ class VegTransition:
 
         # Prevent adding multiple handlers if already added
         if not self._logger.handlers:
-            # Create console handler and set level
             ch = logging.StreamHandler()
             ch.setLevel(log_level)
 
             # Create formatter and add it to the handler
             formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
             )
             ch.setFormatter(formatter)
-
-            # Add the handler to the logger
             self._logger.addHandler(ch)
+
+        # filter to inject the timestep
+        filter_instance = _TimestepFilter(self)
+        self._logger.addFilter(filter_instance)
 
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""
@@ -157,12 +160,15 @@ class VegTransition:
             )
             result = result.stdout.strip()
             self._logger.info(f"Model code version from git: {result}")
+
         except subprocess.CalledProcessError as e:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
 
     def step(self, date):
         """Advance the transition model by one step."""
+        self.current_timestep = date  # Set the current timestep
+
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
@@ -316,7 +322,6 @@ class VegTransition:
 
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
-        # CURRENTLY HAS BUG
         self._calculate_maturity(veg_type_in)
 
         # serialize state variables: veg_type, maturity, mast %
@@ -324,6 +329,7 @@ class VegTransition:
         self._save_state_vars(date)
 
         self._logger.info("completed timestep: %s", date)
+        self.current_timestep = None
 
     def run(self):
         """
@@ -337,7 +343,7 @@ class VegTransition:
             self.start_date,
             self.end_date,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="y")
+        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS")
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
         for timestep in simulation_period:
@@ -565,3 +571,23 @@ class VegTransition:
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir + "/figs", exist_ok=True)
+
+
+class _TimestepFilter(logging.Filter):
+    """A filter to inject the current timestep into log records.
+
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True

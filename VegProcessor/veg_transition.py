@@ -149,10 +149,6 @@ class VegTransition:
             ch.setFormatter(formatter)
             fh.setFormatter(formatter)
 
-            # Add handlers to logger
-            self._logger.addHandler(ch)
-            self._logger.addHandler(fh)
-
         # Add a custom filter to inject the timestep
         filter_instance = _TimestepFilter(self)
         self._logger.addFilter(filter_instance)

@@ -1,5 +1,6 @@
 import logging
 import yaml
+import subprocess
 import xarray as xr
 import numpy as np
 import geopandas as gpd
@@ -8,7 +9,7 @@ import shutil
 import glob
 import os
 from typing import Optional
-import rioxarray
+import rioxarray  # used for tif output
 from datetime import datetime
 
 import veg_logic
@@ -77,8 +78,10 @@ class VegTransition:
         # Store history for analysis
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
-        # Set up the logger
+        self.create_output_dirs()
         self._setup_logger(log_level)
+        self.current_timestep = None  # set in step() method
+        self.timestep_output_dir = None  # set in step() method
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
@@ -87,9 +90,7 @@ class VegTransition:
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
-
-        # setup output dir
-        self.create_output_dirs()
+        self._get_git_commit_hash()
 
         self.dem = self._load_dem()
         # print(self.dem.shape)
@@ -128,21 +129,57 @@ class VegTransition:
 
         # Prevent adding multiple handlers if already added
         if not self._logger.handlers:
-            # Create console handler and set level
+            # Console handler for stdout
             ch = logging.StreamHandler()
             ch.setLevel(log_level)
 
-            # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            ch.setFormatter(formatter)
+            # File handler for logs in `run-input` folder
+            run_input_dir = os.path.join(self.output_dir_path, "run-input")
+            os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
+            log_file_path = os.path.join(run_input_dir, "simulation.log")
+            fh = logging.FileHandler(log_file_path)
+            fh.setLevel(log_level)
 
-            # Add the handler to the logger
+            # Create formatter
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
+            )
+
+            # Add formatter to handlers
+            ch.setFormatter(formatter)
+            fh.setFormatter(formatter)
+
+            # Add handlers to logger
             self._logger.addHandler(ch)
+            self._logger.addHandler(fh)
+
+        # Add a custom filter to inject the timestep
+        filter_instance = _TimestepFilter(self)
+        self._logger.addFilter(filter_instance)
+
+    def _get_git_commit_hash(self):
+        """Retrieve the current Git commit hash for the repository."""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=os.path.dirname(
+                    self.config_path
+                ),  # Ensure it's run in the repo directory
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            result = result.stdout.strip()
+            self._logger.info(f"Model code version from git: {result}")
+
+        except subprocess.CalledProcessError as e:
+            self._logger.warning("Unable to fetch Git commit hash: %s", e)
+            return "unknown"
 
     def step(self, date):
         """Advance the transition model by one step."""
+        self.current_timestep = date  # Set the current timestep
+
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
@@ -265,7 +302,9 @@ class VegTransition:
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
-        self.veg_type = np.full_like(self.veg_type_1, np.nan)  # Initialize with NaN
+        self.veg_type = np.full_like(
+            self.veg_type_update_1, np.nan
+        )  # Initialize with NaN
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
@@ -294,7 +333,6 @@ class VegTransition:
 
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
-        # CURRENTLY HAS BUG
         self._calculate_maturity(veg_type_in)
 
         # serialize state variables: veg_type, maturity, mast %
@@ -302,6 +340,7 @@ class VegTransition:
         self._save_state_vars(date)
 
         self._logger.info("completed timestep: %s", date)
+        self.current_timestep = None
 
     def run(self):
         """
@@ -315,7 +354,7 @@ class VegTransition:
             self.start_date,
             self.end_date,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="y")
+        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS")
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
         for timestep in simulation_period:
@@ -491,6 +530,8 @@ class VegTransition:
     def create_output_dirs(self):
         """Create an output location for state variables, model config,
         input data, and QC plots.
+
+        (No logging because logger needs output location for log file first.)
         """
         output_dir_name = f"VegOut_{self.sim_start_time}"
 
@@ -498,24 +539,15 @@ class VegTransition:
         self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
-        self._logger.info("Created output directory at %s", self.output_dir_path)
 
         # Create the 'run-input' subdirectory
         run_input_dir = os.path.join(self.output_dir_path, "run-input")
         os.makedirs(run_input_dir, exist_ok=True)
-        self._logger.info("Created 'run-input' directory at %s", run_input_dir)
 
-        # Copy the config YAML file to 'run-input'
-        # config_file_path = (
-        #     self.config_file_path
-        # )  # Assuming config_file_path is an attribute
         if os.path.exists(self.config_path):
             shutil.copy(self.config_path, run_input_dir)
-            self._logger.info(
-                "Copied config YAML file from %s to %s", self.config_path, run_input_dir
-            )
         else:
-            self._logger.warning("Config file not found at %s", self.config_path)
+            print("Config file not found at %s", self.config_path)
 
     def _save_state_vars(self, date):
         """The method will save state variables after each timestep.
@@ -543,3 +575,23 @@ class VegTransition:
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir + "/figs", exist_ok=True)
+
+
+class _TimestepFilter(logging.Filter):
+    """A filter to inject the current timestep into log records.
+
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True

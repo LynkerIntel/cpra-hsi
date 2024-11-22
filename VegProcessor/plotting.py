@@ -7,7 +7,13 @@ import os
 logger = logging.getLogger("VegTransition")
 
 
-def np_arr(arr, title, veg_type_desc="", out_path=None, showplot=False):
+def np_arr(
+    arr: np.ndarray,
+    title: str,
+    veg_type_desc: str = "",
+    out_path: str = None,
+    showplot: bool = False,
+):
     """
     Plot 2D numpy arrays and their histogram using fixed bins (2-26).
 
@@ -81,10 +87,13 @@ def np_arr(arr, title, veg_type_desc="", out_path=None, showplot=False):
 
         # Save the figure
         fig.savefig(file_path, dpi=300)
+        plt.close(plt.gcf())
         logger.info(f"Saved plot to {file_path}")
 
     if showplot:
         plt.show()
+
+    plt.close()
 
 
 def sum_changes(
@@ -145,6 +154,7 @@ def sum_changes(
         sanitized_title = plot_title.replace(" ", "_").replace("\n", "_")
         file_path = os.path.join(out_path, f"{sanitized_title}.png")
         plt.savefig(file_path, dpi=300)
+        plt.close(plt.gcf())
         logger.info(f"Saved plot to {file_path}")
 
     if show_plot:

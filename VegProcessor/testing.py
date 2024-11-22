@@ -105,9 +105,10 @@ def has_overlapping_non_nan(stack: np.ndarray) -> np.bool:
     return np.any(overlap_count > 1)
 
 
-def common_true_locations(stack):
+def common_true_locations(stack: np.ndarray) -> np.bool:
     """
     Check if any two 2D arrays in a 3D stack have overlapping `True` values.
+    Treats NaN pixels as False.
 
     Parameters:
     stack (np.ndarray): A 3D boolean array (a stack of 2D boolean arrays).
@@ -118,6 +119,9 @@ def common_true_locations(stack):
     """
     if stack.ndim != 3:
         raise ValueError("Input must be a 3D stack of 2D arrays.")
+
+    # Treat NaN as False by masking them out
+    stack = np.nan_to_num(stack, nan=False)
 
     # Sum the stack along the first axis (layer-wise summation)
     overlap_sum = np.sum(stack, axis=0)

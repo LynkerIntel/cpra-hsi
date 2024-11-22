@@ -32,6 +32,8 @@ def habitat_based_salinity(veg_type: np.ndarray) -> np.ndarray:
     Else if pixel is intermediate marsh then set salinity to 3.5;
     Else set salinity to 1.
 
+    TODO check units
+
     Params:
         - veg_type (np.ndarray): array of current vegetation types.
     Returns:

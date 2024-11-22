@@ -103,6 +103,19 @@ class VegTransition:
         self.wse = None
         self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
         self.water_depth = None
+        self.veg_ts_out = None  # xarray output for timestep
+
+        # initialize partial update arrays as None
+        self.veg_type_update_1 = None
+        self.veg_type_update_2 = None
+        self.veg_type_update_3 = None
+        self.veg_type_update_4 = None
+        self.veg_type_update_5 = None
+        self.veg_type_update_6 = None
+        self.veg_type_update_7 = None
+        self.veg_type_update_8 = None
+        self.veg_type_update_9 = None
+        self.veg_type_update_10 = None
 
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -153,50 +166,42 @@ class VegTransition:
         )
 
         # veg_type array is iteratively updated, for each zone
-        self.veg_type_1 = veg_logic.zone_v(
+        self.veg_type_update_1 = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
             # plot=True,
         )
-        self.veg_type_2 = veg_logic.zone_iv(
+        self.veg_type_update_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
             # plot=True,
         )
-        self.veg_type_3 = veg_logic.zone_iii(
+        self.veg_type_update_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
             # plot=True,
         )
-        self.veg_type_4 = veg_logic.zone_ii(
+        self.veg_type_update_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
             # plot=True,
         )
-        self.veg_type_5 = veg_logic.fresh_shrub(
+        self.veg_type_update_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
             # plot=True,
         )
-        self.veg_type_6 = veg_logic.fresh_marsh(
-            self.veg_type,
-            self.water_depth,
-            self.timestep_output_dir,
-            self.salinity,
-            date,
-            # plot=True,
-        )
-        self.veg_type_7 = veg_logic.intermediate_marsh(
+        self.veg_type_update_6 = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
@@ -204,7 +209,7 @@ class VegTransition:
             date,
             # plot=True,
         )
-        self.veg_type_8 = veg_logic.brackish_marsh(
+        self.veg_type_update_7 = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
@@ -212,7 +217,7 @@ class VegTransition:
             date,
             # plot=True,
         )
-        self.veg_type_9 = veg_logic.saline_marsh(
+        self.veg_type_update_8 = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
@@ -220,7 +225,15 @@ class VegTransition:
             date,
             # plot=True,
         )
-        self.veg_type_10 = veg_logic.water(
+        self.veg_type_update_9 = veg_logic.saline_marsh(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir,
+            self.salinity,
+            date,
+            # plot=True,
+        )
+        self.veg_type_update_10 = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
@@ -232,16 +245,16 @@ class VegTransition:
         # stack partial update arrays for each zone
         stacked_veg = np.stack(
             (
-                self.veg_type_1,
-                self.veg_type_2,
-                self.veg_type_3,
-                self.veg_type_4,
-                self.veg_type_5,
-                self.veg_type_6,
-                self.veg_type_7,
-                self.veg_type_8,
-                self.veg_type_9,
-                self.veg_type_10,
+                self.veg_type_update_1,
+                self.veg_type_update_2,
+                self.veg_type_update_3,
+                self.veg_type_update_4,
+                self.veg_type_update_5,
+                self.veg_type_update_6,
+                self.veg_type_update_7,
+                self.veg_type_update_8,
+                self.veg_type_update_9,
+                self.veg_type_update_10,
             )
         )
 
@@ -511,13 +524,17 @@ class VegTransition:
 
         """
         template = self.water_depth.isel({"time": 0})  # subset to first month
-        # add pct mast, maturity
+
+        # veg type out
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+        self.veg_ts_out = utils.create_dataset_from_template(template, new_variables)
 
-        self.veg_out_ds = utils.create_dataset_from_template(template, new_variables)
-        print(self.veg_out_ds)
+        outpath = self.timestep_output_dir + "/vegtype.tif"
+        self.veg_ts_out["veg_type"].rio.to_raster(outpath)
 
-        # self.veg_out_ds['veg_type'].to_
+        # pct mast out
+
+        # maturity out
 
     def _create_timestep_dir(self, date):
         """ """

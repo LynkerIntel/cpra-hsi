@@ -78,7 +78,7 @@ class VegTransition:
         # Store history for analysis
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
-        # Set up the logger
+        self.create_output_dirs()
         self._setup_logger(log_level)
         self.current_timestep = None  # set in step() method
         self.timestep_output_dir = None  # set in step() method
@@ -91,9 +91,6 @@ class VegTransition:
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
         self._get_git_commit_hash()
-
-        # setup output dir
-        self.create_output_dirs()
 
         self.dem = self._load_dem()
         # print(self.dem.shape)
@@ -132,17 +129,31 @@ class VegTransition:
 
         # Prevent adding multiple handlers if already added
         if not self._logger.handlers:
+            # Console handler for stdout
             ch = logging.StreamHandler()
             ch.setLevel(log_level)
 
-            # Create formatter and add it to the handler
+            # File handler for logs in `run-input` folder
+            run_input_dir = os.path.join(self.output_dir_path, "run-input")
+            os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
+            log_file_path = os.path.join(run_input_dir, "simulation.log")
+            fh = logging.FileHandler(log_file_path)
+            fh.setLevel(log_level)
+
+            # Create formatter
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
             )
-            ch.setFormatter(formatter)
-            self._logger.addHandler(ch)
 
-        # filter to inject the timestep
+            # Add formatter to handlers
+            ch.setFormatter(formatter)
+            fh.setFormatter(formatter)
+
+            # Add handlers to logger
+            self._logger.addHandler(ch)
+            self._logger.addHandler(fh)
+
+        # Add a custom filter to inject the timestep
         filter_instance = _TimestepFilter(self)
         self._logger.addFilter(filter_instance)
 
@@ -519,6 +530,8 @@ class VegTransition:
     def create_output_dirs(self):
         """Create an output location for state variables, model config,
         input data, and QC plots.
+
+        (No logging because logger needs output location for log file first.)
         """
         output_dir_name = f"VegOut_{self.sim_start_time}"
 
@@ -526,24 +539,15 @@ class VegTransition:
         self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
-        self._logger.info("Created output directory at %s", self.output_dir_path)
 
         # Create the 'run-input' subdirectory
         run_input_dir = os.path.join(self.output_dir_path, "run-input")
         os.makedirs(run_input_dir, exist_ok=True)
-        self._logger.info("Created 'run-input' directory at %s", run_input_dir)
 
-        # Copy the config YAML file to 'run-input'
-        # config_file_path = (
-        #     self.config_file_path
-        # )  # Assuming config_file_path is an attribute
         if os.path.exists(self.config_path):
             shutil.copy(self.config_path, run_input_dir)
-            self._logger.info(
-                "Copied config YAML file from %s to %s", self.config_path, run_input_dir
-            )
         else:
-            self._logger.warning("Config file not found at %s", self.config_path)
+            print("Config file not found at %s", self.config_path)
 
     def _save_state_vars(self, date):
         """The method will save state variables after each timestep.

@@ -146,41 +146,47 @@ class VegTransition:
         # self.veg_type = self.veg_type[200:275, 200:275]
         # self.water_depth = self.water_depth.isel(x=slice(200, 275), y=slice(200, 275))
 
+        plotting.np_arr(
+            self.veg_type,
+            title="All Types Input",
+            out_path=self.timestep_output_dir,
+        )
+
         # veg_type array is iteratively updated, for each zone
         self.veg_type_1 = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir,
             date,
-            plot=True,
+            # plot=True,
         )
         self.veg_type_6 = veg_logic.fresh_marsh(
             self.veg_type,
@@ -188,9 +194,42 @@ class VegTransition:
             self.timestep_output_dir,
             self.salinity,
             date,
-            plot=True,
+            # plot=True,
+        )
+        self.veg_type_7 = veg_logic.intermediate_marsh(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir,
+            self.salinity,
+            date,
+            # plot=True,
+        )
+        self.veg_type_8 = veg_logic.brackish_marsh(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir,
+            self.salinity,
+            date,
+            # plot=True,
+        )
+        self.veg_type_9 = veg_logic.saline_marsh(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir,
+            self.salinity,
+            date,
+            # plot=True,
+        )
+        self.veg_type_10 = veg_logic.water(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir,
+            self.salinity,
+            date,
+            # plot=True,
         )
 
+        # stack partial update arrays for each zone
         stacked_veg = np.stack(
             (
                 self.veg_type_1,
@@ -199,14 +238,46 @@ class VegTransition:
                 self.veg_type_4,
                 self.veg_type_5,
                 self.veg_type_6,
+                self.veg_type_7,
+                self.veg_type_8,
+                self.veg_type_9,
+                self.veg_type_10,
             )
         )
 
         if testing.has_overlapping_non_nan(stacked_veg):
-            self._logger.warning("New vegetation stacked array has overlapping values.")
+            raise ValueError(
+                "New vegetation stacked arrays cannot have overlapping values."
+            )
 
-        # combine all zones into new full array
-        self.veg_type = np.nansum(stacked_veg, axis=0)
+        # combine arrays while preserving NaN
+        self._logger.info("Combining new vegetation types into full array.")
+        self.veg_type = np.full_like(self.veg_type_1, np.nan)  # Initialize with NaN
+        for layer in stacked_veg:
+            self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
+
+        # add in unchanged/unhandled vegetation types from base raster
+        no_transition_nan_mask = np.isnan(self.veg_type)
+
+        # Replace NaN values in the new array with corresponding values from the veg base raster
+        self._logger.info(
+            "Filling NaN pixels in result array with vegetation base raster."
+        )
+        self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
+            no_transition_nan_mask
+        ]
+
+        plotting.np_arr(
+            self.veg_type,
+            title="All Types Output",
+            out_path=self.timestep_output_dir,
+        )
+        plotting.sum_changes(
+            veg_type_in,
+            self.veg_type,
+            plot_title="Timestep Veg Changes",
+            out_path=self.timestep_output_dir,
+        )
 
         # if veg type has changed maturity = 0,
         # if veg type has not changes, maturity + 1
@@ -282,7 +353,6 @@ class VegTransition:
             stacked along a 'time' dimension, with the specified variable name.
             Returns None if no files are found for the specified water year.
         """
-        # tif_files = sorted(glob.glob(os.path.join(self.wse_directory_path, "*.tif")))
         tif_files = sorted(
             glob.glob(os.path.join(self.wse_directory_path, "**/*.tif"), recursive=True)
         )

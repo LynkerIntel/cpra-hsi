@@ -488,12 +488,6 @@ class VegTransition:
         self.maturity[diff_mask] += 1
         self._logger.info("Maturity incremented for unchanged veg types")
 
-    def load_landcover(self) -> np.ndarray:
-        """This method will load the landcover dataset, which may
-        be needed?
-        """
-        raise NotImplementedError
-
     def _load_veg_initial_raster(self) -> np.ndarray:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.

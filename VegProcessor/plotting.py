@@ -149,4 +149,5 @@ def sum_changes(
 
     if show_plot:
         plt.show()
-        plt.close()
+
+    plt.close()

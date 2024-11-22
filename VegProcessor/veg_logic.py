@@ -50,8 +50,8 @@ def zone_v(
     veg_name = "Zone V"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -93,26 +93,10 @@ def zone_v(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # Plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        arr=veg_type_input,
-        title="Input - Zone V",
-        out_path=timestep_output_dir,  # Explicit argument
-    )
     plotting.np_arr(
         type_mask,
         "Veg Type Mask (Zone V)",
-        out_path=timestep_output_dir,  # Explicit argument
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
-        timestep_output_dir,  # Explicit argument
+        out_path=timestep_output_dir,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -156,8 +140,8 @@ def zone_iv(
     veg_name = "Zone IV"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -223,12 +207,9 @@ def zone_iv(
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir)
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
+
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -274,8 +255,8 @@ def zone_iii(
     veg_name = "Zone III"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -339,13 +320,9 @@ def zone_iii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir)
 
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -391,8 +368,8 @@ def zone_ii(
     veg_name = "Zone II"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -476,13 +453,9 @@ def zone_ii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir)
 
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -530,8 +503,9 @@ def fresh_shrub(
     veg_name = "Fresh Shrub"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -594,14 +568,13 @@ def fresh_shrub(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
     plotting.np_arr(
         type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
     )
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
+    # plotting.np_arr(
+    #     veg_type, "Output - Updated Veg Types", description, timestep_output_dir
+    # )
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -655,8 +628,9 @@ def fresh_marsh(
     veg_name = "Fresh Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -760,8 +734,7 @@ def fresh_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
     plotting.np_arr(
         type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
     )
@@ -812,8 +785,9 @@ def intermediate_marsh(
     veg_name = "Intermediate Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -893,25 +867,10 @@ def intermediate_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -961,8 +920,9 @@ def brackish_marsh(
     veg_name = "Brackish Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -1044,25 +1004,10 @@ def brackish_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -1108,8 +1053,9 @@ def saline_marsh(
     veg_name = "Saline Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -1172,25 +1118,10 @@ def saline_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -1242,8 +1173,9 @@ def water(
     veg_name = "Water"
     logger.info("Starting transitions with input type: %s", veg_name)
     description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
@@ -1341,25 +1273,10 @@ def water(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,

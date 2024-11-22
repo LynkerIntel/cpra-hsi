@@ -9,6 +9,8 @@ from testing import qc_output, find_nan_to_true_values
 import matplotlib.pyplot as plt
 import logging
 
+import testing
+
 # Configure the logger in VegTransition
 logger = logging.getLogger("VegTransition")
 
@@ -82,11 +84,7 @@ def zone_v(
     combined_mask = np.logical_and.reduce(stacked_masks)
 
     if np.logical_and(np.isnan(veg_type), combined_mask).any():
-        logger.warning(
-            "Logical error: Pixels that were masked by the veg_type mask "
-            "have been identified as True in the combined mask. "
-            "Check inputs."
-        )
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # apply transition
     veg_type[combined_mask] = 16
@@ -98,51 +96,33 @@ def zone_v(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        # Plotting code should be careful to use
-        # veg_type_input, when showing the input
-        # array, and veg_type, when showing the
-        # output array
-        plotting.np_arr(
-            arr=veg_type_input,
-            title="Input - Zone V",
-            out_path=timestep_output_dir,  # Explicit argument
-        )
-        plotting.np_arr(
-            type_mask,
-            "Veg Type Mask (Zone V)",
-            out_path=timestep_output_dir,  # Explicit argument
-        )
-        # plotting.np_arr(
-        #     np.where(condition_1, veg_type_input, np.nan),
-        #     "Condition 1 (Inundation Depth <= 0)",
-        #     description,
-        #     timestep_output_dir,  # Explicit argument
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_2, veg_type_input, np.nan),
-        #     "Condition 2 (GS Inundation > 20%)",
-        #     description,
-        #     timestep_output_dir,  # Explicit argument
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met)",
-        #     description,
-        #     timestep_output_dir,  # Explicit argument
-        # )
-        plotting.np_arr(
-            veg_type,
-            "Output - Updated Veg Types",
-            description,
-            timestep_output_dir,  # Explicit argument
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone V Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    # Plotting code should be careful to use
+    # veg_type_input, when showing the input
+    # array, and veg_type, when showing the
+    # output array
+    plotting.np_arr(
+        arr=veg_type_input,
+        title="Input - Zone V",
+        out_path=timestep_output_dir,  # Explicit argument
+    )
+    plotting.np_arr(
+        type_mask,
+        "Veg Type Mask (Zone V)",
+        out_path=timestep_output_dir,  # Explicit argument
+    )
+    plotting.np_arr(
+        veg_type,
+        "Output - Updated Veg Types",
+        description,
+        timestep_output_dir,  # Explicit argument
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone V Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Zone V")
     return veg_type
@@ -224,14 +204,16 @@ def zone_iv(
     stacked_masks_iii = np.stack((~combined_mask_v, condition_1, condition_3))
     combined_mask_iii = np.logical_and.reduce(stacked_masks_iii)
 
-    # ensure there is no overlap between
-    # zone v and zone iii pixels
-    if np.logical_and(combined_mask_v, combined_mask_iii).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    # Stack arrays and test for overlap
+    qc_stacked = np.stack(
+        [
+            combined_mask_v,
+            combined_mask_iii,
+        ]
+    )
+
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_v] = 15
@@ -244,50 +226,18 @@ def zone_iv(
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
-    if plot:
-        plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
-        plotting.np_arr(
-            type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir
-        )
-        # plotting.np_arr(
-        #     np.where(condition_1, veg_type_input, np.nan),
-        #     "Condition 1 (Inundation Depth <= 0)",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_2, veg_type_input, np.nan),
-        #     "Condition 2 (GS Inundation < 20%)",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_3, veg_type_input, np.nan),
-        #     "Condition 3 (GS Inundation > 35%)",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_v, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> V",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_iii, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> III",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        plotting.np_arr(
-            veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone IV Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
+    plotting.np_arr(type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir)
+    plotting.np_arr(
+        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone IV Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Zone IV")
 
@@ -370,14 +320,16 @@ def zone_iii(
     stacked_masks_ii = np.stack((~combined_mask_iv, condition_1, condition_3))
     combined_mask_ii = np.logical_and.reduce(stacked_masks_ii)
 
-    # ensure there is no overlap between
-    # zone v and zone iii pixels
-    if np.logical_and(combined_mask_iv, combined_mask_ii).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    # Stack arrays and test for overlap
+    qc_stacked = np.stack(
+        [
+            combined_mask_iv,
+            combined_mask_ii,
+        ]
+    )
+
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_iv] = 16
@@ -390,52 +342,19 @@ def zone_iii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        plotting.np_arr(
-            veg_type_input, "Input - Zone III", out_path=timestep_output_dir
-        )
-        plotting.np_arr(
-            type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir
-        )
-        # plotting.np_arr(
-        #     np.where(condition_1, veg_type_input, np.nan),
-        #     "Condition 1 (Inundation Time == 0% )",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_2, veg_type_input, np.nan),
-        #     "Condition 2 (GS Inundation < 15%)",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_3, veg_type_input, np.nan),
-        #     "Condition 3 (GS Inundation > 80%)",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_iv, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> IV",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_ii, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> II",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        plotting.np_arr(
-            veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone III Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
+    plotting.np_arr(type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir)
+
+    plotting.np_arr(
+        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone III Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Zone III")
     return veg_type
@@ -544,12 +463,9 @@ def zone_ii(
             combined_mask_fresh_marsh,
         ]
     )
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_iii] = 17
@@ -563,56 +479,19 @@ def zone_ii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
-        plotting.np_arr(
-            type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir
-        )
-        # plotting.np_arr(
-        #     np.where(condition_1, veg_type_input, np.nan),
-        #     "Condition 1: inundation depth <= 0",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_2, veg_type_input, np.nan),
-        #     "Condition 2: Annual inundation < 70% TIME",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_3, veg_type_input, np.nan),
-        #     "Condition 3: Growing Season (GS) inundation < 20%",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_iii, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> III",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_fresh_shrub, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Fresh Shrub",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_fresh_marsh, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Fresh Marsh",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        plotting.np_arr(
-            veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone II Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
+    plotting.np_arr(type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir)
+
+    plotting.np_arr(
+        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone II Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Zone II")
     return veg_type
@@ -706,12 +585,8 @@ def fresh_shrub(
             combined_mask_fresh_marsh,
         ]
     )
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_ii] = 18
@@ -722,52 +597,20 @@ def fresh_shrub(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        plotting.np_arr(
-            veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir
-        )
-        plotting.np_arr(
-            type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
-        )
-        # plotting.np_arr(
-        #     np.where(condition_1, veg_type_input, np.nan),
-        #     "Condition 1: inundation depth <= 0",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_2, veg_type_input, np.nan),
-        #     "Condition 2: Annual inundation >= 80% TIME",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(condition_3, veg_type_input, np.nan),
-        #     "Condition 3: Growing Season (GS) inundation >= 40%",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_ii, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Zone II",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_fresh_marsh, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Fresh Marsh",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        plotting.np_arr(
-            veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Fresh Shrub Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
+    plotting.np_arr(
+        type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
+    )
+    plotting.np_arr(
+        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Fresh Shrub Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Fresh Shrub")
     return veg_type
@@ -889,14 +732,24 @@ def fresh_marsh(
     # get pixels that meet Zone II criteria
     stacked_masks_zone_ii = np.stack(
         (
-            ~combined_mask_water,
-            ~combined_mask_intermediate_marsh,
-            ~combined_mask_fresh_shrub,
-            condition_5,
-            condition_6,
+            combined_mask_water,
+            combined_mask_intermediate_marsh,
+            combined_mask_fresh_shrub,
         )
     )
     combined_mask_zone_ii = np.logical_and.reduce(stacked_masks_zone_ii)
+
+    # Stack arrays and test for overlap
+    qc_stacked = np.stack(
+        [
+            combined_mask_water,
+            combined_mask_intermediate_marsh,
+            combined_mask_fresh_shrub,
+        ]
+    )
+
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_water] = 26
@@ -910,46 +763,17 @@ def fresh_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        plotting.np_arr(
-            veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir
-        )
-        plotting.np_arr(
-            type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
-        )
-        # plotting.np_arr(
-        #     np.where(combined_mask_water, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Water",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_intermediate_marsh, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Intermediate Marsh",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_fresh_shrub, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Fresh Shrub",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     np.where(combined_mask_zone_ii, veg_type_input, np.nan),
-        #     "Combined Mask (All Conditions Met) -> Zone II",
-        #     description,
-        #     timestep_output_dir,
-        # )
-        # plotting.np_arr(
-        #     veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-        # )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Fresh Marsh Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
+    plotting.np_arr(
+        type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Fresh Marsh Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Fresh Marsh")
     return veg_type
@@ -1057,12 +881,8 @@ def intermediate_marsh(
         ]
     )
 
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_water] = 26
@@ -1076,32 +896,32 @@ def intermediate_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        # plotting code should be careful to use
-        # veg_type_input, when showing the input
-        # array, and veg_type, when showing the
-        # output array
-        plotting.np_arr(
-            veg_type_input,
-            f"Input - {veg_name}",
-            # description,
-        )
-        plotting.np_arr(
-            type_mask,
-            f"Veg Type Mask ({veg_name})",
-            # description,
-        )
-        plotting.np_arr(
-            veg_type,
-            "Output - Updated Veg Types",
-            description,
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Intermediate Marsh Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    # plotting code should be careful to use
+    # veg_type_input, when showing the input
+    # array, and veg_type, when showing the
+    # output array
+    plotting.np_arr(
+        veg_type_input,
+        f"Input - {veg_name}",
+        # description,
+    )
+    plotting.np_arr(
+        type_mask,
+        f"Veg Type Mask ({veg_name})",
+        # description,
+    )
+    plotting.np_arr(
+        veg_type,
+        "Output - Updated Veg Types",
+        description,
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Intermediate Marsh Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Intermediate Marsh")
     return veg_type
@@ -1212,12 +1032,8 @@ def brackish_marsh(
         ]
     )
 
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_water] = 26
@@ -1231,32 +1047,32 @@ def brackish_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        # plotting code should be careful to use
-        # veg_type_input, when showing the input
-        # array, and veg_type, when showing the
-        # output array
-        plotting.np_arr(
-            veg_type_input,
-            f"Input - {veg_name}",
-            # description,
-        )
-        plotting.np_arr(
-            type_mask,
-            f"Veg Type Mask ({veg_name})",
-            # description,
-        )
-        plotting.np_arr(
-            veg_type,
-            "Output - Updated Veg Types",
-            description,
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Brackish Marsh Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    # plotting code should be careful to use
+    # veg_type_input, when showing the input
+    # array, and veg_type, when showing the
+    # output array
+    plotting.np_arr(
+        veg_type_input,
+        f"Input - {veg_name}",
+        # description,
+    )
+    plotting.np_arr(
+        type_mask,
+        f"Veg Type Mask ({veg_name})",
+        # description,
+    )
+    plotting.np_arr(
+        veg_type,
+        "Output - Updated Veg Types",
+        description,
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Brackish Marsh Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Brackish Marsh")
     return veg_type
@@ -1345,12 +1161,8 @@ def saline_marsh(
         ]
     )
 
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_water] = 26
@@ -1363,32 +1175,32 @@ def saline_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        # plotting code should be careful to use
-        # veg_type_input, when showing the input
-        # array, and veg_type, when showing the
-        # output array
-        plotting.np_arr(
-            veg_type_input,
-            f"Input - {veg_name}",
-            # description,
-        )
-        plotting.np_arr(
-            type_mask,
-            f"Veg Type Mask ({veg_name})",
-            # description,
-        )
-        plotting.np_arr(
-            veg_type,
-            "Output - Updated Veg Types",
-            description,
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Saline Marsh Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    # plotting code should be careful to use
+    # veg_type_input, when showing the input
+    # array, and veg_type, when showing the
+    # output array
+    plotting.np_arr(
+        veg_type_input,
+        f"Input - {veg_name}",
+        # description,
+    )
+    plotting.np_arr(
+        type_mask,
+        f"Veg Type Mask ({veg_name})",
+        # description,
+    )
+    plotting.np_arr(
+        veg_type,
+        "Output - Updated Veg Types",
+        description,
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Saline Marsh Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Saline Marsh")
     return veg_type
@@ -1474,7 +1286,11 @@ def water(
 
     # get pixels that meet intermediate marsh criteria
     stacked_mask_intermediate_marsh = np.stack(
-        (~combined_mask_fresh_marsh, condition_2, condition_1_3_5_7)
+        (
+            ~combined_mask_fresh_marsh,
+            condition_2,
+            condition_1_3_5_7,
+        )
     )
     combined_mask_intermediate_marsh = np.logical_and.reduce(
         stacked_mask_intermediate_marsh
@@ -1512,12 +1328,8 @@ def water(
         ]
     )
 
-    if np.logical_and.reduce(qc_stacked).any():
-        logger.warning(
-            "Valid transition pixels have overlap, indicating"
-            "that some pixels are passing for both veg types"
-            "but should be either. Check inputs."
-        )
+    if testing.common_true_locations(qc_stacked):
+        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
     veg_type[combined_mask_fresh_marsh] = 20
@@ -1532,32 +1344,32 @@ def water(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    if plot:
-        # plotting code should be careful to use
-        # veg_type_input, when showing the input
-        # array, and veg_type, when showing the
-        # output array
-        plotting.np_arr(
-            veg_type_input,
-            f"Input - {veg_name}",
-            # description,
-        )
-        plotting.np_arr(
-            type_mask,
-            f"Veg Type Mask ({veg_name})",
-            # description,
-        )
-        plotting.np_arr(
-            veg_type,
-            "Output - Updated Veg Types",
-            description,
-        )
-        plotting.sum_changes(
-            veg_type_input,
-            veg_type,
-            plot_title="Zone Water Sum Changes",
-            out_path=timestep_output_dir,
-        )
+    # if plot:
+    # plotting code should be careful to use
+    # veg_type_input, when showing the input
+    # array, and veg_type, when showing the
+    # output array
+    plotting.np_arr(
+        veg_type_input,
+        f"Input - {veg_name}",
+        # description,
+    )
+    plotting.np_arr(
+        type_mask,
+        f"Veg Type Mask ({veg_name})",
+        # description,
+    )
+    plotting.np_arr(
+        veg_type,
+        "Output - Updated Veg Types",
+        description,
+    )
+    plotting.sum_changes(
+        veg_type_input,
+        veg_type,
+        plot_title="Zone Water Sum Changes",
+        out_path=timestep_output_dir,
+    )
 
     logger.info("Finished transitions with input type: Water")
     return veg_type

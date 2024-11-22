@@ -79,8 +79,8 @@ class VegTransition:
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
         self.create_output_dirs()
-        self._setup_logger(log_level)
         self.current_timestep = None  # set in step() method
+        self._setup_logger(log_level)
         self.timestep_output_dir = None  # set in step() method
 
         # Pretty-print the configuration
@@ -122,25 +122,31 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-    def _setup_logger(self, log_level):
-        """Set up the logger for the class."""
+    def _setup_logger(self, log_level=logging.INFO):
+        """Set up the logger for the VegTransition class."""
         self._logger = logging.getLogger("VegTransition")
         self._logger.setLevel(log_level)
 
-        # Prevent adding multiple handlers if already added
-        if not self._logger.handlers:
-            # Console handler for stdout
+        # clear existing handlers to prevent duplicates
+        # (this happens when re-runnning in notebook)
+        if self._logger.hasHandlers():
+            for handler in self._logger.handlers:
+                self._logger.removeHandler(handler)
+                handler.close()  # Close old handlers properly
+
+        try:
+            # console handler for stdout
+            # i.e. print messages
             ch = logging.StreamHandler()
             ch.setLevel(log_level)
 
-            # File handler for logs in `run-input` folder
+            # file handler for logs in `run-input` folder
             run_input_dir = os.path.join(self.output_dir_path, "run-input")
             os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
             log_file_path = os.path.join(run_input_dir, "simulation.log")
             fh = logging.FileHandler(log_file_path)
             fh.setLevel(log_level)
 
-            # Create formatter
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
             )
@@ -149,12 +155,17 @@ class VegTransition:
             ch.setFormatter(formatter)
             fh.setFormatter(formatter)
 
+            # Add handlers to the logger
             self._logger.addHandler(ch)
             self._logger.addHandler(fh)
 
-        # Add a custom filter to inject the timestep
-        filter_instance = _TimestepFilter(self)
-        self._logger.addFilter(filter_instance)
+            # Add a custom filter to inject the timestep
+            filter_instance = _TimestepFilter(self)
+            self._logger.addFilter(filter_instance)
+
+            self._logger.info("Logger setup complete.")
+        except Exception as e:
+            print(f"Error during logger setup: {e}")
 
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""

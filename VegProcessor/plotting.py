@@ -63,7 +63,7 @@ def np_arr(
     else:
         # Use fixed bins from 2 to 26, corresponding to vegetation types
         flattened = arr[~np.isnan(arr)].flatten()  # Ignore NaN values
-        bins = np.arange(2, 27)  # Integers from 2 to 26
+        bins = np.arange(0, 27)  # Integers from 2 to 26
         axes[1].hist(flattened, bins=bins, color="blue", alpha=0.7, align="left")
         axes[1].set_title(
             f"Histogram of Array Values\n{veg_type_desc}",

@@ -198,49 +198,49 @@ class VegTransition:
         plotting.np_arr(
             self.veg_type,
             title="All Types Input",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
 
         # veg_type array is iteratively updated, for each zone
         self.veg_type_update_1 = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             date,
             # plot=True,
         )
         self.veg_type_update_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             date,
             # plot=True,
         )
         self.veg_type_update_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             date,
             # plot=True,
         )
         self.veg_type_update_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             date,
             # plot=True,
         )
         self.veg_type_update_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             date,
             # plot=True,
         )
         self.veg_type_update_6 = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
             date,
             # plot=True,
@@ -248,7 +248,7 @@ class VegTransition:
         self.veg_type_update_7 = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
             date,
             # plot=True,
@@ -256,7 +256,7 @@ class VegTransition:
         self.veg_type_update_8 = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
             date,
             # plot=True,
@@ -264,7 +264,7 @@ class VegTransition:
         self.veg_type_update_9 = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
             date,
             # plot=True,
@@ -272,7 +272,7 @@ class VegTransition:
         self.veg_type_update_10 = veg_logic.water(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
             date,
             # plot=True,
@@ -321,13 +321,13 @@ class VegTransition:
         plotting.np_arr(
             self.veg_type,
             title="All Types Output",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
             plot_title="Timestep Veg Changes",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
 
         # if veg type has changed maturity = 0,
@@ -517,10 +517,13 @@ class VegTransition:
         self.maturity[combined_mask_no_change] += 1
         self._logger.info("Maturity incremented for unchanged veg types (forested)")
 
+        # all other types (non-forested, non-handled) to np.nan
+        self.maturity[~type_mask] = np.nan
+
         plotting.np_arr(
             self.maturity,
             title="Timestep Maturity",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
 
     def _load_veg_initial_raster(self) -> np.ndarray:
@@ -593,7 +596,7 @@ class VegTransition:
         # pct mast out
 
         # maturity out
-        self.timestep_out["maturity"] = (("x", "y"), self.maturity)
+        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
         self.timestep_out["maturity"].rio.to_raster(
             self.timestep_output_dir + "/maturity.tif"
         )
@@ -603,8 +606,9 @@ class VegTransition:
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"
         )
+        self.timestep_output_dir_figs = os.path.join(self.timestep_output_dir, "figs")
         os.makedirs(self.timestep_output_dir, exist_ok=True)
-        os.makedirs(self.timestep_output_dir + "/figs", exist_ok=True)
+        os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
 
 class _TimestepFilter(logging.Filter):

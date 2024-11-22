@@ -102,7 +102,7 @@ class VegTransition:
         self._load_salinity()
 
         self.wse = None
-        self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
+        self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
 
@@ -471,9 +471,6 @@ class VegTransition:
         """
         +1 maturity for pixels without vegetation changes.
         """
-        # TODO: Need to create mask for only Zone II to V pixels.
-        # self._logger.warning("need to mask to zone II to V pixels.")
-
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
             raise ValueError("Timestep input and output array have different shapes!")
@@ -485,8 +482,43 @@ class VegTransition:
             np.isnan(veg_type_in) & np.isnan(self.veg_type)
         )
 
-        self.maturity[diff_mask] += 1
-        self._logger.info("Maturity incremented for unchanged veg types")
+        # forested veg types
+        values_to_mask = [15, 16, 17, 18]
+        # Create mask where True corresponds to values in the list
+        type_mask = np.isin(self.veg_type, values_to_mask)
+
+        # Use logical AND to find locations where both arrays are True
+        # i.e. pixel value has changed, and it is a forested veg type
+        stacked_mask_change = np.stack((diff_mask, type_mask))
+        combined_mask_change = np.logical_and.reduce(stacked_mask_change)
+
+        # pixel value has NOT changed, and it is a forested veg type
+        stacked_mask_no_change = np.stack((~diff_mask, type_mask))
+        combined_mask_no_change = np.logical_and.reduce(stacked_mask_no_change)
+
+        if not combined_mask_no_change.any():
+            self._logger.warning("No forested pixels had maturity increment increase.")
+
+        if not combined_mask_change.any():
+            self._logger.warning("No forested pixels changed in prior timestep.")
+
+        if testing.common_true_locations(
+            np.stack((combined_mask_change, combined_mask_no_change))
+        ):
+            raise ValueError("Forested types have overlapping True location(s)")
+
+        # if forested pixels change, reset age to 0
+        self.maturity[combined_mask_change] = 0
+        self._logger.info("Maturity reset for changed veg type (forested)")
+        # if forested pixels are the same, add one year
+        self.maturity[combined_mask_no_change] += 1
+        self._logger.info("Maturity incremented for unchanged veg types (forested)")
+
+        plotting.np_arr(
+            self.maturity,
+            title="Timestep Maturity",
+            out_path=self.timestep_output_dir,
+        )
 
     def _load_veg_initial_raster(self) -> np.ndarray:
         """This method will load the base veg raster, from which the model will iterate forwards,
@@ -549,14 +581,19 @@ class VegTransition:
 
         # veg type out
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        self.veg_ts_out = utils.create_dataset_from_template(template, new_variables)
+        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
 
-        outpath = self.timestep_output_dir + "/vegtype.tif"
-        self.veg_ts_out["veg_type"].rio.to_raster(outpath)
+        self.timestep_out["veg_type"].rio.to_raster(
+            self.timestep_output_dir + "/vegtype.tif"
+        )
 
         # pct mast out
 
         # maturity out
+        self.timestep_out["maturity"] = (("x", "y"), self.maturity)
+        self.timestep_out["maturity"].rio.to_raster(
+            self.timestep_output_dir + "/maturity.tif"
+        )
 
     def _create_timestep_dir(self, date):
         """ """

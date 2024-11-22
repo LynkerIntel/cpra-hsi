@@ -68,7 +68,7 @@ def zone_v(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0
+    # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
@@ -80,11 +80,8 @@ def zone_v(
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct > 0.2).to_numpy()
 
-    stacked_masks = np.stack((type_mask, condition_1, condition_2))
+    stacked_masks = np.stack((condition_1, condition_2))
     combined_mask = np.logical_and.reduce(stacked_masks)
-
-    if np.logical_and(np.isnan(veg_type), combined_mask).any():
-        raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # apply transition
     veg_type[combined_mask] = 16
@@ -179,7 +176,7 @@ def zone_iv(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition 1: MAR, APR, MAY inundation depth <= 0
+    # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0 (using OR)
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
@@ -693,7 +690,7 @@ def fresh_marsh(
     # Condition_4: APR:SEP inundation < 30% TIME
     filtered_2 = water_depth.sel(time=slice(f"{date.year}-04", f"{date.year}-09"))
     condition_4_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
-    condition_4 = (condition_4_pct >= 0.4).to_numpy()
+    condition_4 = (condition_4_pct < 0.3).to_numpy()
 
     # Condition_5: MAR, APR, MAY, JUNE inundation <= 0
     filtered_3 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))

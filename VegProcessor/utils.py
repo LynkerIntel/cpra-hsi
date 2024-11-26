@@ -33,7 +33,11 @@ def generate_combined_sequence(
 
     # get all monthly tifs
     path = pathlib.Path(source_folder)
-    source_files = list(path.rglob("*.tif"))
+    # source_files = list(path.rglob("*.tif"))
+
+    source_files = [
+        file for file in list(path.rglob("*.tif")) if "SLR" not in str(file)
+    ]
 
     if not source_files:
         raise FileNotFoundError(f"No .tif files found for year in {source_folder}")
@@ -49,27 +53,32 @@ def generate_combined_sequence(
         source_year_paths = [
             path for path in source_files if start <= extract_date(path) <= end
         ]
+        source_year_paths.sort()
+
         print(f"Mapping {source_year} to {analog_year}")
 
+        if len(source_year_paths) < 12:
+            raise ValueError(f"Missing data in source files for {source_year}.")
+
         for p in source_year_paths:
+            print(f"input path: {p}")
             # for each monthly file, copy and rename to analog year
             file_date = extract_date(p)
             # October 1 is the start of the water year
-            if int(file_date.month) > 9 or (
-                file_date.month == "10" and int(file_date.day) >= 1
-            ):
-                # The date falls in the previous water year
+            if file_date.month in [10, 11, 12]:
                 replacement_year = str(int(analog_year) - 1)
-            else:
-                # The date falls in the next water year
+            else:  # Before October, it's the previous water year
                 replacement_year = analog_year
 
             # Reconstruct the string with the new water year (with zero padding)
             new_file_name = f"WSE_MEAN_{replacement_year}_{file_date.month:02d}_{file_date.day:02d}.tif"
+            print(f"output name: {new_file_name}")
 
             dest_file = os.path.join(output_folder, new_file_name)
             # Copy the file to the new location with the updated name
             shutil.copy(p, dest_file)
+
+        print("All months completed.")
 
     print(f"Generated 25-year sequence in {output_folder}")
     print("WARN: only files NAMES were modified, original timestamps still in place.")

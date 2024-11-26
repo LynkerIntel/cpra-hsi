@@ -364,7 +364,7 @@ class VegTransition:
             self.start_date,
             self.end_date,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS")
+        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS-OCT")
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
         for timestep in simulation_period:

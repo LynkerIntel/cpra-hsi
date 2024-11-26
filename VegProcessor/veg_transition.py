@@ -63,6 +63,7 @@ class VegTransition:
         # simulation
         self.start_date = self.config["simulation"].get("start_date")
         self.end_date = self.config["simulation"].get("end_date")
+        self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -198,7 +199,7 @@ class VegTransition:
         veg_type_in = self.veg_type
 
         # calculate depth
-        self.wse = self._load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -381,7 +382,7 @@ class VegTransition:
         # TODO: where is extra dim coming from? i.e. da[0] is needed!
         return da[0].to_numpy()
 
-    def _load_wse_wy(
+    def load_wse_wy(
         self,
         water_year: int,
         variable_name: str = "WSE_MEAN",
@@ -407,6 +408,12 @@ class VegTransition:
         date_format : str, optional
             Format string for parsing dates from file names, default is "%Y_%m_%d".
             Adjust based on your file naming convention.
+        analog_sequence : bool
+            This is only for use when loading 25-year analog years sequences, where the
+            filenames have been updated to represent analog years, but the file data
+            reamain unchanged (i.e. uses the actual model-year). This flag will reset
+            the MONTHLY time series to match the year given in the file name, in order
+            for the vegetation model to run as normal.
 
         Returns
         -------
@@ -444,7 +451,7 @@ class VegTransition:
             )
 
         # Load selected files into a single Dataset with open_mfdataset
-        xr_dataset = xr.open_mfdataset(
+        ds = xr.open_mfdataset(
             selected_files,
             concat_dim="time",
             combine="nested",
@@ -453,12 +460,23 @@ class VegTransition:
         )
 
         # rename
-        xr_dataset = xr_dataset.rename(
-            {list(xr_dataset.data_vars.keys())[0]: variable_name}
-        )
+        ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
+
+        if self.analog_sequence:
+            self._logger.info("Using sequence loading method!")
+            new_timesteps = pd.date_range(
+                f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
+            )
+
+            if not len(new_timesteps) == len(ds["time"]):
+                raise ValueError("Timestep must be monthly.")
+
+            # Replace the time coordinate with time from
+            ds = ds.assign_coords(time=("time", new_timesteps))
+            self._logger.info("Sequence timeseres updated to match filename.")
 
         self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
-        return xr_dataset
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

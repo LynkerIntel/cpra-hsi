@@ -271,8 +271,8 @@ def zone_iii(
 
     # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0%
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
-    condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
-    condition_1 = (condition_1_pct == 0).to_numpy()
+    condition_1 = (filtered_1["WSE_MEAN"] == 0).any(dim="time")
+    # condition_1 = (condition_1_pct == 0).to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 15%
     filtered_2 = water_depth.sel(
@@ -283,7 +283,7 @@ def zone_iii(
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct < 0.15).to_numpy()
 
-    # Condition 3:  ANNUAL (GS) inundation >= 80%
+    # Condition 3:  ANNUAL inundation >= 80%
     condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct >= 0.8).to_numpy()
 

@@ -15,7 +15,7 @@ import testing
 logger = logging.getLogger("VegTransition")
 
 
-@qc_output
+# @qc_output
 def zone_v(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -36,7 +36,6 @@ def zone_v(
     np.ndarrays.
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
@@ -109,7 +108,7 @@ def zone_v(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def zone_iv(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -151,9 +150,7 @@ def zone_iv(
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
-    # Set other veg types to nan
-    # veg_type[~type_mask] = 999
-    # veg_type_input[~type_mask] = 999
+
     veg_type = np.where(type_mask, veg_type, np.nan)
     veg_type_input = np.where(type_mask, veg_type, np.nan)
 
@@ -222,7 +219,7 @@ def zone_iv(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def zone_iii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -272,7 +269,7 @@ def zone_iii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0
+    # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0%
     filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct == 0).to_numpy()
@@ -286,8 +283,8 @@ def zone_iii(
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct < 0.15).to_numpy()
 
-    # Condition 3:  Growing Season (GS) inundation >= 80%
-    condition_3_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
+    # Condition 3:  ANNUAL (GS) inundation >= 80%
+    condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct >= 0.8).to_numpy()
 
     # get pixels that meet zone iv criteria

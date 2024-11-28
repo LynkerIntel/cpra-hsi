@@ -444,6 +444,9 @@ class VegTransition:
             self._logger.error("No files found for water year: %s", water_year)
             return None
 
+        if len(selected_files) < 12:
+            raise ValueError("month(s) missing from Water Year.")
+
         # Preprocess function to remove the 'band' dimension
         def preprocess(da):
             return da.squeeze(dim="band").expand_dims(
@@ -474,6 +477,11 @@ class VegTransition:
             # Replace the time coordinate with time from
             ds = ds.assign_coords(time=("time", new_timesteps))
             self._logger.info("Sequence timeseres updated to match filename.")
+
+        self._logger.info(
+            "Replacing all NaN in WSE data with 0 (assuming full domain coverage.)"
+        )
+        ds = ds.fillna(0)
 
         self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
         return ds

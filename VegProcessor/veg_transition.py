@@ -481,6 +481,7 @@ class VegTransition:
         self._logger.info(
             "Replacing all NaN in WSE data with 0 (assuming full domain coverage.)"
         )
+        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
 
         self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)

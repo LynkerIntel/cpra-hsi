@@ -85,6 +85,9 @@ def zone_v(
     veg_type[combined_mask] = 16
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
@@ -196,6 +199,9 @@ def zone_iv(
     veg_type[combined_mask_iii] = 17
     # reapply mask, because depth conditions don't include type.
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
@@ -308,6 +314,9 @@ def zone_iii(
     veg_type[combined_mask_ii] = 18
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
@@ -333,8 +342,8 @@ def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
+    # date: datetime.date,
+    # plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone II
 
@@ -446,8 +455,6 @@ def zone_ii(
     # specific nan handling to each condition, but has the downside
     # that intermediate plots (i.e. arrays during the condition building)
     # will not be a reliable source of transition info during debugging.
-
-    # Also: this does not work in the demo code currently
     valid_wse = water_depth["WSE_MEAN"][0].notnull().values
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
@@ -470,13 +477,13 @@ def zone_ii(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def fresh_shrub(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
+    # date: datetime.date,
+    # plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as fresh shrub
 
@@ -566,6 +573,9 @@ def fresh_shrub(
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
@@ -588,13 +598,13 @@ def fresh_shrub(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def fresh_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
+    # date: datetime.date,
     plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as Fresh Marsh
@@ -705,9 +715,11 @@ def fresh_marsh(
     # get pixels that meet Zone II criteria
     stacked_masks_zone_ii = np.stack(
         (
-            combined_mask_water,
-            combined_mask_intermediate_marsh,
-            combined_mask_fresh_shrub,
+            ~combined_mask_water,
+            ~combined_mask_intermediate_marsh,
+            ~combined_mask_fresh_shrub,
+            condition_5,
+            condition_6,
         )
     )
     combined_mask_zone_ii = np.logical_and.reduce(stacked_masks_zone_ii)
@@ -732,6 +744,9 @@ def fresh_marsh(
 
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)

@@ -56,7 +56,8 @@ def zone_v(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
@@ -68,13 +69,11 @@ def zone_v(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation > 20%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct > 0.2).to_numpy()
@@ -146,7 +145,8 @@ def zone_iv(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
@@ -158,13 +158,11 @@ def zone_iv(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0 (using OR)
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 20%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
@@ -259,7 +257,8 @@ def zone_iii(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone III (value 17)
     type_mask = veg_type == 17
@@ -270,14 +269,12 @@ def zone_iii(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0%
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] == 0).any(dim="time")
     # condition_1 = (condition_1_pct == 0).to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 15%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
@@ -331,7 +328,7 @@ def zone_iii(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -372,7 +369,8 @@ def zone_ii(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 18
@@ -383,7 +381,7 @@ def zone_ii(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Annual inundation < 70% TIME
@@ -392,9 +390,7 @@ def zone_ii(
     condition_2 = (condition_2_pct < 0.7).to_numpy()
 
     # Condition 3: Growing Season (GS) inundation < 20%
-    filtered_3 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
@@ -444,6 +440,16 @@ def zone_ii(
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid model locations
+    # this prevents pixels where water_depth is NaN from
+    # being included in results. This is more simple than adding
+    # specific nan handling to each condition, but has the downside
+    # that intermediate plots (i.e. arrays during the condition building)
+    # will not be a reliable source of transition info during debugging.
+
+    # Also: this does not work in the demo code currently
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
@@ -508,7 +514,8 @@ def fresh_shrub(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 19
@@ -519,7 +526,7 @@ def fresh_shrub(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Annual inundation > 80% TIME
@@ -528,9 +535,7 @@ def fresh_shrub(
     condition_2 = (condition_2_pct > 0.8).to_numpy()
 
     # Condition 3: Growing Season (GS) inundation >= 40%
-    filtered_3 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
@@ -633,7 +638,9 @@ def fresh_marsh(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    apr_sep = [4, 5, 6, 7, 8, 9]
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Fresh Marsh (value 20)
     type_mask = veg_type == 20
@@ -644,9 +651,7 @@ def fresh_marsh(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition_1: GS Inundation == 100% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct == 1).to_numpy()
 
@@ -659,12 +664,12 @@ def fresh_marsh(
     condition_3 = salinity >= 2
 
     # Condition_4: APR:SEP inundation < 30% TIME
-    filtered_2 = water_depth.sel(time=slice(f"{date.year}-04", f"{date.year}-09"))
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(apr_sep))
     condition_4_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_4 = (condition_4_pct < 0.3).to_numpy()
 
     # Condition_5: MAR, APR, MAY, JUNE inundation <= 0
-    filtered_3 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_5 = (filtered_3["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition_6: ANNUAL inundation > 80% TIME
@@ -790,7 +795,8 @@ def intermediate_marsh(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Intermediate Marsh (value 21)
     type_mask = veg_type == 21
@@ -801,9 +807,7 @@ def intermediate_marsh(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: Growind Season inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
@@ -925,7 +929,8 @@ def brackish_marsh(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Brackish Marsh (value 22)
     type_mask = veg_type == 22
@@ -936,9 +941,7 @@ def brackish_marsh(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: GS inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
@@ -1058,7 +1061,8 @@ def saline_marsh(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Saline Marsh (value 23)
     type_mask = veg_type == 23
@@ -1069,9 +1073,7 @@ def saline_marsh(
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: GS inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
@@ -1178,7 +1180,8 @@ def water(
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Water (value 26)
     type_mask = veg_type == 26

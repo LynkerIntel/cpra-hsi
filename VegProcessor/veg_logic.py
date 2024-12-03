@@ -37,8 +37,7 @@ def zone_v(
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -123,12 +122,10 @@ def zone_iv(
     Zone III: 17
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -236,12 +233,10 @@ def zone_iii(
     Zone II: 18
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -349,12 +344,10 @@ def zone_ii(
     Zone II: 18
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -487,14 +480,11 @@ def fresh_shrub(
     Zone II: 18
     Fresh Shrub: 19
 
-
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -597,7 +587,6 @@ def fresh_marsh(
 ) -> np.ndarray:
     """Calculate transition for pixels starting as Fresh Marsh
 
-
     Condition_1: GS Inundation == 100% TIME
     Condition_2: mean GS depth > 20cm
     Condition_3: mean ANNUAL salinity >= 2ppt
@@ -611,15 +600,12 @@ def fresh_marsh(
     Fresh Shrub: 19
     Fresh Marsh: 20
 
-
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - salinity (np.ndarray): array of salinity, from HH model OR defaults.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -774,12 +760,11 @@ def intermediate_marsh(
     Intermediate Marsh: 21
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -909,12 +894,11 @@ def brackish_marsh(
     Brackish Marsh: 22
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1042,12 +1026,11 @@ def saline_marsh(
     Saline Marsh: 23
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1119,7 +1102,6 @@ def saline_marsh(
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
@@ -1162,12 +1144,11 @@ def water(
     Water: 26
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1269,6 +1250,7 @@ def water(
     veg_type[combined_mask_intermediate_marsh] = 21
     veg_type[combined_mask_brackish_marsh] = 22
     veg_type[combined_mask_saline_marsh] = 23
+
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask

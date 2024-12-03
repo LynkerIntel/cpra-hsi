@@ -4,7 +4,7 @@ import datetime
 import os
 
 import plotting
-from testing import qc_output, find_nan_to_true_values
+from testing import find_nan_to_true_values
 
 import matplotlib.pyplot as plt
 import logging
@@ -15,7 +15,6 @@ import testing
 logger = logging.getLogger("VegTransition")
 
 
-# @qc_output
 def zone_v(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -45,7 +44,6 @@ def zone_v(
     """
     veg_name = "Zone V"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -107,7 +105,6 @@ def zone_v(
     return veg_type
 
 
-# @qc_output
 def zone_iv(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -133,7 +130,6 @@ def zone_iv(
     """
     veg_name = "Zone IV"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -146,7 +142,6 @@ def zone_iv(
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
-
     veg_type = np.where(type_mask, veg_type, np.nan)
     veg_type_input = np.where(type_mask, veg_type, np.nan)
 
@@ -198,7 +193,6 @@ def zone_iv(
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
-
     logger.info("Output veg types: %s", np.unique(veg_type))
 
     # plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
@@ -216,7 +210,6 @@ def zone_iv(
     return veg_type
 
 
-# @qc_output
 def zone_iii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -244,7 +237,6 @@ def zone_iii(
     """
     veg_name = "Zone III"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -308,7 +300,6 @@ def zone_iii(
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
@@ -326,7 +317,6 @@ def zone_iii(
     return veg_type
 
 
-# @qc_output
 def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -355,7 +345,6 @@ def zone_ii(
     """
     veg_name = "Zone II"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -434,17 +423,11 @@ def zone_ii(
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
-    # apply valid model locations
-    # this prevents pixels where water_depth is NaN from
-    # being included in results. This is more simple than adding
-    # specific nan handling to each condition, but has the downside
-    # that intermediate plots (i.e. arrays during the condition building)
-    # will not be a reliable source of transition info during debugging.
+    # apply valid wse mask
     valid_wse = water_depth["WSE_MEAN"][0].notnull().values
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
@@ -462,7 +445,6 @@ def zone_ii(
     return veg_type
 
 
-# @qc_output
 def fresh_shrub(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -492,8 +474,6 @@ def fresh_shrub(
     """
     veg_name = "Fresh Shrub"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -564,9 +544,7 @@ def fresh_shrub(
     plotting.np_arr(
         type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
     )
-    # plotting.np_arr(
-    #     veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    # )
+
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -578,7 +556,6 @@ def fresh_shrub(
     return veg_type
 
 
-# @qc_output
 def fresh_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -613,8 +590,6 @@ def fresh_marsh(
     """
     veg_name = "Fresh Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -740,7 +715,6 @@ def fresh_marsh(
     return veg_type
 
 
-# @qc_output
 def intermediate_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -772,8 +746,6 @@ def intermediate_marsh(
     """
     veg_name = "Intermediate Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -873,7 +845,6 @@ def intermediate_marsh(
     return veg_type
 
 
-# @qc_output
 def brackish_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -906,8 +877,6 @@ def brackish_marsh(
     """
     veg_name = "Brackish Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -989,7 +958,6 @@ def brackish_marsh(
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
@@ -1009,7 +977,6 @@ def brackish_marsh(
     return veg_type
 
 
-# @qc_output
 def saline_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -1038,8 +1005,6 @@ def saline_marsh(
     """
     veg_name = "Saline Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -1121,7 +1086,6 @@ def saline_marsh(
     return veg_type
 
 
-# @qc_output
 def water(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
@@ -1156,8 +1120,6 @@ def water(
     """
     veg_name = "Water"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-
     timestep_output_dir = os.path.join(
         timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
@@ -1258,7 +1220,6 @@ def water(
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 

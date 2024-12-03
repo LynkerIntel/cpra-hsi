@@ -1,0 +1,33 @@
+name: cpra_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - appdirs
+  - conda-forge::boto3
+  - conda-forge::dash
+  - conda-forge::dash-bootstrap-components
+  - conda-forge::gdal
+  - conda-forge::nbformat
+  - conda-forge::pip
+  - conda-forge::python-dotenv
+  - conda-forge::shapely
+  - future
+  - geojson
+  - geopandas
+  - ipykernel
+  - isodate
+  - matplotlib
+  - numpy
+  - pandas
+  - plotly
+  - python
+  - requests
+  - xarray
+  - rioxarray
+  - cartopy
+  - conda-forge::pyyaml
+  - mypy
+  - geoviews
+  - geocube
+prefix: /Users/dillonragar/miniconda3/envs/cpra_env

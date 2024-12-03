@@ -766,13 +766,13 @@ def fresh_marsh(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def intermediate_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
+    # date: datetime.date,
     plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Intermediate Marsh
@@ -834,7 +834,7 @@ def intermediate_marsh(
     # Condition_3: Average ANNUAL salinity < 1ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
-    condition_3 = salinity >= 5
+    condition_3 = salinity < 1
 
     # get pixels that meet water criteria
     # (reassigning for consistency with other vars)
@@ -877,6 +877,9 @@ def intermediate_marsh(
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 

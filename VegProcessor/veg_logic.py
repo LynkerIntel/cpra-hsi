@@ -902,13 +902,13 @@ def intermediate_marsh(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def brackish_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
+    # date: datetime.date,
     plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Brackish Marsh
@@ -1016,6 +1016,9 @@ def brackish_marsh(
     veg_type[combined_mask_intermediate_marsh] = 21
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
@@ -1038,13 +1041,13 @@ def brackish_marsh(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def saline_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
+    # date: datetime.date,
     plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Saline Marsh
@@ -1095,7 +1098,7 @@ def saline_marsh(
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
-    # Condition_2: Average ANNUAL salinity >= 5ppt
+    # Condition_2: Average ANNUAL salinity < 11ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
     condition_2 = salinity < 11
@@ -1129,6 +1132,9 @@ def saline_marsh(
     veg_type[combined_mask_brackish_marsh] = 22
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
@@ -1151,13 +1157,13 @@ def saline_marsh(
     return veg_type
 
 
-@qc_output
+# @qc_output
 def water(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
+    # date: datetime.date,
     plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Water
@@ -1209,7 +1215,7 @@ def water(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition_1: Average ANNUAL depth < 5cm (AND Condition 3 & 5)
+    # Condition_1: Average ANNUAL depth < 5cm (and Condition 3 & 5)
     condition_1_3_5_7 = water_depth["WSE_MEAN"].mean(dim="time")
     condition_1_3_5_7 = (condition_1_3_5_7 < 0.05).to_numpy()
 
@@ -1220,7 +1226,7 @@ def water(
     condition_4 = salinity < 5
 
     # Condition_6: Average ANNUAL salinity < 12ppt
-    condition_6 = salinity > 12
+    condition_6 = salinity < 12
 
     # get pixels that meet fresh marsh criteria
     stacked_mask_fresh_marsh = np.stack(
@@ -1235,8 +1241,8 @@ def water(
     stacked_mask_intermediate_marsh = np.stack(
         (
             ~combined_mask_fresh_marsh,
-            condition_2,
             condition_1_3_5_7,
+            condition_4,
         )
     )
     combined_mask_intermediate_marsh = np.logical_and.reduce(
@@ -1285,6 +1291,9 @@ def water(
     veg_type[combined_mask_saline_marsh] = 23
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply valid WSE mask
+    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 

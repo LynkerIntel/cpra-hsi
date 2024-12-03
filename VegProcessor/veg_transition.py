@@ -218,76 +218,56 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            date,
-            # plot=True,
         )
         self.veg_type_update_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            date,
-            # plot=True,
         )
         self.veg_type_update_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            date,
-            # plot=True,
         )
         self.veg_type_update_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            date,
-            # plot=True,
         )
         self.veg_type_update_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            date,
-            # plot=True,
         )
         self.veg_type_update_6 = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_7 = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_8 = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_9 = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_10 = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
 
         # stack partial update arrays for each zone
@@ -342,8 +322,6 @@ class VegTransition:
             out_path=self.timestep_output_dir_figs,
         )
 
-        # if veg type has changed maturity = 0,
-        # if veg type has not changes, maturity + 1
         self._calculate_maturity(veg_type_in)
 
         # serialize state variables: veg_type, maturity, mast %
@@ -389,7 +367,8 @@ class VegTransition:
         date_format: str = "%Y_%m_%d",
     ) -> Optional[xr.Dataset]:
         """
-        Load .tif files corresponding to a specific water year into an xarray.Dataset.
+        Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
+        uses lazy-loading via Dask.
 
         Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
         followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will

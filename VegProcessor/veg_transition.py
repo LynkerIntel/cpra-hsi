@@ -396,6 +396,10 @@ class VegTransition:
         automatically extract the timestamps and assign them to a 'time' dimension in the resulting
         xarray.Dataset, but only for files within the specified water year.
 
+        NOTE: Input WSE data is considered to use NaN to designate 0 depth, as is the
+        case for the HEC-RAS data. If this is false, this function must be updated
+        accordingly.
+
         Parameters
         ----------
         folder_path : str
@@ -632,6 +636,7 @@ class VegTransition:
         )
 
         # pct mast out
+        # TODO: add perent mast handling
 
         # maturity out
         self.timestep_out["maturity"] = (("y", "x"), self.maturity)

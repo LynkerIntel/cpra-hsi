@@ -82,7 +82,7 @@ def generate_combined_sequence(
     print("WARN: only files NAMES were modified, original timestamps still in place.")
 
 
-def extract_date(path: pathlib.Path):
+def extract_date(path: pathlib.Path) -> datetime:
     """
     Extract date from HEC-RAS filepaths, or any filepath with dates in a YYYY_MM_DD format.
     Must use pathlib object not str.
@@ -108,7 +108,7 @@ def extract_date(path: pathlib.Path):
 
 def create_dataset_from_template(
     template: xr.Dataset, new_variables: dict[np.ndarray, str]
-):
+) -> xr.Dataset:
     """
     Create an xarray.Dataset based on a template dataset.
 

@@ -22,12 +22,15 @@ import utils
 class VegTransition:
     """The Vegetation Transition Model.
 
-    Vegetation zones are calculated independenlty (slower) for
-    better model interperability and quality control.
+    Vegetation zones are calculated independenlty, then combined into single
+    non-overlapping array.
+
+    Example usage found in `./run.ipynb`
 
     Notes: two dimensinal np.ndarray are used as default, with xr.Dataset for cases
-    where time series arrays are needed. vegetation numpy arrays are dtype float32,
-    because int types have limited interoperability with the np.nan type, which is needed.
+    where time series awareness is helpful (i.e. subsetting WSE data). vegetation numpy
+    arrays are dtype float32, because int types have limited interoperability with the
+    np.nan type, which is needed.
     """
 
     def __init__(self, config_file, log_level=logging.INFO):
@@ -79,7 +82,7 @@ class VegTransition:
         # Store history for analysis
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
-        self.create_output_dirs()
+        self._create_output_dirs()
         self.current_timestep = None  # set in step() method
         self._setup_logger(log_level)
         self.timestep_output_dir = None  # set in step() method
@@ -365,7 +368,7 @@ class VegTransition:
         water_year: int,
         variable_name: str = "WSE_MEAN",
         date_format: str = "%Y_%m_%d",
-    ) -> Optional[xr.Dataset]:
+    ) -> xr.Dataset:
         """
         Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
         uses lazy-loading via Dask.
@@ -576,7 +579,7 @@ class VegTransition:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
             self._logger.info("Creating salinity from habitat defaults")
 
-    def create_output_dirs(self):
+    def _create_output_dirs(self):
         """Create an output location for state variables, model config,
         input data, and QC plots.
 
@@ -598,11 +601,10 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self, date):
+    def _save_state_vars(self):
         """The method will save state variables after each timestep.
 
         This method should also include the config, input data, and QC plots.
-
         """
         template = self.water_depth.isel({"time": 0})  # subset to first month
 
@@ -624,7 +626,9 @@ class VegTransition:
         )
 
     def _create_timestep_dir(self, date):
-        """ """
+        """Create output directory for the current timestamp, where
+        figures and output rasters will be saved.
+        """
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"
         )
@@ -634,7 +638,8 @@ class VegTransition:
 
 
 class _TimestepFilter(logging.Filter):
-    """A filter to inject the current timestep into log records.
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
 
     N/A if log messages occurs while self.current_timestep is not set.
     """

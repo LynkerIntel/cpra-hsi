@@ -1,12 +1,14 @@
 import xarray as xr
 import pathlib
 import numpy as np
+import pandas as pd
 import os
 import shutil
+from datetime import datetime
 
 
 def generate_combined_sequence(
-    quintile_sequence: list[int],
+    quintile_sequence: pd.DataFrame,
     quintile_to_year_map: dict[int, int],
     source_folder: str,  # Path where HEC-RAS .tif files are stored
     output_folder: str,  # Path to store the combined 25-year sequence
@@ -17,7 +19,7 @@ def generate_combined_sequence(
 
     Parameters
     ----------
-    quintile_sequence : list[int]
+    quintile_sequence : pd.DataFrame
         The 25-year sequence of quintiles.
     quintile_to_year_map : dict[int, int])
         Maps quintiles to available years (e.g., {1: 2006, 2: 2023}).
@@ -31,10 +33,7 @@ def generate_combined_sequence(
     Saves WSE data with new filenames to simulate 25 year model output from analog years.
     """
     os.makedirs(output_folder, exist_ok=True)
-
-    # get all monthly tifs
     path = pathlib.Path(source_folder)
-    # source_files = list(path.rglob("*.tif"))
 
     source_files = [
         file for file in list(path.rglob("*.tif")) if "SLR" not in str(file)
@@ -50,7 +49,6 @@ def generate_combined_sequence(
         start = datetime(source_year - 1, 10, 1)
         end = datetime(source_year, 9, 30)
 
-        # filter paths within the water year
         source_year_paths = [
             path for path in source_files if start <= extract_date(path) <= end
         ]
@@ -76,7 +74,6 @@ def generate_combined_sequence(
             print(f"output name: {new_file_name}")
 
             dest_file = os.path.join(output_folder, new_file_name)
-            # Copy the file to the new location with the updated name
             shutil.copy(p, dest_file)
 
         print("All months completed.")
@@ -102,13 +99,11 @@ def extract_date(path: pathlib.Path):
     """
     try:
         # Assuming the date is located just before the file extension in YYYY_MM_DD format
-        date_str = path.stem.split("_")[
-            -3:
-        ]  # Extract the last three underscore-separated parts
+        date_str = path.stem.split("_")[-3:]  # Extract the last three
         date_str = "_".join(date_str)  # Combine back into "YYYY_MM_DD"
         return datetime.strptime(date_str, "%Y_%m_%d")
     except (ValueError, IndexError):
-        return None  # Handle missing or invalid date gracefully
+        return None
 
 
 def create_dataset_from_template(
@@ -131,14 +126,9 @@ def create_dataset_from_template(
     xr.Dataset
         A new dataset based on the template, containing the new variables and copied template attributes.
     """
-    # Copy dimensions and coordinates from the template
-    dims = template.dims
     coords = {name: template.coords[name] for name in template.coords}
-
-    # Create a new dataset
     new_ds = xr.Dataset(coords=coords)
 
-    # Validate and add new variables
     for var_name, (data, attrs) in new_variables.items():
         # Check that the shape matches the template
         if data.shape != template["WSE_MEAN"].shape:

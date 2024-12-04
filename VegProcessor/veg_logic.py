@@ -57,10 +57,15 @@ def zone_v(
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
 
-    # these should be combined eventually
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # veg_type = np.where(type_mask, veg_type, np.nan)
     veg_type_input = np.where(type_mask, veg_type, np.nan)
-    nan_count = np.sum(np.isnan(veg_type))
+
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # veg_type = np.where(valid_wse, veg_type, np.nan)
+    # must use previously maske darray here! (veg_tupe_input)
+    veg_type_input = np.where(valid_wse, veg_type_input, np.nan)
+
+    nan_count = np.sum(np.isnan(veg_type_input))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
@@ -81,7 +86,7 @@ def zone_v(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -188,7 +193,7 @@ def zone_iv(
     # reapply mask, because depth conditions don't include type.
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
@@ -296,7 +301,7 @@ def zone_iii(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -424,7 +429,7 @@ def zone_ii(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid wse mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -534,7 +539,7 @@ def fresh_shrub(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
@@ -694,7 +699,7 @@ def fresh_marsh(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
@@ -821,7 +826,7 @@ def intermediate_marsh(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -954,7 +959,7 @@ def brackish_marsh(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -1063,7 +1068,7 @@ def saline_marsh(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
@@ -1216,7 +1221,7 @@ def water(
     # reapply mask, because depth conditions don't include type
     veg_type = np.where(type_mask, veg_type, np.nan)
     # apply valid WSE mask
-    valid_wse = water_depth["WSE_MEAN"][0].notnull().values
+    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
     veg_type = np.where(valid_wse, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))

@@ -22,8 +22,8 @@ import utils
 class VegTransition:
     """The Vegetation Transition Model.
 
-    Vegetation zones are calculated independenlty, then combined into single
-    non-overlapping array.
+    Vegetation zones are calculated independently, then combined into single
+    non-overlapping array for each timestep.
 
     Example usage found in `./run.ipynb`
 
@@ -31,13 +31,10 @@ class VegTransition:
     where time series awareness is helpful (i.e. subsetting WSE data). vegetation numpy
     arrays are dtype float32, because int types have limited interoperability with the
     np.nan type, which is needed.
-    """
 
-    def __init__(self, config_file, log_level=logging.INFO):
-        """
-        Initialize by setting up logger, loading resource paths, and creating empty
-        arrays for state variables. State variables are:
 
+    Attributes: (only state variables listed)
+    -----------
         self.veg_type
         self.maturity
         self.elevation
@@ -46,9 +43,26 @@ class VegTransition:
         self.pct_no_mast
         self.salinity
 
+    Methods
+    -------
+    step(date):
+        Advances the vegetation model by a single timestep.
+    run():
+        Run the vegetation model, using settings and data defined in `veg_config.yaml`
+
+    """
+
+    def __init__(self, config_file, log_level=logging.INFO):
+        """
+        Initialize by setting up logger, loading resource paths, and creating empty
+        arrays for state variables. State variables are:
+
         Parameters:
-        - config_file (str): Path to configuration YAML
-        - log_level (int): Level of vebosity for logging.
+        -----------
+        config_file : str
+            Path to configuration YAML
+        log_level : int
+            Level of vebosity for logging.
         """
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file

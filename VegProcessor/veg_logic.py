@@ -56,14 +56,12 @@ def zone_v(
 
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
-
-    # veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
-
-    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
-    # veg_type = np.where(valid_wse, veg_type, np.nan)
-    # must use previously maske darray here! (veg_tupe_input)
-    veg_type_input = np.where(valid_wse, veg_type_input, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type_input))
     logger.info("Input NaN count: %d", nan_count)
@@ -81,13 +79,10 @@ def zone_v(
     stacked_masks = np.stack((condition_1, condition_2))
     combined_mask = np.logical_and.reduce(stacked_masks)
 
-    # apply transition
+    # apply transition to full array of all types
     veg_type[combined_mask] = 16
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    # apply valid WSE mask
-    valid_wse = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
-    veg_type = np.where(valid_wse, veg_type, np.nan)
+    # reapply type and valid_depth mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 

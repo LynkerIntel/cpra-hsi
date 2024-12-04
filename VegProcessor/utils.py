@@ -1,33 +1,34 @@
 import xarray as xr
-import numpy as np
-import pandas as pd
 import pathlib
-
+import numpy as np
 import os
-import glob
 import shutil
-from datetime import datetime, timedelta
-import re
 
 
 def generate_combined_sequence(
-    quintile_sequence,  # List[int] for the 25-year sequence
-    quintile_to_year_map,  # Dict[int, int], maps quintiles to available years
-    source_folder,  # Path where HEC-RAS .tif files are stored
-    output_folder,  # Path to store the combined 25-year sequence
+    quintile_sequence: list[int],
+    quintile_to_year_map: dict[int, int],
+    source_folder: str,  # Path where HEC-RAS .tif files are stored
+    output_folder: str,  # Path to store the combined 25-year sequence
 ):
     """
     Generate a 25-year sequence of HEC-RAS .tif files based on quintile assignments. Currently
     requires raster input to be MONTHLY timeseries.
 
-    Parameters:
-        quintile_sequence (list[int]): The 25-year sequence of quintiles.
-        quintile_to_year_map (dict[int, int]): Maps quintiles to available years (e.g., {1: 2006, 2: 2023}).
-        source_folder (str): Path where HEC-RAS .tif files are stored.
-        output_folder (str): Path to store the combined 25-year sequence.
+    Parameters
+    ----------
+    quintile_sequence : list[int]
+        The 25-year sequence of quintiles.
+    quintile_to_year_map : dict[int, int])
+        Maps quintiles to available years (e.g., {1: 2006, 2: 2023}).
+    source_folder : str
+        Path where HEC-RAS .tif files are stored.
+    output_folder : str
+        Path to store the combined 25-year sequence.
 
-    Returns:
-        None
+    Returns
+    --------
+    Saves WSE data with new filenames to simulate 25 year model output from analog years.
     """
     os.makedirs(output_folder, exist_ok=True)
 
@@ -84,10 +85,20 @@ def generate_combined_sequence(
     print("WARN: only files NAMES were modified, original timestamps still in place.")
 
 
-def extract_date(path):
+def extract_date(path: pathlib.Path):
     """
-    Extract date from HEC-RAS filepaths, or any filepath with dates in a
-    YYYY_MM_DD format.
+    Extract date from HEC-RAS filepaths, or any filepath with dates in a YYYY_MM_DD format.
+    Must use pathlib object not str.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        Path to the file with a date embedded in its name in the format YYYY_MM_DD.
+
+    Returns
+    -------
+    datetime or None
+        The extracted date as a datetime object, or None if no valid date is found.
     """
     try:
         # Assuming the date is located just before the file extension in YYYY_MM_DD format
@@ -100,19 +111,25 @@ def extract_date(path):
         return None  # Handle missing or invalid date gracefully
 
 
-def create_dataset_from_template(template, new_variables):
+def create_dataset_from_template(
+    template: xr.Dataset, new_variables: dict[np.ndarray, str]
+):
     """
     Create an xarray.Dataset based on a template dataset.
 
-    Parameters:
-        - template (xr.Dataset): The template dataset.
-        - new_variables (dict): Dictionary defining new variables.
-          Keys are variable names, values are tuples (data, attrs).
-          - `data`: NumPy array of the same shape as the template's data variables.
-          - `attrs`: Metadata for the variable.
+    Parameters
+    ----------
+    template : xr.Dataset
+        The template dataset containing dimensions, coordinates, and optional global attributes.
+    new_variables : dict
+        Dictionary defining new variables. Keys are variable names, and values are tuples (data, attrs).
+        - `data`: NumPy array of the same shape as the template's data variables.
+        - `attrs`: Metadata for the variable.
 
-    Returns:
-        - xr.Dataset: A new dataset based on the template.
+    Returns
+    -------
+    xr.Dataset
+        A new dataset based on the template, containing the new variables and copied template attributes.
     """
     # Copy dimensions and coordinates from the template
     dims = template.dims

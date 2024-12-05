@@ -32,5 +32,5 @@ Description: this folder contains code to setup and run individual HSI models.
 - `AlligatorHSI`: Alligator model.
 
 
-![alt text](VegProcessor/hsi_model_diagram_export.png)
+![alt text](./fig.png)
 

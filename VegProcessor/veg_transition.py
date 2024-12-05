@@ -52,7 +52,7 @@ class VegTransition:
 
     """
 
-    def __init__(self, config_file, log_level=logging.INFO):
+    def __init__(self, config_file: str, log_level: int = logging.INFO):
         """
         Initialize by setting up logger, loading resource paths, and creating empty
         arrays for state variables. State variables are:

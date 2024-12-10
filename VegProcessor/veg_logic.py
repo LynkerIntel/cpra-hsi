@@ -686,6 +686,7 @@ def fresh_marsh(
             combined_mask_water,
             combined_mask_intermediate_marsh,
             combined_mask_fresh_shrub,
+            combined_mask_zone_ii,
         ]
     )
 

@@ -4,7 +4,7 @@ import datetime
 import os
 
 import plotting
-from testing import qc_output, find_nan_to_true_values
+from testing import find_nan_to_true_values
 
 import matplotlib.pyplot as plt
 import logging
@@ -15,13 +15,10 @@ import testing
 logger = logging.getLogger("VegTransition")
 
 
-@qc_output
 def zone_v(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone V
 
@@ -36,12 +33,10 @@ def zone_v(
     np.ndarrays.
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -49,33 +44,34 @@ def zone_v(
     """
     veg_name = "Zone V"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone V (value 15)
     type_mask = veg_type == 15
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
-    # these should be combined eventually
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
-    nan_count = np.sum(np.isnan(veg_type))
+    nan_count = np.sum(np.isnan(veg_type_input))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation > 20%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct > 0.2).to_numpy()
@@ -83,36 +79,20 @@ def zone_v(
     stacked_masks = np.stack((condition_1, condition_2))
     combined_mask = np.logical_and.reduce(stacked_masks)
 
-    # apply transition
+    # apply transition to full array of all types
     veg_type[combined_mask] = 16
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # reapply type and valid_depth mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # Plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        arr=veg_type_input,
-        title="Input - Zone V",
-        out_path=timestep_output_dir,  # Explicit argument
-    )
     plotting.np_arr(
         type_mask,
         "Veg Type Mask (Zone V)",
-        out_path=timestep_output_dir,  # Explicit argument
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
-        timestep_output_dir,  # Explicit argument
+        out_path=timestep_output_dir,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -125,13 +105,10 @@ def zone_v(
     return veg_type
 
 
-@qc_output
 def zone_iv(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transitions for pixels starting in Zone IV
 
@@ -142,12 +119,10 @@ def zone_iv(
     Zone III: 17
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -155,35 +130,34 @@ def zone_iv(
     """
     veg_name = "Zone IV"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone IV (value 16)
     type_mask = veg_type == 16
-    # Set other veg types to nan
-    # veg_type[~type_mask] = 999
-    # veg_type_input[~type_mask] = 999
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY, JUNE inundation depth <= 0 (using OR)
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 20%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
@@ -216,19 +190,15 @@ def zone_iv(
     veg_type[combined_mask_v] = 15
     veg_type[combined_mask_iii] = 17
     # reapply mask, because depth conditions don't include type.
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
-
     logger.info("Output veg types: %s", np.unique(veg_type))
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir)
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
+
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -241,13 +211,10 @@ def zone_iv(
     return veg_type
 
 
-@qc_output
 def zone_iii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone III
 
@@ -260,12 +227,10 @@ def zone_iii(
     Zone II: 18
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -273,40 +238,41 @@ def zone_iii(
     """
     veg_name = "Zone III"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone III (value 17)
     type_mask = veg_type == 17
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
-    condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
-    condition_1 = (condition_1_pct == 0).to_numpy()
+    # Condition 1: MAR, APR, MAY, JUNE inundation % TIME <= 0%
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
+    condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Growing Season (GS) inundation < 15%
-    filtered_2 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct < 0.15).to_numpy()
 
-    # Condition 3:  Growing Season (GS) inundation >= 80%
-    condition_3_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
+    # Condition 3:  ANNUAL inundation >= 80%
+    condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct >= 0.8).to_numpy()
 
     # get pixels that meet zone iv criteria
@@ -331,21 +297,16 @@ def zone_iii(
     # update valid transition types
     veg_type[combined_mask_iv] = 16
     veg_type[combined_mask_ii] = 18
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply type and valid depth mask
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir)
 
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -357,13 +318,10 @@ def zone_iii(
     return veg_type
 
 
-@qc_output
 def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone II
 
@@ -377,12 +335,10 @@ def zone_ii(
     Zone II: 18
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -390,26 +346,30 @@ def zone_ii(
     """
     veg_name = "Zone II"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 18
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition 2: Annual inundation < 70% TIME
@@ -418,9 +378,7 @@ def zone_ii(
     condition_2 = (condition_2_pct < 0.7).to_numpy()
 
     # Condition 3: Growing Season (GS) inundation < 20%
-    filtered_3 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
@@ -464,25 +422,20 @@ def zone_ii(
     if testing.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
-    # update valid transition types
+    # update valid transition types for unmasked array
     veg_type[combined_mask_iii] = 17
     veg_type[combined_mask_fresh_shrub] = 19
     veg_type[combined_mask_fresh_marsh] = 20
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply type and valid depth mask to new veg array
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
     plotting.np_arr(type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir)
 
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -494,13 +447,10 @@ def zone_ii(
     return veg_type
 
 
-@qc_output
 def fresh_shrub(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as fresh shrub
 
@@ -514,14 +464,11 @@ def fresh_shrub(
     Zone II: 18
     Fresh Shrub: 19
 
-
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -529,39 +476,39 @@ def fresh_shrub(
     """
     veg_name = "Fresh Shrub"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 19
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: MAR, APR, MAY inundation depth <= 0
-    filtered_1 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Annual inundation > 80% TIME
-    # Note: this assumes time is serially complete
+    # Condition 2: Annual inundation >= 80% TIME
     condition_2_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct > 0.8).to_numpy()
+    condition_2 = (condition_2_pct >= 0.8).to_numpy()
 
     # Condition 3: Growing Season (GS) inundation >= 40%
-    filtered_3 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
-    # Note: this assumes time is serially complete
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct >= 0.4).to_numpy()
 
@@ -589,19 +536,16 @@ def fresh_shrub(
     veg_type[combined_mask_ii] = 18
     veg_type[combined_mask_fresh_marsh] = 20
     # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
     plotting.np_arr(
         type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
     )
-    plotting.np_arr(
-        veg_type, "Output - Updated Veg Types", description, timestep_output_dir
-    )
+
     plotting.sum_changes(
         veg_type_input,
         veg_type,
@@ -613,17 +557,13 @@ def fresh_shrub(
     return veg_type
 
 
-@qc_output
 def fresh_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as Fresh Marsh
-
 
     Condition_1: GS Inundation == 100% TIME
     Condition_2: mean GS depth > 20cm
@@ -638,15 +578,12 @@ def fresh_marsh(
     Fresh Shrub: 19
     Fresh Marsh: 20
 
-
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - salinity (np.ndarray): array of salinity, from HH model OR defaults.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -654,28 +591,31 @@ def fresh_marsh(
     """
     veg_name = "Fresh Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    apr_sep = [4, 5, 6, 7, 8, 9]
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Fresh Marsh (value 20)
     type_mask = veg_type == 20
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition_1: GS Inundation == 100% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct == 1).to_numpy()
 
@@ -688,12 +628,12 @@ def fresh_marsh(
     condition_3 = salinity >= 2
 
     # Condition_4: APR:SEP inundation < 30% TIME
-    filtered_2 = water_depth.sel(time=slice(f"{date.year}-04", f"{date.year}-09"))
+    filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(apr_sep))
     condition_4_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_4 = (condition_4_pct < 0.3).to_numpy()
 
     # Condition_5: MAR, APR, MAY, JUNE inundation <= 0
-    filtered_3 = water_depth.sel(time=slice(f"{date.year}-03", f"{date.year}-06"))
+    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_5 = (filtered_3["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
     # Condition_6: ANNUAL inundation > 80% TIME
@@ -729,9 +669,11 @@ def fresh_marsh(
     # get pixels that meet Zone II criteria
     stacked_masks_zone_ii = np.stack(
         (
-            combined_mask_water,
-            combined_mask_intermediate_marsh,
-            combined_mask_fresh_shrub,
+            ~combined_mask_water,
+            ~combined_mask_intermediate_marsh,
+            ~combined_mask_fresh_shrub,
+            condition_5,
+            condition_6,
         )
     )
     combined_mask_zone_ii = np.logical_and.reduce(stacked_masks_zone_ii)
@@ -742,26 +684,25 @@ def fresh_marsh(
             combined_mask_water,
             combined_mask_intermediate_marsh,
             combined_mask_fresh_shrub,
+            combined_mask_zone_ii,
         ]
     )
 
     if testing.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
-    # update valid transition types
+    # update valid transition types for unmasked array
     veg_type[combined_mask_water] = 26
     veg_type[combined_mask_intermediate_marsh] = 21
     veg_type[combined_mask_fresh_shrub] = 19
     veg_type[combined_mask_zone_ii] = 18
-
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply combined mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
+    # plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
     plotting.np_arr(
         type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
     )
@@ -776,14 +717,11 @@ def fresh_marsh(
     return veg_type
 
 
-@qc_output
 def intermediate_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Intermediate Marsh
 
@@ -798,12 +736,11 @@ def intermediate_marsh(
     Intermediate Marsh: 21
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -811,28 +748,30 @@ def intermediate_marsh(
     """
     veg_name = "Intermediate Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Intermediate Marsh (value 21)
     type_mask = veg_type == 21
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: Growind Season inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
@@ -844,7 +783,7 @@ def intermediate_marsh(
     # Condition_3: Average ANNUAL salinity < 1ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
-    condition_3 = salinity >= 5
+    condition_3 = salinity < 1
 
     # get pixels that meet water criteria
     # (reassigning for consistency with other vars)
@@ -881,37 +820,21 @@ def intermediate_marsh(
     if testing.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
-    # update valid transition types
+    # update valid transition types on full array
     veg_type[combined_mask_water] = 26
     veg_type[combined_mask_brackish_marsh] = 22
     veg_type[combined_mask_fresh_marsh] = 20
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -924,14 +847,11 @@ def intermediate_marsh(
     return veg_type
 
 
-@qc_output
 def brackish_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Brackish Marsh
 
@@ -947,12 +867,11 @@ def brackish_marsh(
     Brackish Marsh: 22
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -960,28 +879,30 @@ def brackish_marsh(
     """
     veg_name = "Brackish Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Brackish Marsh (value 22)
     type_mask = veg_type == 22
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: GS inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
@@ -1036,33 +957,17 @@ def brackish_marsh(
     veg_type[combined_mask_water] = 26
     veg_type[combined_mask_saline_marsh] = 23
     veg_type[combined_mask_intermediate_marsh] = 21
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -1075,14 +980,11 @@ def brackish_marsh(
     return veg_type
 
 
-@qc_output
 def saline_marsh(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Saline Marsh
 
@@ -1094,12 +996,11 @@ def saline_marsh(
     Saline Marsh: 23
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1107,32 +1008,34 @@ def saline_marsh(
     """
     veg_name = "Saline Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Saline Marsh (value 23)
     type_mask = veg_type == 23
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
     # Condition 1: GS inundation > 80% TIME
-    filtered_1 = water_depth.sel(
-        time=slice(growing_season["start"], growing_season["end"])
-    )
+    filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
-    # Condition_2: Average ANNUAL salinity >= 5ppt
+    # Condition_2: Average ANNUAL salinity < 11ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
     condition_2 = salinity < 11
@@ -1161,36 +1064,20 @@ def saline_marsh(
     if testing.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
-    # update valid transition types
+    # update valid transition types for full array
     veg_type[combined_mask_water] = 26
     veg_type[combined_mask_brackish_marsh] = 22
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+    # apply mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,
@@ -1203,14 +1090,11 @@ def saline_marsh(
     return veg_type
 
 
-@qc_output
 def water(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-    date: datetime.date,
-    plot: bool = False,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Water
 
@@ -1228,12 +1112,11 @@ def water(
     Water: 26
 
     Params:
-        - logger: pass main logger to this function
         - veg_type (np.ndarray): array of current vegetation types.
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
-        - date (datetime.date): Date to derive year for filtering.
-        - plot (bool): If True, plots the array before and after transformation.
+        - timestep_output_dir (str): location for output raster data or plots.
+        - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1241,25 +1124,29 @@ def water(
     """
     veg_name = "Water"
     logger.info("Starting transitions with input type: %s", veg_name)
-    description = f"Input Veg Type: {veg_name}"
-    timestep_output_dir = (
-        timestep_output_dir + f"/figs/{veg_name.lower().replace(" ", "_")}/"
+    timestep_output_dir = os.path.join(
+        timestep_output_dir, veg_name.lower().replace(" ", "_")
     )
     os.makedirs(timestep_output_dir, exist_ok=True)
 
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
-    growing_season = {"start": f"{date.year}-04", "end": f"{date.year}-09"}
+    mar_june = [3, 4, 5, 6]
+    gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Water (value 26)
     type_mask = veg_type == 26
-    veg_type = np.where(type_mask, veg_type, np.nan)
-    veg_type_input = np.where(type_mask, veg_type, np.nan)
+    # mask pixels without full timeseries non-null
+    valid_wse_mask = water_depth.notnull().all(dim="time")["WSE_MEAN"].to_numpy()
+    # apply "type" and "valid depth" masks to "veg_type_input" (to compare output against)
+    stacked_mask_type_valid = np.stack((type_mask, valid_wse_mask))
+    combined_mask_type_valid = np.logical_and.reduce(stacked_mask_type_valid)
+    veg_type_input = np.where(combined_mask_type_valid, veg_type_input, np.nan)
 
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Input NaN count: %d", nan_count)
 
-    # Condition_1: Average ANNUAL depth < 5cm (AND Condition 3 & 5)
+    # Condition_1: Average ANNUAL depth < 5cm (and Condition 3 & 5)
     condition_1_3_5_7 = water_depth["WSE_MEAN"].mean(dim="time")
     condition_1_3_5_7 = (condition_1_3_5_7 < 0.05).to_numpy()
 
@@ -1270,7 +1157,7 @@ def water(
     condition_4 = salinity < 5
 
     # Condition_6: Average ANNUAL salinity < 12ppt
-    condition_6 = salinity > 12
+    condition_6 = salinity < 12
 
     # get pixels that meet fresh marsh criteria
     stacked_mask_fresh_marsh = np.stack(
@@ -1285,8 +1172,8 @@ def water(
     stacked_mask_intermediate_marsh = np.stack(
         (
             ~combined_mask_fresh_marsh,
-            condition_2,
             condition_1_3_5_7,
+            condition_4,
         )
     )
     combined_mask_intermediate_marsh = np.logical_and.reduce(
@@ -1328,38 +1215,23 @@ def water(
     if testing.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
-    # update valid transition types
+    # update valid transition types for full array
     veg_type[combined_mask_fresh_marsh] = 20
     veg_type[combined_mask_intermediate_marsh] = 21
     veg_type[combined_mask_brackish_marsh] = 22
     veg_type[combined_mask_saline_marsh] = 23
-    # reapply mask, because depth conditions don't include type
-    veg_type = np.where(type_mask, veg_type, np.nan)
+
+    # apply mask, because depth conditions don't include type
+    veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
     logger.info("Output veg types: %s", np.unique(veg_type))
-
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # if plot:
-    # plotting code should be careful to use
-    # veg_type_input, when showing the input
-    # array, and veg_type, when showing the
-    # output array
-    plotting.np_arr(
-        veg_type_input,
-        f"Input - {veg_name}",
-        # description,
-    )
     plotting.np_arr(
         type_mask,
         f"Veg Type Mask ({veg_name})",
         # description,
-    )
-    plotting.np_arr(
-        veg_type,
-        "Output - Updated Veg Types",
-        description,
     )
     plotting.sum_changes(
         veg_type_input,

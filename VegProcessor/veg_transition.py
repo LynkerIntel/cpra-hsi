@@ -22,19 +22,19 @@ import utils
 class VegTransition:
     """The Vegetation Transition Model.
 
-    Vegetation zones are calculated independenlty (slower) for
-    better model interperability and quality control.
+    Vegetation zones are calculated independently, then combined into single
+    non-overlapping array for each timestep.
+
+    Example usage found in `./run.ipynb`
 
     Notes: two dimensinal np.ndarray are used as default, with xr.Dataset for cases
-    where time series arrays are needed. vegetation numpy arrays are dtype float32,
-    because int types have limited interoperability with the np.nan type, which is needed.
-    """
+    where time series awareness is helpful (i.e. subsetting WSE data). vegetation numpy
+    arrays are dtype float32, because int types have limited interoperability with the
+    np.nan type, which is needed.
 
-    def __init__(self, config_file, log_level=logging.INFO):
-        """
-        Initialize by setting up logger, loading resource paths, and creating empty
-        arrays for state variables. State variables are:
 
+    Attributes: (only state variables listed)
+    -----------
         self.veg_type
         self.maturity
         self.elevation
@@ -43,9 +43,26 @@ class VegTransition:
         self.pct_no_mast
         self.salinity
 
+    Methods
+    -------
+    step(date):
+        Advances the vegetation model by a single timestep.
+    run():
+        Run the vegetation model, using settings and data defined in `veg_config.yaml`
+
+    """
+
+    def __init__(self, config_file: str, log_level: int = logging.INFO):
+        """
+        Initialize by setting up logger, loading resource paths, and creating empty
+        arrays for state variables. State variables are:
+
         Parameters:
-        - config_file (str): Path to configuration YAML
-        - log_level (int): Level of vebosity for logging.
+        -----------
+        config_file : str
+            Path to configuration YAML
+        log_level : int
+            Level of vebosity for logging.
         """
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file
@@ -63,6 +80,7 @@ class VegTransition:
         # simulation
         self.start_date = self.config["simulation"].get("start_date")
         self.end_date = self.config["simulation"].get("end_date")
+        self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -78,9 +96,9 @@ class VegTransition:
         # Store history for analysis
         # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
 
-        self.create_output_dirs()
-        self._setup_logger(log_level)
+        self._create_output_dirs()
         self.current_timestep = None  # set in step() method
+        self._setup_logger(log_level)
         self.timestep_output_dir = None  # set in step() method
 
         # Pretty-print the configuration
@@ -102,7 +120,7 @@ class VegTransition:
         self._load_salinity()
 
         self.wse = None
-        self.maturity = np.ones_like(self.dem)  # TODO: should maturity iterate from 0?
+        self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
 
@@ -122,25 +140,31 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-    def _setup_logger(self, log_level):
-        """Set up the logger for the class."""
+    def _setup_logger(self, log_level=logging.INFO):
+        """Set up the logger for the VegTransition class."""
         self._logger = logging.getLogger("VegTransition")
         self._logger.setLevel(log_level)
 
-        # Prevent adding multiple handlers if already added
-        if not self._logger.handlers:
-            # Console handler for stdout
+        # clear existing handlers to prevent duplicates
+        # (this happens when re-runnning in notebook)
+        if self._logger.hasHandlers():
+            for handler in self._logger.handlers:
+                self._logger.removeHandler(handler)
+                handler.close()  # Close old handlers properly
+
+        try:
+            # console handler for stdout
+            # i.e. print messages
             ch = logging.StreamHandler()
             ch.setLevel(log_level)
 
-            # File handler for logs in `run-input` folder
+            # file handler for logs in `run-input` folder
             run_input_dir = os.path.join(self.output_dir_path, "run-input")
             os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
             log_file_path = os.path.join(run_input_dir, "simulation.log")
             fh = logging.FileHandler(log_file_path)
             fh.setLevel(log_level)
 
-            # Create formatter
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
             )
@@ -149,9 +173,17 @@ class VegTransition:
             ch.setFormatter(formatter)
             fh.setFormatter(formatter)
 
-        # Add a custom filter to inject the timestep
-        filter_instance = _TimestepFilter(self)
-        self._logger.addFilter(filter_instance)
+            # Add handlers to the logger
+            self._logger.addHandler(ch)
+            self._logger.addHandler(fh)
+
+            # Add a custom filter to inject the timestep
+            filter_instance = _TimestepFilter(self)
+            self._logger.addFilter(filter_instance)
+
+            self._logger.info("Logger setup complete.")
+        except Exception as e:
+            print(f"Error during logger setup: {e}")
 
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""
@@ -184,7 +216,7 @@ class VegTransition:
         veg_type_in = self.veg_type
 
         # calculate depth
-        self.wse = self._load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -195,84 +227,64 @@ class VegTransition:
         plotting.np_arr(
             self.veg_type,
             title="All Types Input",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
 
         # veg_type array is iteratively updated, for each zone
         self.veg_type_update_1 = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
-            date,
-            # plot=True,
+            self.timestep_output_dir_figs,
         )
         self.veg_type_update_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
-            date,
-            # plot=True,
+            self.timestep_output_dir_figs,
         )
         self.veg_type_update_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
-            date,
-            # plot=True,
+            self.timestep_output_dir_figs,
         )
         self.veg_type_update_4 = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
-            date,
-            # plot=True,
+            self.timestep_output_dir_figs,
         )
         self.veg_type_update_5 = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
-            date,
-            # plot=True,
+            self.timestep_output_dir_figs,
         )
         self.veg_type_update_6 = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_7 = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_8 = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_9 = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
         self.veg_type_update_10 = veg_logic.water(
             self.veg_type,
             self.water_depth,
-            self.timestep_output_dir,
+            self.timestep_output_dir_figs,
             self.salinity,
-            date,
-            # plot=True,
         )
 
         # stack partial update arrays for each zone
@@ -318,22 +330,20 @@ class VegTransition:
         plotting.np_arr(
             self.veg_type,
             title="All Types Output",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
             plot_title="Timestep Veg Changes",
-            out_path=self.timestep_output_dir,
+            out_path=self.timestep_output_dir_figs,
         )
 
-        # if veg type has changed maturity = 0,
-        # if veg type has not changes, maturity + 1
         self._calculate_maturity(veg_type_in)
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        self._save_state_vars(date)
+        self._save_state_vars()
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -350,7 +360,7 @@ class VegTransition:
             self.start_date,
             self.end_date,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS")
+        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS-OCT")
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
         for timestep in simulation_period:
@@ -367,19 +377,26 @@ class VegTransition:
         # TODO: where is extra dim coming from? i.e. da[0] is needed!
         return da[0].to_numpy()
 
-    def _load_wse_wy(
+    def load_wse_wy(
         self,
         water_year: int,
         variable_name: str = "WSE_MEAN",
         date_format: str = "%Y_%m_%d",
-    ) -> Optional[xr.Dataset]:
+    ) -> xr.Dataset:
         """
-        Load .tif files corresponding to a specific water year into an xarray.Dataset.
+        Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
+        uses lazy-loading via Dask.
 
         Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
         followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
         automatically extract the timestamps and assign them to a 'time' dimension in the resulting
         xarray.Dataset, but only for files within the specified water year.
+
+        NOTE: Input WSE data is considered to use NaN to designate 0 depth, as is the
+        case for the HEC-RAS data. If this is false, this function must be updated
+        accordingly.
+
+        UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
 
         Parameters
         ----------
@@ -393,6 +410,12 @@ class VegTransition:
         date_format : str, optional
             Format string for parsing dates from file names, default is "%Y_%m_%d".
             Adjust based on your file naming convention.
+        analog_sequence : bool
+            This is only for use when loading 25-year analog years sequences, where the
+            filenames have been updated to represent analog years, but the file data
+            reamain unchanged (i.e. uses the actual model-year). This flag will reset
+            the MONTHLY time series to match the year given in the file name, in order
+            for the vegetation model to run as normal.
 
         Returns
         -------
@@ -423,6 +446,9 @@ class VegTransition:
             self._logger.error("No files found for water year: %s", water_year)
             return None
 
+        if len(selected_files) < 12:
+            raise ValueError(f"month(s) missing from Water Year: {water_year}")
+
         # Preprocess function to remove the 'band' dimension
         def preprocess(da):
             return da.squeeze(dim="band").expand_dims(
@@ -430,21 +456,39 @@ class VegTransition:
             )
 
         # Load selected files into a single Dataset with open_mfdataset
-        xr_dataset = xr.open_mfdataset(
+        ds = xr.open_mfdataset(
             selected_files,
             concat_dim="time",
             combine="nested",
             parallel=True,
             preprocess=preprocess,
         )
-
         # rename
-        xr_dataset = xr_dataset.rename(
-            {list(xr_dataset.data_vars.keys())[0]: variable_name}
+        ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
+
+        ds[variable_name] *= 0.3048  # UNIT: feet to meters
+
+        if self.analog_sequence:
+            self._logger.info("Using sequence loading method!")
+            new_timesteps = pd.date_range(
+                f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
+            )
+
+            if not len(new_timesteps) == len(ds["time"]):
+                raise ValueError("Timestep must be monthly.")
+
+            # Replace the time coordinate with time from
+            ds = ds.assign_coords(time=("time", new_timesteps))
+            self._logger.info("Sequence timeseres updated to match filename.")
+
+        self._logger.info(
+            "Replacing all NaN in WSE data with 0 (assuming full domain coverage.)"
         )
+        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
+        ds = ds.fillna(0)
 
         self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
-        return xr_dataset
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
@@ -471,9 +515,6 @@ class VegTransition:
         """
         +1 maturity for pixels without vegetation changes.
         """
-        # TODO: Need to create mask for only Zone II to V pixels.
-        # self._logger.warning("need to mask to zone II to V pixels.")
-
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
             raise ValueError("Timestep input and output array have different shapes!")
@@ -485,8 +526,46 @@ class VegTransition:
             np.isnan(veg_type_in) & np.isnan(self.veg_type)
         )
 
-        self.maturity[diff_mask] += 1
-        self._logger.info("Maturity incremented for unchanged veg types")
+        # forested veg types
+        values_to_mask = [15, 16, 17, 18]
+        # Create mask where True corresponds to values in the list
+        type_mask = np.isin(self.veg_type, values_to_mask)
+
+        # Use logical AND to find locations where both arrays are True
+        # i.e. pixel value has changed, and it is a forested veg type
+        stacked_mask_change = np.stack((diff_mask, type_mask))
+        combined_mask_change = np.logical_and.reduce(stacked_mask_change)
+
+        # pixel value has NOT changed, and it is a forested veg type
+        stacked_mask_no_change = np.stack((~diff_mask, type_mask))
+        combined_mask_no_change = np.logical_and.reduce(stacked_mask_no_change)
+
+        if not combined_mask_no_change.any():
+            self._logger.warning("No forested pixels had maturity increment increase.")
+
+        if not combined_mask_change.any():
+            self._logger.warning("No forested pixels changed in prior timestep.")
+
+        if testing.common_true_locations(
+            np.stack((combined_mask_change, combined_mask_no_change))
+        ):
+            raise ValueError("Forested types have overlapping True location(s)")
+
+        # if forested pixels change, reset age to 0
+        self.maturity[combined_mask_change] = 0
+        self._logger.info("Maturity reset for changed veg type (forested)")
+        # if forested pixels are the same, add one year
+        self.maturity[combined_mask_no_change] += 1
+        self._logger.info("Maturity incremented for unchanged veg types (forested)")
+
+        # all other types (non-forested, non-handled) to np.nan
+        self.maturity[~type_mask] = np.nan
+
+        plotting.np_arr(
+            self.maturity,
+            title="Timestep Maturity",
+            out_path=self.timestep_output_dir_figs,
+        )
 
     def _load_veg_initial_raster(self) -> np.ndarray:
         """This method will load the base veg raster, from which the model will iterate forwards,
@@ -517,7 +596,7 @@ class VegTransition:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
             self._logger.info("Creating salinity from habitat defaults")
 
-    def create_output_dirs(self):
+    def _create_output_dirs(self):
         """Create an output location for state variables, model config,
         input data, and QC plots.
 
@@ -539,36 +618,45 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self, date):
+    def _save_state_vars(self):
         """The method will save state variables after each timestep.
 
         This method should also include the config, input data, and QC plots.
-
         """
         template = self.water_depth.isel({"time": 0})  # subset to first month
 
         # veg type out
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        self.veg_ts_out = utils.create_dataset_from_template(template, new_variables)
+        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
 
-        outpath = self.timestep_output_dir + "/vegtype.tif"
-        self.veg_ts_out["veg_type"].rio.to_raster(outpath)
+        self.timestep_out["veg_type"].rio.to_raster(
+            self.timestep_output_dir + "/vegtype.tif"
+        )
 
         # pct mast out
+        # TODO: add perent mast handling
 
         # maturity out
+        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
+        self.timestep_out["maturity"].rio.to_raster(
+            self.timestep_output_dir + "/maturity.tif"
+        )
 
     def _create_timestep_dir(self, date):
-        """ """
+        """Create output directory for the current timestamp, where
+        figures and output rasters will be saved.
+        """
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"
         )
+        self.timestep_output_dir_figs = os.path.join(self.timestep_output_dir, "figs")
         os.makedirs(self.timestep_output_dir, exist_ok=True)
-        os.makedirs(self.timestep_output_dir + "/figs", exist_ok=True)
+        os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
 
 class _TimestepFilter(logging.Filter):
-    """A filter to inject the current timestep into log records.
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
 
     N/A if log messages occurs while self.current_timestep is not set.
     """

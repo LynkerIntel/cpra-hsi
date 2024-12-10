@@ -502,15 +502,13 @@ def fresh_shrub(
     filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Annual inundation > 80% TIME
-    # Note: this assumes time is serially complete
+    # Condition 2: Annual inundation >= 80% TIME
     condition_2_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct > 0.8).to_numpy()
+    condition_2 = (condition_2_pct >= 0.8).to_numpy()
 
     # Condition 3: Growing Season (GS) inundation >= 40%
     filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
-    # Note: this assumes time is serially complete
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct >= 0.4).to_numpy()
 

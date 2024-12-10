@@ -343,7 +343,7 @@ class VegTransition:
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        self._save_state_vars(date)
+        self._save_state_vars()
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -396,6 +396,8 @@ class VegTransition:
         case for the HEC-RAS data. If this is false, this function must be updated
         accordingly.
 
+        UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
+
         Parameters
         ----------
         folder_path : str
@@ -445,7 +447,7 @@ class VegTransition:
             return None
 
         if len(selected_files) < 12:
-            raise ValueError("month(s) missing from Water Year.")
+            raise ValueError(f"month(s) missing from Water Year: {water_year}")
 
         # Preprocess function to remove the 'band' dimension
         def preprocess(da):
@@ -461,9 +463,10 @@ class VegTransition:
             parallel=True,
             preprocess=preprocess,
         )
-
         # rename
         ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
+
+        ds[variable_name] *= 0.3048  # UNIT: feet to meters
 
         if self.analog_sequence:
             self._logger.info("Using sequence loading method!")

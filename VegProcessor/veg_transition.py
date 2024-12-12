@@ -81,6 +81,9 @@ class VegTransition:
         self.start_date = self.config["simulation"].get("start_date")
         self.end_date = self.config["simulation"].get("end_date")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
+        self.scenario_type = self.config["simulation"].get(
+            "scenario_type", ""
+        )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -159,9 +162,9 @@ class VegTransition:
             ch.setLevel(log_level)
 
             # file handler for logs in `run-input` folder
-            run_input_dir = os.path.join(self.output_dir_path, "run-input")
-            os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
-            log_file_path = os.path.join(run_input_dir, "simulation.log")
+            run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+            os.makedirs(run_metadata_dir, exist_ok=True)  # Ensure directory exists
+            log_file_path = os.path.join(run_metadata_dir, "simulation.log")
             fh = logging.FileHandler(log_file_path)
             fh.setLevel(log_level)
 
@@ -329,13 +332,13 @@ class VegTransition:
 
         plotting.np_arr(
             self.veg_type,
-            title="All Types Output",
+            title=f"All Types Output - {date.strftime('%Y-%m-%d')} - {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
-            plot_title="Timestep Veg Changes",
+            plot_title=f"Timestep Veg Changes - {date.strftime('%Y-%m-%d')} - {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
@@ -610,11 +613,11 @@ class VegTransition:
         os.makedirs(self.output_dir_path, exist_ok=True)
 
         # Create the 'run-input' subdirectory
-        run_input_dir = os.path.join(self.output_dir_path, "run-input")
-        os.makedirs(run_input_dir, exist_ok=True)
+        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+        os.makedirs(run_metadata_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, run_input_dir)
+            shutil.copy(self.config_path, run_metadata_dir)
         else:
             print("Config file not found at %s", self.config_path)
 
@@ -649,7 +652,10 @@ class VegTransition:
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"
         )
-        self.timestep_output_dir_figs = os.path.join(self.timestep_output_dir, "figs")
+        self.timestep_output_dir_figs = os.path.join(
+            self.timestep_output_dir,
+            "figs",
+        )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 

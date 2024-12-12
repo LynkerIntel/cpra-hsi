@@ -2,16 +2,17 @@
 
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
-  #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/sequence-data"
+  #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
+  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-wet"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   salinity_raster: #str (optional)
 
 simulation:
-  start_date: "2021-10-01"
-  end_date: "2023-10-01"
-  wse_sequence_input: False # bool if stage input is synthetic
+  start_date: "1999-10-01"
+  end_date: "2023-09-30"
+  wse_sequence_input: True # bool if WSE input is synthetic
+  scenario_type: "Wet" # str; one of: 'Dry', 'Moderate', 'Wet' 
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

@@ -38,13 +38,13 @@ def np_arr(
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     unique_values = np.unique(arr[~np.isnan(arr)])
 
-    if len(unique_values) == 1:
+    if len(unique_values) == 1:  # for boolean arrays
         cmap = "gray"  # Use black (grayscale) colormap
-        unique_value = unique_values[0]
-        vmin, vmax = unique_value, unique_value
+        unique_first = unique_values[0]
+        vmin, vmax = unique_first, unique_first
     else:
         cmap = "viridis"
-        vmin, vmax = None, None  # Default scaling
+        vmin, vmax = unique_values.min(), unique_values.max()  # Default scaling
 
     # Plot the 2D array
     im = axes[0].imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
@@ -86,7 +86,7 @@ def np_arr(
 
         sanitized_title = title.replace(" ", "_").replace("\n", "_")
         file_path = os.path.join(out_path, f"{sanitized_title}.png")
-        fig.savefig(file_path, dpi=300)
+        fig.savefig(file_path, dpi=300, bbox_inches="tight")
         plt.close(plt.gcf())
         logger.info("Saved plot to %s", file_path)
 

@@ -229,7 +229,7 @@ class VegTransition:
 
         plotting.np_arr(
             self.veg_type,
-            title="All Types Input",
+            f"All Types Output {date.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
@@ -332,13 +332,13 @@ class VegTransition:
 
         plotting.np_arr(
             self.veg_type,
-            title=f"All Types Output - {date.strftime('%Y-%m-%d')} - {self.scenario_type}",
+            title=f"All Types Output {date.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
-            plot_title=f"Timestep Veg Changes - {date.strftime('%Y-%m-%d')} - {self.scenario_type}",
+            plot_title=f"Timestep Veg Changes {date.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 

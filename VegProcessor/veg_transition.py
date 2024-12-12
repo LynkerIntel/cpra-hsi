@@ -93,12 +93,6 @@ class VegTransition:
             self.config, default_flow_style=False, sort_keys=False
         )
 
-        # Time
-        # self.time = 0
-
-        # Store history for analysis
-        # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
-
         self._create_output_dirs()
         self.current_timestep = None  # set in step() method
         self._setup_logger(log_level)
@@ -210,11 +204,11 @@ class VegTransition:
     def step(self, date):
         """Advance the transition model by one step."""
         self.current_timestep = date  # Set the current timestep
+        wy = date.year
 
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        wy = date.year
         # copy existing veg types
         veg_type_in = self.veg_type
 
@@ -223,13 +217,9 @@ class VegTransition:
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
-        # temporary bug fixing subset
-        # self.veg_type = self.veg_type[200:275, 200:275]
-        # self.water_depth = self.water_depth.isel(x=slice(200, 275), y=slice(200, 275))
-
         plotting.np_arr(
             self.veg_type,
-            f"All Types Output {date.strftime('%Y-%m-%d')} {self.scenario_type}",
+            f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
@@ -332,13 +322,13 @@ class VegTransition:
 
         plotting.np_arr(
             self.veg_type,
-            title=f"All Types Output {date.strftime('%Y-%m-%d')} {self.scenario_type}",
+            title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
-            plot_title=f"Timestep Veg Changes {date.strftime('%Y-%m-%d')} {self.scenario_type}",
+            plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
@@ -566,7 +556,7 @@ class VegTransition:
 
         plotting.np_arr(
             self.maturity,
-            title="Timestep Maturity",
+            title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 

@@ -35,9 +35,7 @@ def generate_combined_sequence(
     os.makedirs(output_folder, exist_ok=True)
     path = pathlib.Path(source_folder)
 
-    source_files = [
-        file for file in list(path.rglob("*.tif")) if "SLR" not in str(file)
-    ]
+    source_files = list(path.rglob("*.tif"))
 
     if not source_files:
         raise FileNotFoundError(f"No .tif files found for year in {source_folder}")

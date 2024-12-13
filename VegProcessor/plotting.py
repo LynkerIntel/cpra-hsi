@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
+import matplotlib.colors as mcolors
 import logging
 import os
 from typing import Optional
@@ -40,6 +40,7 @@ def np_arr(
     None
         Saves figures based on input arrays, in the `out_path`
     """
+    # Define vegetation types and their associated colors
     vegetation_colors = {
         15: (0, 102, 0),  # Dark Green
         16: (0, 204, 153),  # Teal
@@ -53,64 +54,39 @@ def np_arr(
         26: (153, 204, 255),  # Light Blue
     }
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    # Get all unique values in the array (this will be used as a fallback for veg_keys if veg_palette is False)
     unique_values = np.unique(arr[~np.isnan(arr)]).astype(int)
 
     if veg_palette:
-        # Extract the vegetation type keys and colors
-        veg_keys = list(vegetation_colors.keys())
+        # Extract the keys and colors from the vegetation colors
+        veg_keys = sorted(unique_values)  # Get all unique values from the array
         veg_colors = [
-            np.array(color) / 255.0 for color in vegetation_colors.values()
-        ]  # Normalize 0-1
-
-        # Identify missing (undefined) vegetation types and assign them a gray color
-        undefined_veg_types = [val for val in unique_values if val not in veg_keys]
-
-        # Add gray color for undefined vegetation types
-        for veg_type in undefined_veg_types:
-            vegetation_colors[veg_type] = (128, 128, 128)  # Gray color
-
-        # Update keys and colors after adding undefined types
-        veg_keys = sorted(
-            vegetation_colors.keys()
-        )  # 🔥 Sort to avoid ValueError from BoundaryNorm
-        veg_colors = [
-            np.array(vegetation_colors[key]) / 255.0 for key in veg_keys
-        ]  # Normalize 0-1
-
-        # Create a ListedColormap from the specific vegetation colors
-        cmap = ListedColormap(veg_colors, name="vegetation")
-
-        # Create a boundary norm to map pixel values to colors
-        boundaries = [key - 0.5 for key in veg_keys] + [veg_keys[-1] + 0.5]
-        norm = BoundaryNorm(boundaries, ncolors=len(veg_colors))
+            tuple(np.array(vegetation_colors.get(key, (128, 128, 128))) / 255.0)
+            for key in veg_keys
+        ]  # Normalize to 0-1 and use gray (128, 128, 128) for missing keys
     else:
-        # If veg_palette is False, use the unique values from the array as the "vegetation keys"
         veg_keys = sorted(unique_values)
-        cmap = "viridis"
-        norm = None
+        veg_colors = plt.cm.viridis(np.linspace(0, 1, len(veg_keys)))
 
-    # Remove vmin and vmax from imshow() and use norm instead
+    # Create a Normalize object to map vegetation type values directly to 0-1
+    norm = mcolors.Normalize(vmin=min(veg_keys), vmax=max(veg_keys))
+
+    # Create a ListedColormap from the specified vegetation colors
+    cmap = mcolors.ListedColormap(veg_colors)
+
+    # Plot the vegetation array
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     im = axes[0].imshow(arr, cmap=cmap, norm=norm)
-
-    # Set the title for the 2D array plot
     axes[0].set_title(f"{title}\n{veg_type_desc}", fontsize=10)
 
-    # Create the colorbar and set integer tick labels
-    cbar = fig.colorbar(im, ax=axes[0], orientation="vertical")
-    cbar.set_ticks(
-        veg_keys
-    )  # Set the ticks at the exact positions of the vegetation types
-    cbar.set_ticklabels(
-        [str(veg_type) for veg_type in veg_keys]
-    )  # Set labels as integers
+    # # Create the colorbar and set tick positions at the unique vegetation type values
+    # cbar = fig.colorbar(im, ax=axes[0], orientation="vertical")
+    # cbar.set_ticks(veg_keys)  # Tick at each vegetation type
+    # cbar.set_ticklabels(
+    #     [str(veg_type) for veg_type in veg_keys]
+    # )  # Label tick at each vegetation type
 
-    # Count occurrences of each unique vegetation type
+    # Generate a histogram of vegetation types in the array
     unique_types, counts = np.unique(arr[~np.isnan(arr)], return_counts=True)
-
-    # Sort values so they appear in ascending order
     sorted_indices = np.argsort(unique_types)
     unique_types = unique_types[sorted_indices]
     counts = counts[sorted_indices]
@@ -123,9 +99,8 @@ def np_arr(
     else:
         bar_colors = ["blue"] * len(unique_types)
 
-    # Plot the histogram using bar
+    # Plot the histogram of vegetation types
     axes[1].bar(unique_types, counts, color=bar_colors, align="center", alpha=0.7)
-
     axes[1].set_title(f"Histogram of Array Values\n{veg_type_desc}", fontsize=10)
     axes[1].set_xlabel("Vegetation Type")
     axes[1].set_ylabel("Frequency")

@@ -569,7 +569,20 @@ class VegTransition:
 
         da = self._reproject_match_to_dem(da)
         self._logger.info("Loaded initial vegetation raster")
-        return da.to_numpy()
+        veg_type = da.to_numpy()
+
+        self._logger.info("Subsetting initial vegetation raster to allowed types")
+        # allowed veg types
+        values_to_mask = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
+        # Create mask where True corresponds to values in the list
+        type_mask = np.isin(veg_type, values_to_mask)
+        veg_type = np.where(type_mask, veg_type, np.nan)
+
+        # Mask the vegetation raster to only include valid DEM pixels
+        self._logger.info("Masking vegetation raster to valid DEM pixels")
+        dem_valid_mask = ~np.isnan(self.dem)
+        veg_type = np.where(dem_valid_mask, veg_type, np.nan)
+        return veg_type
 
     def _load_veg_keys(self) -> pd.DataFrame:
         """load vegetation class names from database file"""

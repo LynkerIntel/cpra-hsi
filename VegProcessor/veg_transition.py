@@ -15,7 +15,6 @@ from datetime import datetime
 import veg_logic
 import hydro_logic
 import plotting
-import testing
 import utils
 
 
@@ -298,7 +297,7 @@ class VegTransition:
             )
         )
 
-        if testing.has_overlapping_non_nan(stacked_veg):
+        if utils.has_overlapping_non_nan(stacked_veg):
             raise ValueError(
                 "New vegetation stacked arrays cannot have overlapping values."
             )
@@ -544,7 +543,7 @@ class VegTransition:
         if not combined_mask_change.any():
             self._logger.warning("No forested pixels changed in prior timestep.")
 
-        if testing.common_true_locations(
+        if utils.common_true_locations(
             np.stack((combined_mask_change, combined_mask_no_change))
         ):
             raise ValueError("Forested types have overlapping True location(s)")

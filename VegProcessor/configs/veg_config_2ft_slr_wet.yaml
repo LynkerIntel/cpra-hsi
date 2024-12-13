@@ -1,0 +1,18 @@
+# config.yaml
+
+raster_data:
+  dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
+  #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
+  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-wet"
+  veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
+  veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
+  salinity_raster: #str (optional)
+
+simulation:
+  water_year_start: 1951 # int
+  water_year_end: 1975 # int
+  wse_sequence_input: True # bool if WSE input is synthetic
+  scenario_type: "+2ft SLR - Wet" # scenario info for plots and metadata
+
+output:
+  output_base: "/Users/dillonragar/data/cpra/"

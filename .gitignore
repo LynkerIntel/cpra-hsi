@@ -1,3 +1,4 @@
 *.nc
 **/debug_*
 **/data/tmp/scratch/
+test.ipynb

@@ -78,8 +78,9 @@ class VegTransition:
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
         # simulation
-        self.start_date = self.config["simulation"].get("start_date")
-        self.end_date = self.config["simulation"].get("end_date")
+        self.water_year_start = self.config["simulation"].get("water_year_start")
+        self.water_year_end = self.config["simulation"].get("water_year_end")
+
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
         self.scenario_type = self.config["simulation"].get(
             "scenario_type", ""
@@ -344,20 +345,24 @@ class VegTransition:
     def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
+
+        Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
         # steps = int(self.simulation_duration / self.simulation_time_step)
         self._logger.info(
             "Starting simulation at %s. Period: %s - %s",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            self.start_date,
-            self.end_date,
+            self.water_year_start,
+            self.water_year_end,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS-OCT")
+
+        # plus 1 to make inclusive
+        simulation_period = range(self.water_year_start, self.water_year_end + 1)
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
-        for timestep in simulation_period:
-            self.step(timestep)
+        for wy in simulation_period:
+            self.step(pd.to_datetime(f"{wy}-10-01"))
 
         self._logger.info("Simulation complete")
 
@@ -385,9 +390,9 @@ class VegTransition:
         automatically extract the timestamps and assign them to a 'time' dimension in the resulting
         xarray.Dataset, but only for files within the specified water year.
 
-        NOTE: Input WSE data is considered to use NaN to designate 0 depth, as is the
-        case for the HEC-RAS data. If this is false, this function must be updated
-        accordingly.
+        NOTE: Input WSE data (as of 2024-12-13) uses NaN to designate 0 depth. If this is false,
+        because the input data has changed, or a different model with different NaAn classification
+        is used, this function must be updated accordingly.
 
         UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
 
@@ -480,7 +485,7 @@ class VegTransition:
         # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
 
-        self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
+        self._logger.info("Loaded HEC-RAS WSE Datset for water-year: %s", water_year)
         return ds
 
     def _reproject_match_to_dem(

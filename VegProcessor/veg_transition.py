@@ -219,8 +219,9 @@ class VegTransition:
 
         plotting.np_arr(
             self.veg_type,
-            f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+            f"All Types Input {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
+            veg_palette=True,
         )
 
         # veg_type array is iteratively updated, for each zone
@@ -303,9 +304,7 @@ class VegTransition:
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
-        self.veg_type = np.full_like(
-            self.veg_type_update_1, np.nan
-        )  # Initialize with NaN
+        self.veg_type = np.full_like(self.veg_type_update_1, np.nan)
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
@@ -313,17 +312,18 @@ class VegTransition:
         no_transition_nan_mask = np.isnan(self.veg_type)
 
         # Replace NaN values in the new array with corresponding values from the veg base raster
-        self._logger.info(
-            "Filling NaN pixels in result array with vegetation base raster."
-        )
-        self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
-            no_transition_nan_mask
-        ]
+        # self._logger.info(
+        #     "Filling NaN pixels in result array with vegetation base raster."
+        # )
+        # self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
+        #     no_transition_nan_mask
+        # ]
 
         plotting.np_arr(
             self.veg_type,
             title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
+            veg_palette=True,
         )
         plotting.sum_changes(
             veg_type_in,
@@ -462,7 +462,7 @@ class VegTransition:
         ds[variable_name] *= 0.3048  # UNIT: feet to meters
 
         if self.analog_sequence:
-            self._logger.info("Using sequence loading method!")
+            self._logger.info("Using sequence loading method.")
             new_timesteps = pd.date_range(
                 f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
             )

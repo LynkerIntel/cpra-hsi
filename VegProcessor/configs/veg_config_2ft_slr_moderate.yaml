@@ -9,8 +9,8 @@ raster_data:
   salinity_raster: #str (optional)
 
 simulation:
-  water_year_start: 1951 # int
-  water_year_end: 1975 # int
+  water_year_start: 1967 # int
+  water_year_end: 1991 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   scenario_type: "+2ft SLR - Moderate" # scenario info for plots and metadata
 

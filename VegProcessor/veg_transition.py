@@ -309,7 +309,7 @@ class VegTransition:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
         # get unchanged/unhandled vegetation types from base raster
-        no_transition_nan_mask = np.isnan(self.veg_type)
+        # no_transition_nan_mask = np.isnan(self.veg_type)
 
         # Replace NaN values in the new array with corresponding values from the veg base raster
         # self._logger.info(

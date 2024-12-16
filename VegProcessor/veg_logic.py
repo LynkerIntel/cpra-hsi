@@ -4,12 +4,12 @@ import datetime
 import os
 
 import plotting
-from testing import find_nan_to_true_values
+from utils import find_nan_to_true_values
 
 import matplotlib.pyplot as plt
 import logging
 
-import testing
+import utils
 
 # Configure the logger in VegTransition
 logger = logging.getLogger("VegTransition")
@@ -183,7 +183,7 @@ def zone_iv(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
@@ -291,7 +291,7 @@ def zone_iii(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
@@ -419,7 +419,7 @@ def zone_ii(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types for unmasked array
@@ -529,7 +529,7 @@ def fresh_shrub(
             combined_mask_fresh_marsh,
         ]
     )
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
@@ -688,7 +688,7 @@ def fresh_marsh(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types for unmasked array
@@ -817,7 +817,7 @@ def intermediate_marsh(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types on full array
@@ -950,7 +950,7 @@ def brackish_marsh(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types
@@ -1061,7 +1061,7 @@ def saline_marsh(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types for full array
@@ -1212,7 +1212,7 @@ def water(
         ]
     )
 
-    if testing.common_true_locations(qc_stacked):
+    if utils.common_true_locations(qc_stacked):
         raise ValueError("Stacked arrays cannot have overlapping True pixels.")
 
     # update valid transition types for full array

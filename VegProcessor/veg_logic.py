@@ -327,12 +327,13 @@ def zone_ii(
 
 
     Condition_1: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <70% TIME
-    Condition_2: GS Inundation < 20% TIME
-    Condition_3: Annual inundation == 100% AND annual inundation depth > 10cm
+    Condition_2: Annual Inundation == 100% AND annual inundation depth > 10cm
+    Condition_3: Annual inundation == 100% AND annual inundation depth ≤ 10cm
 
-    Zone IV: 16
-    Zone III: 17
-    Zone II: 18
+    Fresh Shrub: 16
+    Fresh Marsh: 20
+    Zone III: 17 Lower BLH
+    Zone II: 18 Swamp
 
     Params:
         - veg_type (np.ndarray): array of current vegetation types.
@@ -354,7 +355,7 @@ def zone_ii(
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     mar_june = [3, 4, 5, 6]
-    gs = [4, 5, 6, 7, 8, 9]
+    #gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 18
@@ -377,16 +378,12 @@ def zone_ii(
     condition_2_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_2 = (condition_2_pct < 0.7).to_numpy()
 
-    # Condition 3: Growing Season (GS) inundation < 20%
-    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
-    # get pct duration of inundation (i.e. depth > 0)
-    # Note: this assumes time is serially complete
-    condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
-    condition_3 = (condition_3_pct < 0.2).to_numpy()
+    # Condition 3:  Annual inundation == 100%
+    condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    condition_3 = (condition_3_pct == 1).to_numpy()
 
-    # Condition 4:  Annual inundation == 100%
-    condition_4_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_4 = (condition_4_pct == 1).to_numpy()
+    # Condition 4: Annual inundation depth > 10cm #UNIT
+    condition_4 = (water_depth["WSE_MEAN"] > 0.1).all(dim="time").to_numpy()
 
     # Condition 5: Annual inundation depth <= 10cm #UNIT
     condition_5 = (water_depth["WSE_MEAN"] <= 0.1).all(dim="time").to_numpy()
@@ -396,7 +393,7 @@ def zone_ii(
     combined_mask_iii = np.logical_and.reduce(stacked_masks_iii)
 
     # get pixels that meet fresh shrub criteria
-    stacked_masks_fresh_shrub = np.stack((~combined_mask_iii, condition_3))
+    stacked_masks_fresh_shrub = np.stack((~combined_mask_iii, condition_3, condition_4))
     combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
 
     # get pixels that meet fresh marsh criteria
@@ -404,7 +401,7 @@ def zone_ii(
         (
             ~combined_mask_iii,
             ~combined_mask_fresh_shrub,
-            condition_4,
+            condition_3,
             condition_5,
         )
     )

@@ -3,15 +3,16 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3.12
+  - gdal
   - appdirs
-  - conda-forge::boto3
-  - conda-forge::dash
-  - conda-forge::dash-bootstrap-components
-  - conda-forge::gdal
-  - conda-forge::nbformat
-  - conda-forge::pip
-  - conda-forge::python-dotenv
-  - conda-forge::shapely
+  - boto3
+  - dash
+  - dash-bootstrap-components
+  - nbformat
+  - pip
+  - python-dotenv
+  - shapely
   - future
   - geojson
   - geopandas
@@ -21,13 +22,11 @@ dependencies:
   - numpy
   - pandas
   - plotly
-  - python
   - requests
   - xarray
   - rioxarray
   - cartopy
-  - conda-forge::pyyaml
+  - pyyaml
   - mypy
   - geoviews
   - geocube
-prefix: /Users/dillonragar/miniconda3/envs/cpra_env

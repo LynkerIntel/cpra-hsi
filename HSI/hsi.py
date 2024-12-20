@@ -182,6 +182,10 @@ class HSI:
 
             # save state variables
             self._logger.info("saving state variables for timestep.")
+
+            # TODO: update this function to build a dataset out of the
+            # of the suitability indices for each species, i.e.
+            # self._output_indices()
             self._save_state_vars()
 
         self._logger.info("completed timestep: %s", date)

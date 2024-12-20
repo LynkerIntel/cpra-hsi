@@ -6,6 +6,11 @@ import os
 import shutil
 from datetime import datetime
 from typing import Callable, List, Tuple
+import logging
+
+
+# Configure the logger in VegTransition
+logger = logging.getLogger("VegTransition")
 
 
 def generate_combined_sequence(
@@ -250,7 +255,7 @@ def load_mf_tifs(
 
 def generate_pct_cover(
     data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs
-) -> None:
+) -> xr.Dataset:
     """iterate vegetation types, merge all arrays, serialize to NetCDF.
 
     The creates a pct cover .nc for each veg types list in the veg_keys
@@ -267,7 +272,7 @@ def generate_pct_cover(
     veg_arrays = []
 
     for n, i in enumerate(veg_types):
-        print(f"processing veg type: {i}, (number {n} out of {len(veg_types)})")
+        logging.info("processing veg type: %s, (number %s out of %s)", i, n, veg_types)
         new_da = coarsen_and_reduce(data_array, veg_type=i, **kwargs)
         new_da = new_da.rename(f"pct_cover_{i}")
         veg_arrays.append(new_da)

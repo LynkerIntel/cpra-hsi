@@ -261,7 +261,7 @@ def generate_pct_cover(
         include col with title "Values". This could be generalized
         to a list in future.
 
-    :return: None, output is .nc file
+    :return (xr.Dataset): ds with layers for each veg type
     """
     veg_types = veg_keys["Value"].values
     veg_arrays = []
@@ -273,7 +273,8 @@ def generate_pct_cover(
         veg_arrays.append(new_da)
 
     ds_out = xr.merge(veg_arrays)
-    ds_out.to_netcdf("./pct_cover.nc")
+    # ds_out.to_netcdf("./pct_cover.nc")
+    return ds_out
 
 
 def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
@@ -293,7 +294,8 @@ def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
     da["binary"] = (["x", "y"], np.isin(da, veg_types))
     # run coarsen w/ True as valid veg type
     da_out = coarsen_and_reduce(da=da["binary"], veg_type=True, **kwargs)
-    da_out.to_netcdf("./pct_cover.nc")
+    # da_out.to_netcdf("./pct_cover.nc")
+    return da_out
 
 
 def read_veg_key(path: str) -> pd.DataFrame:

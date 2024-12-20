@@ -15,7 +15,7 @@ from datetime import datetime
 # import veg_logic
 # import hydro_logic
 # import plotting
-# import utils
+import utils
 
 from alligator import AlligatorHSI
 
@@ -221,10 +221,15 @@ class HSI:
 
         Derived from VegTransition Output
         """
-        self.veg_type
+        # self.veg_type
 
         # logical index for coarsening (i.e # of pixels)
-        out = utils.generate_pct_cover_arrays(da, x=10, y=10, boundary="trim")
+        # this generates ds with all veg types.
+        # x, y, dims -> 480 / 60 = 8
+        ds = utils.generate_pct_cover(self.veg_type, x=8, y=8, boundary="trim")
+
+        # might want to return individual arrays?
+        return ds
 
     def _load_dem(self) -> np.ndarray:
         """Load project domain DEM."""

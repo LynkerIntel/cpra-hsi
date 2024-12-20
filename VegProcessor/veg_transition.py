@@ -478,12 +478,6 @@ class VegTransition:
             ds = ds.assign_coords(time=("time", new_timesteps))
             self._logger.info("Sequence timeseres updated to match filename.")
 
-        self._logger.info(
-            "Replacing all NaN in WSE data with 0 (assuming full domain coverage.)"
-        )
-        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
-        ds = ds.fillna(0)
-
         self._logger.info("Loaded HEC-RAS WSE Datset for water-year: %s", water_year)
         return ds
 
@@ -503,10 +497,20 @@ class VegTransition:
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
-        TODO: check units !
+        NOTE: NaN values are changed to 0, so that Null WSE becomes equivalent
+        to 0 water depth. This is necessary so that inundation checks do
+        not have NaN values for periods without inundation (logic relies
+        on > or < comparison operators).
         """
         self._logger.info("Creating depth")
-        return self.wse - self.dem
+        ds = self.wse - self.dem
+
+        self._logger.info(
+            "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
+        )
+        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
+        ds = ds.fillna(0)
+        return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """

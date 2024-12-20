@@ -19,7 +19,8 @@ Description: This folder contains code for processing inputs and executing the v
 - `preprocess.py`: Utilities for data preprocessing, including input preparation and validation for vegetation modeling.
 - `veg_transition.py`: Core logic for vegetation transition modeling, implementing rules and conditions for vegetation type changes over time.
 - `veg_logic.py`: Detailed implementation of vegetation transition rules, handling specific conditions and constraints for various vegetation types.
-- `testing.py`: Utility functions for unit testing (not developed yet) and runtime quality control of model outputs.
+- `testing.py`: Unit testing of zone logic.
+- `utils.py`: General utility functions for working with file paths, datasets, and common logic used throughout the model. Also includes runtime testing that occurs during execution.
 - `plotting.py`: Tools for visualizing input data, transition results, and model outputs.
 - `run.ipynb`: Example workflow demonstrating how to execute the vegetation model and visualize results.
 - `veg_config.yaml`: Configuration file for defining a vegetation transition model run.

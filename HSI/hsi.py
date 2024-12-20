@@ -94,12 +94,15 @@ class HSI:
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
 
-        # Initialize HSI models
+        # HSI models
         self.alligator = None
         self.bald_eagle = None
         self.black_bear = None
 
-        # Initialize HSI Variables
+        # datasets
+        self.pct_cover_veg = None
+
+        # HSI Variables
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
         self.pct_cell_covered_by_habitat_types = None
@@ -164,6 +167,12 @@ class HSI:
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
+        # veg type
+        self.veg_type = self._load_veg_type()
+
+        # calculate pct cover for all veg types
+        self.pct_cover_veg = self._get_pct_cover()
+
         # calculate suitability indices
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
@@ -179,6 +188,8 @@ class HSI:
         if self.run_hsi:
 
             self.alligator = AlligatorHSI(self)
+            # self.bald_eagle = BaldEagleHSI(self)
+            # self.black_bear = BlackBearHSI(self)
 
             # save state variables
             self._logger.info("saving state variables for timestep.")
@@ -215,12 +226,12 @@ class HSI:
 
         self._logger.info("Simulation complete")
 
-    def load_veg_type(self):
+    def _load_veg_type(self):
         """Load"""
         ds = xr.open_mfdataset(self.veg_type_path, combine="nested", concat_dim="time")
         return ds
 
-    def get_pct_cover(self):
+    def _get_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
 
         Derived from VegTransition Output

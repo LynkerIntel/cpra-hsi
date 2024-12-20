@@ -497,8 +497,8 @@ class VegTransition:
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
-        NOTE: NaN values are changed to 0, so that Null WSE becomes equivalent
-        to 0 water depth. This is necessary so that inundation checks do
+        NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
+        equivalent to 0 water depth. This is necessary so that inundation checks do
         not have NaN values for periods without inundation (logic relies
         on > or < comparison operators).
         """

@@ -282,7 +282,7 @@ def generate_pct_cover(
     return ds_out
 
 
-def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
+def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwargs):
     """Generate pct cover for combinations of veg types
 
     Uses `coarsen_and_reduce` with an intermediate array with bools
@@ -296,9 +296,9 @@ def generate_pct_cover_custom(da: xr.DataArray, veg_types: list, **kwargs):
     :return: None, output is .nc file
     """
     # create new binary var with tuple of dims, data
-    da["binary"] = (["x", "y"], np.isin(da, veg_types))
+    data_array["binary"] = (["x", "y"], np.isin(data_array, veg_types))
     # run coarsen w/ True as valid veg type
-    da_out = coarsen_and_reduce(da=da["binary"], veg_type=True, **kwargs)
+    da_out = coarsen_and_reduce(da=data_array["binary"], veg_type=True, **kwargs)
     # da_out.to_netcdf("./pct_cover.nc")
     return da_out
 

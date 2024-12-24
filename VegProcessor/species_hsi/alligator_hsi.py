@@ -18,7 +18,14 @@ class AlligatorHSI:
     # init with None to be distinct from np.nan
     v1_pct_open_water: np.ndarray = None
     v2_avg_water_depth_rlt_marsh_surface: np.ndarray = None
-    v3_pct_cell_covered_by_habitat_types: np.ndarray = None
+    
+    #v3_pct_cell_covered_by_habitat_types: np.ndarray = None
+    v3a_pct_swamp_bottom_hardwood: np.ndarray = None
+    v3b_pct_fresh_marsh: np.ndarray = None
+    v3c_pct_intermediate_marsh: np.ndarray = None
+    v3d_brackish_marsh: np.ndarray = None
+
+    
     v4_edge: np.ndarray = None
     v5_mean_annual_salinity: np.ndarray = None
 
@@ -164,7 +171,8 @@ class AlligatorHSI:
             suitability = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+
+            
 
         return suitability
 

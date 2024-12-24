@@ -14,6 +14,7 @@ simulation:
   water_year_end: 2014 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   scenario_type: "Base - Wet" # scenario info for plots and metadata
+  run_hsi: False
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

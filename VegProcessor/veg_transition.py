@@ -444,7 +444,7 @@ class VegTransition:
                 time_stamps.append(file_date)
 
         if not selected_files:
-            self._logger.error("No files found for water year: %s", water_year)
+            self._logger.error("No WSE files found for water year: %s", water_year)
             return None
 
         if len(selected_files) < 12:

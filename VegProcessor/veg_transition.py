@@ -11,6 +11,8 @@ import os
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
+import matplotlib.pyplot as plt
+
 
 import veg_logic
 import hydro_logic
@@ -94,9 +96,9 @@ class VegTransition:
         )
 
         self._create_output_dirs()
-        self.current_timestep = None  # set in step() method
+        self.current_timestep = None
         self._setup_logger(log_level)
-        self.timestep_output_dir = None  # set in step() method
+        self.timestep_output_dir = None
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
@@ -113,13 +115,11 @@ class VegTransition:
         self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
 
-        # load raster if provided, default values if not
-        self._load_salinity()
-
         self.wse = None
         self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
+        self.salinity = None
 
         # initialize partial update arrays as None
         self.veg_type_update_1 = None
@@ -216,6 +216,9 @@ class VegTransition:
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
+
+        # get salinity
+        self.salinity = self._get_salinity()
 
         plotting.np_arr(
             self.veg_type,
@@ -364,6 +367,7 @@ class VegTransition:
             self.step(pd.to_datetime(f"{wy}-10-01"))
 
         self._logger.info("Simulation complete")
+        logging.shutdown()
 
     def _load_dem(self) -> np.ndarray:
         """Load project domain DEM."""
@@ -510,6 +514,15 @@ class VegTransition:
         )
         # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
+
+        # ds["WSE_MEAN"].plot(
+        #     col="time",  # Create panels for each time step
+        #     col_wrap=4,  # Number of panels per row
+        #     cmap="viridis",
+        #     aspect=1.5,  # Adjust aspect ratio
+        #     size=3,  # Adjust figure size
+        # )
+        # plt.show()
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
@@ -600,15 +613,15 @@ class VegTransition:
         self._logger.info("Loaded Vegetation Keys")
         return dbf
 
-    def _load_salinity(self):
+    def _get_salinity(self) -> np.ndarray:
         """Load salinity raster data (if available.)"""
-        # raise NotImplementedError
         if self.salinity_path:
             # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
-            self._logger.info("Creating salinity from habitat defaults")
+            self._logger.info("Creating salinity defaults from veg type array.")
+            return self.salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

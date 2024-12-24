@@ -151,45 +151,6 @@ def create_dataset_from_template(
     return new_ds
 
 
-def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArray:
-    """execute `.coarsen` and `.reduce`, with args handled
-    by this function, due to xarray bug (described below).
-
-    Combined, these functions allow the raw veg raster to be
-    downsampled into an individual array containing pct cover
-    of a single constituent vegetation classes.
-
-    :param (xr.DataArray) da: DataArray containing single-band veg raster
-    :param (int) veg_type: single vegetation type to use as a pct cover
-        value for the new, downsampled veg array.
-
-    :return (xr.DataArray): Downsampled array with pct cover for a SINGLE veg type.
-    """
-
-    def _count_vegtype_and_calculate_percentage(block, axis):
-        """Get percentage cover of vegetation types in pixel group
-
-        NOTE: This function is nested as a work-around to the kwargs bug
-        in DataArray.reduce, described here:
-        https://github.com/pydata/xarray/issues/8059. This avoids having
-        to use a global variable to provide args to the `.reduce` call.
-
-
-        :param (np.ndarray) block: non-overlapping chunks from `.coarsen` function.
-        :param (tuple) axis: used to index the chunks, which are returned with dims
-            based on the coarsen dims.
-        :return (np.ndarray): coarsened chunk
-        """
-        # Sum over the provided axis
-        count = (block == veg_type).sum(axis=axis)
-        total_cells = block.shape[axis[0]] * block.shape[axis[1]]
-        return (count / total_cells) * 100
-
-    result = da.coarsen(**kwargs).reduce(_count_vegtype_and_calculate_percentage)
-
-    return result
-
-
 def load_mf_tifs(
     wse_directory_path: str,
     variable_name: str = "WSE_MEAN",
@@ -251,6 +212,45 @@ def load_mf_tifs(
     )
 
     return xr_dataset
+
+
+def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArray:
+    """execute `.coarsen` and `.reduce`, with args handled
+    by this function, due to xarray bug (described below).
+
+    Combined, these functions allow the raw veg raster to be
+    downsampled into an individual array containing pct cover
+    of a single constituent vegetation classes.
+
+    :param (xr.DataArray) da: DataArray containing single-band veg raster
+    :param (int) veg_type: single vegetation type to use as a pct cover
+        value for the new, downsampled veg array.
+
+    :return (xr.DataArray): Downsampled array with pct cover for a SINGLE veg type.
+    """
+
+    def _count_vegtype_and_calculate_percentage(block, axis):
+        """Get percentage cover of vegetation types in pixel group
+
+        NOTE: This function is nested as a work-around to the kwargs bug
+        in DataArray.reduce, described here:
+        https://github.com/pydata/xarray/issues/8059. This avoids having
+        to use a global variable to provide args to the `.reduce` call.
+
+
+        :param (np.ndarray) block: non-overlapping chunks from `.coarsen` function.
+        :param (tuple) axis: used to index the chunks, which are returned with dims
+            based on the coarsen dims.
+        :return (np.ndarray): coarsened chunk
+        """
+        # Sum over the provided axis
+        count = (block == veg_type).sum(axis=axis)
+        total_cells = block.shape[axis[0]] * block.shape[axis[1]]
+        return (count / total_cells) * 100
+
+    result = da.coarsen(**kwargs).reduce(_count_vegtype_and_calculate_percentage)
+
+    return result
 
 
 def generate_pct_cover(
@@ -324,8 +324,8 @@ def find_nan_to_true_values(
 
     Returns:
         - Tuple containing:
-      - Array of values from lookup_array at the identified locations.
-      - Indices tuple of arrays representing the indices where the change occurs.
+        - Array of values from lookup_array at the identified locations.
+        - Indices tuple of arrays representing the indices where the change occurs.
     """
     # Ensure the arrays have the same shape
     if not (array1.shape == array2.shape == lookup_array.shape):

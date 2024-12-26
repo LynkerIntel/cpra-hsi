@@ -214,7 +214,9 @@ def load_mf_tifs(
     return xr_dataset
 
 
-def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArray:
+def coarsen_and_reduce(
+    da: xr.DataArray, veg_type: int | bool, **kwargs
+) -> xr.DataArray:
     """execute `.coarsen` and `.reduce`, with args handled
     by this function, due to xarray bug (described below).
 
@@ -223,8 +225,9 @@ def coarsen_and_reduce(da: xr.DataArray, veg_type: int, **kwargs) -> xr.DataArra
     of a single constituent vegetation classes.
 
     :param (xr.DataArray) da: DataArray containing single-band veg raster
-    :param (int) veg_type: single vegetation type to use as a pct cover
-        value for the new, downsampled veg array.
+    :param (int | bool) veg_type: single vegetation type to use as a pct cover
+        value for the new, downsampled veg array. Can also be boolean for
+        treating multiple veg types as True.
 
     :return (xr.DataArray): Downsampled array with pct cover for a SINGLE veg type.
     """
@@ -286,8 +289,7 @@ def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwarg
     """Generate pct cover for combinations of veg types
 
     Uses `coarsen_and_reduce` with an intermediate array with bools
-    for desired veg type. TODO: update code to separate CLI methdods,
-    i.e. `python module.py` from imported module.
+    for desired veg type.
 
     :param (xr.DataArray) data_array: input array; must include x,y dims
     :param (list) veg_types: List of veg types to consider as "True"
@@ -296,9 +298,9 @@ def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwarg
     :return: None, output is .nc file
     """
     # create new binary var with tuple of dims, data
-    data_array["binary"] = (["x", "y"], np.isin(data_array, veg_types))
+    data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))
     # run coarsen w/ True as valid veg type
-    da_out = coarsen_and_reduce(da=data_array["binary"], veg_type=True, **kwargs)
+    da_out = coarsen_and_reduce(da=data_array["boolean"], veg_type=True, **kwargs)
     # da_out.to_netcdf("./pct_cover.nc")
     return da_out
 

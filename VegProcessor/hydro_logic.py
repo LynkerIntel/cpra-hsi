@@ -1,28 +1,16 @@
 import numpy as np
+import xarray as xr
 
 
-def inundation():
-    """Get inundation based on DEM and WSE."""
-
-
-def seasonal_inundation(named_season):
-    """Get inundation for period (n months)
-
-    arg should be named season OR months
-    """
+def model_based_salinity():
     return NotImplementedError
 
-    if named_season == "gs":
-        months = [5, 6, 7]
-    elif named_season == "spring":
-        months = [3, 4, 5]
 
-
-# def model_based_salinity():
-
-
-def habitat_based_salinity(veg_type: np.ndarray) -> np.ndarray:
-    """Get salinity defaults based on habitat type.
+def habitat_based_salinity(veg_type: np.ndarray | xr.DataArray) -> np.ndarray:
+    """Get salinity defaults based on habitat type. If supplied a numpy array
+    (as by VegTransition) the numpy array is returned with the same dims. If
+    supplied an xr.DataArray, the same logic is applied, by the returned DataArray
+    is downsampled from 60m to 480m using a spatial average (as in HSI).
 
 
     From Jenneke:
@@ -35,11 +23,24 @@ def habitat_based_salinity(veg_type: np.ndarray) -> np.ndarray:
     TODO check units
 
     Params:
-        - veg_type (np.ndarray): array of current vegetation types.
+        - veg_type (np.ndarray | xr.DataArray): array of current vegetation types.
     Returns:
-        - np.ndarray: Sailinty array with default values, for use
+        - np.ndarray: Salinty array with default values, for use
             when no salinity data is available.
     """
+    if isinstance(veg_type, xr.DataArray):
+        # Create salinity array initialized with default value of 1
+        da = xr.full_like(veg_type, 1.0, dtype=float)
+
+        # Apply conditions
+        da = da.where(veg_type != 23, 18)
+        da = da.where(veg_type != 22, 8)
+        da = da.where(veg_type != 21, 3.5)
+
+        # NaN is added (pad) for non-exact downscaling dims
+        da = da.coarsen(x=8, y=8, boundary="pad").mean()
+        return da
+
     # creat salinity, set all elements to 1
     salinity = np.ones_like(veg_type)
 
@@ -53,3 +54,41 @@ def habitat_based_salinity(veg_type: np.ndarray) -> np.ndarray:
     salinity[intermediate_marsh_mask] = 3.5
 
     return salinity
+
+
+# def downsampled_habitat_based_salinity(veg_type: xr.DataArray) -> xr.DataArray:
+#     """
+#     Get salinity defaults based on habitat type for an xarray.DataArray. Logic
+#     is the same as `hydro_logic.habitat_based_salnity`, while this function
+#     operates on xr.DataArray object for easier and more robust resampling.
+
+#     Params:
+#         - veg_type (xr.DataArray): DataArray of current vegetation types.
+#     Returns:
+#         - xr.DataArray: Salinity DataArray with default values, for use
+#             when no salinity data is available.
+#     """
+#     # Create salinity array initialized with default value of 1
+#     salinity = xr.full_like(veg_type, 1.0, dtype=float)
+
+#     # Apply conditions
+#     salinity = salinity.where(veg_type != 23, 18)
+#     salinity = salinity.where(veg_type != 22, 8)
+#     salinity = salinity.where(veg_type != 21, 3.5)
+
+#     return salinity
+
+# def downsampled_habitat_based_salinity(veg_type: np.ndarray) -> np.ndarray:
+#     """
+#     Create habitat based salinity (60m), then downsample to 480m.
+#     """
+#     salinity = habitat_based_salinity(veg_type)
+
+#     # DataArray with no geographic coordinates
+#     da = xr.DataArray(
+#         data=salinity,  # Input numpy array
+#         dims=["x", "y"],  # Non-geographic dimensions
+#         name="salinity",  # Optional: Name of the DataArray
+#     )
+
+#     da = da.coarsen(x=8, y=8, boundary="trim").mean()

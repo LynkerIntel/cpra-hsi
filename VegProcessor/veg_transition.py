@@ -530,7 +530,7 @@ class VegTransition:
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
-        +1 maturity for pixels without vegetation changes.
+        +1 year maturity for pixels without vegetation changes.
         """
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
@@ -584,9 +584,20 @@ class VegTransition:
             out_path=self.timestep_output_dir_figs,
         )
 
-    def _load_veg_initial_raster(self) -> np.ndarray:
+    def _load_veg_initial_raster(self, xarray=False) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
+
+        Parameters
+        ----------
+        xarray : bool
+            True if xarray output format is needed.
+
+        Returns
+        -------
+        xr.Dataarray or np.ndarray
+            An array with the intial vegetation types, subset to types with transition rules
+            and with NaN applied to pixels outside of the DEM valid bounds.
         """
         da = xr.open_dataarray(self.veg_base_path)
         da = da.squeeze(drop="band")
@@ -606,6 +617,13 @@ class VegTransition:
         self._logger.info("Masking vegetation raster to valid DEM pixels")
         dem_valid_mask = ~np.isnan(self.dem)
         veg_type = np.where(dem_valid_mask, veg_type, np.nan)
+
+        if xarray:
+            # Reassign np.array to origina DataArray. This ensure
+            # the data is identical for either output type.
+            da["veg_type_subset"] = (("y", "x"), veg_type)
+            return da["veg_type_subset"]
+
         return veg_type
 
     def _load_veg_keys(self) -> pd.DataFrame:

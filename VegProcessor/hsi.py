@@ -46,7 +46,7 @@ class HSI(veg_transition.VegTransition):
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
         self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
-        # self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
@@ -82,14 +82,12 @@ class HSI(veg_transition.VegTransition):
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
+        # Static Variables
         self.dem = self._load_dem()
-        # print(self.dem.shape)
-        # Load veg base and use as template to create arrays for the main state variables
-        # self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
-
         self.edge = self._calculate_edge()
 
+        # Dynamic Variables
         self.wse = None
         self.maturity = np.zeros_like(self.dem)
         self.water_depth_annual_mean = None
@@ -107,7 +105,6 @@ class HSI(veg_transition.VegTransition):
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
         self.pct_cell_covered_by_habitat_types = None
-        self.edge = None
         self.mean_annual_salinity = None
 
         self.pct_swamp_bottom_hardwood = None
@@ -291,10 +288,13 @@ class HSI(veg_transition.VegTransition):
 
         # might want to return individual arrays?
 
-    def _calculate_edge(self):
+    def _calculate_edge(self) -> np.ndarray:
         """
         Calculate percent of 480m cell that is marsh edge.
         """
+        # Load veg base and use as template to create arrays for the main state variables
+        initial_veg = self._load_veg_initial_raster(xarray=True)
+
         logging.info("Calculating water edge pixels.")
         open_water = 26
         # can't use np.nan, need to use an int
@@ -302,28 +302,28 @@ class HSI(veg_transition.VegTransition):
 
         # Check neighbors
         neighbors = [
-            self.veg_type.shift(x=1, fill_value=fill_value),  # left
-            self.veg_type.shift(x=-1, fill_value=fill_value),  # right
-            self.veg_type.shift(y=1, fill_value=fill_value),  # down
-            self.veg_type.shift(y=-1, fill_value=fill_value),  # up
+            initial_veg.shift(x=1, fill_value=fill_value),  # left
+            initial_veg.shift(x=-1, fill_value=fill_value),  # right
+            initial_veg.shift(y=1, fill_value=fill_value),  # down
+            initial_veg.shift(y=-1, fill_value=fill_value),  # up
         ]
 
         # Combine all neighbor comparisons
-        edge = xr.concat(
+        edge_pixels = xr.concat(
             [(neighbor == open_water) for neighbor in neighbors], dim="direction"
         ).any(dim="direction")
 
         logging.info("Calculating percent of water edge pixels in cell.")
         # get pct of cell that is edge
         # run coarsen w/ True as valid veg type
-        da_out = utils.coarsen_and_reduce(
-            da=edge,
+        da = utils.coarsen_and_reduce(
+            da=edge_pixels,
             veg_type=True,
             x=8,
             y=8,
             boundary="pad",
         )
-        return da_out
+        return da.to_numpy()
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

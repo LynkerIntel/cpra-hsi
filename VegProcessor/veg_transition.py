@@ -498,7 +498,7 @@ class VegTransition:
         # self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds.variables)
         return ds.rio.reproject_match(da_dem)
 
-    def _get_depth(self) -> xr.Dataset:
+    def _get_depth(self, annual_mean: bool = False) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
         NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
@@ -514,6 +514,9 @@ class VegTransition:
         )
         # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
+
+        if annual_mean:
+            ds = ds.mean(dim="time")
 
         # ds["WSE_MEAN"].plot(
         #     col="time",  # Create panels for each time step

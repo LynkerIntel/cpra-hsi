@@ -88,11 +88,11 @@ class HSI(veg_transition.VegTransition):
         # self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
 
-        # load raster if provided, default values if not
+        self.edge = self._calculate_edge()
 
         self.wse = None
         self.maturity = np.zeros_like(self.dem)
-        self.water_depth = None
+        self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
 
         # HSI models
@@ -113,7 +113,8 @@ class HSI(veg_transition.VegTransition):
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
         self.pct_intermediate_marsh = None
-        self.brackish_marsh = None
+        self.pct_brackish_marsh = None
+        self.pct_saline_marsh = None
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -161,7 +162,11 @@ class HSI(veg_transition.VegTransition):
             print(f"Error during logger setup: {e}")
 
     def step(self, date):
-        """Calculate Indices & Advance the HSI models by one step."""
+        """Calculate Indices & Advance the HSI models by one step.
+
+        TODO: for memory efficiency, 60m arrays should be deleted after creation of
+        480m HSI input arrays.
+        """
         self.current_timestep = date  # Set the current timestep
         wy = date.year
 
@@ -169,32 +174,21 @@ class HSI(veg_transition.VegTransition):
         self._create_timestep_dir(date)
 
         # calculate depth
+        # avg_water_depth_rlt_marsh_surface
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
-        self.water_depth = self._get_depth()
+        self.water_depth_annual_mean = self._get_depth(annual_mean=True)
 
-        # veg type
+        # load veg type
         self.veg_type = self._load_veg_type()
-
-        # salinity
-        # TODO: `hydro_logic.habitat_based_salinity` expects a
-        # np.array, not xr.Dataset -- salinity should therefore
-        # calculated different in the HSI Class than the VegTransition
-        # class.
-        # self.salinity = self._get_salinity()
 
         # calculate pct cover for all veg types
         self._calculate_pct_cover()
-
-        # self.pct_cell_covered_by_habitat_types = None
-
-        self.edge = None
-        self.mean_annual_salinity = None
-        self.avg_water_depth_rlt_marsh_surface = None
+        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(self.veg_type)
 
         # bald eagle
 
-        # SAVE SI INDICES INDIVIDUALLY
+        # SAVE ALL SI INDICES INDIVIDUALLY
 
         # run HSI models for timestep
         if self.run_hsi:
@@ -259,8 +253,8 @@ class HSI(veg_transition.VegTransition):
                 f"File path for VegTransition not found for {self.current_timestep}"
             )
 
-        ds = xr.open_dataset(veg_type_timestep_path)
-        return ds["band_data"]
+        da = xr.open_dataarray(veg_type_timestep_path)
+        return da["band" == 0]
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
@@ -275,24 +269,61 @@ class HSI(veg_transition.VegTransition):
             veg_keys=self.veg_keys,
             x=8,
             y=8,
-            boundary="trim",
+            boundary="pad",
         )
-
+        # x, y, dims -> 480 / 60 = 8
         ds_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[15, 16, 17],  # these are the BLH zones
+            x=8,
+            y=8,
+            boundary="pad",
         )
 
-        self.pct_open_water = ds["pct_cover_26"]
-        self.pct_fresh_marsh = ds["pct_cover_20"]
-        self.pct_intermediate_marsh = ds["pct_cover_21"]
-        self.brackish_marsh = ds["pct_cover_22"]
+        self.pct_open_water = ds["pct_cover_26"].to_numpy()
+        self.pct_fresh_marsh = ds["pct_cover_20"].to_numpy()
+        self.pct_intermediate_marsh = ds["pct_cover_21"].to_numpy()
+        self.pct_brackish_marsh = ds["pct_cover_22"].to_numpy()
+        self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
 
         # Zone V, IV, III
         self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
 
         # might want to return individual arrays?
-        # return ds
+
+    def _calculate_edge(self):
+        """
+        Calculate percent of 480m cell that is marsh edge.
+        """
+        logging.info("Calculating water edge pixels.")
+        open_water = 26
+        # can't use np.nan, need to use an int
+        fill_value = -99
+
+        # Check neighbors
+        neighbors = [
+            self.veg_type.shift(x=1, fill_value=fill_value),  # left
+            self.veg_type.shift(x=-1, fill_value=fill_value),  # right
+            self.veg_type.shift(y=1, fill_value=fill_value),  # down
+            self.veg_type.shift(y=-1, fill_value=fill_value),  # up
+        ]
+
+        # Combine all neighbor comparisons
+        edge = xr.concat(
+            [(neighbor == open_water) for neighbor in neighbors], dim="direction"
+        ).any(dim="direction")
+
+        logging.info("Calculating percent of water edge pixels in cell.")
+        # get pct of cell that is edge
+        # run coarsen w/ True as valid veg type
+        da_out = utils.coarsen_and_reduce(
+            da=edge,
+            veg_type=True,
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        return da_out
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

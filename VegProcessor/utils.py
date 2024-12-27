@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 from typing import Callable, List, Tuple
 import logging
+from pathlib import Path
 
 
 # Configure the logger in VegTransition
@@ -457,3 +458,65 @@ def timeseries_output(ds: xr.Dataset) -> pd.DataFrame:
     df = counts.to_dataframe(name="count").reset_index()
     df = df.pivot(index="time", columns="value", values="count")
     return df
+
+
+def generate_filename(params: dict, base_path: str = None) -> Path:
+    """
+    Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
+
+    Parameters:
+    -----------
+    params : dict
+        Dictionary containing the following keys:
+        - model : str
+        - scenario : str
+        - group : str
+        - wpu : str
+        - io_type : str
+        - time_frame : str
+        - year_range : str
+        - parameter : str
+        - file_extension : str
+    base_path : str or Path, optional
+        Base directory path where the file should be located.
+
+    Returns:
+    --------
+    Path
+        A `Path` object representing the full path to the generated file.
+    """
+    # Ensure keys are provided in the dictionary
+    required_keys = [
+        "model",
+        "scenario",
+        "group",
+        "wpu",
+        "io_type",
+        "time_freq",
+        "year_range",
+        "parameter",
+        "file_extension",
+    ]
+    for key in required_keys:
+        if key not in params:
+            raise ValueError(f"Missing required key: '{key}' in params dictionary")
+
+    # Extract and process the values
+    model = params["model"].upper()
+    scenario = params["scenario"]
+    group = params["group"]
+    wpu = params["wpu"]
+    io_type = params["io_type"].upper()
+    time_freq = params["time_frame"].upper()
+    year_range = params["year_range"]
+    parameter = params["parameter"]
+    file_extension = params["file_extension"].lower()
+
+    # Construct the filename
+    filename = f"AMP_{model}_{scenario}_G{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}.{file_extension}"
+
+    # Combine with base path if provided
+    if base_path:
+        return Path(base_path) / filename
+    else:
+        return Path(filename)

@@ -356,10 +356,10 @@ def has_overlapping_non_nan(stack: np.ndarray) -> np.bool:
     Check if a stack of 2D arrays has any overlapping non-NaN values.
 
     Parameters:
-    - stack (np.ndarray): A 3D NumPy array where each "layer" is a 2D array.
+        - stack (np.ndarray): A 3D NumPy array where each "layer" is a 2D array.
 
     Returns:
-    - bool: True if there are overlapping non-NaN values, False otherwise.
+        - bool: True if there are overlapping non-NaN values, False otherwise.
     """
     if stack.ndim != 3:
         raise ValueError("Input must be a 3D array (stack of 2D arrays).")
@@ -380,10 +380,10 @@ def common_true_locations(stack: np.ndarray) -> np.bool:
     Treats NaN pixels as False.
 
     Parameters:
-    stack (np.ndarray): A 3D boolean array (a stack of 2D boolean arrays).
+        stack (np.ndarray): A 3D boolean array (a stack of 2D boolean arrays).
 
     Returns:
-    bool: True if any two 2D arrays in the stack have overlapping `True` values,
+        bool: True if any two 2D arrays in the stack have overlapping `True` values,
           otherwise False.
     """
     if stack.ndim != 3:
@@ -397,3 +397,63 @@ def common_true_locations(stack: np.ndarray) -> np.bool:
 
     # Check if any position has a value > 1, indicating overlap
     return np.any(overlap_sum > 1)
+
+
+def preprocess_remove_extra_dim(da: xr.DataArray) -> xr.DataArray:
+    """
+    Preprocess function to remove an extra 'band' dimension and add a placeholder time dimension.
+    Assumes the extra dimension is named 'band'.
+    """
+    da = da.squeeze(dim="band", drop=True)
+
+    # Add a placeholder time based on file index
+    file_index = da.encoding.get("source", "file_0").split("/")[-1]
+    placeholder_time = datetime(2000, 1, 1)
+    return da.expand_dims(time=[placeholder_time])
+
+
+def open_veg_multifile(veg_base_path: str) -> xr.Dataset:
+    """Open a multifile VegTransition output directory
+
+    Correct timestamps must be applied after opening.
+
+    Parameters:
+        - veg_base_path (string): Path to VegTransition output dir.
+
+    Returns:
+        (xr.Dataset) with expanded *placeholder* time dimension.
+
+    """
+    ds = xr.open_mfdataset(
+        f"{veg_base_path}/**/vegtype.tif",
+        preprocess=preprocess_remove_extra_dim,
+        combine="nested",
+        concat_dim="time",
+    )
+
+    ds["time"] = pd.date_range("1980-10-01", "2005-10-01", freq="YS")
+    ds["band_data"] = ds["band_data"].astype(int)
+    return ds
+
+
+def timeseries_output(ds: xr.Dataset) -> pd.DataFrame:
+    """Process VegTransition output into timeseries .csv.
+
+    Runtime for this function is 3 minutes or more for 25 year scenarios.
+    """
+    # Define unique vegetation types to analyze
+    unique_values = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
+
+    # Use Xarray to count occurrences of each unique value
+    # Create a DataArray mask for all unique values at once
+    mask = xr.concat(
+        [(ds["band_data"] == value) for value in unique_values], dim="value"
+    )
+    # Assign unique values as a coordinate to the new dimension
+    mask = mask.assign_coords(value=("value", unique_values))
+    # Sum across spatial dimensions (y, x) to get counts for each value over time
+    counts = mask.sum(dim=("y", "x"))
+
+    df = counts.to_dataframe(name="count").reset_index()
+    df = df.pivot(index="time", columns="value", values="count")
+    return df

@@ -202,110 +202,110 @@ class TestZoneIII(unittest.TestCase):
         )
 
 
-# class TestZoneII(unittest.TestCase):
+class TestZoneII(unittest.TestCase):
 
-#     def setUp(self):
-#         """Set up test data for Zone II logic tests."""
-#         # Create a small veg_type array with consistent dimensions
-#         self.veg_type = np.array(
-#             [
-#                 [18, 18, 0],
-#                 [0, 18, 18],
-#             ]
-#         )
+    def setUp(self):
+        """Set up test data for Zone II logic tests."""
+        # Create a small veg_type array with consistent dimensions
+        self.veg_type = np.array(
+            [
+                [18, 18, 0],
+                [0, 18, 18],
+            ]
+        )
 
-#         # Create time range
+        # Create time range
 
-#         time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
 
-#         # Ensure wse_mean matches the spatial dimensions of veg_type
-#         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
-#         wse_mean = np.array(
-#             [
-#                 [  # y=1 row
-#                     [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-#                     [
-#                         0.0,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                     ],  # top middle
-#                     [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
-#                 ],
-#                 [  # y=0 row
-#                     [
-#                         0.0,
-#                         -0.0,
-#                         0.0,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                         0.5,
-#                     ],  # NaN
-#                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # low mid
-#                     [
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                         0.05,
-#                     ],
-#                 ],
-#             ]
-#         )
+        # Ensure wse_mean matches the spatial dimensions of veg_type
+        # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
+        wse_mean = np.array(
+            [
+                [  # y=1 row
+                    [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 01.5, 1.5],
+                    [
+                        0.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # top middle
+                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                ],
+                [  # y=0 row
+                    [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # low mid
+                    [
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                        0.05,
+                    ],
+                ],
+            ]
+        )
 
-#         # Create xarray Dataset
-#         water_depth = xr.Dataset(
-#             {"WSE_MEAN": (["x", "y", "time"], wse_mean)},
-#             coords={
-#                 "time": time,
-#                 "x": np.arange(self.veg_type.shape[0]),
-#                 "y": np.arange(self.veg_type.shape[1]),
-#             },
-#         )
-#         # reorder to match WSE data
-#         self.water_depth = water_depth.transpose("time", "x", "y")
+        # Create xarray Dataset
+        water_depth = xr.Dataset(
+            {"WSE_MEAN": (["x", "y", "time"], wse_mean)},
+            coords={
+                "time": time,
+                "x": np.arange(self.veg_type.shape[0]),
+                "y": np.arange(self.veg_type.shape[1]),
+            },
+        )
+        # reorder to match WSE data
+        self.water_depth = water_depth.transpose("time", "x", "y")
 
-#     def test_transitions(self):
-#         """Test that the shape of veg_type matches the first two dimensions of wse_mean."""
-#         correct_result = np.array(
-#             [
-#                 [18, 18, np.nan],
-#                 [np.nan, 17, 20],
-#             ]
-#         )
+    def test_transitions(self):
+        """Test that the shape of veg_type matches the first two dimensions of wse_mean."""
+        correct_result = np.array(
+            [
+                [19, 18, np.nan],
+                [np.nan, 17, 20],
+            ]
+        )
 
-#         result = veg_logic.zone_ii(
-#             veg_type=self.veg_type,
-#             water_depth=self.water_depth,
-#             timestep_output_dir="~/data/tmp/scratch/",
-#         )
+        result = veg_logic.zone_ii(
+            veg_type=self.veg_type,
+            water_depth=self.water_depth,
+            timestep_output_dir="~/data/tmp/scratch/",
+        )
 
-#         np.testing.assert_array_equal(
-#             correct_result,
-#             result,
-#             "Result does not match known values.",
-#         )
+        np.testing.assert_array_equal(
+            correct_result,
+            result,
+            "Result does not match known values.",
+        )
 
 
 class TestFreshShrub(unittest.TestCase):

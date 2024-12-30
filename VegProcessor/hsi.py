@@ -277,16 +277,20 @@ class HSI(veg_transition.VegTransition):
             boundary="pad",
         )
 
-        self.pct_open_water = ds["pct_cover_26"].to_numpy()
+        self.pct_zone_v = ds["pct_cover_15"].to_numpy()
+        self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
+        self.pct_zone_iii = ds["pct_cover_17"].to_numpy()
+        self.pct_zone_ii = ds["pct_cover_17"].to_numpy()
+        self.pct_fresh_shrubs = ds["pct_cover_19"].to_numpy()
+
         self.pct_fresh_marsh = ds["pct_cover_20"].to_numpy()
         self.pct_intermediate_marsh = ds["pct_cover_21"].to_numpy()
         self.pct_brackish_marsh = ds["pct_cover_22"].to_numpy()
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
+        self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
         # Zone V, IV, III
         self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
-
-        # might want to return individual arrays?
 
     def _calculate_edge(self) -> np.ndarray:
         """

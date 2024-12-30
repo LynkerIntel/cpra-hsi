@@ -321,11 +321,13 @@ def find_nan_to_true_values(
     Finds the values in a lookup array at locations where array1 changes from NaN to True in array2.
 
     Parameters:
+    -----------
         - array1: NumPy array (can contain NaN values).
         - array2: NumPy boolean array (should be of the same shape as array1).
         - lookup_array: NumPy array of the same shape as array1 and array2 to look up values.
 
     Returns:
+    --------
         - Tuple containing:
         - Array of values from lookup_array at the identified locations.
         - Indices tuple of arrays representing the indices where the change occurs.
@@ -357,9 +359,11 @@ def has_overlapping_non_nan(stack: np.ndarray) -> np.bool:
     Check if a stack of 2D arrays has any overlapping non-NaN values.
 
     Parameters:
+    -----------
         - stack (np.ndarray): A 3D NumPy array where each "layer" is a 2D array.
 
     Returns:
+    --------
         - bool: True if there are overlapping non-NaN values, False otherwise.
     """
     if stack.ndim != 3:
@@ -381,9 +385,11 @@ def common_true_locations(stack: np.ndarray) -> np.bool:
     Treats NaN pixels as False.
 
     Parameters:
+    -----------
         stack (np.ndarray): A 3D boolean array (a stack of 2D boolean arrays).
 
     Returns:
+    --------
         bool: True if any two 2D arrays in the stack have overlapping `True` values,
           otherwise False.
     """
@@ -419,9 +425,11 @@ def open_veg_multifile(veg_base_path: str) -> xr.Dataset:
     Correct timestamps must be applied after opening.
 
     Parameters:
+    -----------
         - veg_base_path (string): Path to VegTransition output dir.
 
     Returns:
+    --------
         (xr.Dataset) with expanded *placeholder* time dimension.
 
     """

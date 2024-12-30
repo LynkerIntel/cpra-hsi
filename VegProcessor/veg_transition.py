@@ -81,11 +81,18 @@ class VegTransition:
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
         self.water_year_end = self.config["simulation"].get("water_year_end")
-
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.scenario_type = self.config["simulation"].get(
-            "scenario_type", ""
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
         )  # empty str if missing
+
+        # self.model = self.config["metadata"].get("model")
+        # self.group = self.config["metadata"].get("group")
+        # self.wpu = self.config["metadata"].get("wpu")
+        # self.ion = self.config["metadata"].get("ion")
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -201,13 +208,24 @@ class VegTransition:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
 
-    def step(self, date):
-        """Advance the transition model by one step."""
-        self.current_timestep = date  # Set the current timestep
-        wy = date.year
+    def step(self, timestep: pd.DatetimeTZDtype, counter: int, simulation_period: int):
+        """Advance the transition model by one step.
 
-        self._logger.info("starting timestep: %s", date)
-        self._create_timestep_dir(date)
+        Parameters:
+        -----------
+            timestep : pd.DatetimeTZDtype
+                The current model timestep.
+            counter : int
+                Integer representation of timestep.
+            simulation_period: int
+                The length of the simulation. i.e. 25 years for a single
+                scenario run.
+        """
+        self.current_timestep = timestep  # Set the current timestep
+        wy = timestep.year
+
+        self._logger.info("starting timestep: %s", timestep)
+        self._create_timestep_dir(timestep)
 
         # copy existing veg types
         veg_type_in = self.veg_type
@@ -339,9 +357,22 @@ class VegTransition:
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        self._save_state_vars()
 
-        self._logger.info("completed timestep: %s", date)
+        params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "wpu": "ARS",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "time_frame": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+            "parameter": None,  # ?
+            "file_extension": ".tif",
+        }
+
+        self._save_state_vars(params)
+
+        self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
 
     def run(self):
@@ -361,10 +392,15 @@ class VegTransition:
 
         # plus 1 to make inclusive
         simulation_period = range(self.water_year_start, self.water_year_end + 1)
+
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
-        for wy in simulation_period:
-            self.step(pd.to_datetime(f"{wy}-10-01"))
+        for i, wy in enumerate(simulation_period):
+            self.step(
+                timestep=pd.to_datetime(f"{wy}-10-01"),
+                counter=i + 1,
+                simulation_period=simulation_period,
+            )
 
         self._logger.info("Simulation complete")
         logging.shutdown()
@@ -666,12 +702,14 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self):
+    def _save_state_vars(self, params: dict):
         """The method will save state variables after each timestep.
 
         This method should also include the config, input data, and QC plots.
         """
         template = self.water_depth.isel({"time": 0})  # subset to first month
+
+        filename = utils.generate_filename(params=params)
 
         # veg type out
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}

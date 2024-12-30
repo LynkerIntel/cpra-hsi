@@ -3,15 +3,15 @@
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
   #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-wet"
+  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-moderate"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/VegOut_20241223_base_wet/**/vegtype.tif" # must include wildcard, i.e. /**/vegtype.tif
+  veg_type_path: "/Users/dillonragar/data/cpra/VegOut_20241226_095142/**/vegtype.tif" # must include wildcard, i.e. /**/vegtype.tif
 
 simulation:
-  water_year_start: 2013 # int
-  water_year_end: 2014 # int
+  water_year_start: 1983 # int
+  water_year_end: 1984 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   scenario_type: "Base - Wet" # scenario info for plots and metadata
   run_hsi: False

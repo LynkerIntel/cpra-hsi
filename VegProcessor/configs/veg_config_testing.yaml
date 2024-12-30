@@ -12,7 +12,14 @@ simulation:
   water_year_start: 1974 # int
   water_year_end: 1975 # int
   wse_sequence_input: True # bool if WSE input is synthetic
-  scenario_type: "+2ft SLR - Dry" # scenario info for plots and metadata
+
+metadata: # partial list (static vars)
+  model: VEG
+  scenario: "+2ft SLR - Dry" # scenario info for plots and metadata
+  group: LYNK
+  wpu: ARS
+  # ion: O # identifier: input, output, internal 
+
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

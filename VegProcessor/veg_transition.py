@@ -365,9 +365,8 @@ class VegTransition:
             "wpu": "ARS",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "time_frame": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
-            "parameter": None,  # ?
-            "file_extension": ".tif",
+            "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+            "parameter": "NA",  # ?
         }
 
         self._save_state_vars(params)
@@ -398,8 +397,8 @@ class VegTransition:
         for i, wy in enumerate(simulation_period):
             self.step(
                 timestep=pd.to_datetime(f"{wy}-10-01"),
-                counter=i + 1,
-                simulation_period=simulation_period,
+                counter=str(i + 1),
+                simulation_period=str(len(simulation_period)),
             )
 
         self._logger.info("Simulation complete")
@@ -709,23 +708,30 @@ class VegTransition:
         """
         template = self.water_depth.isel({"time": 0})  # subset to first month
 
-        filename = utils.generate_filename(params=params)
-
         # veg type out
+        filename_vegtype = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="VEGTYPE",
+        )
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
         self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-
         self.timestep_out["veg_type"].rio.to_raster(
-            self.timestep_output_dir + "/vegtype.tif"
+            filename_vegtype.with_suffix(".tif")
         )
 
         # pct mast out
         # TODO: add perent mast handling
 
         # maturity out
+        filename_maturity = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="MATURITY",
+        )
         self.timestep_out["maturity"] = (("y", "x"), self.maturity)
         self.timestep_out["maturity"].rio.to_raster(
-            self.timestep_output_dir + "/maturity.tif"
+            filename_maturity.with_suffix(".tif")
         )
 
     def _create_timestep_dir(self, date):

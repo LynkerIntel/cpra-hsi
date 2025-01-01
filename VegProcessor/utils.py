@@ -468,7 +468,7 @@ def timeseries_output(ds: xr.Dataset) -> pd.DataFrame:
     return df
 
 
-def generate_filename(params: dict, base_path: str = None) -> Path:
+def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
 
@@ -483,8 +483,15 @@ def generate_filename(params: dict, base_path: str = None) -> Path:
         - io_type : str
         - time_frame : str
         - year_range : str
-        - parameter : str
-        - file_extension : str
+        This dict is created in `VegTransition.step` and includes metadata from the
+        current timestep as well as the model config file. It excludes, "parameter"
+        wich is a required arg, and specified only when this function is called so
+        that the same timestep params dict can be used for different output
+        "parameters".
+
+    parameter : str
+        The name of the variable being saved, i.e. "VEGTYPE".
+
     base_path : str or Path, optional
         Base directory path where the file should be located.
 
@@ -502,8 +509,6 @@ def generate_filename(params: dict, base_path: str = None) -> Path:
         "io_type",
         "time_freq",
         "year_range",
-        "parameter",
-        "file_extension",
     ]
     for key in required_keys:
         if key not in params:
@@ -515,13 +520,13 @@ def generate_filename(params: dict, base_path: str = None) -> Path:
     group = params["group"]
     wpu = params["wpu"]
     io_type = params["io_type"].upper()
-    time_freq = params["time_frame"].upper()
+    time_freq = params["time_freq"].upper()
     year_range = params["year_range"]
-    parameter = params["parameter"]
-    file_extension = params["file_extension"].lower()
+
+    # file_extension = params["file_extension"].lower()
 
     # Construct the filename
-    filename = f"AMP_{model}_{scenario}_G{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}.{file_extension}"
+    filename = f"AMP_{model}_{scenario}_{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}"
 
     # Combine with base path if provided
     if base_path:

@@ -225,7 +225,7 @@ class VegTransition:
         wy = timestep.year
 
         self._logger.info("starting timestep: %s", timestep)
-        self._create_timestep_dir(timestep)
+        self._create_timestep_dir(counter.zfill(2))
 
         # copy existing veg types
         veg_type_in = self.veg_type
@@ -734,13 +734,11 @@ class VegTransition:
             filename_maturity.with_suffix(".tif")
         )
 
-    def _create_timestep_dir(self, date):
+    def _create_timestep_dir(self, counter):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
         """
-        self.timestep_output_dir = os.path.join(
-            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-        )
+        self.timestep_output_dir = os.path.join(self.output_dir_path, counter)
         self.timestep_output_dir_figs = os.path.join(
             self.timestep_output_dir,
             "figs",

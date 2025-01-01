@@ -746,6 +746,21 @@ class VegTransition:
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
+    def post_process(self):
+        """After a run has been executed, this method generates a summary
+        timeseries, and saves it as CSV in the "run-metadata" directory.
+        """
+        # uses utils.open_veg_multifile,
+        # then utils.timeseries_outputs
+
+        # options should be enabled/disabled here
+        # TODO write WPU subset func: this will include
+        # adding another data source, the WPU polygons, or
+        # perhaps a raster layer that is coded with WPU number.
+        # the code for that should also go in `utils`
+
+        return NotImplementedError
+
 
 class _TimestepFilter(logging.Filter):
     """A roundabout way to inject the current timestep into log records.

@@ -6,13 +6,21 @@ raster_data:
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-wet"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
+  wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
 
 simulation:
   water_year_start: 1999 # int
   water_year_end: 2023 # int
   wse_sequence_input: True # bool if WSE input is synthetic
-  scenario_type: "+2ft SLR - Wet" # scenario info for plots and metadata
+
+metadata: # partial list (static vars)
+  model: VEG
+  scenario: "2ftSLRwet" # scenario info for plots and metadata
+  group: LNK
+  wpu: ARS
+  # ion: O # identifier: input, output, internal 
+
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

@@ -77,6 +77,7 @@ class VegTransition:
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
+        self.wpu_path = self.config["raster_data"].get("wpu_path")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -693,11 +694,11 @@ class VegTransition:
         os.makedirs(self.output_dir_path, exist_ok=True)
 
         # Create the 'run-input' subdirectory
-        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-        os.makedirs(run_metadata_dir, exist_ok=True)
+        self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+        os.makedirs(self.run_metadata_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, run_metadata_dir)
+            shutil.copy(self.config_path, self.run_metadata_dir)
         else:
             print("Config file not found at %s", self.config_path)
 
@@ -753,17 +754,25 @@ class VegTransition:
         """After a run has been executed, this method generates a summary
         timeseries, and saves it as CSV in the "run-metadata" directory.
         """
-        # uses utils.open_veg_multifile,
+        logging.info("Running post-processing routine.")
+        wpu = xr.open_dataarray(
+            "/Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif"
+        )
+        wpu = wpu["band" == 0]
+        # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
+        wpu = xr.where(wpu != 0, wpu, np.nan)
 
-        # then utils.timeseries_outputs
+        ds = utils.open_veg_multifile(self.output_dir_path)
 
-        # options should be enabled/disabled here
-        # TODO write WPU subset func: this will include
-        # adding another data source, the WPU polygons, or
-        # perhaps a raster layer that is coded with WPU number.
-        # the code for that should also go in `utils`
+        logging.info("Calculating WPU veg type sums.")
+        df = utils.wpu_sums(ds_veg=ds, zones=wpu)
 
-        return NotImplementedError
+        # rename cols from int to type name
+        types_dict = dict(self.veg_keys[["Value", "Class"]].values)
+        df.rename(columns=types_dict, inplace=True)
+
+        outpath = os.path.join(self.run_metadata_dir, "wpu_vegtype_timeseries.csv")
+        df.to_csv(outpath)
 
 
 class _TimestepFilter(logging.Filter):

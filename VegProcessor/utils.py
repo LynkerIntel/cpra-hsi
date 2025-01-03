@@ -2,11 +2,14 @@ import xarray as xr
 import pathlib
 import numpy as np
 import pandas as pd
+from xrspatial.zonal import crosstab
+
 import os
 import shutil
 from datetime import datetime
 from typing import Callable, List, Tuple
 import logging
+import re
 from pathlib import Path
 
 
@@ -433,19 +436,25 @@ def open_veg_multifile(veg_base_path: str) -> xr.Dataset:
         (xr.Dataset) with expanded *placeholder* time dimension.
 
     """
+    dates = os.listdir(veg_base_path)
+    dates = [
+        i for i in dates if not re.search("[a-zA-Z]", i)
+    ]  # rm any str with letters, which will handle the "run-metadata" dir
+    dates = pd.to_datetime(dates)
+
     ds = xr.open_mfdataset(
-        f"{veg_base_path}/**/vegtype.tif",
+        f"{veg_base_path}/**/*VEGTYPE.tif",
         preprocess=preprocess_remove_extra_dim,
         combine="nested",
         concat_dim="time",
     )
 
-    ds["time"] = pd.date_range("1980-10-01", "2005-10-01", freq="YS")
+    ds["time"] = dates
     ds["band_data"] = ds["band_data"].astype(int)
     return ds
 
 
-def timeseries_output(ds: xr.Dataset) -> pd.DataFrame:
+def pixel_sums_full_domain(ds: xr.Dataset) -> pd.DataFrame:
     """Process VegTransition output into timeseries .csv.
 
     Runtime for this function is 3 minutes or more for 25 year scenarios.
@@ -466,6 +475,53 @@ def timeseries_output(ds: xr.Dataset) -> pd.DataFrame:
     df = counts.to_dataframe(name="count").reset_index()
     df = df.pivot(index="time", columns="value", values="count")
     return df
+
+
+def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
+    """
+    Calculate timeseries of WPU pixel counts for vegetation data.
+
+    This function computes a crosstabulation between vegetation types and zone identifiers
+    across multiple timesteps, aggregating the results into a DataFrame. Note that NaN will
+    be introduced into the output dataframe if a vegetation type exists in one timestep, but
+    not others. This is equivalent to zero, and can be update to such if necessary.
+
+    Parameters
+    ----------
+    ds_veg : xr.Dataset
+        The vegetation dataset containing a `band_data` variable. This variable is a
+        3D array with dimensions `(time, y, x)` representing vegetation types at
+        each timestep.
+    zones : xr.DataArray
+        A 2D array with dimensions `(y, x)` representing zone identifiers (e.g., WPU zones).
+        Must match the spatial dimensions of `band_data`.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with columns representing vegetation types and rows for each
+        combination of zone and timestep. The `timestep` column indicates the time
+        of each observation.
+    """
+    df_list = []
+
+    for t in ds_veg.time.values:
+        veg_2d = ds_veg["band_data"].sel(time=t)
+
+        # Convert the dask-backed DataArrays to NumPy
+        veg_2d_np = veg_2d.compute()
+        zones_np = zones.compute()
+
+        df = crosstab(zones=zones_np, values=veg_2d_np)
+        df.insert(loc=0, column="timestep", value=t)
+        df_list.append(df)
+
+    df_out = pd.concat(df_list)
+    df_out.rename(columns={"zone": "wpu"}, inplace=True)
+    df_out["wpu"] = df_out["wpu"].astype(int)
+    df_out.drop(columns=0, inplace=True)
+
+    return df_out
 
 
 def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
@@ -533,3 +589,21 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
         return Path(base_path) / filename
     else:
         return Path(filename)
+
+
+def create_wpu_raster():
+    """Placeholder to keep the code necessary to create the WPU zones raster.
+    will need to be modified.
+    """
+    return NotImplementedError
+    # from xarr_tools import xr_rasterize
+    # import xarray as xr
+
+    # da = xr.open_dataarray(
+    # "/Users/dillonragar/data/cpra/VegOut_20250102_091939/19741001/AMP_VEG_2ftSLRdry_LNK_ARS_O_ANN_01_02_VEGTYPE.tif"
+    # )
+    # da = da["band" == 0]
+    # da.rio.write_crs("EPSG:32615", inplace=True)
+
+    # res = xr_rasterize(gdf=gdf, da=da, attribute_col="WPU_ID", crs="EPSG:32615")
+    # res.astype("int").rio.to_raster("WPU_id_60m.tif", driver="GTiff", compress="LZW")

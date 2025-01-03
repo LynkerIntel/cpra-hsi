@@ -355,7 +355,7 @@ def zone_ii(
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     mar_june = [3, 4, 5, 6]
-    #gs = [4, 5, 6, 7, 8, 9]
+    # gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Zone II (value 18)
     type_mask = veg_type == 18
@@ -393,7 +393,13 @@ def zone_ii(
     combined_mask_iii = np.logical_and.reduce(stacked_masks_iii)
 
     # get pixels that meet fresh shrub criteria
-    stacked_masks_fresh_shrub = np.stack((~combined_mask_iii, condition_3, condition_4))
+    stacked_masks_fresh_shrub = np.stack(
+        (
+            ~combined_mask_iii,
+            condition_3,
+            condition_4,
+        )
+    )
     combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
 
     # get pixels that meet fresh marsh criteria

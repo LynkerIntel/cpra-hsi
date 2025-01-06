@@ -344,14 +344,21 @@ class HSI(veg_transition.VegTransition):
         transforming the Dataset into an annual mean at 480m
         resolution.
         """
-        # call the parent method from VegTransition
-        ds = super()._get_depth()
-        # get temporal mean
-        ds = ds.mean(dim="time")
+        mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
+        height = mean_wse - self.dem
+
         # downscale to 480m
-        ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
-        arr = ds_coarse["WSE_MEAN"].to_numpy()
-        return arr
+        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+        # # call the parent method from VegTransition
+        # ds = super()._get_depth()
+        # # get temporal mean
+        # ds = ds.mean(dim="time")
+        # # downscale to 480m
+        # ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+        # arr = ds_coarse["WSE_MEAN"].to_numpy()
+        # return arr
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

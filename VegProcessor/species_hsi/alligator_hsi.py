@@ -17,13 +17,13 @@ class AlligatorHSI:
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
     v1_pct_open_water: np.ndarray = None
-    v2_avg_water_depth_rlt_marsh_surface: np.ndarray = None
+    v2_water_depth_annual_mean: np.ndarray = None
 
     # v3_pct_cell_covered_by_habitat_types: np.ndarray = None
     v3a_pct_swamp_bottom_hardwood: np.ndarray = None
     v3b_pct_fresh_marsh: np.ndarray = None
     v3c_pct_intermediate_marsh: np.ndarray = None
-    v3d_brackish_marsh: np.ndarray = None
+    v3d_pct_brackish_marsh: np.ndarray = None
 
     v4_edge: np.ndarray = None
     v5_mean_annual_salinity: np.ndarray = None
@@ -43,6 +43,20 @@ class AlligatorHSI:
 
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
+
+    @classmethod
+    def from_hsi(cls, hsi_instance):
+        """Create AlligatorHSI instance from an HSI instance."""
+        return cls(
+            v1_pct_open_water=hsi_instance.pct_open_water / 100,
+            v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
+            v3a_pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood / 100,
+            v3b_pct_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
+            v3c_pct_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
+            v3d_pct_brackish_marsh=hsi_instance.pct_brackish_marsh / 100,
+            v4_edge=hsi_instance.edge,
+            v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+        )
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
@@ -85,14 +99,8 @@ class AlligatorHSI:
     def _determine_shape(self) -> tuple:
         """Determine the shape of the environmental variable arrays."""
         # Iterate over instance attributes and return the shape of the first non None numpy array
-        for name, value in vars(self).items():
-            if value is not None and isinstance(value, np.ndarray):
-                self._logger.info(
-                    "Using attribute %s as shape for output: %s", name, value.shape
-                )
-                return value.shape
-
-        raise ValueError("At least one S.I. raster input must be provided.")
+        return self.v1_pct_open_water.shape
+        # raise ValueError("At least one S.I. raster input must be provided.")
 
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is open water."""
@@ -103,7 +111,7 @@ class AlligatorHSI:
         else:
             self._logger.info("Running SI 1")
             # Create an array to store the results
-            si_1 = np.full(self._shape, 999)
+            si_1 = np.full(self._shape, 999.0)
 
             # condition 1
             mask_1 = self.v1_pct_open_water < 0.2
@@ -124,7 +132,7 @@ class AlligatorHSI:
 
     def calculate_si_2(self) -> np.ndarray:
         """Mean annual water depth relative to the marsh surface."""
-        if self.v2_avg_water_depth_rlt_marsh_surface is None:
+        if self.v2_water_depth_annual_mean is None:
             self._logger.info(
                 "avg annual water depth relative to marsh surface data not provided. Setting index to 1."
             )
@@ -132,55 +140,76 @@ class AlligatorHSI:
 
         else:
             self._logger.info("Running SI 2")
-            si_2 = np.full(self._shape, 999)
+            # Not using 999 as init value, because depth has
+            # many NaN pixels, instead these become 0
+            si_2 = np.full(self._shape, 0.0)  # must be float value!
 
             # condition 1 (OR)
-            mask_1 = (self.v2_avg_water_depth_rlt_marsh_surface <= -0.55) | (
-                self.v2_avg_water_depth_rlt_marsh_surface >= 0.25
+            mask_1 = (self.v2_water_depth_annual_mean <= -0.55) | (
+                self.v2_water_depth_annual_mean >= 0.25
             )
             si_2[mask_1] = 0.1
 
             # condition 2 (AND)
-            mask_2 = (self.v2_avg_water_depth_rlt_marsh_surface >= -0.55) & (
-                self.v2_avg_water_depth_rlt_marsh_surface <= 0.15
+            mask_2 = (self.v2_water_depth_annual_mean >= -0.55) & (
+                self.v2_water_depth_annual_mean <= 0.15
             )
-            si_2[mask_2] = (
-                2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_2]
-            ) + 1.3375
+            si_2[mask_2] = (2.25 * self.v2_water_depth_annual_mean[mask_2]) + 1.3375
 
-            # condition 3 (OR)
-            mask_3 = (self.v2_avg_water_depth_rlt_marsh_surface > -0.15) & (
-                self.v2_avg_water_depth_rlt_marsh_surface < 0.25
+            # condition 3 (AND)
+            mask_3 = (self.v2_water_depth_annual_mean > -0.15) & (
+                self.v2_water_depth_annual_mean < 0.25
             )
-            si_2[mask_3] = (
-                -2.25 * self.v2_avg_water_depth_rlt_marsh_surface[mask_3]
-            ) + 0.6625
+            si_2[mask_3] = (-2.25 * self.v2_water_depth_annual_mean[mask_3]) + 0.6625
 
-            if 999 in si_2:
-                raise ValueError("Unhandled condition in SI logic!")
+            # if 999 in si_2:
+            #     raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 
     def calculate_si_3(self) -> np.ndarray:
         """Proportion of cell covered by habitat types."""
-        if self.v3_pct_cell_covered_by_habitat_types is None:
-            self._logger.info(
-                "Pct habitat types data not provided. Setting index to 1."
-            )
-            suitability = np.ones(self._shape)
+        self._logger.info("Running SI 3")
 
-        return suitability
+        for array in [
+            self.v3a_pct_swamp_bottom_hardwood,
+            self.v3b_pct_fresh_marsh,
+            self.v3c_pct_intermediate_marsh,
+            self.v3d_pct_brackish_marsh,
+        ]:
+            if array is None:
+                self._logger.info("%s not provided. Setting index to 1.", array)
+                array = np.ones(self._shape)
+
+        si_3 = (
+            (0.551 * self.v3a_pct_swamp_bottom_hardwood)
+            + (0.713 * self.v3b_pct_fresh_marsh)
+            + (1.0 * self.v3c_pct_intermediate_marsh)
+            + (0.408 * self.v3d_pct_brackish_marsh)
+        )
+
+        # TODO: error handling here? (for case where no blank arr is initialized)
+        return si_3
 
     def calculate_si_4(self) -> np.ndarray:
         """Edge."""
         if self.v4_edge is None:
             self._logger.info("Edge data not provided. Setting index to 1.")
-            suitability = np.ones(self._shape)
+            si_4 = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+            self._logger.info("Running SI 4")
+            si_4 = np.full(self._shape, 999.0)
+            mask_1 = (self.v4_edge >= 0) & (self.v4_edge <= 22)
+            si_4[mask_1] = 0.05 + (0.95 * (self.v4_edge[mask_1] / 22))
 
-        return suitability
+            mask_2 = self.v4_edge > 22
+            si_4[mask_2] = 1
+
+            if 999 in si_4:
+                raise ValueError("Unhandled condition in SI logic!")
+
+        return si_4
 
     def calculate_si_5(self) -> np.ndarray:
         """Mean annual salinity."""
@@ -188,23 +217,37 @@ class AlligatorHSI:
             self._logger.info(
                 "mean annual salinity data not provided. Setting index to 1."
             )
-            suitability = np.ones(self._shape)
+            si_5 = np.ones(self._shape)
 
         else:
-            return NotImplementedError
+            self._logger.info("Running SI 5")
+            si_5 = np.full(self._shape, 999.0)  # must be float
+            mask_1 = (self.v5_mean_annual_salinity >= 0) & (
+                self.v5_mean_annual_salinity <= 10
+            )
 
-        return suitability
+            si_5[mask_1] = (-0.1 * self.v5_mean_annual_salinity[mask_1]) + 1
+
+            mask_2 = self.v5_mean_annual_salinity > 10
+            si_5[mask_2] = 0
+
+            if 999 in si_5:
+                raise ValueError("Unhandled condition in SI logic!")
+
+        return si_5
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
-        hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** 1 / 5
+        self._logger.info("Running Alligator final HSI.")
+        hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** (1 / 5)
 
         # Quality control check: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)
+
         if np.any(invalid_values):
             num_invalid = np.count_nonzero(invalid_values)
             self._logger.warning(
-                "Combined suitability score has %d values outside [0,1]. Clipping values.",
+                "Combined suitability score has %d values outside [0,1].",
                 num_invalid,
             )
             # Clip the combined_score to ensure it's between 0 and 1

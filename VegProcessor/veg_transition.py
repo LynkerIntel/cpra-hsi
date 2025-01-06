@@ -534,7 +534,7 @@ class VegTransition:
         # self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds.variables)
         return ds.rio.reproject_match(da_dem)
 
-    def _get_depth(self, annual_mean: bool = False) -> xr.Dataset:
+    def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
         NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
@@ -551,8 +551,9 @@ class VegTransition:
         # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
 
-        if annual_mean:
-            ds = ds.mean(dim="time")
+        # if annual_mean:
+        #     ds = ds.mean(dim="time")
+        #     return ds["WSE_MEAN"].to_numpy()
 
         # ds["WSE_MEAN"].plot(
         #     col="time",  # Create panels for each time step
@@ -753,6 +754,10 @@ class VegTransition:
     def post_process(self):
         """After a run has been executed, this method generates a summary
         timeseries, and saves it as CSV in the "run-metadata" directory.
+
+        TODO: `utils.pixel_sums_full_domain` is very slow. It takes nearly
+            8 minutes. Speeding this up would nearly half the total
+            exection time.
         """
         logging.info("Running post-processing routine.")
         wpu = xr.open_dataarray(
@@ -761,18 +766,25 @@ class VegTransition:
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)
-
         ds = utils.open_veg_multifile(self.output_dir_path)
 
         logging.info("Calculating WPU veg type sums.")
         df = utils.wpu_sums(ds_veg=ds, zones=wpu)
 
         # rename cols from int to type name
-        types_dict = dict(self.veg_keys[["Value", "Class"]].values)
-        df.rename(columns=types_dict, inplace=True)
+        # types_dict = dict(self.veg_keys[["Value", "Class"]].values)
+        # df.rename(columns=types_dict, inplace=True)
 
         outpath = os.path.join(self.run_metadata_dir, "wpu_vegtype_timeseries.csv")
         df.to_csv(outpath)
+
+        logging.info("Calculating full-domain veg type sums.")
+
+        df_full_domain = utils.pixel_sums_full_domain(ds=ds)
+        outpath = os.path.join(self.run_metadata_dir, "vegtype_timeseries.csv")
+        df_full_domain.to_csv(outpath)
+
+        logging.info("Post-processing complete.")
 
 
 class _TimestepFilter(logging.Filter):

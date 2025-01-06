@@ -55,10 +55,12 @@ class HSI(veg_transition.VegTransition):
         self.water_year_start = self.config["simulation"].get("water_year_start")
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
-
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.scenario_type = self.config["simulation"].get(
-            "scenario_type", ""
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
         )  # empty str if missing
 
         # output
@@ -112,6 +114,12 @@ class HSI(veg_transition.VegTransition):
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
+
+        self.pct_zone_v = None
+        self.pct_zone_iv = None
+        self.pct_zone_iii = None
+        self.pct_zone_ii = None
+        self.pct_fresh_shrubs = None
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -174,7 +182,7 @@ class HSI(veg_transition.VegTransition):
         # avg_water_depth_rlt_marsh_surface
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
-        self.water_depth_annual_mean = self._get_depth(annual_mean=True)
+        self.water_depth_annual_mean = self._get_water_depth_annual_mean()
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -190,17 +198,17 @@ class HSI(veg_transition.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator_hsi.AlligatorHSI(self)
+            self.alligator = alligator_hsi.AlligatorHSI.from_hsi(self)
             # self.bald_eagle = BaldEagleHSI(self)
             # self.black_bear = BlackBearHSI(self)
 
             # save state variables
-            self._logger.info("saving state variables for timestep.")
+            # self._logger.info("saving state variables for timestep.")
 
             # TODO: update this function to build a dataset out of the
             # of the suitability indices for each species, i.e.
             # self._output_indices()
-            self._save_state_vars()
+            # self._save_state_vars()
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -236,7 +244,8 @@ class HSI(veg_transition.VegTransition):
         Returns a single WY.
         """
         logging.info("Loading vegetation data.")
-        files = glob.glob(self.veg_type_path, recursive=True)
+        file_path = os.path.join(self.veg_type_path, "**/*VEGTYPE.tif")
+        files = glob.glob(file_path, recursive=True)
         time_str = self.current_timestep.strftime("%Y%m%d")
         # Filter files by checking only the folder containing the date,
         # not the model execution timestep in the base dir
@@ -328,6 +337,21 @@ class HSI(veg_transition.VegTransition):
             boundary="pad",
         )
         return da.to_numpy()
+
+    def _get_water_depth_annual_mean(self) -> np.ndarray:
+        """
+        Extends the parent `VegTransition._get_depth` by
+        transforming the Dataset into an annual mean at 480m
+        resolution.
+        """
+        # call the parent method from VegTransition
+        ds = super()._get_depth()
+        # get temporal mean
+        ds = ds.mean(dim="time")
+        # downscale to 480m
+        ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+        arr = ds_coarse["WSE_MEAN"].to_numpy()
+        return arr
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

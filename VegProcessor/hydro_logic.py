@@ -20,7 +20,7 @@ def habitat_based_salinity(veg_type: np.ndarray | xr.DataArray) -> np.ndarray:
     Else if pixel is intermediate marsh then set salinity to 3.5;
     Else set salinity to 1.
 
-    TODO check units
+    TODO properly implement 12 month salinity (static as of now)
 
     Params:
         - veg_type (np.ndarray | xr.DataArray): array of current vegetation types.
@@ -39,7 +39,7 @@ def habitat_based_salinity(veg_type: np.ndarray | xr.DataArray) -> np.ndarray:
 
         # NaN is added (pad) for non-exact downscaling dims
         da = da.coarsen(x=8, y=8, boundary="pad").mean()
-        return da
+        return da.to_numpy()
 
     # creat salinity, set all elements to 1
     salinity = np.ones_like(veg_type)

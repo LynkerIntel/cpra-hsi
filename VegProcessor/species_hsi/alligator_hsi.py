@@ -109,7 +109,7 @@ class AlligatorHSI:
 
             # condition 1
             mask_1 = self.v1_pct_open_water < 0.2
-            si_1[mask_1] = ((4.5 * self.v1_pct_open_water[mask_1]) / 100) + 0.1
+            si_1[mask_1] = (4.5 * self.v1_pct_open_water[mask_1]) + 0.1
 
             # condition 2
             mask_2 = (self.v1_pct_open_water >= 0.2) & (self.v1_pct_open_water <= 0.4)
@@ -117,7 +117,7 @@ class AlligatorHSI:
 
             # condition 3
             mask_3 = self.v1_pct_open_water > 0.4
-            si_1[mask_3] = ((-1.667 * self.v1_pct_open_water[mask_3]) / 100) + 1.667
+            si_1[mask_3] = (-1.667 * self.v1_pct_open_water[mask_3]) + 1.667
 
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):

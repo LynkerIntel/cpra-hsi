@@ -10,8 +10,6 @@ class AlligatorHSI:
     used for each individual suitability index, and initialized as None for cases where
     the data for an index is not available. These indices will be set to ideal (1).
 
-    Note: percent cover arrays should be provided as decimals
-
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """

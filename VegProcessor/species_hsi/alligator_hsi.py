@@ -28,12 +28,6 @@ class AlligatorHSI:
     v4_edge: np.ndarray = None
     v5_mean_annual_salinity: np.ndarray = None
 
-    # Species-specific parameters (example values)
-    # for cases where static values are used
-
-    # optimal_temperature: float = 20.0  # EXAMPLE
-    # temperature_tolerance: float = 10.0  # EXAMPLE
-
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -125,7 +119,8 @@ class AlligatorHSI:
             mask_3 = self.v1_pct_open_water > 0.4
             si_1[mask_3] = ((-1.667 * self.v1_pct_open_water[mask_3]) / 100) + 1.667
 
-            if 999 in si_1:
+            # Check for unhandled condition with tolerance
+            if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_1
@@ -162,7 +157,8 @@ class AlligatorHSI:
             )
             si_2[mask_3] = (-2.25 * self.v2_water_depth_annual_mean[mask_3]) + 0.6625
 
-            # if 999 in si_2:
+            # # Check for unhandled condition with tolerance
+            # if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             #     raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
@@ -206,7 +202,8 @@ class AlligatorHSI:
             mask_2 = self.v4_edge > 22
             si_4[mask_2] = 1
 
-            if 999 in si_4:
+            # Check for unhandled condition with tolerance
+            if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
@@ -231,7 +228,8 @@ class AlligatorHSI:
             mask_2 = self.v5_mean_annual_salinity > 10
             si_5[mask_2] = 0
 
-            if 999 in si_5:
+            # Check for unhandled condition with tolerance
+            if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_5
@@ -239,18 +237,32 @@ class AlligatorHSI:
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Alligator final HSI.")
+        for si_name, si_array in [
+            ("SI 1", self.si_1),
+            ("SI 2", self.si_2),
+            ("SI 3", self.si_3),
+            ("SI 4", self.si_4),
+            ("SI 5", self.si_5),
+        ]:
+            invalid_values = (si_array < 0) | (si_array > 1)
+            if np.any(invalid_values):
+                num_invalid = np.count_nonzero(invalid_values)
+                self._logger.warning(
+                    "%s contains %d values outside the range [0, 1].",
+                    si_name,
+                    num_invalid,
+                )
+
+        # Combine individual suitability indices
         hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** (1 / 5)
 
-        # Quality control check: Ensure combined_score is between 0 and 1
-        invalid_values = (hsi < 0) | (hsi > 1)
-
-        if np.any(invalid_values):
-            num_invalid = np.count_nonzero(invalid_values)
+        # Check the final HSI array for invalid values
+        invalid_values_hsi = (hsi < 0) | (hsi > 1)
+        if np.any(invalid_values_hsi):
+            num_invalid_hsi = np.count_nonzero(invalid_values_hsi)
             self._logger.warning(
-                "Combined suitability score has %d values outside [0,1].",
-                num_invalid,
+                "Final HSI contains %d values outside the range [0, 1].",
+                num_invalid_hsi,
             )
-            # Clip the combined_score to ensure it's between 0 and 1
-            # hsi = np.clip(hsi, 0, 1)
 
         return hsi

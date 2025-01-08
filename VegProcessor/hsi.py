@@ -17,12 +17,13 @@ import hydro_logic
 import plotting
 import utils
 
-import veg_transition
+import veg_transition as vt
 from veg_transition import _TimestepFilter
+
 from species_hsi import alligator_hsi
 
 
-class HSI(veg_transition.VegTransition):
+class HSI(vt.VegTransition):
     """HSI model framework."""
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -347,7 +348,7 @@ class HSI(veg_transition.VegTransition):
         mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
         height = mean_wse - self.dem
 
-        # downscale to 480m
+        # upscale to 480m from 60m
         da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 
@@ -419,24 +420,3 @@ class HSI(veg_transition.VegTransition):
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
-
-
-# class _TimestepFilter(logging.Filter):
-#     """A roundabout way to inject the current timestep into log records.
-#     Should & could be simplified.
-
-#     N/A if log messages occurs while self.current_timestep is not set.
-#     """
-
-#     def __init__(self, veg_transition_instance):
-#         super().__init__()
-#         self.veg_transition_instance = veg_transition_instance
-
-#     def filter(self, record):
-#         # Dynamically add the current timestep to log records
-#         record.timestep = (
-#             self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-#             if self.veg_transition_instance.current_timestep
-#             else "N/A"
-#         )
-#         return True

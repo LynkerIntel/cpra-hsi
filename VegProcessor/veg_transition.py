@@ -551,10 +551,6 @@ class VegTransition:
         # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
         ds = ds.fillna(0)
 
-        # if annual_mean:
-        #     ds = ds.mean(dim="time")
-        #     return ds["WSE_MEAN"].to_numpy()
-
         # ds["WSE_MEAN"].plot(
         #     col="time",  # Create panels for each time step
         #     col_wrap=4,  # Number of panels per row

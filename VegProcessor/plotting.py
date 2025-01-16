@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import logging
 import os
-
 from typing import Optional
 
 
@@ -15,9 +15,10 @@ def np_arr(
     veg_type_desc: Optional[str] = "",
     out_path: Optional[str] = None,
     showplot: Optional[bool] = False,
+    veg_palette: Optional[bool] = False,
 ):
     """
-    Plot 2D numpy arrays and their histogram using fixed bins (2-26).
+    Plot 2D numpy arrays and their histogram using unique values for vegetation color palette.
 
     Parameters
     ----------
@@ -27,68 +28,95 @@ def np_arr(
         Title for the plot.
     veg_type_desc : str
         Description of the input vegetation type to be included in the plot title.
+    out_path : str, optional
+        Directory to save the plot. If None, the plot is not saved.
+    showplot : bool, optional
+        If True, display the plot after generating it. Default is False.
+    veg_palette : bool, optional
+        If True, use the `vegetation_colors` dictionary to color the array and histogram based on vegetation types.
 
     Returns
     -------
     None
         Saves figures based on input arrays, in the `out_path`
     """
-    n_valid = np.sum(~np.isnan(arr))
+    # Define vegetation types and their associated colors
+    vegetation_colors = {
+        15: (0, 102, 0),  # Dark Green
+        16: (0, 204, 153),  # Teal
+        17: (0, 255, 153),  # Light Green
+        18: (102, 153, 0),  # Olive Green
+        19: (128, 128, 0),  # Dark Yellow
+        20: (51, 204, 51),  # Light Green
+        21: (255, 255, 102),  # Light Yellow
+        22: (237, 125, 49),  # Orange
+        23: (255, 0, 0),  # Red
+        26: (153, 204, 255),  # Light Blue
+    }
 
+    unique_values = np.unique(arr[~np.isnan(arr)]).astype(int)
+
+    if veg_palette:
+        # Extract the keys and colors from the vegetation colors
+        veg_keys = sorted(unique_values)  # Get all unique values from the array
+        veg_colors = [
+            tuple(np.array(vegetation_colors.get(key, (128, 128, 128))) / 255.0)
+            for key in veg_keys
+        ]  # Normalize to 0-1 and use gray (128, 128, 128) for missing keys
+    else:
+        veg_keys = sorted(unique_values)
+        veg_colors = plt.cm.viridis(np.linspace(0, 1, len(veg_keys)))
+
+    # Create a Normalize object to map vegetation type values directly to 0-1
+    norm = mcolors.Normalize(vmin=min(veg_keys), vmax=max(veg_keys))
+
+    # Create a ListedColormap from the specified vegetation colors
+    cmap = mcolors.ListedColormap(veg_colors)
+
+    # Plot the vegetation array
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    unique_values = np.unique(arr[~np.isnan(arr)])
+    im = axes[0].imshow(arr, cmap=cmap, norm=norm)
+    axes[0].set_title(f"{title}\n{veg_type_desc}", fontsize=10)
 
-    if len(unique_values) == 1:
-        cmap = "gray"  # Use black (grayscale) colormap
-        unique_value = unique_values[0]
-        vmin, vmax = unique_value, unique_value
+    # # Create the colorbar and set tick positions at the unique vegetation type values
+    # cbar = fig.colorbar(im, ax=axes[0], orientation="vertical")
+    # cbar.set_ticks(veg_keys)  # Tick at each vegetation type
+    # cbar.set_ticklabels(
+    #     [str(veg_type) for veg_type in veg_keys]
+    # )  # Label tick at each vegetation type
+
+    # Generate a histogram of vegetation types in the array
+    unique_types, counts = np.unique(arr[~np.isnan(arr)], return_counts=True)
+    sorted_indices = np.argsort(unique_types)
+    unique_types = unique_types[sorted_indices]
+    counts = counts[sorted_indices]
+
+    if veg_palette:
+        bar_colors = [
+            tuple(np.array(vegetation_colors.get(veg_type, (128, 128, 128))) / 255.0)
+            for veg_type in unique_types
+        ]
     else:
-        cmap = "viridis"
-        vmin, vmax = None, None  # Default scaling
+        bar_colors = ["blue"] * len(unique_types)
 
-    # Plot the 2D array
-    im = axes[0].imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
-    axes[0].set_title(
-        f"{title}\n{veg_type_desc}",
-        fontsize=10,
+    # Plot the histogram of vegetation types
+    axes[1].bar(unique_types, counts, color=bar_colors, align="center", alpha=0.7)
+    axes[1].set_title(f"Histogram of Array Values\n{veg_type_desc}", fontsize=10)
+    axes[1].set_xlabel("Vegetation Type")
+    axes[1].set_ylabel("Frequency")
+    axes[1].set_xticks(unique_types)
+    axes[1].set_xticklabels(
+        [str(int(veg_type)) for veg_type in unique_types], rotation=45
     )
-    fig.colorbar(im, ax=axes[0], orientation="vertical")
-
-    if arr.dtype == bool:
-        axes[1].text(
-            0.5,
-            0.5,
-            "Boolean Array - Histogram Not Applicable",
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=12,
-            transform=axes[1].transAxes,
-        )
-        axes[1].set_title("Histogram (Empty for Boolean Arrays)", fontsize=10)
-        axes[1].axis("off")
-    else:
-        # Use fixed bins from 2 to 26, corresponding to vegetation types
-        flattened = arr[~np.isnan(arr)].flatten()  # Ignore NaN values
-        bins = np.arange(0, 27)  # Integers from 2 to 26
-        axes[1].hist(flattened, bins=bins, color="blue", alpha=0.7, align="left")
-        axes[1].set_title(
-            f"Histogram of Array Values\n{veg_type_desc}",
-            fontsize=10,
-        )
-        axes[1].set_xlabel("Vegetation Type")
-        axes[1].set_ylabel("Frequency")
-        axes[1].set_xticks(bins[:-1])  # Align x-axis ticks with bin centers
 
     plt.tight_layout()
 
     if out_path:
         os.makedirs(out_path, exist_ok=True)
-
         sanitized_title = title.replace(" ", "_").replace("\n", "_")
         file_path = os.path.join(out_path, f"{sanitized_title}.png")
-        fig.savefig(file_path, dpi=300)
-        plt.close(plt.gcf())
-        logger.info("Saved plot to %s", file_path)
+        fig.savefig(file_path, dpi=300, bbox_inches="tight")
+        print(f"Saved plot to {file_path}")
 
     if showplot:
         plt.show()

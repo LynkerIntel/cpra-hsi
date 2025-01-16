@@ -1,2 +1,5 @@
 *.nc
 **/debug_*
+**/data/tmp/scratch/
+test.ipynb
+hsi_testing.ipynb

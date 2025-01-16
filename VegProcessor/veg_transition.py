@@ -11,11 +11,12 @@ import os
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
+import matplotlib.pyplot as plt
+
 
 import veg_logic
 import hydro_logic
 import plotting
-import testing
 import utils
 
 
@@ -76,11 +77,23 @@ class VegTransition:
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
+        self.wpu_path = self.config["raster_data"].get("wpu_path")
 
         # simulation
-        self.start_date = self.config["simulation"].get("start_date")
-        self.end_date = self.config["simulation"].get("end_date")
+        self.water_year_start = self.config["simulation"].get("water_year_start")
+        self.water_year_end = self.config["simulation"].get("water_year_end")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
+
+        # self.model = self.config["metadata"].get("model")
+        # self.group = self.config["metadata"].get("group")
+        # self.wpu = self.config["metadata"].get("wpu")
+        # self.ion = self.config["metadata"].get("ion")
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -90,16 +103,10 @@ class VegTransition:
             self.config, default_flow_style=False, sort_keys=False
         )
 
-        # Time
-        # self.time = 0
-
-        # Store history for analysis
-        # self.history = {"P": [self.P], "H": [self.H], "time": [self.time]}
-
         self._create_output_dirs()
-        self.current_timestep = None  # set in step() method
+        self.current_timestep = None
         self._setup_logger(log_level)
-        self.timestep_output_dir = None  # set in step() method
+        self.timestep_output_dir = None
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
@@ -116,13 +123,11 @@ class VegTransition:
         self.veg_type = self._load_veg_initial_raster()
         self.veg_keys = self._load_veg_keys()
 
-        # load raster if provided, default values if not
-        self._load_salinity()
-
         self.wse = None
         self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
+        self.salinity = None
 
         # initialize partial update arrays as None
         self.veg_type_update_1 = None
@@ -159,9 +164,9 @@ class VegTransition:
             ch.setLevel(log_level)
 
             # file handler for logs in `run-input` folder
-            run_input_dir = os.path.join(self.output_dir_path, "run-input")
-            os.makedirs(run_input_dir, exist_ok=True)  # Ensure directory exists
-            log_file_path = os.path.join(run_input_dir, "simulation.log")
+            run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+            os.makedirs(run_metadata_dir, exist_ok=True)  # Ensure directory exists
+            log_file_path = os.path.join(run_metadata_dir, "simulation.log")
             fh = logging.FileHandler(log_file_path)
             fh.setLevel(log_level)
 
@@ -204,14 +209,25 @@ class VegTransition:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
 
-    def step(self, date):
-        """Advance the transition model by one step."""
-        self.current_timestep = date  # Set the current timestep
+    def step(self, timestep: pd.DatetimeTZDtype, counter: int, simulation_period: int):
+        """Advance the transition model by one step.
 
-        self._logger.info("starting timestep: %s", date)
-        self._create_timestep_dir(date)
+        Parameters:
+        -----------
+            timestep : pd.DatetimeTZDtype
+                The current model timestep.
+            counter : int
+                Integer representation of timestep.
+            simulation_period: int
+                The length of the simulation. i.e. 25 years for a single
+                scenario run.
+        """
+        self.current_timestep = timestep  # Set the current timestep
+        wy = timestep.year
 
-        wy = date.year
+        self._logger.info("starting timestep: %s", timestep)
+        self._create_timestep_dir(timestep)
+
         # copy existing veg types
         veg_type_in = self.veg_type
 
@@ -220,14 +236,14 @@ class VegTransition:
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
-        # temporary bug fixing subset
-        # self.veg_type = self.veg_type[200:275, 200:275]
-        # self.water_depth = self.water_depth.isel(x=slice(200, 275), y=slice(200, 275))
+        # get salinity
+        self.salinity = self._get_salinity()
 
         plotting.np_arr(
             self.veg_type,
-            title="All Types Input",
+            f"All Types Input {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
+            veg_palette=True,
         )
 
         # veg_type array is iteratively updated, for each zone
@@ -303,39 +319,38 @@ class VegTransition:
             )
         )
 
-        if testing.has_overlapping_non_nan(stacked_veg):
+        if utils.has_overlapping_non_nan(stacked_veg):
             raise ValueError(
                 "New vegetation stacked arrays cannot have overlapping values."
             )
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
-        self.veg_type = np.full_like(
-            self.veg_type_update_1, np.nan
-        )  # Initialize with NaN
+        self.veg_type = np.full_like(self.veg_type_update_1, np.nan)
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
         # get unchanged/unhandled vegetation types from base raster
-        no_transition_nan_mask = np.isnan(self.veg_type)
+        # no_transition_nan_mask = np.isnan(self.veg_type)
 
         # Replace NaN values in the new array with corresponding values from the veg base raster
-        self._logger.info(
-            "Filling NaN pixels in result array with vegetation base raster."
-        )
-        self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
-            no_transition_nan_mask
-        ]
+        # self._logger.info(
+        #     "Filling NaN pixels in result array with vegetation base raster."
+        # )
+        # self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
+        #     no_transition_nan_mask
+        # ]
 
         plotting.np_arr(
             self.veg_type,
-            title="All Types Output",
+            title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
+            veg_palette=True,
         )
         plotting.sum_changes(
             veg_type_in,
             self.veg_type,
-            plot_title="Timestep Veg Changes",
+            plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
@@ -343,30 +358,52 @@ class VegTransition:
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        self._save_state_vars()
 
-        self._logger.info("completed timestep: %s", date)
+        params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "wpu": "ARS",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+            "parameter": "NA",  # ?
+        }
+
+        self._save_state_vars(params)
+
+        self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
 
     def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
+
+        Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
         # steps = int(self.simulation_duration / self.simulation_time_step)
         self._logger.info(
             "Starting simulation at %s. Period: %s - %s",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            self.start_date,
-            self.end_date,
+            self.water_year_start,
+            self.water_year_end,
         )
-        simulation_period = pd.date_range(self.start_date, self.end_date, freq="YS-OCT")
+
+        # plus 1 to make inclusive
+        simulation_period = range(self.water_year_start, self.water_year_end + 1)
+
         self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
-        for timestep in simulation_period:
-            self.step(timestep)
+        for i, wy in enumerate(simulation_period):
+            self.step(
+                timestep=pd.to_datetime(f"{wy}-10-01"),
+                counter=str(i + 1),
+                simulation_period=str(len(simulation_period)),
+            )
 
         self._logger.info("Simulation complete")
+        logging.shutdown()
 
     def _load_dem(self) -> np.ndarray:
         """Load project domain DEM."""
@@ -392,9 +429,9 @@ class VegTransition:
         automatically extract the timestamps and assign them to a 'time' dimension in the resulting
         xarray.Dataset, but only for files within the specified water year.
 
-        NOTE: Input WSE data is considered to use NaN to designate 0 depth, as is the
-        case for the HEC-RAS data. If this is false, this function must be updated
-        accordingly.
+        NOTE: Input WSE data (as of 2024-12-13) uses NaN to designate 0 depth. If this is false,
+        because the input data has changed, or a different model with different NaAn classification
+        is used, this function must be updated accordingly.
 
         UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
 
@@ -443,7 +480,7 @@ class VegTransition:
                 time_stamps.append(file_date)
 
         if not selected_files:
-            self._logger.error("No files found for water year: %s", water_year)
+            self._logger.error("No WSE files found for water year: %s", water_year)
             return None
 
         if len(selected_files) < 12:
@@ -469,7 +506,7 @@ class VegTransition:
         ds[variable_name] *= 0.3048  # UNIT: feet to meters
 
         if self.analog_sequence:
-            self._logger.info("Using sequence loading method!")
+            self._logger.info("Using sequence loading method.")
             new_timesteps = pd.date_range(
                 f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
             )
@@ -481,13 +518,7 @@ class VegTransition:
             ds = ds.assign_coords(time=("time", new_timesteps))
             self._logger.info("Sequence timeseres updated to match filename.")
 
-        self._logger.info(
-            "Replacing all NaN in WSE data with 0 (assuming full domain coverage.)"
-        )
-        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
-        ds = ds.fillna(0)
-
-        self._logger.info("Loaded HEC-RAS WSE Datset for year: %s", water_year)
+        self._logger.info("Loaded HEC-RAS WSE Datset for water-year: %s", water_year)
         return ds
 
     def _reproject_match_to_dem(
@@ -506,14 +537,33 @@ class VegTransition:
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
 
-        TODO: check units !
+        NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
+        equivalent to 0 water depth. This is necessary so that inundation checks do
+        not have NaN values for periods without inundation (logic relies
+        on > or < comparison operators).
         """
         self._logger.info("Creating depth")
-        return self.wse - self.dem
+        ds = self.wse - self.dem
+
+        self._logger.info(
+            "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
+        )
+        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
+        ds = ds.fillna(0)
+
+        # ds["WSE_MEAN"].plot(
+        #     col="time",  # Create panels for each time step
+        #     col_wrap=4,  # Number of panels per row
+        #     cmap="viridis",
+        #     aspect=1.5,  # Adjust aspect ratio
+        #     size=3,  # Adjust figure size
+        # )
+        # plt.show()
+        return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
-        +1 maturity for pixels without vegetation changes.
+        +1 year maturity for pixels without vegetation changes.
         """
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
@@ -546,7 +596,7 @@ class VegTransition:
         if not combined_mask_change.any():
             self._logger.warning("No forested pixels changed in prior timestep.")
 
-        if testing.common_true_locations(
+        if utils.common_true_locations(
             np.stack((combined_mask_change, combined_mask_no_change))
         ):
             raise ValueError("Forested types have overlapping True location(s)")
@@ -563,20 +613,51 @@ class VegTransition:
 
         plotting.np_arr(
             self.maturity,
-            title="Timestep Maturity",
+            title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
 
-    def _load_veg_initial_raster(self) -> np.ndarray:
+    def _load_veg_initial_raster(self, xarray=False) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
+
+        Parameters
+        ----------
+        xarray : bool
+            True if xarray output format is needed.
+
+        Returns
+        -------
+        xr.Dataarray or np.ndarray
+            An array with the intial vegetation types, subset to types with transition rules
+            and with NaN applied to pixels outside of the DEM valid bounds.
         """
         da = xr.open_dataarray(self.veg_base_path)
         da = da.squeeze(drop="band")
 
         da = self._reproject_match_to_dem(da)
         self._logger.info("Loaded initial vegetation raster")
-        return da.to_numpy()
+        veg_type = da.to_numpy()
+
+        self._logger.info("Subsetting initial vegetation raster to allowed types")
+        # allowed veg types
+        values_to_mask = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
+        # Create mask where True corresponds to values in the list
+        type_mask = np.isin(veg_type, values_to_mask)
+        veg_type = np.where(type_mask, veg_type, np.nan)
+
+        # Mask the vegetation raster to only include valid DEM pixels
+        self._logger.info("Masking vegetation raster to valid DEM pixels")
+        dem_valid_mask = ~np.isnan(self.dem)
+        veg_type = np.where(dem_valid_mask, veg_type, np.nan)
+
+        if xarray:
+            # Reassign np.array to origina DataArray. This ensure
+            # the data is identical for either output type.
+            da["veg_type_subset"] = (("y", "x"), veg_type)
+            return da["veg_type_subset"]
+
+        return veg_type
 
     def _load_veg_keys(self) -> pd.DataFrame:
         """load vegetation class names from database file"""
@@ -586,15 +667,15 @@ class VegTransition:
         self._logger.info("Loaded Vegetation Keys")
         return dbf
 
-    def _load_salinity(self):
+    def _get_salinity(self) -> np.ndarray:
         """Load salinity raster data (if available.)"""
-        # raise NotImplementedError
         if self.salinity_path:
             # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
             self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
-            self._logger.info("Creating salinity from habitat defaults")
+            self._logger.info("Creating salinity defaults from veg type array.")
+            return self.salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,
@@ -610,15 +691,15 @@ class VegTransition:
         os.makedirs(self.output_dir_path, exist_ok=True)
 
         # Create the 'run-input' subdirectory
-        run_input_dir = os.path.join(self.output_dir_path, "run-input")
-        os.makedirs(run_input_dir, exist_ok=True)
+        self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+        os.makedirs(self.run_metadata_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, run_input_dir)
+            shutil.copy(self.config_path, self.run_metadata_dir)
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self):
+    def _save_state_vars(self, params: dict):
         """The method will save state variables after each timestep.
 
         This method should also include the config, input data, and QC plots.
@@ -626,32 +707,80 @@ class VegTransition:
         template = self.water_depth.isel({"time": 0})  # subset to first month
 
         # veg type out
+        filename_vegtype = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="VEGTYPE",
+        )
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
         self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-
         self.timestep_out["veg_type"].rio.to_raster(
-            self.timestep_output_dir + "/vegtype.tif"
+            filename_vegtype.with_suffix(".tif")
         )
 
         # pct mast out
         # TODO: add perent mast handling
 
         # maturity out
+        filename_maturity = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="MATURITY",
+        )
         self.timestep_out["maturity"] = (("y", "x"), self.maturity)
         self.timestep_out["maturity"].rio.to_raster(
-            self.timestep_output_dir + "/maturity.tif"
+            filename_maturity.with_suffix(".tif")
         )
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
         """
+
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"
         )
-        self.timestep_output_dir_figs = os.path.join(self.timestep_output_dir, "figs")
+        self.timestep_output_dir_figs = os.path.join(
+            self.timestep_output_dir,
+            "figs",
+        )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+
+    def post_process(self):
+        """After a run has been executed, this method generates a summary
+        timeseries, and saves it as CSV in the "run-metadata" directory.
+
+        TODO: `utils.pixel_sums_full_domain` is very slow. It takes nearly
+            8 minutes. Speeding this up would nearly half the total
+            exection time.
+        """
+        logging.info("Running post-processing routine.")
+        wpu = xr.open_dataarray(
+            "/Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif"
+        )
+        wpu = wpu["band" == 0]
+        # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
+        wpu = xr.where(wpu != 0, wpu, np.nan)
+        ds = utils.open_veg_multifile(self.output_dir_path)
+
+        logging.info("Calculating WPU veg type sums.")
+        df = utils.wpu_sums(ds_veg=ds, zones=wpu)
+
+        # rename cols from int to type name
+        # types_dict = dict(self.veg_keys[["Value", "Class"]].values)
+        # df.rename(columns=types_dict, inplace=True)
+
+        outpath = os.path.join(self.run_metadata_dir, "wpu_vegtype_timeseries.csv")
+        df.to_csv(outpath)
+
+        logging.info("Calculating full-domain veg type sums.")
+
+        df_full_domain = utils.pixel_sums_full_domain(ds=ds)
+        outpath = os.path.join(self.run_metadata_dir, "vegtype_timeseries.csv")
+        df_full_domain.to_csv(outpath)
+
+        logging.info("Post-processing complete.")
 
 
 class _TimestepFilter(logging.Filter):

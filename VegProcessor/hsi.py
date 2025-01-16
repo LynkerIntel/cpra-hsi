@@ -20,7 +20,7 @@ import utils
 import veg_transition as vt
 from veg_transition import _TimestepFilter
 
-from species_hsi import alligator_hsi
+from species_hsi import alligator
 
 
 class HSI(vt.VegTransition):
@@ -199,7 +199,7 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator_hsi.AlligatorHSI.from_hsi(self)
+            self.alligator = alligator.AlligatorHSI.from_hsi(self)
             # self.bald_eagle = BaldEagleHSI(self)
             # self.black_bear = BlackBearHSI(self)
 

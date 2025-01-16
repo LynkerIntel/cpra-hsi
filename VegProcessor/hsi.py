@@ -18,8 +18,6 @@ import plotting
 import utils
 
 import veg_transition as vt
-from veg_transition import _TimestepFilter
-
 from species_hsi import alligator
 
 

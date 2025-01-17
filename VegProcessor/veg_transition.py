@@ -363,7 +363,7 @@ class VegTransition:
             "model": self.metadata.get("model"),
             "scenario": self.metadata.get("scenario"),
             "group": self.metadata.get("group"),  # not sure if this is correct,
-            "wpu": "ARS",
+            "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
@@ -713,6 +713,7 @@ class VegTransition:
             parameter="VEGTYPE",
         )
         new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+        # xr.Dataset `timestep_out` will contain all output arrays, defined here first
         self.timestep_out = utils.create_dataset_from_template(template, new_variables)
         self.timestep_out["veg_type"].rio.to_raster(
             filename_vegtype.with_suffix(".tif")
@@ -721,9 +722,16 @@ class VegTransition:
         # pct mast out
         # TODO: add perent mast handling
 
-        # TODO: add timestep water depth out
+        filename_depth = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="WATER_DEPTH",
+        )
+        self.timestep_out["depth"] = (("y", "x"), self.water_depth)
+        self.timestep_out["depth"].rio.to_raster(
+            filename_depth.with_suffix(".tif"),
+        )
 
-        # maturity out
         filename_maturity = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,

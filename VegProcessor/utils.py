@@ -593,7 +593,7 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
 
 def create_wpu_raster():
     """Placeholder to keep the code necessary to create the WPU zones raster.
-    will need to be modified.
+    will need to be modified if it should be called from `utils`.
     """
     return NotImplementedError
     # from xarr_tools import xr_rasterize

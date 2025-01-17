@@ -16,9 +16,18 @@ simulation:
 
 metadata: # partial list (static vars)
   model: VEG
-  scenario: "BaseMod" # scenario info for plots and metadata
-  group: LNK # TODO: double check this
+  scenario: "03" # scenario info for plots and metadata
+  group: GXXX # TODO: double check this
   wpu: ARS
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"
+
+
+# Scenario codes (20250116)
+# 01: Dry, base
+# 02: Dry, +2' SLR
+# 03: Moderate, base
+# 04: Moderate, +2' SLR
+# 05: Wet, base
+# 06: Wet, +2' SLR

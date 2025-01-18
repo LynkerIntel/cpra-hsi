@@ -223,7 +223,7 @@ class VegTransition:
                 scenario run.
         """
         self.current_timestep = timestep  # Set the current timestep
-        wy = timestep.year
+        self.wy = timestep.year
 
         self._logger.info("starting timestep: %s", timestep)
         self._create_timestep_dir(timestep)
@@ -232,7 +232,7 @@ class VegTransition:
         veg_type_in = self.veg_type
 
         # calculate depth
-        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -353,11 +353,13 @@ class VegTransition:
             plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
+        # save water depth plots
+        plotting.water_depth(
+            self.water_depth,
+            out_path=self.timestep_output_dir_figs,
+        )
 
         self._calculate_maturity(veg_type_in)
-
-        # serialize state variables: veg_type, maturity, mast %
-        self._logger.info("saving state variables for timestep.")
 
         params = {
             "model": self.metadata.get("model"),
@@ -370,8 +372,9 @@ class VegTransition:
             "parameter": "NA",  # ?
         }
 
+        # serialize state variables: veg_type, maturity, mast %
+        self._logger.info("saving state variables for timestep.")
         self._save_state_vars(params)
-
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
 
@@ -722,16 +725,6 @@ class VegTransition:
         # pct mast out
         # TODO: add perent mast handling
 
-        filename_depth = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            parameter="WATER_DEPTH",
-        )
-        self.timestep_out["depth"] = (("y", "x"), self.water_depth)
-        self.timestep_out["depth"].rio.to_raster(
-            filename_depth.with_suffix(".tif"),
-        )
-
         filename_maturity = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
@@ -756,6 +749,29 @@ class VegTransition:
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+
+    # def save_water_depth(self, params: dict):
+    #     """
+    #     Output water depth (calculated from difference of DEM and WSE).
+    #     This method us unique from `save_state_vars` as water depth is
+    #     (1) a model input (not state var), and (2) an xr.Dataset. This
+    #     method is designed to work for either monthly or daily frequency.
+    #     """
+    #     # create dir for monthly or daily water depth files
+
+    #     # create filenames
+    #     dates = self.water_depth.time.values
+
+    #     filenames = []
+    #     for d in dates:
+    #         fn = utils.generate_filename(
+    #             params=params,
+    #             base_path=self.timestep_output_dir,
+    #             parameter="WATER_DEPTH",
+    #         )
+    #         filenames.append(fn)
+
+    #     # for each timestep, output TIF? or do they want a figure?
 
     def post_process(self):
         """After a run has been executed, this method generates a summary

@@ -229,3 +229,20 @@ def create_wpu_raster(
     )
 
     print(f"Saved WPU raster to {output_raster_path}")
+
+
+def create_hecras_domain_mask(ds):
+    """Work around method to create a domain mask for HECRAS modeling.
+
+    Calculates max printprint of valid WSE data to create a mask.
+
+    Arguments:
+    ----------
+        ds : xr.Dataset:
+            input dataset
+
+    Returns:
+    --------
+        file save?
+    """
+    raise NotImplementedError

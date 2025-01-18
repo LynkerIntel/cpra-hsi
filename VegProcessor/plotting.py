@@ -2,7 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import logging
+import pandas as pd
 import os
+import xarray as xr
 from typing import Optional
 
 
@@ -195,3 +197,46 @@ def sum_changes(
         plt.show()
 
     plt.close()
+
+
+def water_depth(
+    ds: xr.Dataset,
+    out_path: Optional[str] = None,
+    showplot: Optional[bool] = False,
+):
+    """
+    Create figure of water depth for a 12-month period with square pixels.
+    """
+    os.makedirs(out_path + "/water_depth/", exist_ok=True)
+
+    time_steps = ds.time.values
+    for i, t in enumerate(time_steps):
+        date_str = pd.to_datetime(t).strftime("%Y-%m-%d")
+
+        # Select data slice
+        data_slice = ds["WSE_MEAN"].sel(time=t)
+
+        # Create plot with Xarray managing the figure
+        fig, ax = plt.subplots(figsize=(10, 10))  # Ensure square figure size
+        data_slice.plot(
+            ax=ax,
+            robust=True,
+            cbar_kwargs={"label": "water depth (m)"},  # Add color bar label here
+        )
+
+        # Add title and labels
+        ax.set_title(
+            f"Water Depth at Time {date_str}\n"
+            "Color bar uses 2nd and 98th percentiles of data for color range.",
+            fontsize=12,
+        )
+        ax.set_aspect("equal", "box")  # Forces square pixels regardless of figure size
+
+        # Save or display the plot
+        if out_path:
+            file_path = os.path.join(out_path, f"water_depth/{date_str}.png")
+            plt.savefig(file_path, dpi=300, bbox_inches="tight")
+            print(f"Saved plot to {file_path}")
+            plt.close(fig)
+        else:
+            plt.show()

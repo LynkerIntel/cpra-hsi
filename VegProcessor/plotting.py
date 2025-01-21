@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 import os
 import xarray as xr
+import geopandas as gpd
 from typing import Optional
 
 
@@ -202,12 +203,24 @@ def sum_changes(
 def water_depth(
     ds: xr.Dataset,
     out_path: Optional[str] = None,
+    wpu_polygons_path=str,
     showplot: Optional[bool] = False,
 ):
-    """
-    Create figure of water depth for a 12-month period with square pixels.
+    """Create figure of water depth for a 12-month period with square pixels.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset of water depth
+    out_path : str, optional
+        Directory to save the plot. If None, the plot is not saved.
+    show_plot : bool, optional
+        If True, display the plot after generating it. Default is False.
     """
     os.makedirs(out_path + "/water_depth/", exist_ok=True)
+
+    gdf_wpu = gpd.read_file(wpu_polygons_path)
+    gdf_wpu = gdf_wpu.to_crs("EPSG:32615")
 
     time_steps = ds.time.values
     for i, t in enumerate(time_steps):
@@ -218,11 +231,14 @@ def water_depth(
 
         # Create plot with Xarray managing the figure
         fig, ax = plt.subplots(figsize=(10, 10))  # Ensure square figure size
+
         data_slice.plot(
             ax=ax,
             robust=True,
             cbar_kwargs={"label": "water depth (m)"},  # Add color bar label here
         )
+
+        gdf_wpu.boundary.plot(ax=ax, color="white", linewidth=0.5)
 
         # Add title and labels
         ax.set_title(
@@ -236,7 +252,7 @@ def water_depth(
         if out_path:
             file_path = os.path.join(out_path, f"water_depth/{date_str}.png")
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
-            print(f"Saved plot to {file_path}")
+            # print(f"Saved plot to {file_path}")
             plt.close(fig)
         else:
             plt.show()

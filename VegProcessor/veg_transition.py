@@ -79,6 +79,9 @@ class VegTransition:
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
 
+        # polygon data
+        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
+
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
         self.water_year_end = self.config["simulation"].get("water_year_end")
@@ -357,6 +360,7 @@ class VegTransition:
         plotting.water_depth(
             self.water_depth,
             out_path=self.timestep_output_dir_figs,
+            wpu_polygons_path=self.wpu_polygons,
         )
 
         self._calculate_maturity(veg_type_in)

@@ -77,7 +77,7 @@ class VegTransition:
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
-        self.wpu_path = self.config["raster_data"].get("wpu_path")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -782,9 +782,7 @@ class VegTransition:
             exection time.
         """
         logging.info("Running post-processing routine.")
-        wpu = xr.open_dataarray(
-            "/Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif"
-        )
+        wpu = xr.open_dataarray(self.wpu_grid_path)
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)

@@ -8,6 +8,8 @@ import pandas as pd
 import shutil
 import glob
 import os
+import gc
+import copy
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
@@ -382,6 +384,12 @@ class VegTransition:
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
 
+        # clean up mpl objects
+        plt.cla()
+        plt.clf()
+        plt.close("all")
+        gc.collect()
+
     def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
@@ -535,11 +543,10 @@ class VegTransition:
         Temporary fix to match WSE model output to 60m DEM grid.
         """
         ds_dem = xr.open_dataset(self.dem_path)
-        ds_dem = ds_dem.squeeze(drop="band_data")
-        da_dem = ds_dem.to_dataarray(dim="band")
-
-        # self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds.variables)
-        return ds.rio.reproject_match(da_dem)
+        da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+        ds_reprojected = ds.rio.reproject_match(da_dem)
+        ds_dem.close()
+        return ds_reprojected
 
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation.
@@ -739,6 +746,8 @@ class VegTransition:
             filename_maturity.with_suffix(".tif")
         )
 
+        del self.timestep_out
+
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
@@ -786,7 +795,7 @@ class VegTransition:
             exection time.
         """
         logging.info("Running post-processing routine.")
-        wpu = xr.open_dataarray(self.wpu_grid_path)
+        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)

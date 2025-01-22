@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import logging
@@ -6,9 +7,11 @@ import pandas as pd
 import os
 import xarray as xr
 import geopandas as gpd
+import gc
 from typing import Optional
 
 
+matplotlib.use("Agg")  # may be needed to prevent mpl memory leak
 logger = logging.getLogger("VegTransition")
 
 
@@ -191,7 +194,7 @@ def sum_changes(
         sanitized_title = plot_title.replace(" ", "_").replace("\n", "_")
         file_path = os.path.join(out_path, f"{sanitized_title}.png")
         plt.savefig(file_path, dpi=300)
-        plt.close(plt.gcf())
+        plt.close()
         logger.info(f"Saved plot to {file_path}")
 
     if show_plot:
@@ -203,56 +206,61 @@ def sum_changes(
 def water_depth(
     ds: xr.Dataset,
     out_path: Optional[str] = None,
-    wpu_polygons_path=str,
+    wpu_polygons_path: str = None,
     showplot: Optional[bool] = False,
 ):
     """Create figure of water depth for a 12-month period with square pixels.
 
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Dataset of water depth
-    out_path : str, optional
-        Directory to save the plot. If None, the plot is not saved.
-    show_plot : bool, optional
-        If True, display the plot after generating it. Default is False.
+    `del` and `gc` added to troubleshoot memory leak.
     """
-    os.makedirs(out_path + "/water_depth/", exist_ok=True)
+    os.makedirs(f"{out_path}/water_depth/", exist_ok=True)
 
-    gdf_wpu = gpd.read_file(wpu_polygons_path)
-    gdf_wpu = gdf_wpu.to_crs("EPSG:32615")
+    # Read and simplify polygons
+    # gdf_wpu = gpd.read_file(wpu_polygons_path)
+    # gdf_wpu = gdf_wpu.to_crs("EPSG:32615")
+    # gdf_wpu = gdf_wpu.simplify(
+    #    tolerance=0.01
+    # )  # Simplify polygons to reduce memory usage
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=(10, 10))
 
     time_steps = ds.time.values
-    for i, t in enumerate(time_steps):
+    for t in time_steps:
         date_str = pd.to_datetime(t).strftime("%Y-%m-%d")
 
-        # Select data slice
-        data_slice = ds["WSE_MEAN"].sel(time=t)
-
-        # Create plot with Xarray managing the figure
-        fig, ax = plt.subplots(figsize=(10, 10))  # Ensure square figure size
+        ax.clear()  # remove old data
+        # Select data slice and process
+        data_slice = ds["WSE_MEAN"].sel({"time": f"{date_str}"}).load()
 
         data_slice.plot(
             ax=ax,
             robust=True,
-            cbar_kwargs={"label": "water depth (m)"},  # Add color bar label here
+            cbar_kwargs={"label": "water depth (m)"},
         )
+        # gdf_wpu.boundary.plot(ax=ax, color="white", linewidth=0.5)
 
-        gdf_wpu.boundary.plot(ax=ax, color="white", linewidth=0.5)
-
-        # Add title and labels
+        # Customize and save plot
         ax.set_title(
             f"Water Depth at Time {date_str}\n"
             "Color bar uses 2nd and 98th percentiles of data for color range.",
             fontsize=12,
         )
-        ax.set_aspect("equal", "box")  # Forces square pixels regardless of figure size
+        ax.set_aspect("equal", "box")
 
-        # Save or display the plot
         if out_path:
             file_path = os.path.join(out_path, f"water_depth/{date_str}.png")
-            plt.savefig(file_path, dpi=300, bbox_inches="tight")
-            # print(f"Saved plot to {file_path}")
-            plt.close(fig)
-        else:
+            plt.savefig(
+                file_path, dpi=200, bbox_inches="tight"
+            )  # Reduced DPI to save memory
+        if showplot:
             plt.show()
+
+        # Cleanup
+        del data_slice
+        gc.collect()
+
+    # del gdf_wpu
+    plt.close(fig)
+    ds.close()
+    gc.collect()

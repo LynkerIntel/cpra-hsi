@@ -43,6 +43,22 @@ class CrawfishHSI:
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
 
+    @classmethod
+    def from_hsi(cls, hsi_instance):
+        """Create CrawfishHSI instance from an HSI instance."""
+        return cls(
+            v1_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+            v2_mean_water_depth_jan_aug=hsi_instance.mean_water_depth_jan_aug, #NEW
+            v3a_pct_cell_swamp_bottomland_hardwood=hsi_instance.pct_swamp_bottom_hardwood / 100,
+            v3b_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
+            v3c_pct_cell_open_water=hsi_instance.pct_open_water / 100, #many already in hsi "superclass" use same RHS
+            v3d_pct_cell_intermediate_marsh=pct_intermediate_marsh / 100,
+            v3e_pct_cell_brackish_marsh=hsi_instance.pct_brackish_marsh / 100,
+            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_saline_marsh / 100, #NEW
+            v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground / 100, #NEW
+            v4_mean_water_depth_sept_dec=hsi_instance.mean_water_depth_sept_dec, #NEW
+        )
+
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
@@ -165,35 +181,35 @@ class CrawfishHSI:
 
         return si_2
 
-    # JG TODO 10.31.24: not yet fully implimented 
     def calculate_si_3(self) -> np.ndarray:
         """Proportion of cell covered by habitat types."""
-        if self.v3_pct_cell_covered_by_habitat_types is None:
-            self._logger.info(
-                "Pct habitat types data not provided. Setting index to 1."
-            )
-            si_3 = np.ones(self._shape)
+        self._logger.info("Running SI 3")
+        
+        for array in [
+            self.v3a_pct_cell_swamp_bottomland_hardwood,
+            self.v3b_pct_cell_fresh_marsh,
+            self.v3c_pct_cell_open_water,
+            self.v3d_pct_cell_intermediate_marsh,
+            self.v3e_pct_cell_brackish_marsh,
+            self.v3f_pct_cell_saline_marsh,
+            self.v3g_pct_cell_bare_ground,
+        ]:
+            if array is None:
+                self._logger.info("Pct habitat types data not provided. Setting index to 1", array)
+                array = np.ones(self._shape)
 
-        else:
-            self._logger.info("Running SI 3")
-            si_3 = np.full(self._shape, 999)
-
-            si_3 = [(1.0 * v3a_pct_cell_swamp_bottomland_hardwood) + 
+        si_3 = [(1.0 * v3a_pct_cell_swamp_bottomland_hardwood) + 
             (0.85 * v3b_pct_cell_fresh_marsh) + 
             (0.75 * v3c_pct_cell_open_water) + 
             (0.6 * v3d_pct_cell_intermediate_marsh) +
             (0.2 * v3e_pct_cell_brackish_marsh) +
             (0.0 * v3f_pct_cell_saline_marsh) + 
-            (0.0 * v3g_pct_cell_bare_ground)] # why even include v3f & g? 
-
-            if 999 in si_3:
-                raise ValueError("Unhandled condition in SI logic!")
-            
-            #return NotImplementedError
-
+            (0.0 * v3g_pct_cell_bare_ground)
+        ]
+        # TODO: error handling here? (for case where no blank arr is initialized)
         return si_3
 
- def calculate_si_4(self) -> np.ndarray:
+    def calculate_si_4(self) -> np.ndarray:
         """Mean water depth from September to December in cm."""
         if self.v4_mean_water_depth_sept_dec is None:
             self._logger.info(
@@ -227,6 +243,23 @@ class CrawfishHSI:
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
+        self._logger.info("Running Crayfish final HSI.")
+        for si_name, si_array in [
+            ("SI 1", self.si_1),
+            ("SI 2", self.si_2),
+            ("SI 3", self.si_3),
+            ("SI 4", self.si_4),
+        ]:
+            invalid_values = (si_array < 0) | (si_array > 1)
+            if np.any(invalid_values):
+                num_invalid = np.count_nonzero(invalid_values)
+                self._logger.warning(
+                    "%s contains %d values outside the range [0, 1].",
+                    si_name,
+                    num_invalid,
+                )
+
+        # Combine individual suitability indices
         hsi = ((self.si_1 * self.si_2) ** 1/6) * (self.si_3 ** 1/3) * (self.si_4 ** 1/3)
 
         # Quality control check: Ensure combined_score is between 0 and 1

@@ -756,9 +756,7 @@ class VegTransition:
             exection time.
         """
         logging.info("Running post-processing routine.")
-        wpu = xr.open_dataarray(
-            "/Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif"
-        )
+        wpu = xr.open_dataarray(self.wpu_path)
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)

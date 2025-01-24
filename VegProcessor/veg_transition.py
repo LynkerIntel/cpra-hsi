@@ -79,7 +79,7 @@ class VegTransition:
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
 
         # polygon data
         self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")

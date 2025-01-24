@@ -223,13 +223,16 @@ def water_depth(
     # )  # Simplify polygons to reduce memory usage
 
     # Create plot
-    fig, ax = plt.subplots(figsize=(10, 10))
+    # fig, ax = plt.subplots(figsize=(10, 10))
 
     time_steps = ds.time.values
     for t in time_steps:
         date_str = pd.to_datetime(t).strftime("%Y-%m-%d")
 
-        ax.clear()  # remove old data
+        # Create plot
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        # ax.clear()  # remove old data
         # Select data slice and process
         data_slice = ds["WSE_MEAN"].sel({"time": f"{date_str}"}).load()
 
@@ -257,6 +260,7 @@ def water_depth(
             plt.show()
 
         # Cleanup
+        plt.close(fig)
         del data_slice
         gc.collect()
 

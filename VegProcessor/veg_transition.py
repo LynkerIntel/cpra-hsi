@@ -237,7 +237,9 @@ class VegTransition:
         veg_type_in = self.veg_type
 
         # calculate depth
-        self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+        self.wse = self.load_wse_wy(
+            self.wy, variable_name="WSE_MEAN", date_format="%Y_%m_%d_%H_%M_%S"
+        )
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -487,7 +489,9 @@ class VegTransition:
         time_stamps = []
 
         for f in tif_files:
-            date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(".tif", "")
+            print(f)
+            # date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(".tif", "")
+            date_str = "_".join(os.path.basename(f).split("_")[1:7]).replace(".tif", "")
             file_date = pd.to_datetime(date_str, format=date_format)
 
             if start_date <= file_date <= end_date:
@@ -498,8 +502,8 @@ class VegTransition:
             self._logger.error("No WSE files found for water year: %s", water_year)
             return None
 
-        if len(selected_files) < 12:
-            raise ValueError(f"month(s) missing from Water Year: {water_year}")
+        # if len(selected_files) < 12:
+        #     raise ValueError(f"month(s) missing from Water Year: {water_year}")
 
         # Preprocess function to remove the 'band' dimension
         def preprocess(da):

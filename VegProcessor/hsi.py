@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator
+from species_hsi import alligator, crawfish
 
 
 class HSI(vt.VegTransition):
@@ -96,8 +96,9 @@ class HSI(vt.VegTransition):
 
         # HSI models
         self.alligator = None
-        self.bald_eagle = None
-        self.black_bear = None
+        self.crawfish = None
+        #self.baldeagle = None
+        #self.blackbear = None
 
         # datasets
         self.pct_cover_veg = None
@@ -105,8 +106,10 @@ class HSI(vt.VegTransition):
         # HSI Variables
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
-        self.pct_cell_covered_by_habitat_types = None
+        #self.pct_cell_covered_by_habitat_types = None #jg: not used at this time 01.24.25
         self.mean_annual_salinity = None
+        #mean_water_depth_jan_aug
+        #mean_water_depth_sept_dec
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -119,6 +122,11 @@ class HSI(vt.VegTransition):
         self.pct_zone_iii = None
         self.pct_zone_ii = None
         self.pct_fresh_shrubs = None
+
+        self.pct_saline_saline_marsh = None
+        self.pct_bare_ground = None 
+
+
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -198,6 +206,7 @@ class HSI(vt.VegTransition):
         if self.run_hsi:
 
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             # self.bald_eagle = BaldEagleHSI(self)
             # self.black_bear = BlackBearHSI(self)
 
@@ -284,7 +293,34 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-
+        # VEG TYPES AND THIER MAPPED NUMBERS FROM 
+        # 2  Developed High Intensity                 
+        # 3  Developed Medium Intensity               
+        # 4  Developed Low Intensity                  
+        # 5  Developed Open Space                     
+        # 6  Cultivated Crops                         
+        # 7  Pasture/Hay                              
+        # 8  Grassland/Herbaceous                     
+        # 9  Upland - Mixed Deciduous Forest         
+        # 10  Upland - Mixed Evergreen Forest         
+        # 11  Upland Mixed Forest                     
+        # 12  Upland Scrub/Shrub                      
+        # 13  Unconsolidated Shore                    
+        # 14  Bare Land                               
+        # 15  Zone V                                  
+        # 16  Zone IV                                 
+        # 17  Zone III                                
+        # 18  Zone II                                 
+        # 19  Fresh Shrubs                            
+        # 20  Fresh Marsh                             
+        # 21  Intermediate Marsh                      
+        # 22  Brackish Marsh                          
+        # 23  Saline Marsh                            
+        # 24  Palustrine Aquatic Bed                  
+        # 25  Estuarine Aquatic Bed                   
+        # 26  Open Water
+   
+        self.pct_bare_ground = ds["prt_cover_14"].to_nump()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
         self.pct_zone_iii = ds["pct_cover_17"].to_numpy()
@@ -296,6 +332,7 @@ class HSI(vt.VegTransition):
         self.pct_brackish_marsh = ds["pct_cover_22"].to_numpy()
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
+        self.pct_bare_ground = ds["prt_cover_14"].to_nump()
 
         # Zone V, IV, III
         self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()

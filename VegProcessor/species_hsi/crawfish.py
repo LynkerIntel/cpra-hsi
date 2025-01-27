@@ -54,7 +54,7 @@ class CrawfishHSI:
             v3c_pct_cell_open_water=hsi_instance.pct_open_water / 100, #many already in hsi "superclass" use same RHS
             v3d_pct_cell_intermediate_marsh=pct_intermediate_marsh / 100,
             v3e_pct_cell_brackish_marsh=hsi_instance.pct_brackish_marsh / 100,
-            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_saline_marsh / 100, #NEW
+            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_saline_marsh / 100, #NEW #23
             v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground / 100, #NEW
             v4_mean_water_depth_sept_dec=hsi_instance.mean_water_depth_sept_dec, #NEW
         )

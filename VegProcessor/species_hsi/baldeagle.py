@@ -19,8 +19,14 @@ class BaldEagleHSI:
 
     # JG //TODO: should prob split this out? 
     v1_pct_cell_developed_or_upland: np.ndarray = None
-    #v1a_pct_cell_developed_land: np.ndarray = None
-    #v1b_pct_cell_upland: np.ndarray = None
+    #v1a_pct_cell_developed_high_intensity: np.ndarray = None
+    #v1b_pct_cell_developed_med_intensity: np.ndarray = None
+    #v1c_pct_cell_developed_low_intensity: np.ndarray = None
+    #v1d_pct_cell_developed_open_space: np.ndarray = None
+    #v1e_pct_cell_upland_mixed_decid_forest: np.ndarray = None
+    #v1f_pct_cell_upland_mixed_evrgrn_forest: np.ndarray = None
+    #v1g_pct_cell_upland_mixed_forest: np.ndarray = None
+    #v1h_pct_cell_upland_scrub_shrub: np.ndarray = None
     v2_pct_cell_flotant_marsh: np.ndarray = None
     v3_pct_cell_forested_wetland: np.ndarray = None
     v4_pct_cell_fresh_marsh: np.ndarray = None
@@ -43,6 +49,27 @@ class BaldEagleHSI:
 
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
+    
+    @classmethod
+    def from_hsi(cls, hsi_instance):
+        """Create BaldEagleHSI instance from an HSI instance."""
+        return cls(
+            # these are all specific to bldegle so rhs will need to be added to hsi class
+            #v1a_pct_cell_developed_high_intensity=hsi_instance.pct_dev_high_intensity / 100,
+            #v1b_pct_cell_developed_med_intensity=hsi_instance.pct_dev_med_intensity / 100,
+            #v1c_pct_cell_developed_low_intensity=hsi_instance.pct_dev_low_intensity / 100,
+            #v1d_pct_cell_developed_open_space=hsi_instance.pct_dev_open_space / 100,
+            #v1e_pct_cell_upland_mixed_decid_forest=hsi_instance.pct_upland_decid_forest / 100,
+            #v1f_pct_cell_upland_mixed_evrgrn_forest=hsi_instance.pct_upland_evrgrn_forest / 100,
+            #v1g_pct_cell_upland_mixed_forest=hsi_instance.pct_upland_mixed_forest / 100,
+            #v1h_pct_cell_upland_scrub_shrub=hsi_instance.pct_upland_scrub_shrub / 100,
+            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland / 100, 
+            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh / 100, #NEW
+            v3_pct_cell_forested_wetland=hsi_instance.pct_forested_wetland / 100, #NEW
+            v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
+            v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
+            v6_pct_cell_open_water=hsi_instance.pct_open_water / 100,
+        )
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""

@@ -116,6 +116,7 @@ class HSI(vt.VegTransition):
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
+        self.pct_flotant_marsh = None #need to find
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
@@ -123,8 +124,8 @@ class HSI(vt.VegTransition):
         self.pct_zone_ii = None
         self.pct_fresh_shrubs = None
 
-        self.pct_saline_saline_marsh = None
-        self.pct_bare_ground = None 
+        self.pct_bare_ground = None
+        self.pct_dev_upland = None
 
 
 
@@ -286,13 +287,30 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
         # x, y, dims -> 480 / 60 = 8
-        ds_blh = utils.generate_pct_cover_custom(
+        #ds_blh = utils.generate_pct_cover_custom(
+        #    data_array=self.veg_type,
+        #    veg_types=[15, 16, 17],  # these are the BLH zones
+        #    x=8,
+        #    y=8,
+        #    boundary="pad",
+        #)
+
+        ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[15, 16, 17],  # these are the BLH zones
+            veg_types=[15, 16, 17, 18],  # these are the BLH zones + swamp
             x=8,
             y=8,
             boundary="pad",
         )
+
+        ds_dev_upland = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+
         # VEG TYPES AND THIER MAPPED NUMBERS FROM 
         # 2  Developed High Intensity                 
         # 3  Developed Medium Intensity               
@@ -307,10 +325,10 @@ class HSI(vt.VegTransition):
         # 12  Upland Scrub/Shrub                      
         # 13  Unconsolidated Shore                    
         # 14  Bare Land                               
-        # 15  Zone V                                  
-        # 16  Zone IV                                 
-        # 17  Zone III                                
-        # 18  Zone II                                 
+        # 15  Zone V  (BLH)                                
+        # 16  Zone IV (BLH)                                
+        # 17  Zone III (BLH)                                
+        # 18  Zone II (swamp)                                
         # 19  Fresh Shrubs                            
         # 20  Fresh Marsh                             
         # 21  Intermediate Marsh                      
@@ -324,7 +342,7 @@ class HSI(vt.VegTransition):
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
         self.pct_zone_iii = ds["pct_cover_17"].to_numpy()
-        self.pct_zone_ii = ds["pct_cover_17"].to_numpy()
+        self.pct_zone_ii = ds["pct_cover_18"].to_numpy()
         self.pct_fresh_shrubs = ds["pct_cover_19"].to_numpy()
 
         self.pct_fresh_marsh = ds["pct_cover_20"].to_numpy()
@@ -332,10 +350,15 @@ class HSI(vt.VegTransition):
         self.pct_brackish_marsh = ds["pct_cover_22"].to_numpy()
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
-        self.pct_bare_ground = ds["prt_cover_14"].to_nump()
 
         # Zone V, IV, III
-        self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
+        # self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
+
+        # Zone V, IV, III, (BLH's) II (swamp)
+        self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
+        
+        # Developed Land (4 diff types) and Upland (also 4)
+        self.pct_dev_upland = ds_dev_upland.to_numpy()
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -375,6 +398,29 @@ class HSI(vt.VegTransition):
         return da.to_numpy()
 
     def _get_water_depth_annual_mean(self) -> np.ndarray:
+        """
+        Extends the parent `VegTransition._get_depth` by
+        transforming the Dataset into an annual mean at 480m
+        resolution.
+        """
+        mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
+        height = mean_wse - self.dem
+
+        # upscale to 480m from 60m
+        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+        # # call the parent method from VegTransition
+        # ds = super()._get_depth()
+        # # get temporal mean
+        # ds = ds.mean(dim="time")
+        # # downscale to 480m
+        # ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+        # arr = ds_coarse["WSE_MEAN"].to_numpy()
+        # return arr
+    
+    # jg todo
+    def _get_water_depth_monthly_mean(self) -> np.ndarray:
         """
         Extends the parent `VegTransition._get_depth` by
         transforming the Dataset into an annual mean at 480m

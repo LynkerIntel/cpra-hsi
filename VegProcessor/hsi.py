@@ -288,7 +288,7 @@ class HSI(vt.VegTransition):
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
         self.pct_zone_iii = ds["pct_cover_17"].to_numpy()
-        self.pct_zone_ii = ds["pct_cover_17"].to_numpy()
+        self.pct_zone_ii = ds["pct_cover_18"].to_numpy()
         self.pct_fresh_shrubs = ds["pct_cover_19"].to_numpy()
 
         self.pct_fresh_marsh = ds["pct_cover_20"].to_numpy()

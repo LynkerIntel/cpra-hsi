@@ -339,9 +339,8 @@ class HSI(vt.VegTransition):
 
     def _get_water_depth_annual_mean(self) -> np.ndarray:
         """
-        Extends the parent `VegTransition._get_depth` by
-        transforming the Dataset into an annual mean at 480m
-        resolution.
+        Get temporal mean for all timesteps, then difference with DEM
+        to get water depth, then coarsen to 480m grid cell.
         """
         mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
         height = mean_wse - self.dem
@@ -349,15 +348,6 @@ class HSI(vt.VegTransition):
         # upscale to 480m from 60m
         da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
-
-        # # call the parent method from VegTransition
-        # ds = super()._get_depth()
-        # # get temporal mean
-        # ds = ds.mean(dim="time")
-        # # downscale to 480m
-        # ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
-        # arr = ds_coarse["WSE_MEAN"].to_numpy()
-        # return arr
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

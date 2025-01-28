@@ -76,10 +76,12 @@ class VegTransition:
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
         self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
+        self.wse_domain_path = self.config["raster_data"].get("wse_domain_raster")
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.initial_maturity_path = self.config["raster_data"].get("initial_maturity")
 
         # polygon data
         self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
@@ -123,13 +125,14 @@ class VegTransition:
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
-        # print(self.dem.shape)
-        # Load veg base and use as template to create arrays for the main state variables
+        self.hecras_domain = self._load_hecras_domain_raster()
+        # self.initial_veg = self._load_veg_initial_raster(mask_hecras_domain=False)
         self.veg_type = self._load_veg_initial_raster()
+        self.static_veg = self._load_veg_initial_raster(return_static_veg_only=True)
         self.veg_keys = self._load_veg_keys()
 
+        self.maturity = np.zeros_like(self.dem)  # self._load_initial_maturity_raster()
         self.wse = None
-        self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
         self.salinity = None
@@ -251,6 +254,10 @@ class VegTransition:
             veg_palette=True,
         )
 
+        # important: mask areas outside of domain before calculting transition:
+        self._logger.info("Masking veg type array to domain.")
+        self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
+
         # veg_type array is iteratively updated, for each zone
         self.veg_type_update_1 = veg_logic.zone_v(
             self.veg_type,
@@ -309,6 +316,9 @@ class VegTransition:
         )
 
         # stack partial update arrays for each zone
+        # the final arrays is the static pixels that
+        # are within the VegTransition domain, but
+        # outside of the HEC-RAS domain.
         stacked_veg = np.stack(
             (
                 self.veg_type_update_1,
@@ -321,6 +331,7 @@ class VegTransition:
                 self.veg_type_update_8,
                 self.veg_type_update_9,
                 self.veg_type_update_10,
+                self.static_veg,
             )
         )
 
@@ -338,13 +349,11 @@ class VegTransition:
         # get unchanged/unhandled vegetation types from base raster
         # no_transition_nan_mask = np.isnan(self.veg_type)
 
-        # Replace NaN values in the new array with corresponding values from the veg base raster
-        # self._logger.info(
-        #     "Filling NaN pixels in result array with vegetation base raster."
-        # )
-        # self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
-        #     no_transition_nan_mask
-        # ]
+        # add back static veg types that do not transition because they are
+        # outside the WSE model domain
+        # important: mask areas outside of domain before calculting transition:
+        # self._logger.info("")
+        # self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
 
         plotting.np_arr(
             self.veg_type,
@@ -549,7 +558,8 @@ class VegTransition:
         return ds_reprojected
 
     def _get_depth(self) -> xr.Dataset:
-        """Calculate water depth from DEM and Water Surface Elevation.
+        """Calculate water depth from DEM and Water Surface Elevation and subset
+        difference array to valid HECRAS domain.
 
         NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
         equivalent to 0 water depth. This is necessary so that inundation checks do
@@ -562,17 +572,23 @@ class VegTransition:
         self._logger.info(
             "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
         )
-        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
+        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+        # WSE pixels, where missing data indicates "no inundation"
         ds = ds.fillna(0)
 
-        # ds["WSE_MEAN"].plot(
-        #     col="time",  # Create panels for each time step
-        #     col_wrap=4,  # Number of panels per row
-        #     cmap="viridis",
-        #     aspect=1.5,  # Adjust aspect ratio
-        #     size=3,  # Adjust figure size
-        # )
-        # plt.show()
+        # after filling zeros for areas with no inundation, apply domain mask,
+        # so that areas outside of HECRAS domain are not classified as
+        # dry (na is 0-filled above) when in fact that are outside of the domain.
+        ds = ds.where(self.hecras_domain)
+
+        ds["WSE_MEAN"].plot(
+            col="time",  # Create panels for each time step
+            col_wrap=4,  # Number of panels per row
+            cmap="viridis",
+            aspect=1.5,  # Adjust aspect ratio
+            size=3,  # Adjust figure size
+        )
+        plt.show()
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
@@ -631,12 +647,18 @@ class VegTransition:
             out_path=self.timestep_output_dir_figs,
         )
 
-    def _load_veg_initial_raster(self, xarray=False) -> np.ndarray | xr.Dataset:
+    def _load_veg_initial_raster(
+        self,
+        return_static_veg_only: bool = False,
+        xarray: bool = False,
+    ) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic.
 
         Parameters
         ----------
+        mask_hecras_domain : bool
+            True if vegetation type data should be masked to the `hecras_domain` array
         xarray : bool
             True if xarray output format is needed.
 
@@ -661,9 +683,17 @@ class VegTransition:
         veg_type = np.where(type_mask, veg_type, np.nan)
 
         # Mask the vegetation raster to only include valid DEM pixels
-        self._logger.info("Masking vegetation raster to valid DEM pixels")
+        self._logger.info("Masking vegetation raster to valid DEM pixels.")
         dem_valid_mask = ~np.isnan(self.dem)
-        veg_type = np.where(dem_valid_mask, veg_type, np.nan)
+
+        if return_static_veg_only:
+            self._logger.info("Returning array of static vegetation pixels only.")
+            # combine DEM valid mask and inverse of HEC-RAS domain valid mask
+            veg_type = np.where(dem_valid_mask & ~self.hecras_domain, veg_type, np.nan)
+
+        else:
+            # only apply valid DEM mask
+            veg_type = np.where(dem_valid_mask, veg_type, np.nan)
 
         if xarray:
             # Reassign np.array to origina DataArray. This ensure
@@ -680,6 +710,21 @@ class VegTransition:
         dbf["Value"] = dbf["Value"].astype(int)
         self._logger.info("Loaded Vegetation Keys")
         return dbf
+
+    def _load_initial_maturity_raster(self):
+        """Initial conditions for vegetation maturity."""
+        return NotImplementedError
+
+    def _load_hecras_domain_raster(self) -> np.ndarray:
+        """Load raster file specifying the boundary of the HECRAS domain."""
+        # load raster
+        self._logger.info("Loading WSE domain extent raster.")
+        da = xr.open_dataarray(self.wse_domain_path)
+        da = da.squeeze(drop="band")
+        # reproject match to DEM
+        da = self._reproject_match_to_dem(da)
+        da = da.astype(bool)
+        return da.to_numpy()
 
     def _get_salinity(self) -> np.ndarray:
         """Load salinity raster data (if available.)"""

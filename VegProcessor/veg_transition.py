@@ -346,15 +346,6 @@ class VegTransition:
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
-        # get unchanged/unhandled vegetation types from base raster
-        # no_transition_nan_mask = np.isnan(self.veg_type)
-
-        # add back static veg types that do not transition because they are
-        # outside the WSE model domain
-        # important: mask areas outside of domain before calculting transition:
-        # self._logger.info("")
-        # self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
-
         plotting.np_arr(
             self.veg_type,
             title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",

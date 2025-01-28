@@ -327,11 +327,9 @@ def zone_ii(
 
 
     Condition_1: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <70% TIME
-    Condition_2: Annual Inundation == 100% AND annual inundation depth > 10cm
-    Condition_3: Annual inundation == 100% AND annual inundation depth ≤ 10cm
+    Condition_2: Annual Inundation == 100% AND annual inundation depth > 30cm
 
     Fresh Shrub: 16
-    Fresh Marsh: 20
     Zone III: 17 Lower BLH
     Zone II: 18 Swamp
 
@@ -382,11 +380,8 @@ def zone_ii(
     condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct == 1).to_numpy()
 
-    # Condition 4: Annual inundation depth > 10cm #UNIT
-    condition_4 = (water_depth["WSE_MEAN"] > 0.1).all(dim="time").to_numpy()
-
-    # Condition 5: Annual inundation depth <= 10cm #UNIT
-    condition_5 = (water_depth["WSE_MEAN"] <= 0.1).all(dim="time").to_numpy()
+    # Condition 4: Annual inundation depth > 30cm #UNIT
+    condition_4 = (water_depth["WSE_MEAN"] > 0.3).all(dim="time").to_numpy()
 
     # get pixels that meet zone iii criteria
     stacked_masks_iii = np.stack((condition_1, condition_2))
@@ -402,23 +397,11 @@ def zone_ii(
     )
     combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
 
-    # get pixels that meet fresh marsh criteria
-    stacked_masks_fresh_marsh = np.stack(
-        (
-            ~combined_mask_iii,
-            ~combined_mask_fresh_shrub,
-            condition_3,
-            condition_5,
-        )
-    )
-    combined_mask_fresh_marsh = np.logical_and.reduce(stacked_masks_fresh_marsh)
-
     # Stack arrays and test for overlap
     qc_stacked = np.stack(
         [
             combined_mask_iii,
             combined_mask_fresh_shrub,
-            combined_mask_fresh_marsh,
         ]
     )
 
@@ -428,7 +411,6 @@ def zone_ii(
     # update valid transition types for unmasked array
     veg_type[combined_mask_iii] = 17
     veg_type[combined_mask_fresh_shrub] = 19
-    veg_type[combined_mask_fresh_marsh] = 20
     # apply type and valid depth mask to new veg array
     veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 
@@ -572,12 +554,9 @@ def fresh_marsh(
     Condition_2: mean GS depth > 20cm
     Condition_3: mean ANNUAL salinity >= 2ppt
     Condition_4: APR:SEP inundation < 30% TIME
-    Condition_5: MAR, APR, MAY, JUNE inundation <= 0
-    Condition_6: ANNUAL inundation > 80% TIME
 
     Zone IV: 16
     Zone III: 17
-    Zone II: 18
     Fresh Shrub: 19
     Fresh Marsh: 20
 
@@ -602,7 +581,7 @@ def fresh_marsh(
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     apr_sep = [4, 5, 6, 7, 8, 9]
-    mar_june = [3, 4, 5, 6]
+    #mar_june = [3, 4, 5, 6]
     gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Fresh Marsh (value 20)
@@ -635,14 +614,6 @@ def fresh_marsh(
     condition_4_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
     condition_4 = (condition_4_pct < 0.3).to_numpy()
 
-    # Condition_5: MAR, APR, MAY, JUNE inundation <= 0
-    filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
-    condition_5 = (filtered_3["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
-
-    # Condition_6: ANNUAL inundation > 80% TIME
-    condition_6_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_6 = (condition_6_pct > 0.8).to_numpy()
-
     # get pixels that meet Water criteria
     # Use logical AND to find locations where all arrays are True
     stacked_mask_water = np.stack((condition_1, condition_2))
@@ -669,25 +640,12 @@ def fresh_marsh(
     )
     combined_mask_fresh_shrub = np.logical_and.reduce(stacked_masks_fresh_shrub)
 
-    # get pixels that meet Zone II criteria
-    stacked_masks_zone_ii = np.stack(
-        (
-            ~combined_mask_water,
-            ~combined_mask_intermediate_marsh,
-            ~combined_mask_fresh_shrub,
-            condition_5,
-            condition_6,
-        )
-    )
-    combined_mask_zone_ii = np.logical_and.reduce(stacked_masks_zone_ii)
-
     # Stack arrays and test for overlap
     qc_stacked = np.stack(
         [
             combined_mask_water,
             combined_mask_intermediate_marsh,
-            combined_mask_fresh_shrub,
-            combined_mask_zone_ii,
+            combined_mask_fresh_shrub
         ]
     )
 
@@ -698,7 +656,6 @@ def fresh_marsh(
     veg_type[combined_mask_water] = 26
     veg_type[combined_mask_intermediate_marsh] = 21
     veg_type[combined_mask_fresh_shrub] = 19
-    veg_type[combined_mask_zone_ii] = 18
     # apply combined mask, because depth conditions don't include type
     veg_type = np.where(combined_mask_type_valid, veg_type, np.nan)
 

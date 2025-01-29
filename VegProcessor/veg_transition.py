@@ -583,6 +583,14 @@ class VegTransition:
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
         +1 year maturity for pixels without vegetation changes.
+
+        TODO: Should static veg pixel increment age? Or should only valid WSE pixels
+        advance?
+
+        Parameters
+        ----------
+        veg_type_in : np.ndarray
+            veg_type array at start of timestep, before transition calculations.
         """
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:

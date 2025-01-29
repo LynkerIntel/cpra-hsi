@@ -21,9 +21,9 @@ class CrawfishHSI:
     #v3_pct_cell_covered_by_habitat_types: np.ndarray = None
     v3a_pct_cell_swamp_bottomland_hardwood: np.ndarray = None
     v3b_pct_cell_fresh_marsh: np.ndarray = None
-    v3c_pct_cell_open_water: np.ndarry = None
-    v3d_pct_cell_intermediate_marsh: np.ndarry = None
-    v3e_pct_cell_brackish_marsh: np.ndarry = None
+    v3c_pct_cell_open_water: np.ndarray = None
+    v3d_pct_cell_intermediate_marsh: np.ndarray = None
+    v3e_pct_cell_brackish_marsh: np.ndarray = None
     v3f_pct_cell_saline_marsh: np.ndarray = None
     v3g_pct_cell_bare_ground: np.ndarray = None
     v4_mean_water_depth_sept_dec: np.ndarray = None
@@ -198,13 +198,13 @@ class CrawfishHSI:
                 self._logger.info("Pct habitat types data not provided. Setting index to 1", array)
                 array = np.ones(self._shape)
 
-        si_3 = [(1.0 * v3a_pct_cell_swamp_bottomland_hardwood) + 
-            (0.85 * v3b_pct_cell_fresh_marsh) + 
-            (0.75 * v3c_pct_cell_open_water) + 
-            (0.6 * v3d_pct_cell_intermediate_marsh) +
-            (0.2 * v3e_pct_cell_brackish_marsh) +
-            (0.0 * v3f_pct_cell_saline_marsh) + 
-            (0.0 * v3g_pct_cell_bare_ground)
+        si_3 = [(1.0 * self.v3a_pct_cell_swamp_bottomland_hardwood) + 
+            (0.85 * self.v3b_pct_cell_fresh_marsh) + 
+            (0.75 * self.v3c_pct_cell_open_water) + 
+            (0.6 * self.v3d_pct_cell_intermediate_marsh) +
+            (0.2 * self.v3e_pct_cell_brackish_marsh) +
+            (0.0 * self.v3f_pct_cell_saline_marsh) + 
+            (0.0 * self.v3g_pct_cell_bare_ground)
         ]
         # TODO: error handling here? (for case where no blank arr is initialized)
         return si_3

@@ -18,9 +18,29 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish
+from species_hsi import alligator, crawfish, baldeagle
 
+# this is a c/p from veg class, not sure why I need it again here.
+class _TimestepFilter(logging.Filter):
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
 
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True
+    
 class HSI(vt.VegTransition):
     """HSI model framework."""
 
@@ -93,11 +113,13 @@ class HSI(vt.VegTransition):
         self.maturity = np.zeros_like(self.dem)
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
+        self.water_depth_monthly_mean_jan_aug = None
+        self.water_depth_monthly_mean_sept_dec = None
 
         # HSI models
         self.alligator = None
         self.crawfish = None
-        #self.baldeagle = None
+        self.baldeagle = None
         #self.blackbear = None
 
         # datasets
@@ -108,15 +130,13 @@ class HSI(vt.VegTransition):
         self.avg_water_depth_rlt_marsh_surface = None
         #self.pct_cell_covered_by_habitat_types = None #jg: not used at this time 01.24.25
         self.mean_annual_salinity = None
-        #mean_water_depth_jan_aug
-        #mean_water_depth_sept_dec
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
-        self.pct_flotant_marsh = None #need to find
+        self.pct_flotant_marsh = None #need to find #does not change
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
@@ -125,9 +145,8 @@ class HSI(vt.VegTransition):
         self.pct_fresh_shrubs = None
 
         self.pct_bare_ground = None
-        self.pct_dev_upland = None
-
-
+        #self.pct_dev_upland = None #does not change
+        self.pct_dev_upland = self._calculate_pct_cover_static()
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -191,6 +210,8 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_water_depth_annual_mean()
+        self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
+        self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -208,7 +229,7 @@ class HSI(vt.VegTransition):
 
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            # self.bald_eagle = BaldEagleHSI(self)
+            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             # save state variables
@@ -300,16 +321,17 @@ class HSI(vt.VegTransition):
             veg_types=[15, 16, 17, 18],  # these are the BLH zones + swamp
             x=8,
             y=8,
-            boundary="pad",
+            boundary="pad", #not needed for partial pixels, fyi
         )
 
-        ds_dev_upland = utils.generate_pct_cover_custom(
-            data_array=self.veg_type,
-            veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
-            x=8,
-            y=8,
-            boundary="pad",
-        )
+        # this is static
+        #ds_dev_upland = utils.generate_pct_cover_custom(
+        #    data_array=self.veg_type,
+        #    veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
+        #    x=8,
+        #    y=8,
+        #    boundary="pad",
+        #)
 
         # VEG TYPES AND THIER MAPPED NUMBERS FROM 
         # 2  Developed High Intensity                 
@@ -325,10 +347,10 @@ class HSI(vt.VegTransition):
         # 12  Upland Scrub/Shrub                      
         # 13  Unconsolidated Shore                    
         # 14  Bare Land                               
-        # 15  Zone V  (BLH)                                
-        # 16  Zone IV (BLH)                                
-        # 17  Zone III (BLH)                                
-        # 18  Zone II (swamp)                                
+        # 15  Zone V (Upper BLH)                                
+        # 16  Zone IV (Middle BLH)                                
+        # 17  Zone III (Lower BLH)                                
+        # 18  Zone II (Swamp)                                
         # 19  Fresh Shrubs                            
         # 20  Fresh Marsh                             
         # 21  Intermediate Marsh                      
@@ -358,7 +380,42 @@ class HSI(vt.VegTransition):
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         
         # Developed Land (4 diff types) and Upland (also 4)
+        #self.pct_dev_upland = ds_dev_upland.to_numpy()
+
+    def _calculate_pct_cover_static(self):
+        """Get percent coverage for each 480m cell, based on 60m veg type pixels.
+
+        Derived from VegTransition Output
+        """
+        # logical index for coarsening (i.e # of pixels)
+        # this generates ds with all veg types.
+        # x, y, dims -> 480 / 60 = 8
+       
+        #ds = utils.generate_pct_cover(
+        #    # Load veg base and use as template to create arrays for the main state variables
+        #   data_array=self.veg_type,   
+        #   #initial_veg = self._load_veg_initial_raster(xarray=True)
+        #    data_array=self._load_veg_initial_raster(xarray=True),
+        #    veg_keys=self.veg_keys,
+        #    x=8,
+        #    y=8,
+        #    boundary="pad",
+        #)
+
+        ds_dev_upland = utils.generate_pct_cover_custom(
+            # dont reload, check dillions dev
+            # TMP NEED TO CHANGE
+            data_array=self._load_veg_initial_raster(xarray=True),
+            veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        
+        # Developed Land (4 diff types) and Upland (also 4)
         self.pct_dev_upland = ds_dev_upland.to_numpy()
+
+        # Flotant marsh (static) will go here for baldeagle
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -419,28 +476,44 @@ class HSI(vt.VegTransition):
         # arr = ds_coarse["WSE_MEAN"].to_numpy()
         # return arr
     
-    # jg todo
-    def _get_water_depth_monthly_mean(self) -> np.ndarray:
+    def _get_water_depth_monthly_mean_jan_aug(self) -> np.ndarray:
         """
         Extends the parent `VegTransition._get_depth` by
         transforming the Dataset into an annual mean at 480m
         resolution.
         """
-        mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
-        height = mean_wse - self.dem
+        
+        # Filter by month first
+        jan_aug = [1,2,3,4,5,6,7,8]
+        #filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
+        filter_jan_aug = self.wse.sel(time=self.wse['time'].dt.month.isin(jan_aug))
+        
+        # Calc mean 
+        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)
+        height = mean_monthly_wse_jan_aug - self.dem
 
         # upscale to 480m from 60m
         da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+    
+    def _get_water_depth_monthly_mean_sept_dec(self) -> np.ndarray:
+        """
+        Extends the parent `VegTransition._get_depth` by
+        transforming the Dataset into an annual mean at 480m
+        resolution.
+        """
+        
+        # Filter by month first
+        sept_dec = [9,10,11,12]
+        filter_sept_dec = self.wse.sel(time=self.wse['time'].dt.month.isin(sept_dec))
 
-        # # call the parent method from VegTransition
-        # ds = super()._get_depth()
-        # # get temporal mean
-        # ds = ds.mean(dim="time")
-        # # downscale to 480m
-        # ds_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
-        # arr = ds_coarse["WSE_MEAN"].to_numpy()
-        # return arr
+        # Calc mean 
+        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)
+        height = mean_monthly_wse_sept_dec - self.dem
+
+        # upscale to 480m from 60m
+        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

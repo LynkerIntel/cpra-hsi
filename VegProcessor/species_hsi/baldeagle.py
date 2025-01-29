@@ -64,8 +64,10 @@ class BaldEagleHSI:
             #v1g_pct_cell_upland_mixed_forest=hsi_instance.pct_upland_mixed_forest / 100,
             #v1h_pct_cell_upland_scrub_shrub=hsi_instance.pct_upland_scrub_shrub / 100,
             v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland / 100, 
+            # Note: 01.28 we are still waiting on clarification on this
             v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh / 100, #NEW
-            v3_pct_cell_forested_wetland=hsi_instance.pct_forested_wetland / 100, #NEW
+            # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
+            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood / 100, #NEW
             v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
             v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
             v6_pct_cell_open_water=hsi_instance.pct_open_water / 100,
@@ -281,6 +283,25 @@ class BaldEagleHSI:
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
+        self._logger.info("Running Bald Eagle final HSI.")
+        for si_name, si_array in [
+            ("SI 1", self.si_1),
+            ("SI 2", self.si_2),
+            ("SI 3", self.si_3),
+            ("SI 4", self.si_4),
+            ("SI 5", self.si_5),
+            ("SI 6", self.si_6),
+        ]:
+            invalid_values = (si_array < 0) | (si_array > 1)
+            if np.any(invalid_values):
+                num_invalid = np.count_nonzero(invalid_values)
+                self._logger.warning(
+                    "%s contains %d values outside the range [0, 1].",
+                    si_name,
+                    num_invalid,
+                )
+
+        # Combine individual suitability indices
         hsi = ((self.si_1 ** 0.0104) *
                (self.si_2 ** 0.3715) *
                (self.si_3 ** 0.4743) *
@@ -288,12 +309,12 @@ class BaldEagleHSI:
                (self.si_5 ** 0.0353) *
                (self.si_6 ** 0.0669)) ** 0.991
 
-        # Quality control check: Ensure combined_score is between 0 and 1
+        # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)
         if np.any(invalid_values):
             num_invalid = np.count_nonzero(invalid_values)
             self._logger.warning(
-                "Combined suitability score has %d values outside [0,1]. Clipping values.",
+                "Combined suitability score has %d values outside [0,1]",
                 num_invalid,
             )
             # Clip the combined_score to ensure it's between 0 and 1

@@ -3,17 +3,20 @@ raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
   #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-dry"
+  #wse_directory_path: "/Users/dillonragar/data/cpra/AMP_SimulationResults/base/WY2006_base"
+  wse_domain_raster: "/Users/dillonragar/data/cpra/hecras_max_extent_domain.tif"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_grid: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
+  initial_maturity:  "/Users/dillonragar/data/tmp/cpra/AMP_Tree_Age/AMP_Tree_Age.tif"
 
 polygon_data:
   wpu_polygons: /Users/dillonragar/data/tmp/cpra/Atchafalaya MP WPUs/Atchafalaya MP WPUs.shp
 
 simulation:
-  water_year_start: 1974 # int
-  water_year_end: 1975 # int
+  water_year_start: 1955 # int
+  water_year_end: 1958 # int
   wse_sequence_input: True # bool if WSE input is synthetic
 
 metadata: # partial list (static vars)

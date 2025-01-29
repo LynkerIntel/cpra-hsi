@@ -31,16 +31,15 @@ class VegTransition:
     Example usage found in `./run.ipynb`
 
     Notes: two dimensinal np.ndarray are used as default, with xr.Dataset for cases
-    where time series awareness is helpful (i.e. subsetting WSE data). vegetation numpy
-    arrays are dtype float32, because int types have limited interoperability with the
-    np.nan type, which is needed.
+    where time series awareness is needed (i.e. subsetting WSE data). vegetation numpy
+    arrays are dtype float32 by default, because int types have limited interoperability
+    with the np.nan type, which is needed.
 
 
     Attributes: (only state variables listed)
     -----------
         self.veg_type
         self.maturity
-        self.elevation
         self.pct_mast_hard
         self.pct_mast_soft
         self.pct_no_mast
@@ -48,11 +47,10 @@ class VegTransition:
 
     Methods
     -------
-    step(date):
+    step():
         Advances the vegetation model by a single timestep.
     run():
         Run the vegetation model, using settings and data defined in `veg_config.yaml`
-
     """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -131,7 +129,7 @@ class VegTransition:
         self.static_veg = self._load_veg_initial_raster(return_static_veg_only=True)
         self.veg_keys = self._load_veg_keys()
 
-        self.maturity = np.zeros_like(self.dem)  # self._load_initial_maturity_raster()
+        self.maturity = self._load_initial_maturity_raster()
         self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
@@ -237,7 +235,7 @@ class VegTransition:
         self._create_timestep_dir(timestep)
 
         # copy existing veg types
-        veg_type_in = self.veg_type
+        veg_type_in = self.veg_type.copy()
 
         # calculate depth
         self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
@@ -702,9 +700,13 @@ class VegTransition:
         self._logger.info("Loaded Vegetation Keys")
         return dbf
 
-    def _load_initial_maturity_raster(self):
-        """Initial conditions for vegetation maturity."""
-        return NotImplementedError
+    def _load_initial_maturity_raster(self) -> np.ndarray:
+        """Load initial conditions for vegetation maturity."""
+        self._logger.info("Loading initial maturity raster.")
+        da = xr.open_dataarray(self.initial_maturity_path)
+        da = da["band" == 0]
+        da = self._reproject_match_to_dem(da)
+        return da.to_numpy()
 
     def _load_hecras_domain_raster(self) -> np.ndarray:
         """Load raster file specifying the boundary of the HECRAS domain."""

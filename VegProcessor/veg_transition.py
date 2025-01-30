@@ -151,6 +151,9 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
+        # NetCDF data output
+        self._create_output_file()
+
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
         self._logger = logging.getLogger("VegTransition")
@@ -378,7 +381,9 @@ class VegTransition:
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        self._save_state_vars(params)
+        # self._save_state_vars(params)
+        self._append_to_netcdf(timestep=self.current_timestep)
+
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
 
@@ -750,7 +755,7 @@ class VegTransition:
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-input' subdirectory
+        # Create the 'run-metadata' subdirectory
         self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(self.run_metadata_dir, exist_ok=True)
 
@@ -759,40 +764,103 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self, params: dict):
-        """The method will save state variables after each timestep.
+    def _create_output_file(self):
+        """Create NetCDF file for data output."""
+        self.netcdf_filepath = os.path.join(self.output_dir_path, "data_output.nc")
 
-        This method should also include the config, input data, and QC plots.
-        """
-        template = self.water_depth.isel({"time": 0})  # subset to first month
+        # load DEM, use coords
+        da = xr.open_dataarray(self.dem_path)
+        da = da["band" == 0]
+        x = da.coords["x"].values
+        y = da.coords["y"].values
 
-        # veg type out
-        filename_vegtype = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            parameter="VEGTYPE",
+        # Define the new time coordinate
+        time_range = pd.date_range(
+            start=f"{self.water_year_start}-10-01",
+            end=f"{self.water_year_end}-10-01",
+            freq="YS-OCT",
+        )  # Annual start
+
+        # Create a new Dataset with dimensions (time, y, x) and veg_type variable
+        ds = xr.Dataset(
+            data_vars={
+                "veg_type": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+                "maturity": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+            },
+            coords={"time": time_range, "y": y, "x": x},
         )
-        new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        # xr.Dataset `timestep_out` will contain all output arrays, defined here first
-        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-        self.timestep_out["veg_type"].rio.to_raster(
-            filename_vegtype.with_suffix(".tif")
-        )
 
-        # pct mast out
-        # TODO: add perent mast handling
+        ds = ds.rio.write_crs("EPSG:6344")
 
-        filename_maturity = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            parameter="MATURITY",
-        )
-        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-        self.timestep_out["maturity"].rio.to_raster(
-            filename_maturity.with_suffix(".tif")
-        )
+        # Add metadata
+        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
+        # ds["veg_type"].attrs["units"] = "Category"
+        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
+        # ds["maturity"].attrs["units"] = "Years"
 
-        del self.timestep_out
+        # Save initial file
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        ds.close()
+        da.close()
+        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+
+    def _append_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append timestep data to the NetCDF file."""
+        timestep_str = timestep.strftime("%Y-%m-%d")
+        # Open existing NetCDF file
+        ds = xr.open_dataset(self.netcdf_filepath)
+
+        # Modify in-memory dataset
+        ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
+        ds["maturity"].loc[{"time": timestep_str}] = self.maturity
+
+        ds.close()
+        # Write back to file
+        ds.to_netcdf(self.netcdf_filepath, mode="a")
+
+        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+
+    # def _save_state_vars(self, params: dict):
+    #     """The method will save state variables after each timestep.
+
+    #     This method should also include the config, input data, and QC plots.
+    #     """
+    #     template = self.water_depth.isel({"time": 0})  # subset to first month
+
+    #     # veg type out
+    #     filename_vegtype = utils.generate_filename(
+    #         params=params,
+    #         base_path=self.timestep_output_dir,
+    #         parameter="VEGTYPE",
+    #     )
+    #     new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+    #     # xr.Dataset `timestep_out` will contain all output arrays, defined here first
+    #     self.timestep_out = utils.create_dataset_from_template(template, new_variables)
+    #     self.timestep_out["veg_type"].rio.to_raster(
+    #         filename_vegtype.with_suffix(".tif")
+    #     )
+
+    #     # pct mast out
+    #     # TODO: add perent mast handling
+
+    #     filename_maturity = utils.generate_filename(
+    #         params=params,
+    #         base_path=self.timestep_output_dir,
+    #         parameter="MATURITY",
+    #     )
+    #     self.timestep_out["maturity"] = (("y", "x"), self.maturity)
+    #     self.timestep_out["maturity"].rio.to_raster(
+    #         filename_maturity.with_suffix(".tif")
+    #     )
+
+    #     self.timestep_out.to_netcdf(self.netcdf_filepath, mode="w")
+    #     del self.timestep_out
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where

@@ -48,15 +48,15 @@ class CrawfishHSI:
         """Create CrawfishHSI instance from an HSI instance."""
         return cls(
             v1_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v2_mean_water_depth_jan_aug=hsi_instance.mean_water_depth_jan_aug, #NEW
-            v3a_pct_cell_swamp_bottomland_hardwood=hsi_instance.pct_swamp_bottom_hardwood / 100,
-            v3b_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
-            v3c_pct_cell_open_water=hsi_instance.pct_open_water / 100, #many already in hsi "superclass" use same RHS
-            v3d_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
-            v3e_pct_cell_brackish_marsh=hsi_instance.pct_brackish_marsh / 100,
-            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_saline_marsh / 100, #NEW #23
-            v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground / 100, #NEW
-            v4_mean_water_depth_sept_dec=hsi_instance.mean_water_depth_sept_dec, #NEW
+            v2_mean_water_depth_jan_aug=hsi_instance.water_depth_monthly_mean_jan_aug, #NEW
+            v3a_pct_cell_swamp_bottomland_hardwood=hsi_instance.pct_swamp_bottom_hardwood,
+            v3b_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
+            v3c_pct_cell_open_water=hsi_instance.pct_open_water, #many already in hsi "superclass" use same RHS
+            v3d_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
+            v3e_pct_cell_brackish_marsh=hsi_instance.pct_brackish_marsh,
+            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_marsh, #NEW #23
+            v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground, #NEW
+            v4_mean_water_depth_sept_dec=hsi_instance.water_depth_monthly_mean_sept_dec, #NEW
         )
 
     def __post_init__(self):
@@ -198,13 +198,14 @@ class CrawfishHSI:
                 self._logger.info("Pct habitat types data not provided. Setting index to 1", array)
                 array = np.ones(self._shape)
 
-        si_3 = [(1.0 * self.v3a_pct_cell_swamp_bottomland_hardwood) + 
-            (0.85 * self.v3b_pct_cell_fresh_marsh) + 
-            (0.75 * self.v3c_pct_cell_open_water) + 
-            (0.6 * self.v3d_pct_cell_intermediate_marsh) +
-            (0.2 * self.v3e_pct_cell_brackish_marsh) +
-            (0.0 * self.v3f_pct_cell_saline_marsh) + 
-            (0.0 * self.v3g_pct_cell_bare_ground)
+        # easier to just do % here, hence /100
+        si_3 = [(1.0 * (self.v3a_pct_cell_swamp_bottomland_hardwood/100)) + 
+            (0.85 * (self.v3b_pct_cell_fresh_marsh/100)) + 
+            (0.75 * (self.v3c_pct_cell_open_water/100)) + 
+            (0.6 * (self.v3d_pct_cell_intermediate_marsh/100)) +
+            (0.2 * (self.v3e_pct_cell_brackish_marsh/100)) +
+            (0.0 * (self.v3f_pct_cell_saline_marsh/100)) + 
+            (0.0 * (self.v3g_pct_cell_bare_ground/100))
         ]
         # TODO: error handling here? (for case where no blank arr is initialized)
         return si_3

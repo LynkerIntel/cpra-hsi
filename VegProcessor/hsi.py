@@ -145,8 +145,8 @@ class HSI(vt.VegTransition):
         self.pct_fresh_shrubs = None
 
         self.pct_bare_ground = None
-        #self.pct_dev_upland = None #does not change
-        self.pct_dev_upland = self._calculate_pct_cover_static()
+        self.pct_dev_upland = None #does not change
+        #self.pct_dev_upland = self._calculate_pct_cover_static()
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -210,8 +210,8 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_water_depth_annual_mean()
-        self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
-        self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
+        #self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
+        #self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -227,9 +227,9 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            #self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            #self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             # save state variables
@@ -360,7 +360,7 @@ class HSI(vt.VegTransition):
         # 25  Estuarine Aquatic Bed                   
         # 26  Open Water
    
-        self.pct_bare_ground = ds["prt_cover_14"].to_nump()
+        self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
         self.pct_zone_iii = ds["pct_cover_17"].to_numpy()

@@ -63,14 +63,14 @@ class BaldEagleHSI:
             #v1f_pct_cell_upland_mixed_evrgrn_forest=hsi_instance.pct_upland_evrgrn_forest / 100,
             #v1g_pct_cell_upland_mixed_forest=hsi_instance.pct_upland_mixed_forest / 100,
             #v1h_pct_cell_upland_scrub_shrub=hsi_instance.pct_upland_scrub_shrub / 100,
-            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland / 100, 
+            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland, 
             # Note: 01.28 we are still waiting on clarification on this
-            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh / 100, #NEW
+            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh, #NEW
             # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
-            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood / 100, #NEW
-            v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
-            v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
-            v6_pct_cell_open_water=hsi_instance.pct_open_water / 100,
+            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood, #NEW
+            v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
+            v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
+            v6_pct_cell_open_water=hsi_instance.pct_open_water,
         )
 
     def __post_init__(self):
@@ -141,6 +141,9 @@ class BaldEagleHSI:
             # condition 1 (if no dev'd land or upland in cell)
             # note: we could just =0 vs !=0
             #mask_1 = self.v1a_pct_cell_developed_land | self.v1b_pct_cell_upland <= 0.0
+            
+            #calc prct first
+            self.v1_pct_cell_developed_or_upland = self.v1_pct_cell_developed_or_upland / 100
             mask_1 = self.v1_pct_cell_developed_or_upland <= 0.0
             si_1[mask_1] =  0.01
 
@@ -166,6 +169,7 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_2 = np.full(self._shape, 999)
 
+            self.v2_pct_cell_flotant_marsh = self.v2_pct_cell_flotant_marsh / 100
             # condition 1 (there is just one function here, so no need for mask)
             si_2 = (0.282 + 
                 (0.047 * self.v2_pct_cell_flotant_marsh) - 
@@ -191,6 +195,7 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_3 = np.full(self._shape, 999)
 
+            self.v3_pct_cell_forested_wetland = self.v3_pct_cell_forested_wetland / 100
             # condition 1 (there is just one function here, so no need for mask)
             si_3 = (0.015 + 
                 (0.048 * self.v3_pct_cell_forested_wetland) - 
@@ -216,6 +221,7 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_4 = np.full(self._shape, 999)
 
+            self.v4_pct_cell_fresh_marsh = self.v4_pct_cell_fresh_marsh / 100
             # condition 1 (there is just one function here, so no need for mask)
             si_4 = (0.370 + 
                 (0.07 * self.v4_pct_cell_fresh_marsh) - 
@@ -241,6 +247,7 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_5 = np.full(self._shape, 999)
 
+            self.v5_pct_cell_intermediate_marsh = self.v5_pct_cell_intermediate_marsh / 100
             # condition 1 (there is just one function here, so no need for mask)
             si_5 = (0.263 - 
                 (9.406 * np.exp(-3) * self.v5_pct_cell_intermediate_marsh) +
@@ -264,13 +271,14 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_6 = np.full(self._shape, 999)
 
+            self.v6_pct_cell_open_water = self.v6_pct_cell_open_water / 100
             # condition 1
             mask_1 = self.v6_pct_cell_open_water <= 0.0
             si_6[mask_1] = 0.01
 
             # condition 2 (AND)
             mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 0.95)
-            si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water ** -1))
+            si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1))
 
             # condition 3
             mask_3 = self.v6_pct_cell_open_water > 0.95

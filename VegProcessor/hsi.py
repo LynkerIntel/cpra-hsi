@@ -70,8 +70,8 @@ class HSI(vt.VegTransition):
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
         
-        self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
-        self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+        #self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
+        #self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -140,6 +140,7 @@ class HSI(vt.VegTransition):
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
         self.pct_flotant_marsh = None #need to find #does not change
+        #self._calculate_flotant_marsh()
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
@@ -465,6 +466,24 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
         return da.to_numpy()
+    
+    # def _calculate_flotant_marsh(self) -> np.ndarray:
+    #     """
+    #     Calculate percent of 480m cell that is flotant marsh.
+    #     """
+    #     # Load flotant marsh raster
+    #     #initial_flotant = self._load_veg_initial_raster(xarray=True)
+
+    #     # reproject to match hsi grid
+    #     #self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
+
+    #     #define which value is flotant marsh in raster key
+    #     flotant_marsh = 4
+
+    #     #do some magic formating 
+        
+    #     # convert to numpy array
+    #     return da.to_numpy()    
 
     def _get_water_depth_annual_mean(self) -> np.ndarray:
         """

@@ -16,7 +16,7 @@ polygon_data:
 
 simulation:
   water_year_start: 1955 # int
-  water_year_end: 1958 # int
+  water_year_end: 1956 # int
   wse_sequence_input: True # bool if WSE input is synthetic
 
 metadata: # partial list (static vars)

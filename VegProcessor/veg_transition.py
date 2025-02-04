@@ -554,7 +554,8 @@ class VegTransition:
 
     def _get_depth(self) -> xr.Dataset:
         """Calculate water depth from DEM and Water Surface Elevation and subset
-        difference array to valid HECRAS domain.
+        difference array to valid HECRAS domain. Results is subset to valid HECRAS
+        pixels before being returned.
 
         NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
         equivalent to 0 water depth. This is necessary so that inundation checks do

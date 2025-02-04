@@ -124,8 +124,9 @@ class VegTransition:
 
         self.dem = self._load_dem()
         self.hecras_domain = self._load_hecras_domain_raster()
-        # self.initial_veg = self._load_veg_initial_raster(mask_hecras_domain=False)
-        self.veg_type = self._load_veg_initial_raster()
+
+        self.initial_veg_type = self._load_veg_initial_raster()  # static
+        self.veg_type = self._load_veg_initial_raster()  # dynamic
         self.static_veg = self._load_veg_initial_raster(return_static_veg_only=True)
         self.veg_keys = self._load_veg_keys()
 
@@ -575,14 +576,14 @@ class VegTransition:
         # dry (na is 0-filled above) when in fact that are outside of the domain.
         ds = ds.where(self.hecras_domain)
 
-        ds["WSE_MEAN"].plot(
-            col="time",  # Create panels for each time step
-            col_wrap=4,  # Number of panels per row
-            cmap="viridis",
-            aspect=1.5,  # Adjust aspect ratio
-            size=3,  # Adjust figure size
-        )
-        plt.show()
+        # ds["WSE_MEAN"].plot(
+        #     col="time",  # Create panels for each time step
+        #     col_wrap=4,  # Number of panels per row
+        #     cmap="viridis",
+        #     aspect=1.5,  # Adjust aspect ratio
+        #     size=3,  # Adjust figure size
+        # )
+        # plt.show()
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):

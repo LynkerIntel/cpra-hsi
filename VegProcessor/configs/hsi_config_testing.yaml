@@ -9,7 +9,7 @@ raster_data:
   salinity_raster: #str (optional)
   veg_type_path: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/data_out/VegOut_20250115_132228" # VegTransition output folder
   flotant_marsh_raster: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
-  floant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
+  flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
 simulation:
   water_year_start: 1981 # int

@@ -69,6 +69,9 @@ class HSI(vt.VegTransition):
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
+        
+        self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
+        self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -228,8 +231,8 @@ class HSI(vt.VegTransition):
         if self.run_hsi:
 
             #self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            #self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            #self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             # save state variables
@@ -297,6 +300,9 @@ class HSI(vt.VegTransition):
 
         Derived from VegTransition Output
         """
+        
+        #self._logger.debug("Starting _calculate_pct_cover")
+        
         # logical index for coarsening (i.e # of pixels)
         # this generates ds with all veg types.
         # x, y, dims -> 480 / 60 = 8
@@ -315,6 +321,8 @@ class HSI(vt.VegTransition):
         #    y=8,
         #    boundary="pad",
         #)
+
+        #self._logger.debug("Generated ds: %s", ds)
 
         ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -360,6 +368,8 @@ class HSI(vt.VegTransition):
         # 25  Estuarine Aquatic Bed                   
         # 26  Open Water
    
+        #self._logger.debug("Generated ds_swamp_blh: %s", ds_swamp_blh)
+
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
@@ -378,6 +388,8 @@ class HSI(vt.VegTransition):
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
+
+        #self._logger.debug("Completed _calculate_pct_cover")
         
         # Developed Land (4 diff types) and Upland (also 4)
         #self.pct_dev_upland = ds_dev_upland.to_numpy()

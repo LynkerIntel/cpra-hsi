@@ -72,7 +72,7 @@ class HSI(vt.VegTransition):
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
-        # self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
+        self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
@@ -225,8 +225,8 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_water_depth_annual_mean()
-        # self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
-        # self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
+        self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
+        self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -242,9 +242,9 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            # self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            # self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            #self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            #self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             # save state variables
@@ -480,7 +480,8 @@ class HSI(vt.VegTransition):
         # Load flotant marsh raster
         # initial_flotant = self._load_veg_initial_raster(xarray=True)
         da = xr.open_dataarray(
-            "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
+            #"/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
+            self.flotant_marsh_path
         )
         da = da["band" == 0]
 
@@ -524,7 +525,7 @@ class HSI(vt.VegTransition):
         filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
 
         # Calc mean
-        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)
+        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)#["WSE_MEAN"]
         height = mean_monthly_wse_jan_aug - self.dem
 
         # upscale to 480m from 60m
@@ -545,7 +546,7 @@ class HSI(vt.VegTransition):
         filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
 
         # Calc mean
-        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)
+        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)#["WSE_MEAN"]
         height = mean_monthly_wse_sept_dec - self.dem
 
         # upscale to 480m from 60m

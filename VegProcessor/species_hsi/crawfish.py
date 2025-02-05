@@ -154,25 +154,25 @@ class CrawfishHSI:
 
             # condition 1 (OR)
             mask_1 = (self.v2_mean_water_depth_jan_aug <= 0.0) | (
-                self.v2_mean_water_depth_jan_aug > 274.0 #RHS is in cm
+                self.v2_mean_water_depth_jan_aug > 2.74 #RHS is in meters
             )
             si_2[mask_1] = 0.0
 
             # condition 2 (AND)
             mask_2 = (self.v2_mean_water_depth_jan_aug > 0.0) & (
-                self.v2_mean_water_depth_jan_aug <= 46.0
+                self.v2_mean_water_depth_jan_aug <= 0.46
             )
             si_2[mask_2] = 0.02174 * self.v2_mean_water_depth_jan_aug[mask_2]
 
             # condition 3 (AND)
-            mask_3 = (self.v2_mean_water_depth_jan_aug > 46.0) & (
-                self.v2_mean_water_depth_jan_aug <= 91.0
+            mask_3 = (self.v2_mean_water_depth_jan_aug > 0.46) & (
+                self.v2_mean_water_depth_jan_aug <= 0.91
             )
             si_2[mask_3] = 1.0
 
             # condition 4 (AND)
-            mask_4 = (self.v2_mean_water_depth_jan_aug > 91.0) & (
-                self.v2_mean_water_depth_jan_aug <= 274.0
+            mask_4 = (self.v2_mean_water_depth_jan_aug > 0.91) & (
+                self.v2_mean_water_depth_jan_aug <= 2.74
             )
             si_2[mask_4] = 1.5 - (0.00457 * self.v2_mean_water_depth_jan_aug[mask_4])
 
@@ -199,14 +199,14 @@ class CrawfishHSI:
                 array = np.ones(self._shape)
 
         # easier to just do % here, hence /100
-        si_3 = [(1.0 * (self.v3a_pct_cell_swamp_bottomland_hardwood/100)) + 
+        si_3 = ((1.0 * (self.v3a_pct_cell_swamp_bottomland_hardwood/100)) + 
             (0.85 * (self.v3b_pct_cell_fresh_marsh/100)) + 
             (0.75 * (self.v3c_pct_cell_open_water/100)) + 
             (0.6 * (self.v3d_pct_cell_intermediate_marsh/100)) +
             (0.2 * (self.v3e_pct_cell_brackish_marsh/100)) +
             (0.0 * (self.v3f_pct_cell_saline_marsh/100)) + 
             (0.0 * (self.v3g_pct_cell_bare_ground/100))
-        ]
+        )
         # TODO: error handling here? (for case where no blank arr is initialized)
         return si_3
 
@@ -223,17 +223,17 @@ class CrawfishHSI:
             si_4 = np.full(self._shape, 999)
 
             # condition 1
-            mask_1 = (self.v4_mean_water_depth_sept_dec <= 0.0) #RHS is in cm
+            mask_1 = (self.v4_mean_water_depth_sept_dec <= 0.0) #RHS is in meters
             si_4[mask_1] = 1.0
 
             # condition 2 (AND)
             mask_2 = (self.v4_mean_water_depth_sept_dec > 0.0) & (
-                self.v4_mean_water_depth_sept_dec <= 15.0
+                self.v4_mean_water_depth_sept_dec <= 0.15
             )
             si_4[mask_2] = 1.0 - (0.06667 * self.v4_mean_water_depth_sept_dec[mask_2])
 
             # condition 3 
-            mask_3 = (self.v4_mean_water_depth_sept_dec > 15.0)
+            mask_3 = (self.v4_mean_water_depth_sept_dec > 0.15)
             si_4[mask_3] = 0.0
 
             if 999 in si_4:

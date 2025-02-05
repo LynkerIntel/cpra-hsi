@@ -17,16 +17,7 @@ class BaldEagleHSI:
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
 
-    # JG //TODO: should prob split this out?
     v1_pct_cell_developed_or_upland: np.ndarray = None
-    # v1a_pct_cell_developed_high_intensity: np.ndarray = None
-    # v1b_pct_cell_developed_med_intensity: np.ndarray = None
-    # v1c_pct_cell_developed_low_intensity: np.ndarray = None
-    # v1d_pct_cell_developed_open_space: np.ndarray = None
-    # v1e_pct_cell_upland_mixed_decid_forest: np.ndarray = None
-    # v1f_pct_cell_upland_mixed_evrgrn_forest: np.ndarray = None
-    # v1g_pct_cell_upland_mixed_forest: np.ndarray = None
-    # v1h_pct_cell_upland_scrub_shrub: np.ndarray = None
     v2_pct_cell_flotant_marsh: np.ndarray = None
     v3_pct_cell_forested_wetland: np.ndarray = None
     v4_pct_cell_fresh_marsh: np.ndarray = None
@@ -55,7 +46,6 @@ class BaldEagleHSI:
         """Create BaldEagleHSI instance from an HSI instance."""
         return cls(
             v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland,
-            # Note: 01.28 we are still waiting on clarification on this
             v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh,  # NEW
             # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
             v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood,  # NEW

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-import numpy as np
 import logging
 from math import exp
+import numpy as np
 
 
 @dataclass
@@ -36,7 +36,7 @@ class BassHSI:
         """Create BassHSI instance from an HSI instance."""
         return cls(
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            
+
             # TODO implement these two variables/inputs in hsi.py
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
             v2_pct_emergent_vegetation=hsi_instance.pct_emergent_vegetation
@@ -88,7 +88,7 @@ class BassHSI:
         if self.v1a_mean_annual_salinity is None:
             self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
             si_1 = np.ones(self._shape)
-        
+
         elif self.v1b_mean_annual_temperature is None:
             self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
             si_1 = np.ones(self._shape)
@@ -101,10 +101,10 @@ class BassHSI:
             S_si_2 = ((self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08) / 24.91
             T_si_2 = ((self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature) - 535.99) / 206.16
 
-            si_1 = exp(2.50 - 0.25(S_si) + 0.30(T_si) + 0.04(S_si_2) - 0.33(T_si_2) - 0.05(S_si * T_si)) / 14.3
+            si_1 = exp(2.50 - (0.25 * S_si) + (0.30 * T_si) + (0.04 * S_si_2) - (0.33 * T_si_2) - (0.05 * (S_si * T_si))) / 14.3
 
         return si_1
-    
+
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is covered by emergent vegetation."""
         if self.v2_pct_emergent_vegetation is None:
@@ -144,7 +144,7 @@ class BassHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
 
         return si_2
 

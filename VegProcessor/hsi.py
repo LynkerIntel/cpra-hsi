@@ -120,6 +120,9 @@ class HSI(vt.VegTransition):
         self.pct_zone_ii = None
         self.pct_fresh_shrubs = None
 
+        # NetCDF data output
+        self._create_output_file()
+
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
         self._logger = logging.getLogger("HSI")
@@ -360,29 +363,104 @@ class HSI(vt.VegTransition):
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self):
-        """The method will save state variables after each timestep.
+    def _create_output_file(self):
+        """HSI: Create NetCDF file for data output."""
+        self.netcdf_filepath = os.path.join(self.output_dir_path, "hsi.nc")
 
-        This method should also include the config, input data, and QC plots.
+        # load DEM, use coords
+        da = xr.open_dataarray(self.dem_path)
+        da = da["band" == 0]
+        # coarsen to 480m grid cell
+        da = da.coarsen(x=8, y=8, boundary="pad").mean()
+
+        x = da.coords["x"].values
+        y = da.coords["y"].values
+
+        # Define the new time coordinate
+        time_range = pd.date_range(
+            start=f"{self.water_year_start}-10-01",
+            end=f"{self.water_year_end}-10-01",
+            freq="YS-OCT",
+        )  # Annual start
+
+        # Create a new Dataset with dimensions (time, y, x) and veg_type variable
+        ds = xr.Dataset(
+            data_vars={
+                "alligator": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+                "bald_eagle": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+            },
+            coords={"time": time_range, "y": y, "x": x},
+        )
+
+        ds = ds.rio.write_crs("EPSG:6344")
+
+        # Add metadata
+        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
+        # ds["veg_type"].attrs["units"] = "Category"
+        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
+        # ds["maturity"].attrs["units"] = "Years"
+
+        # Save initial file
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        ds.close()
+        da.close()
+        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+
+    def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """BETA Append timestep data to the NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
-        template = self.water_depth.isel({"time": 0})  # subset to first month
+        timestep_str = timestep.strftime("%Y-%m-%d")
+        # Open existing NetCDF file
+        ds = xr.open_dataset(self.netcdf_filepath)
 
-        # veg type out
-        new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
+        # Modify in-memory dataset
+        ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
+        ds["maturity"].loc[{"time": timestep_str}] = self.maturity
 
-        self.timestep_out["veg_type"].rio.to_raster(
-            self.timestep_output_dir + "/vegtype.tif"
-        )
+        ds.close()
+        # Write back to file
+        ds.to_netcdf(self.netcdf_filepath, mode="a")
 
-        # pct mast out
-        # TODO: add perent mast handling
+        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
-        # maturity out
-        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-        self.timestep_out["maturity"].rio.to_raster(
-            self.timestep_output_dir + "/maturity.tif"
-        )
+    # def _save_state_vars(self):
+    #     """The method will save state variables after each timestep.
+
+    #     This method should also include the config, input data, and QC plots.
+    #     """
+    #     template = self.water_depth.isel({"time": 0})  # subset to first month
+
+    #     # veg type out
+    #     new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+    #     self.timestep_out = utils.create_dataset_from_template(template, new_variables)
+
+    #     self.timestep_out["veg_type"].rio.to_raster(
+    #         self.timestep_output_dir + "/vegtype.tif"
+    #     )
+
+    #     # pct mast out
+    #     # TODO: add perent mast handling
+
+    #     # maturity out
+    #     self.timestep_out["maturity"] = (("y", "x"), self.maturity)
+    #     self.timestep_out["maturity"].rio.to_raster(
+    #         self.timestep_output_dir + "/maturity.tif"
+    #     )
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where

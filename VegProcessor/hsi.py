@@ -377,21 +377,6 @@ class HSI(vt.VegTransition):
             freq="YS-OCT",
         )  # Annual start
 
-        # Create a new Dataset with dimensions (time, y, x) and veg_type variable
-        # ds = xr.Dataset(
-        #     data_vars={
-        #         "alligator_hsi": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #         "bald_eagle_hsi": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #     },
-        #     coords={"time": time_range, "y": y, "x": x},
-        # )
-
         # Create an empty Dataset with only coordinates
         ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
         ds = ds.rio.write_crs("EPSG:6344")
@@ -426,16 +411,6 @@ class HSI(vt.VegTransition):
         # Open existing NetCDF file
         ds = xr.open_dataset(self.netcdf_filepath)
 
-        # Modify in-memory dataset
-        # ds["alligator_hsi"].loc[{"time": timestep_str}] = self.alligator.hsi
-        # ds["alligator_si_1"].loc[{"time": timestep_str}] = self.alligator.si_1
-        # ds["alligator_si_2"].loc[{"time": timestep_str}] = self.alligator.si_2
-        # ds["alligator_si_3"].loc[{"time": timestep_str}] = self.alligator.si_3
-        # ds["alligator_si_4"].loc[{"time": timestep_str}] = self.alligator.si_4
-        # ds["alligator_si_5"].loc[{"time": timestep_str}] = self.alligator.si_5
-        # ds["bald_eagle"].loc[{"time": timestep_str}] = self.bald_eagle
-
-        # Define the variables and corresponding data attributes
         hsi_variables = {
             "alligator_hsi": self.alligator.hsi,
             "alligator_si_1": self.alligator.si_1,
@@ -462,30 +437,6 @@ class HSI(vt.VegTransition):
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
-
-    # def _save_state_vars(self):
-    #     """The method will save state variables after each timestep.
-
-    #     This method should also include the config, input data, and QC plots.
-    #     """
-    #     template = self.water_depth.isel({"time": 0})  # subset to first month
-
-    #     # veg type out
-    #     new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-    #     self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-
-    #     self.timestep_out["veg_type"].rio.to_raster(
-    #         self.timestep_output_dir + "/vegtype.tif"
-    #     )
-
-    #     # pct mast out
-    #     # TODO: add perent mast handling
-
-    #     # maturity out
-    #     self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-    #     self.timestep_out["maturity"].rio.to_raster(
-    #         self.timestep_output_dir + "/maturity.tif"
-    #     )
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where

@@ -813,7 +813,17 @@ class VegTransition:
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
 
     def _append_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """Append timestep data to the NetCDF file."""
+        """VegTransition: Append timestep data to the NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
+        """
         timestep_str = timestep.strftime("%Y-%m-%d")
         # Open existing NetCDF file
         ds = xr.open_dataset(self.netcdf_filepath)

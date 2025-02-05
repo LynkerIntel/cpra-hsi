@@ -19,6 +19,7 @@ import utils
 
 import veg_transition as vt
 from species_hsi import alligator
+from species_hsi import bass
 
 
 class HSI(vt.VegTransition):
@@ -98,6 +99,7 @@ class HSI(vt.VegTransition):
         self.alligator = None
         self.bald_eagle = None
         self.black_bear = None
+        self.bass = None
 
         # datasets
         self.pct_cover_veg = None
@@ -200,6 +202,7 @@ class HSI(vt.VegTransition):
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             # self.bald_eagle = BaldEagleHSI(self)
             # self.black_bear = BlackBearHSI(self)
+            # self.bass = bass.BassHSI.from_hsi(self)
 
             # save state variables
             # self._logger.info("saving state variables for timestep.")

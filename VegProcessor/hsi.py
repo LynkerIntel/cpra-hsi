@@ -525,7 +525,7 @@ class HSI(vt.VegTransition):
         filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
 
         # Calc mean
-        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)#["WSE_MEAN"]
+        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)["WSE_MEAN"]
         height = mean_monthly_wse_jan_aug - self.dem
 
         # upscale to 480m from 60m
@@ -546,7 +546,7 @@ class HSI(vt.VegTransition):
         filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
 
         # Calc mean
-        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)#["WSE_MEAN"]
+        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)["WSE_MEAN"]
         height = mean_monthly_wse_sept_dec - self.dem
 
         # upscale to 480m from 60m

@@ -1,6 +1,6 @@
 # config.yaml
 raster_data:
-  dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
+  dem_path: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/DEM/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str"
   #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-dry"
   #wse_directory_path: "/Users/dillonragar/data/cpra/AMP_SimulationResults/base/WY2006_base"

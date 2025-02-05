@@ -27,7 +27,6 @@ metadata: # partial list (static vars)
   wpu: ARS
   # ion: O # identifier: input, output, internal 
 
-
 output:
   output_base: "/Users/dillonragar/data/cpra/"
 

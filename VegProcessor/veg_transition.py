@@ -652,7 +652,10 @@ class VegTransition:
         )
 
     def _load_veg_initial_raster(
-        self, xarray: bool = False, all_types: bool = False
+        self,
+        xarray: bool = False,
+        all_types: bool = False,
+        return_static_veg_only: bool = False,
     ) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic. The veg types are subset to the DEM boundary before

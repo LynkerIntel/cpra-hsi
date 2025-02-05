@@ -18,7 +18,7 @@ class CrawfishHSI:
     # init with None to be distinct from np.nan
     v1_mean_annual_salinity: np.ndarray = None
     v2_mean_water_depth_jan_aug: np.ndarray = None
-    #v3_pct_cell_covered_by_habitat_types: np.ndarray = None
+    # v3_pct_cell_covered_by_habitat_types: np.ndarray = None
     v3a_pct_cell_swamp_bottomland_hardwood: np.ndarray = None
     v3b_pct_cell_fresh_marsh: np.ndarray = None
     v3c_pct_cell_open_water: np.ndarray = None
@@ -48,15 +48,15 @@ class CrawfishHSI:
         """Create CrawfishHSI instance from an HSI instance."""
         return cls(
             v1_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v2_mean_water_depth_jan_aug=hsi_instance.water_depth_monthly_mean_jan_aug, #NEW
+            v2_mean_water_depth_jan_aug=hsi_instance.water_depth_monthly_mean_jan_aug,  # NEW
             v3a_pct_cell_swamp_bottomland_hardwood=hsi_instance.pct_swamp_bottom_hardwood,
             v3b_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
-            v3c_pct_cell_open_water=hsi_instance.pct_open_water, #many already in hsi "superclass" use same RHS
+            v3c_pct_cell_open_water=hsi_instance.pct_open_water,  # many already in hsi "superclass" use same RHS
             v3d_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
             v3e_pct_cell_brackish_marsh=hsi_instance.pct_brackish_marsh,
-            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_marsh, #NEW #23
-            v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground, #NEW
-            v4_mean_water_depth_sept_dec=hsi_instance.water_depth_monthly_mean_sept_dec, #NEW
+            v3f_pct_cell_saline_marsh=hsi_instance.pct_saline_marsh,  # NEW #23
+            v3g_pct_cell_bare_ground=hsi_instance.pct_bare_ground,  # NEW
+            v4_mean_water_depth_sept_dec=hsi_instance.water_depth_monthly_mean_sept_dec,  # NEW
         )
 
     def __post_init__(self):
@@ -111,7 +111,9 @@ class CrawfishHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Mean annual salinity."""
         if self.v1_mean_annual_salinity is None:
-            self._logger.info("mean annual salinity data not provided. Setting index to 1.")
+            self._logger.info(
+                "mean annual salinity data not provided. Setting index to 1."
+            )
             si_1 = np.ones(self._shape)
 
         else:
@@ -124,11 +126,15 @@ class CrawfishHSI:
             si_1[mask_1] = 1.0
 
             # condition 2 (AND)
-            mask_2 = (self.v1_mean_annual_salinity > 1.5) & (self.v1_mean_annual_salinity <= 3.0)
+            mask_2 = (self.v1_mean_annual_salinity > 1.5) & (
+                self.v1_mean_annual_salinity <= 3.0
+            )
             si_1[mask_2] = 1.5 - (0.333 * self.v1_mean_annual_salinity[mask_2])
 
             # condition 3 (AND)
-            mask_3 = (self.v1_mean_annual_salinity > 3.0) & (self.v1_mean_annual_salinity <= 6.0)
+            mask_3 = (self.v1_mean_annual_salinity > 3.0) & (
+                self.v1_mean_annual_salinity <= 6.0
+            )
             si_1[mask_3] = 1.0 - (0.167 * self.v1_mean_annual_salinity[mask_3])
 
             # condition 4
@@ -154,7 +160,7 @@ class CrawfishHSI:
 
             # condition 1 (OR)
             mask_1 = (self.v2_mean_water_depth_jan_aug <= 0.0) | (
-                self.v2_mean_water_depth_jan_aug > 274.0 #RHS is in cm
+                self.v2_mean_water_depth_jan_aug > 274.0  # RHS is in cm
             )
             si_2[mask_1] = 0.0
 
@@ -184,7 +190,7 @@ class CrawfishHSI:
     def calculate_si_3(self) -> np.ndarray:
         """Proportion of cell covered by habitat types."""
         self._logger.info("Running SI 3")
-        
+
         for array in [
             self.v3a_pct_cell_swamp_bottomland_hardwood,
             self.v3b_pct_cell_fresh_marsh,
@@ -195,18 +201,21 @@ class CrawfishHSI:
             self.v3g_pct_cell_bare_ground,
         ]:
             if array is None:
-                self._logger.info("Pct habitat types data not provided. Setting index to 1", array)
+                self._logger.info(
+                    "Pct habitat types data not provided. Setting index to 1", array
+                )
                 array = np.ones(self._shape)
 
         # easier to just do % here, hence /100
-        si_3 = [(1.0 * (self.v3a_pct_cell_swamp_bottomland_hardwood/100)) + 
-            (0.85 * (self.v3b_pct_cell_fresh_marsh/100)) + 
-            (0.75 * (self.v3c_pct_cell_open_water/100)) + 
-            (0.6 * (self.v3d_pct_cell_intermediate_marsh/100)) +
-            (0.2 * (self.v3e_pct_cell_brackish_marsh/100)) +
-            (0.0 * (self.v3f_pct_cell_saline_marsh/100)) + 
-            (0.0 * (self.v3g_pct_cell_bare_ground/100))
-        ]
+        si_3 = (
+            (1.0 * (self.v3a_pct_cell_swamp_bottomland_hardwood / 100))
+            + (0.85 * (self.v3b_pct_cell_fresh_marsh / 100))
+            + (0.75 * (self.v3c_pct_cell_open_water / 100))
+            + (0.6 * (self.v3d_pct_cell_intermediate_marsh / 100))
+            + (0.2 * (self.v3e_pct_cell_brackish_marsh / 100))
+            + (0.0 * (self.v3f_pct_cell_saline_marsh / 100))
+            + (0.0 * (self.v3g_pct_cell_bare_ground / 100))
+        )
         # TODO: error handling here? (for case where no blank arr is initialized)
         return si_3
 
@@ -223,7 +232,7 @@ class CrawfishHSI:
             si_4 = np.full(self._shape, 999)
 
             # condition 1
-            mask_1 = (self.v4_mean_water_depth_sept_dec <= 0.0) #RHS is in cm
+            mask_1 = self.v4_mean_water_depth_sept_dec <= 0.0  # RHS is in cm
             si_4[mask_1] = 1.0
 
             # condition 2 (AND)
@@ -232,15 +241,14 @@ class CrawfishHSI:
             )
             si_4[mask_2] = 1.0 - (0.06667 * self.v4_mean_water_depth_sept_dec[mask_2])
 
-            # condition 3 
-            mask_3 = (self.v4_mean_water_depth_sept_dec > 15.0)
+            # condition 3
+            mask_3 = self.v4_mean_water_depth_sept_dec > 15.0
             si_4[mask_3] = 0.0
 
             if 999 in si_4:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
-    
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
@@ -261,7 +269,9 @@ class CrawfishHSI:
                 )
 
         # Combine individual suitability indices
-        hsi = ((self.si_1 * self.si_2) ** 1/6) * (self.si_3 ** 1/3) * (self.si_4 ** 1/3)
+        hsi = (
+            ((self.si_1 * self.si_2) ** 1 / 6) * (self.si_3**1 / 3) * (self.si_4**1 / 3)
+        )
 
         # Quality control check: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

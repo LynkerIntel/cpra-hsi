@@ -299,9 +299,6 @@ class HSI(vt.VegTransition):
 
         Derived from VegTransition Output
         """
-
-        # self._logger.debug("Starting _calculate_pct_cover")
-
         # logical index for coarsening (i.e # of pixels)
         # this generates ds with all veg types.
         # x, y, dims -> 480 / 60 = 8
@@ -312,16 +309,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # x, y, dims -> 480 / 60 = 8
-        # ds_blh = utils.generate_pct_cover_custom(
-        #    data_array=self.veg_type,
-        #    veg_types=[15, 16, 17],  # these are the BLH zones
-        #    x=8,
-        #    y=8,
-        #    boundary="pad",
-        # )
-
-        # self._logger.debug("Generated ds: %s", ds)
 
         ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -330,15 +317,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",  # not needed for partial pixels, fyi
         )
-
-        # this is static
-        # ds_dev_upland = utils.generate_pct_cover_custom(
-        #    data_array=self.veg_type,
-        #    veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
-        #    x=8,
-        #    y=8,
-        #    boundary="pad",
-        # )
 
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
@@ -387,11 +365,7 @@ class HSI(vt.VegTransition):
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
-
         # self._logger.debug("Completed _calculate_pct_cover")
-
-        # Developed Land (4 diff types) and Upland (also 4)
-        # self.pct_dev_upland = ds_dev_upland.to_numpy()
 
     def _calculate_pct_cover_static(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
@@ -463,22 +437,14 @@ class HSI(vt.VegTransition):
         Return:
             array of flotant marsh meeting both criteria, at 60m resolution.
         """
-        # Load flotant marsh raster
-        # initial_flotant = self._load_veg_initial_raster(xarray=True)
-        da = xr.open_dataarray(
-            # "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
-            self.flotant_marsh_path
-        )
+        da = xr.open_dataarray(self.flotant_marsh_path)
         da = da["band" == 0]
-
         # reproject to match hsi grid
         da = self._reproject_match_to_dem(da)
 
         # define which value is flotant marsh in raster key
         flotant_marsh = da == 4
-        # load intial veg type
         fresh_marsh = self.initial_veg_type["veg_type_subset"] == 20
-        # do some magic formating
         combined_flotant = flotant_marsh & fresh_marsh
 
         return combined_flotant
@@ -587,8 +553,6 @@ class HSI(vt.VegTransition):
 
         # Create an empty Dataset with only coordinates
         ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
-        ds = ds.rio.write_crs("EPSG:6344")
-
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Add metadata

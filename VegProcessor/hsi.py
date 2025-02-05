@@ -204,13 +204,7 @@ class HSI(vt.VegTransition):
             # self.bald_eagle = BaldEagleHSI(self)
             # self.black_bear = BlackBearHSI(self)
 
-            # save state variables
-            # self._logger.info("saving state variables for timestep.")
-
-            # TODO: update this function to build a dataset out of the
-            # of the suitability indices for each species, i.e.
-            # self._output_indices()
-            # self._save_state_vars()
+            self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -384,19 +378,23 @@ class HSI(vt.VegTransition):
         )  # Annual start
 
         # Create a new Dataset with dimensions (time, y, x) and veg_type variable
-        ds = xr.Dataset(
-            data_vars={
-                "alligator": (
-                    ["time", "y", "x"],
-                    np.full((len(time_range), len(y), len(x)), np.nan),
-                ),
-                "bald_eagle": (
-                    ["time", "y", "x"],
-                    np.full((len(time_range), len(y), len(x)), np.nan),
-                ),
-            },
-            coords={"time": time_range, "y": y, "x": x},
-        )
+        # ds = xr.Dataset(
+        #     data_vars={
+        #         "alligator_hsi": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #         "bald_eagle_hsi": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #     },
+        #     coords={"time": time_range, "y": y, "x": x},
+        # )
+
+        # Create an empty Dataset with only coordinates
+        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+        ds = ds.rio.write_crs("EPSG:6344")
 
         ds = ds.rio.write_crs("EPSG:6344")
 
@@ -429,13 +427,40 @@ class HSI(vt.VegTransition):
         ds = xr.open_dataset(self.netcdf_filepath)
 
         # Modify in-memory dataset
-        ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
-        ds["maturity"].loc[{"time": timestep_str}] = self.maturity
+        # ds["alligator_hsi"].loc[{"time": timestep_str}] = self.alligator.hsi
+        # ds["alligator_si_1"].loc[{"time": timestep_str}] = self.alligator.si_1
+        # ds["alligator_si_2"].loc[{"time": timestep_str}] = self.alligator.si_2
+        # ds["alligator_si_3"].loc[{"time": timestep_str}] = self.alligator.si_3
+        # ds["alligator_si_4"].loc[{"time": timestep_str}] = self.alligator.si_4
+        # ds["alligator_si_5"].loc[{"time": timestep_str}] = self.alligator.si_5
+        # ds["bald_eagle"].loc[{"time": timestep_str}] = self.bald_eagle
+
+        # Define the variables and corresponding data attributes
+        hsi_variables = {
+            "alligator_hsi": self.alligator.hsi,
+            "alligator_si_1": self.alligator.si_1,
+            "alligator_si_2": self.alligator.si_2,
+            "alligator_si_3": self.alligator.si_3,
+            "alligator_si_4": self.alligator.si_4,
+            "alligator_si_5": self.alligator.si_5,
+            # "bald_eagle_hsi": self.bald_eagle.hsi,
+            # "crawfish_hsi": self.crawfish.hsi,
+            # "black_bear_hsi": self.black_bear.hsi,  # Example: add more variables as needed
+        }
+
+        for var_name, data in hsi_variables.items():
+            # create var if not already existing, with full timeseries of nan
+            if var_name not in ds:
+                ds[var_name] = (
+                    ["time", "y", "x"],
+                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
+                )
+
+            # assign values for timestep
+            ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()
-        # Write back to file
         ds.to_netcdf(self.netcdf_filepath, mode="a")
-
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     # def _save_state_vars(self):

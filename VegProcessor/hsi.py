@@ -92,7 +92,9 @@ class HSI(vt.VegTransition):
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
+            self.config,
+            default_flow_style=False,
+            sort_keys=False,
         )
 
         self._create_output_dirs()
@@ -102,16 +104,26 @@ class HSI(vt.VegTransition):
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
+            self.config,
+            default_flow_style=False,
+            sort_keys=False,
         )
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
-        # Static Variables
+        # Generate static variables
         self.dem = self._load_dem()
         self.veg_keys = self._load_veg_keys()
         self.edge = self._calculate_edge()
+        self.initial_veg_type = self._load_veg_initial_raster(
+            xarray=True,
+            all_types=True,
+        )
+        self.flotant_marsh = self._calculate_flotant_marsh()
+
+        # Get pct cover for prevously defined static variables
+        self._calculate_pct_cover_static()
 
         # Dynamic Variables
         self.wse = None
@@ -133,7 +145,6 @@ class HSI(vt.VegTransition):
         # HSI Variables
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
-        # self.pct_cell_covered_by_habitat_types = None #jg: not used at this time 01.24.25
         self.mean_annual_salinity = None
 
         self.pct_swamp_bottom_hardwood = None
@@ -141,8 +152,6 @@ class HSI(vt.VegTransition):
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
-        self.pct_flotant_marsh = None  # need to find #does not change
-        # self._calculate_flotant_marsh()
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
@@ -418,19 +427,9 @@ class HSI(vt.VegTransition):
         # )
 
         ds_dev_upland = utils.generate_pct_cover_custom(
-            # dont reload, check dillions dev
-            # TMP NEED TO CHANGE
-            data_array=self._load_veg_initial_raster(xarray=True),
-            veg_types=[
-                2,
-                3,
-                4,
-                5,
-                9,
-                10,
-                11,
-                12,
-            ],  # these are the dev'd (4) and upland (4)
+            data_array=self.initial_veg_type,
+            # these are the dev'd (4) and upland (4)
+            veg_types=[2, 3, 4, 5, 9, 10, 11, 12],
             x=8,
             y=8,
             boundary="pad",
@@ -440,6 +439,13 @@ class HSI(vt.VegTransition):
         self.pct_dev_upland = ds_dev_upland.to_numpy()
 
         # Flotant marsh (static) will go here for baldeagle
+        self.pct_flotant_marsh = utils.coarsen_and_reduce(
+            da=self.flotant_marsh,
+            veg_type=True,
+            x=8,
+            y=8,
+            boundary="pad",
+        ).to_numpy()
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -450,7 +456,7 @@ class HSI(vt.VegTransition):
 
         logging.info("Calculating water edge pixels.")
         open_water = 26
-        # can't use np.nan, need to use an int
+        # can't use np.nan (float), need to use an int
         fill_value = -99
 
         # Check neighbors
@@ -478,23 +484,32 @@ class HSI(vt.VegTransition):
         )
         return da.to_numpy()
 
-    # def _calculate_flotant_marsh(self) -> np.ndarray:
-    #     """
-    #     Calculate percent of 480m cell that is flotant marsh.
-    #     """
-    #     # Load flotant marsh raster
-    #     #initial_flotant = self._load_veg_initial_raster(xarray=True)
+    def _calculate_flotant_marsh(self) -> xr.DataArray:
+        """
+        Calculate percent of 480m cell that is flotant marsh.
+        Fresh Marsh: 20
 
-    #     # reproject to match hsi grid
-    #     #self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
+        Return:
+            array of flotant marsh meeting both criteria, at 60m resolution.
+        """
+        # Load flotant marsh raster
+        # initial_flotant = self._load_veg_initial_raster(xarray=True)
+        da = xr.open_dataarray(
+            "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
+        )
+        da = da["band" == 0]
 
-    #     #define which value is flotant marsh in raster key
-    #     flotant_marsh = 4
+        # reproject to match hsi grid
+        da = self._reproject_match_to_dem(da)
 
-    #     #do some magic formating
+        # define which value is flotant marsh in raster key
+        flotant_marsh = da == 4
+        # load intial veg type
+        fresh_marsh = self.initial_veg_type["veg_type_subset"] == 20
+        # do some magic formating
+        combined_flotant = flotant_marsh & fresh_marsh
 
-    #     # convert to numpy array
-    #     return da.to_numpy()
+        return combined_flotant
 
     def _get_water_depth_annual_mean(self) -> np.ndarray:
         """ """

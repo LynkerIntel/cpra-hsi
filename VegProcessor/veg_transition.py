@@ -617,14 +617,20 @@ class VegTransition:
             out_path=self.timestep_output_dir_figs,
         )
 
-    def _load_veg_initial_raster(self, xarray=False) -> np.ndarray | xr.Dataset:
+    def _load_veg_initial_raster(
+        self, xarray: bool = False, all_types: bool = False
+    ) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
-        according to the transition logic.
+        according to the transition logic. The veg types are subset to the DEM boundary before
+        being returned.
 
         Parameters
         ----------
         xarray : bool
-            True if xarray output format is needed.
+            True if xarray output format is needed. Default is False.
+        all_types : bool
+            True if all veg types are required, False if only transitioning veg types
+            are needed. Default is False.
 
         Returns
         -------
@@ -639,12 +645,13 @@ class VegTransition:
         self._logger.info("Loaded initial vegetation raster")
         veg_type = da.to_numpy()
 
-        self._logger.info("Subsetting initial vegetation raster to allowed types")
         # allowed veg types
-        values_to_mask = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
-        # Create mask where True corresponds to values in the list
-        type_mask = np.isin(veg_type, values_to_mask)
-        veg_type = np.where(type_mask, veg_type, np.nan)
+        if not all_types:
+            self._logger.info("Subsetting initial vegetation raster to allowed types")
+            values_to_mask = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
+            # Create mask where True corresponds to values in the list
+            type_mask = np.isin(veg_type, values_to_mask)
+            veg_type = np.where(type_mask, veg_type, np.nan)
 
         # Mask the vegetation raster to only include valid DEM pixels
         self._logger.info("Masking vegetation raster to valid DEM pixels")

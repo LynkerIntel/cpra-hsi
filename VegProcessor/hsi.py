@@ -308,7 +308,8 @@ class HSI(vt.VegTransition):
         return da["band" == 0]
 
     def _calculate_pct_cover(self):
-        """Get percent coverage for each 480m cell, based on 60m veg type pixels.
+        """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
+        function is called for every HSI timestep.
 
         Derived from VegTransition Output
         """
@@ -408,24 +409,8 @@ class HSI(vt.VegTransition):
 
     def _calculate_pct_cover_static(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
-
-        Derived from VegTransition Output
+        This method is called during initialization, for static variables.
         """
-        # logical index for coarsening (i.e # of pixels)
-        # this generates ds with all veg types.
-        # x, y, dims -> 480 / 60 = 8
-
-        # ds = utils.generate_pct_cover(
-        #    # Load veg base and use as template to create arrays for the main state variables
-        #   data_array=self.veg_type,
-        #   #initial_veg = self._load_veg_initial_raster(xarray=True)
-        #    data_array=self._load_veg_initial_raster(xarray=True),
-        #    veg_keys=self.veg_keys,
-        #    x=8,
-        #    y=8,
-        #    boundary="pad",
-        # )
-
         ds_dev_upland = utils.generate_pct_cover_custom(
             data_array=self.initial_veg_type,
             # these are the dev'd (4) and upland (4)
@@ -438,7 +423,7 @@ class HSI(vt.VegTransition):
         # Developed Land (4 diff types) and Upland (also 4)
         self.pct_dev_upland = ds_dev_upland.to_numpy()
 
-        # Flotant marsh (static) will go here for baldeagle
+        # Flotant marsh for baldeagle
         self.pct_flotant_marsh = utils.coarsen_and_reduce(
             da=self.flotant_marsh,
             veg_type=True,
@@ -512,7 +497,12 @@ class HSI(vt.VegTransition):
         return combined_flotant
 
     def _get_water_depth_annual_mean(self) -> np.ndarray:
-        """ """
+        """
+        Calculates the difference between the avg annual WSE value and the DEM.
+
+        Returns : np.ndarray
+            Depth array
+        """
         mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
         height = mean_wse - self.dem
 
@@ -522,11 +512,12 @@ class HSI(vt.VegTransition):
 
     def _get_water_depth_monthly_mean_jan_aug(self) -> np.ndarray:
         """
-        Extends the parent `VegTransition._get_depth` by
-        transforming the Dataset into an annual mean at 480m
-        resolution.
-        """
+        Calculates the difference between the mean WSE value for a
+        selection of months and the DEM.
 
+        Returns : np.ndarray
+            Depth array
+        """
         # Filter by month first
         jan_aug = [1, 2, 3, 4, 5, 6, 7, 8]
         # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
@@ -542,9 +533,11 @@ class HSI(vt.VegTransition):
 
     def _get_water_depth_monthly_mean_sept_dec(self) -> np.ndarray:
         """
-        Extends the parent `VegTransition._get_depth` by
-        transforming the Dataset into an annual mean at 480m
-        resolution.
+        Calculates the difference between the mean WSE value for a
+        selection of months and the DEM.
+
+        Returns : np.ndarray
+            Depth array
         """
 
         # Filter by month first

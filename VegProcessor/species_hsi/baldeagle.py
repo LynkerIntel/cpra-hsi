@@ -17,16 +17,16 @@ class BaldEagleHSI:
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
 
-    # JG //TODO: should prob split this out? 
+    # JG //TODO: should prob split this out?
     v1_pct_cell_developed_or_upland: np.ndarray = None
-    #v1a_pct_cell_developed_high_intensity: np.ndarray = None
-    #v1b_pct_cell_developed_med_intensity: np.ndarray = None
-    #v1c_pct_cell_developed_low_intensity: np.ndarray = None
-    #v1d_pct_cell_developed_open_space: np.ndarray = None
-    #v1e_pct_cell_upland_mixed_decid_forest: np.ndarray = None
-    #v1f_pct_cell_upland_mixed_evrgrn_forest: np.ndarray = None
-    #v1g_pct_cell_upland_mixed_forest: np.ndarray = None
-    #v1h_pct_cell_upland_scrub_shrub: np.ndarray = None
+    # v1a_pct_cell_developed_high_intensity: np.ndarray = None
+    # v1b_pct_cell_developed_med_intensity: np.ndarray = None
+    # v1c_pct_cell_developed_low_intensity: np.ndarray = None
+    # v1d_pct_cell_developed_open_space: np.ndarray = None
+    # v1e_pct_cell_upland_mixed_decid_forest: np.ndarray = None
+    # v1f_pct_cell_upland_mixed_evrgrn_forest: np.ndarray = None
+    # v1g_pct_cell_upland_mixed_forest: np.ndarray = None
+    # v1h_pct_cell_upland_scrub_shrub: np.ndarray = None
     v2_pct_cell_flotant_marsh: np.ndarray = None
     v3_pct_cell_forested_wetland: np.ndarray = None
     v4_pct_cell_fresh_marsh: np.ndarray = None
@@ -49,25 +49,16 @@ class BaldEagleHSI:
 
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
-    
+
     @classmethod
     def from_hsi(cls, hsi_instance):
         """Create BaldEagleHSI instance from an HSI instance."""
         return cls(
-            # these are all specific to bldegle so rhs will need to be added to hsi class
-            #v1a_pct_cell_developed_high_intensity=hsi_instance.pct_dev_high_intensity / 100,
-            #v1b_pct_cell_developed_med_intensity=hsi_instance.pct_dev_med_intensity / 100,
-            #v1c_pct_cell_developed_low_intensity=hsi_instance.pct_dev_low_intensity / 100,
-            #v1d_pct_cell_developed_open_space=hsi_instance.pct_dev_open_space / 100,
-            #v1e_pct_cell_upland_mixed_decid_forest=hsi_instance.pct_upland_decid_forest / 100,
-            #v1f_pct_cell_upland_mixed_evrgrn_forest=hsi_instance.pct_upland_evrgrn_forest / 100,
-            #v1g_pct_cell_upland_mixed_forest=hsi_instance.pct_upland_mixed_forest / 100,
-            #v1h_pct_cell_upland_scrub_shrub=hsi_instance.pct_upland_scrub_shrub / 100,
-            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland, 
+            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland,
             # Note: 01.28 we are still waiting on clarification on this
-            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh, #NEW
+            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh,  # NEW
             # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
-            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood, #NEW
+            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood,  # NEW
             v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
             v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
             v6_pct_cell_open_water=hsi_instance.pct_open_water,
@@ -127,10 +118,12 @@ class BaldEagleHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is developed land or upland."""
         # Calculate for inital conditions and use for all time periods
-        
-        #if self.v1a_pct_cell_developed_land is None | self.v1b_pct_cell_upland is None:
+
+        # if self.v1a_pct_cell_developed_land is None | self.v1b_pct_cell_upland is None:
         if self.v1_pct_cell_developed_or_upland is None:
-            self._logger.info("Pct developed land or upland data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct developed land or upland data not provided. Setting index to 1."
+            )
             si_1 = np.ones(self._shape)
 
         else:
@@ -140,28 +133,34 @@ class BaldEagleHSI:
 
             # condition 1 (if no dev'd land or upland in cell)
             # note: we could just =0 vs !=0
-            #mask_1 = self.v1a_pct_cell_developed_land | self.v1b_pct_cell_upland <= 0.0
-            
-            #calc prct first
-            self.v1_pct_cell_developed_or_upland = self.v1_pct_cell_developed_or_upland / 100
+            # mask_1 = self.v1a_pct_cell_developed_land | self.v1b_pct_cell_upland <= 0.0
+
+            # calc prct first
+            self.v1_pct_cell_developed_or_upland = (
+                self.v1_pct_cell_developed_or_upland / 100
+            )
             mask_1 = self.v1_pct_cell_developed_or_upland <= 0.0
-            si_1[mask_1] =  0.01
+            si_1[mask_1] = 0.01
 
             # condition 2 (otherwise)
             mask_2 = self.v1_pct_cell_developed_or_upland > 0.0
-            si_1[mask_2] = 0.408 + 0.142 * np.log(self.v1_pct_cell_developed_or_upland[mask_2])
+            si_1[mask_2] = 0.408 + 0.142 * np.log(
+                self.v1_pct_cell_developed_or_upland[mask_2]
+            )
 
             if 999 in si_1:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_1
-    
+
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is flotant marsh."""
         # Calculate for inital conditions and use for all time periods
-        
+
         if self.v2_pct_cell_flotant_marsh is None:
-            self._logger.info("Pct flotant marsh data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct flotant marsh data not provided. Setting index to 1."
+            )
             si_2 = np.ones(self._shape)
 
         else:
@@ -171,23 +170,26 @@ class BaldEagleHSI:
 
             self.v2_pct_cell_flotant_marsh = self.v2_pct_cell_flotant_marsh / 100
             # condition 1 (there is just one function here, so no need for mask)
-            si_2 = (0.282 + 
-                (0.047 * self.v2_pct_cell_flotant_marsh) - 
-                (1.105 * np.exp(-3) * self.v2_pct_cell_flotant_marsh ** 2) +
-                (1.101 * np.exp(-5) * self.v2_pct_cell_flotant_marsh ** 3) -
-                (3.967 * np.exp(-8) * self.v2_pct_cell_flotant_marsh ** 4)
+            si_2 = (
+                0.282
+                + (0.047 * self.v2_pct_cell_flotant_marsh)
+                - (1.105 * np.exp(-3) * self.v2_pct_cell_flotant_marsh**2)
+                + (1.101 * np.exp(-5) * self.v2_pct_cell_flotant_marsh**3)
+                - (3.967 * np.exp(-8) * self.v2_pct_cell_flotant_marsh**4)
             )
 
             if 999 in si_2:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
-    
+
     def calculate_si_3(self) -> np.ndarray:
         """Percent of cell that is covered by forested wetland."""
-        
+
         if self.v3_pct_cell_forested_wetland is None:
-            self._logger.info("Pct forested wetland data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct forested wetland data not provided. Setting index to 1."
+            )
             si_3 = np.ones(self._shape)
 
         else:
@@ -197,21 +199,22 @@ class BaldEagleHSI:
 
             self.v3_pct_cell_forested_wetland = self.v3_pct_cell_forested_wetland / 100
             # condition 1 (there is just one function here, so no need for mask)
-            si_3 = (0.015 + 
-                (0.048 * self.v3_pct_cell_forested_wetland) - 
-                (1.178 * np.exp(-3) * self.v3_pct_cell_forested_wetland ** 2) +
-                (1.366 * np.exp(-5) * self.v3_pct_cell_forested_wetland ** 3) -
-                (5.673 * np.exp(-8) * self.v3_pct_cell_forested_wetland ** 4)
+            si_3 = (
+                0.015
+                + (0.048 * self.v3_pct_cell_forested_wetland)
+                - (1.178 * np.exp(-3) * self.v3_pct_cell_forested_wetland**2)
+                + (1.366 * np.exp(-5) * self.v3_pct_cell_forested_wetland**3)
+                - (5.673 * np.exp(-8) * self.v3_pct_cell_forested_wetland**4)
             )
 
             if 999 in si_3:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_3
-    
+
     def calculate_si_4(self) -> np.ndarray:
         """Percent of cell that is covered by fresh marsh."""
-        
+
         if self.v4_pct_cell_fresh_marsh is None:
             self._logger.info("Pct fresh marsh data not provided. Setting index to 1.")
             si_4 = np.ones(self._shape)
@@ -223,23 +226,26 @@ class BaldEagleHSI:
 
             self.v4_pct_cell_fresh_marsh = self.v4_pct_cell_fresh_marsh / 100
             # condition 1 (there is just one function here, so no need for mask)
-            si_4 = (0.370 + 
-                (0.07 * self.v4_pct_cell_fresh_marsh) - 
-                (2.655 * np.exp(-3) * self.v4_pct_cell_fresh_marsh ** 2) +
-                (3.691 * np.exp(-5) * self.v4_pct_cell_fresh_marsh ** 3) -
-                (1.701 * np.exp(-7) * self.v4_pct_cell_fresh_marsh ** 4)
+            si_4 = (
+                0.370
+                + (0.07 * self.v4_pct_cell_fresh_marsh)
+                - (2.655 * np.exp(-3) * self.v4_pct_cell_fresh_marsh**2)
+                + (3.691 * np.exp(-5) * self.v4_pct_cell_fresh_marsh**3)
+                - (1.701 * np.exp(-7) * self.v4_pct_cell_fresh_marsh**4)
             )
 
             if 999 in si_4:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
-    
+
     def calculate_si_5(self) -> np.ndarray:
         """Percent of cell that is covered by intermediate marsh."""
-        
+
         if self.v5_pct_cell_intermediate_marsh is None:
-            self._logger.info("Pct intermediate marsh data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct intermediate marsh data not provided. Setting index to 1."
+            )
             si_5 = np.ones(self._shape)
 
         else:
@@ -247,19 +253,22 @@ class BaldEagleHSI:
             # Create an array to store the results
             si_5 = np.full(self._shape, 999)
 
-            self.v5_pct_cell_intermediate_marsh = self.v5_pct_cell_intermediate_marsh / 100
+            self.v5_pct_cell_intermediate_marsh = (
+                self.v5_pct_cell_intermediate_marsh / 100
+            )
             # condition 1 (there is just one function here, so no need for mask)
-            si_5 = (0.263 - 
-                (9.406 * np.exp(-3) * self.v5_pct_cell_intermediate_marsh) +
-                (5.432 * np.exp(-4) * self.v5_pct_cell_intermediate_marsh ** 2) -
-                (3.817 * np.exp(-6) * self.v5_pct_cell_intermediate_marsh ** 3)
+            si_5 = (
+                0.263
+                - (9.406 * np.exp(-3) * self.v5_pct_cell_intermediate_marsh)
+                + (5.432 * np.exp(-4) * self.v5_pct_cell_intermediate_marsh**2)
+                - (3.817 * np.exp(-6) * self.v5_pct_cell_intermediate_marsh**3)
             )
 
             if 999 in si_5:
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_5
-    
+
     def calculate_si_6(self) -> np.ndarray:
         """Percent of cell that is open water."""
         if self.v6_pct_cell_open_water is None:
@@ -277,7 +286,9 @@ class BaldEagleHSI:
             si_6[mask_1] = 0.01
 
             # condition 2 (AND)
-            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 0.95)
+            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (
+                self.v6_pct_cell_open_water <= 0.95
+            )
             si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1))
 
             # condition 3
@@ -310,12 +321,14 @@ class BaldEagleHSI:
                 )
 
         # Combine individual suitability indices
-        hsi = ((self.si_1 ** 0.0104) *
-               (self.si_2 ** 0.3715) *
-               (self.si_3 ** 0.4743) *
-               (self.si_4 ** 0.033) *
-               (self.si_5 ** 0.0353) *
-               (self.si_6 ** 0.0669)) ** 0.991
+        hsi = (
+            (self.si_1**0.0104)
+            * (self.si_2**0.3715)
+            * (self.si_3**0.4743)
+            * (self.si_4**0.033)
+            * (self.si_5**0.0353)
+            * (self.si_6**0.0669)
+        ) ** 0.991
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

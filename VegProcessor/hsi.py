@@ -240,26 +240,15 @@ class HSI(vt.VegTransition):
     def _load_veg_type(self) -> xr.DataArray:
         """Load VegTransition output raster data.
 
-        Returns a single WY.
+        Returns : xr.DataArray
+            a single WY, defined by `self.current_timestep`.
         """
         logging.info("Loading vegetation data.")
-        file_path = os.path.join(self.veg_type_path, "**/*VEGTYPE.tif")
-        files = glob.glob(file_path, recursive=True)
+        file_path = os.path.join(self.veg_type_path, "data_output.nc")
         time_str = self.current_timestep.strftime("%Y%m%d")
-        # Filter files by checking only the folder containing the date,
-        # not the model execution timestep in the base dir
-        veg_type_timestep_path = next(
-            (f for f in files if time_str in os.path.basename(os.path.dirname(f))),
-            None,
-        )
-
-        if veg_type_timestep_path is None:
-            raise ValueError(
-                f"File path for VegTransition not found for {self.current_timestep}"
-            )
-
-        da = xr.open_dataarray(veg_type_timestep_path)
-        return da["band" == 0]
+        ds = xr.open_dataset(file_path)
+        da = ds.sel({"time": time_str})["veg_type"]
+        return da
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
@@ -408,3 +397,24 @@ class HSI(vt.VegTransition):
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+
+
+class _TimestepFilter(logging.Filter):
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
+
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True

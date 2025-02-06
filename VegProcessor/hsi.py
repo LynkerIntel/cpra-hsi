@@ -568,7 +568,7 @@ class HSI(vt.VegTransition):
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """BETA Append timestep data to the NetCDF file.
+        """Append timestep data to the NetCDF file.
 
         Parameters
         ----------

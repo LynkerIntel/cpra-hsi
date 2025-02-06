@@ -61,7 +61,7 @@ class TestZoneV(unittest.TestCase):
             veg_type=self.veg_type,
             water_depth=self.water_depth,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -127,7 +127,7 @@ class TestZoneIV(unittest.TestCase):
             veg_type=self.veg_type,
             water_depth=self.water_depth,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -193,7 +193,7 @@ class TestZoneIII(unittest.TestCase):
             veg_type=self.veg_type,
             water_depth=self.water_depth,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -299,7 +299,7 @@ class TestZoneII(unittest.TestCase):
             veg_type=self.veg_type,
             water_depth=self.water_depth,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -392,7 +392,7 @@ class TestFreshShrub(unittest.TestCase):
             veg_type=self.veg_type,
             water_depth=self.water_depth,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -503,7 +503,7 @@ class TestFreshMarsh(unittest.TestCase):
             water_depth=self.water_depth,
             salinity=self.salinity,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -628,7 +628,7 @@ class TestIntermediateMarsh(unittest.TestCase):
             water_depth=self.water_depth,
             salinity=self.salinity,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -753,7 +753,7 @@ class TestBrackishMarsh(unittest.TestCase):
             water_depth=self.water_depth,
             salinity=self.salinity,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -878,7 +878,7 @@ class TestSalineMarsh(unittest.TestCase):
             water_depth=self.water_depth,
             salinity=self.salinity,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,
@@ -1016,7 +1016,7 @@ class TestWater(unittest.TestCase):
             water_depth=self.water_depth,
             salinity=self.salinity,
             timestep_output_dir="~/data/tmp/scratch/",
-        )
+        )["veg_type"]
 
         np.testing.assert_array_equal(
             correct_result,

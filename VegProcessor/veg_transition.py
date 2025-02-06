@@ -153,7 +153,18 @@ class VegTransition:
         # self.pct_no_mast = template
 
         # NetCDF data output
-        self._create_output_file()
+        file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            # "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+            # "parameter": "NA",  # ?
+        }
+
+        self._create_output_file(file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -369,16 +380,16 @@ class VegTransition:
 
         self._calculate_maturity(veg_type_in)
 
-        params = {
-            "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),  # not sure if this is correct,
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
-            "parameter": "NA",  # ?
-        }
+        # params = {
+        #     "model": self.metadata.get("model"),
+        #     "scenario": self.metadata.get("scenario"),
+        #     "group": self.metadata.get("group"),  # not sure if this is correct,
+        #     "wpu": "AB",
+        #     "io_type": "O",
+        #     "time_freq": "ANN",  # for annual output
+        #     "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+        #     "parameter": "NA",  # ?
+        # }
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
@@ -772,9 +783,16 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _create_output_file(self):
+    def _create_output_file(self, params: dict):
         """Create NetCDF file for data output."""
-        self.netcdf_filepath = os.path.join(self.output_dir_path, "data_output.nc")
+
+        file_name = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="DATA",
+        )
+
+        self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
 
         # load DEM, use coords
         da = xr.open_dataarray(self.dem_path)

@@ -388,7 +388,7 @@ class VegTransition:
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
         # self._save_state_vars(params)
-        self._append_to_netcdf(timestep=self.current_timestep)
+        self._append_veg_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None

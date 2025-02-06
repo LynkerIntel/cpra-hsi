@@ -977,7 +977,9 @@ class VegTransition:
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)
-        ds = utils.open_veg_multifile(self.output_dir_path)
+
+        ds = xr.open_dataset(self.netcdf_filepath)
+        # ds = utils.open_veg_multifile(self.output_dir_path)
 
         logging.info("Calculating WPU veg type sums.")
         df = utils.wpu_sums(ds_veg=ds, zones=wpu)

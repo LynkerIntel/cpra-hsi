@@ -526,23 +526,22 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
+    Missing parameters are skipped.
 
     Parameters:
     -----------
     params : dict
-        Dictionary containing the following keys:
+        Dictionary containing optional keys:
         - model : str
         - scenario : str
         - group : str
         - wpu : str
         - io_type : str
-        - time_frame : str
+        - time_freq : str
         - year_range : str
         This dict is created in `VegTransition.step` and includes metadata from the
-        current timestep as well as the model config file. It excludes, "parameter"
-        wich is a required arg, and specified only when this function is called so
-        that the same timestep params dict can be used for different output
-        "parameters".
+        current timestep as well as the model config file. It excludes "parameter",
+        which is specified separately.
 
     parameter : str
         The name of the variable being saved, i.e. "VEGTYPE".
@@ -555,8 +554,8 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
     Path
         A `Path` object representing the full path to the generated file.
     """
-    # Ensure keys are provided in the dictionary
-    required_keys = [
+    # Define the order of keys
+    key_order = [
         "model",
         "scenario",
         "group",
@@ -565,26 +564,86 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
         "time_freq",
         "year_range",
     ]
-    for key in required_keys:
-        if key not in params:
-            raise ValueError(f"Missing required key: '{key}' in params dictionary")
 
-    # Extract and process the values
-    model = params["model"].upper()
-    scenario = params["scenario"]
-    group = params["group"]
-    wpu = params["wpu"]
-    io_type = params["io_type"].upper()
-    time_freq = params["time_freq"].upper()
-    year_range = params["year_range"]
+    # Collect available values from params in order
+    values = [
+        params[key].upper() if isinstance(params.get(key), str) else params.get(key)
+        for key in key_order
+        if key in params and params[key] is not None
+    ]
 
-    # file_extension = params["file_extension"].lower()
+    # Append parameter to the filename
+    values.append(parameter)
 
     # Construct the filename
-    filename = f"AMP_{model}_{scenario}_{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}"
+    filename = "AMP_" + "_".join(map(str, values))
 
     # Combine with base path if provided
-    if base_path:
-        return Path(base_path) / filename
-    else:
-        return Path(filename)
+    return Path(base_path) / filename if base_path else Path(filename)
+
+
+# def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
+#     """
+#     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
+
+#     Parameters:
+#     -----------
+#     params : dict
+#         Dictionary containing the following keys:
+#         - model : str
+#         - scenario : str
+#         - group : str
+#         - wpu : str
+#         - io_type : str
+#         - time_frame : str
+#         - year_range : str
+#         This dict is created in `VegTransition.step` and includes metadata from the
+#         current timestep as well as the model config file. It excludes, "parameter"
+#         wich is a required arg, and specified only when this function is called so
+#         that the same timestep params dict can be used for different output
+#         "parameters".
+
+#     parameter : str
+#         The name of the variable being saved, i.e. "VEGTYPE".
+
+#     base_path : str or Path, optional
+#         Base directory path where the file should be located.
+
+#     Returns:
+#     --------
+#     Path
+#         A `Path` object representing the full path to the generated file.
+#     """
+#     # Ensure keys are provided in the dictionary
+#     required_keys = [
+#         "model",
+#         "scenario",
+#         "group",
+#         "wpu",
+#         "io_type",
+#         "time_freq",
+#         "year_range",
+#     ]
+#     for key in required_keys:
+#         if key not in params:
+#             raise ValueError(f"Missing required key: '{key}' in params dictionary")
+
+#     # Extract and process the values
+#     model = params["model"].upper()
+#     scenario = params["scenario"]
+#     group = params["group"]
+#     wpu = params["wpu"]
+#     io_type = params["io_type"].upper()
+#     time_freq = params["time_freq"].upper()
+#     year_range = params["year_range"]
+
+#     # file_extension = params["file_extension"].lower()
+
+#     # Construct the filename
+#     filename = f"AMP_{model}_{scenario}_{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}"
+
+#     # Combine with base path if provided
+#     if base_path:
+#         return Path(base_path) / filename
+#     else:
+#         return Path(filename)

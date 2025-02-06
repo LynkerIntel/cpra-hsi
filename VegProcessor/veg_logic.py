@@ -101,8 +101,15 @@ def zone_v(
         out_path=timestep_output_dir,
     )
 
+    # create output dict
+    out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+    }
+
     logger.info("Finished transitions with input type: Zone V")
-    return veg_type
+    return out
 
 
 def zone_iv(
@@ -581,7 +588,7 @@ def fresh_marsh(
     # clone input
     veg_type, veg_type_input = veg_type.copy(), veg_type.copy()
     apr_sep = [4, 5, 6, 7, 8, 9]
-    #mar_june = [3, 4, 5, 6]
+    # mar_june = [3, 4, 5, 6]
     gs = [4, 5, 6, 7, 8, 9]
 
     # Subset for veg type Fresh Marsh (value 20)
@@ -645,7 +652,7 @@ def fresh_marsh(
         [
             combined_mask_water,
             combined_mask_intermediate_marsh,
-            combined_mask_fresh_shrub
+            combined_mask_fresh_shrub,
         ]
     )
 

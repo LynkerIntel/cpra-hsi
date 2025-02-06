@@ -433,8 +433,7 @@ def open_veg_multifile(veg_base_path: str) -> xr.Dataset:
 
     Returns:
     --------
-        (xr.Dataset) with expanded *placeholder* time dimension.
-
+        (xr.Dataset) with time dimension.
     """
     dates = os.listdir(veg_base_path)
     dates = [
@@ -465,7 +464,7 @@ def pixel_sums_full_domain(ds: xr.Dataset) -> pd.DataFrame:
     # Use Xarray to count occurrences of each unique value
     # Create a DataArray mask for all unique values at once
     mask = xr.concat(
-        [(ds["band_data"] == value) for value in unique_values], dim="value"
+        [(ds["veg_type"] == value) for value in unique_values], dim="value"
     )
     # Assign unique values as a coordinate to the new dimension
     mask = mask.assign_coords(value=("value", unique_values))
@@ -506,7 +505,7 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     df_list = []
 
     for t in ds_veg.time.values:
-        veg_2d = ds_veg["band_data"].sel(time=t)
+        veg_2d = ds_veg["veg_type"].sel(time=t)
 
         # Convert the dask-backed DataArrays to NumPy
         veg_2d_np = veg_2d.compute()
@@ -519,7 +518,7 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     df_out = pd.concat(df_list)
     df_out.rename(columns={"zone": "wpu"}, inplace=True)
     df_out["wpu"] = df_out["wpu"].astype(int)
-    df_out.drop(columns=0, inplace=True)
+    # df_out.drop(columns=0, inplace=True)
 
     return df_out
 

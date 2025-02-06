@@ -260,62 +260,57 @@ class VegTransition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
 
-        # brainstorm for saving condition arrays
+        # note: arrays are named for their starting veg type
         self.zone_v = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
-        self.veg_type_update_1 = self.zone_v["veg_type"]
-
         self.zone_iv = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
-
-        self.veg_type_update_2 = self.zone_iv["veg_type"]
-
-        self.veg_type_update_3 = veg_logic.zone_iii(
+        self.zone_iii = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
-        self.veg_type_update_4 = veg_logic.zone_ii(
+        self.zone_ii = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
-        self.veg_type_update_5 = veg_logic.fresh_shrub(
+        self.fresh_shrub = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
-        self.veg_type_update_6 = veg_logic.fresh_marsh(
-            self.veg_type,
-            self.water_depth,
-            self.timestep_output_dir_figs,
-            self.salinity,
-        )
-        self.veg_type_update_7 = veg_logic.intermediate_marsh(
+        self.fresh_marsh = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
         )
-        self.veg_type_update_8 = veg_logic.brackish_marsh(
+        self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
         )
-        self.veg_type_update_9 = veg_logic.saline_marsh(
+        self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
         )
-        self.veg_type_update_10 = veg_logic.water(
+        self.saline_marsh = veg_logic.saline_marsh(
+            self.veg_type,
+            self.water_depth,
+            self.timestep_output_dir_figs,
+            self.salinity,
+        )
+        self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
@@ -328,16 +323,16 @@ class VegTransition:
         # outside of the HEC-RAS domain.
         stacked_veg = np.stack(
             (
-                self.veg_type_update_1,
-                self.veg_type_update_2,
-                self.veg_type_update_3,
-                self.veg_type_update_4,
-                self.veg_type_update_5,
-                self.veg_type_update_6,
-                self.veg_type_update_7,
-                self.veg_type_update_8,
-                self.veg_type_update_9,
-                self.veg_type_update_10,
+                self.zone_v["veg_type"],
+                self.zone_iv["veg_type"],
+                self.zone_iii["veg_type"],
+                self.zone_ii["veg_type"],
+                self.fresh_shrub["veg_type"],
+                self.fresh_marsh["veg_type"],
+                self.intermediate_marsh["veg_type"],
+                self.brackish_marsh["veg_type"],
+                self.saline_marsh["veg_type"],
+                self.water["veg_type"],
                 self.static_veg,
             )
         )
@@ -349,7 +344,7 @@ class VegTransition:
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
-        self.veg_type = np.full_like(self.veg_type_update_1, np.nan)
+        self.veg_type = np.full_like(self.zone_v["veg_type"], np.nan)
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
@@ -856,39 +851,83 @@ class VegTransition:
             # qc vars below
             "zone_v_condition_1": self.zone_v["condition_1"],
             "zone_v_condition_2": self.zone_v["condition_2"],
+            #
             "zone_iv_condition_1": self.zone_iv["condition_1"],
             "zone_iv_condition_2": self.zone_iv["condition_2"],
             "zone_iv_condition_3": self.zone_iv["condition_3"],
-            # "alligator_si_3": self.alligator.si_3,
-            # "alligator_si_4": self.alligator.si_4,
-            # "alligator_si_5": self.alligator.si_5,
-            # #
-            # "bald_eagle_hsi": self.baldeagle.hsi,
-            # "bald_eagle_si_1": self.baldeagle.si_1,
-            # "bald_eagle_si_2": self.baldeagle.si_2,
-            # "bald_eagle_si_3": self.baldeagle.si_3,
-            # "bald_eagle_si_4": self.baldeagle.si_4,
-            # "bald_eagle_si_5": self.baldeagle.si_5,
-            # "bald_eagle_si_6": self.baldeagle.si_6,
-            # #
-            # "crawfish_hsi": self.crawfish.hsi,
-            # "crawfish_si_1": self.crawfish.si_1,
-            # "crawfish_si_2": self.crawfish.si_2,
-            # "crawfish_si_3": self.crawfish.si_3,
-            # "crawfish_si_4": self.crawfish.si_4,
-            # "black_bear_hsi": self.black_bear.hsi,
+            #
+            "zone_iii_condition_1": self.zone_iii["condition_1"],
+            "zone_iii_condition_2": self.zone_iii["condition_2"],
+            "zone_iii_condition_3": self.zone_iii["condition_3"],
+            #
+            "zone_ii_condition_1": self.zone_ii["condition_1"],
+            "zone_ii_condition_2": self.zone_ii["condition_2"],
+            "zone_ii_condition_3": self.zone_ii["condition_3"],
+            "zone_ii_condition_4": self.zone_ii["condition_4"],
+            #
+            "fresh_shrub_condition_1": self.fresh_shrub["condition_1"],
+            "fresh_shrub_condition_2": self.fresh_shrub["condition_2"],
+            "fresh_shrub_condition_3": self.fresh_shrub["condition_3"],
+            #
+            "fresh_marsh_condition_1": self.fresh_marsh["condition_1"],
+            "fresh_marsh_condition_2": self.fresh_marsh["condition_2"],
+            "fresh_marsh_condition_3": self.fresh_marsh["condition_3"],
+            "fresh_marsh_condition_4": self.fresh_marsh["condition_4"],
+            #
+            "intermediate_marsh_condition_1": self.intermediate_marsh["condition_1"],
+            "intermediate_marsh_condition_2": self.intermediate_marsh["condition_2"],
+            "intermediate_marsh_condition_3": self.intermediate_marsh["condition_3"],
+            #
+            "brackish_marsh_condition_1": self.brackish_marsh["condition_1"],
+            "brackish_marsh_condition_2": self.brackish_marsh["condition_2"],
+            "brackish_marsh_condition_3": self.brackish_marsh["condition_3"],
+            #
+            "saline_marsh_condition_1": self.saline_marsh["condition_1"],
+            "saline_marsh_condition_2": self.saline_marsh["condition_2"],
+            #
+            "water_condition_1_3_5_7": self.water["condition_1_3_5_7"],
+            "water_condition_2": self.water["condition_2"],
+            "water_condition_4": self.water["condition_4"],
+            "water_condition_6": self.water["condition_6"],
         }
 
         for var_name, data in veg_variables.items():
-            # create var if not already existing, with full timeseries of nan
+            # Check if the variable exists in the dataset, if not, initialize it
             if var_name not in ds:
+                shape = (len(ds.time), len(ds.y), len(ds.x))
+                default_value = np.nan if "condition" not in var_name else False
+                dtype = float if "condition" not in var_name else bool
                 ds[var_name] = (
                     ["time", "y", "x"],
-                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
+                    np.full(shape, default_value, dtype=dtype),
                 )
 
-            # assign values for timestep
-            ds[var_name].loc[{"time": timestep_str}] = data
+            # Convert 'condition' variables to boolean, replacing NaN values with False
+            if "condition" in var_name:
+                data = np.nan_to_num(data, nan=False).astype(bool)
+
+            # Assign the data to the dataset for the specific time step
+            ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+
+            # # create var if not already existing, with full timeseries of nan
+            # if var_name not in ds:
+            #     ds[var_name] = (
+            #         ["time", "y", "x"],
+            #         np.full(
+            #             (len(ds.time), len(ds.y), len(ds.x)), np.nan
+            #         ),  # fills float
+            #     )
+
+            # # Explicitly convert condition arrays to bool and ensure NaNs are replaced
+            # if "condition" in var_name:
+            #     data = np.nan_to_num(data, nan=False).astype(
+            #         bool
+            #     )  # Replace NaNs with False
+
+            #     ds[var_name].loc[{"time": timestep_str}] = data.astype(bool)
+
+            # else:
+            #     ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")

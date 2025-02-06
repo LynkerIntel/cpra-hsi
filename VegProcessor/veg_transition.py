@@ -794,29 +794,6 @@ class VegTransition:
         ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # # Create a new Dataset with dimensions (time, y, x) and veg_type variable
-        # ds = xr.Dataset(
-        #     data_vars={
-        #         "veg_type": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #         "maturity": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #         "zone_v_condition_1": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #         "zone_v_condition_2": (
-        #             ["time", "y", "x"],
-        #             np.full((len(time_range), len(y), len(x)), np.nan),
-        #         ),
-        #     },
-        #     coords={"time": time_range, "y": y, "x": x},
-        # )
-
         # Add metadata
         # ds["veg_type"].attrs["description"] = "Vegetation type classification"
         # ds["veg_type"].attrs["units"] = "Category"
@@ -908,26 +885,6 @@ class VegTransition:
 
             # Assign the data to the dataset for the specific time step
             ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
-
-            # # create var if not already existing, with full timeseries of nan
-            # if var_name not in ds:
-            #     ds[var_name] = (
-            #         ["time", "y", "x"],
-            #         np.full(
-            #             (len(ds.time), len(ds.y), len(ds.x)), np.nan
-            #         ),  # fills float
-            #     )
-
-            # # Explicitly convert condition arrays to bool and ensure NaNs are replaced
-            # if "condition" in var_name:
-            #     data = np.nan_to_num(data, nan=False).astype(
-            #         bool
-            #     )  # Replace NaNs with False
-
-            #     ds[var_name].loc[{"time": timestep_str}] = data.astype(bool)
-
-            # else:
-            #     ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")

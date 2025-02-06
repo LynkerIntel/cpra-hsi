@@ -153,7 +153,7 @@ class VegTransition:
         # self.pct_no_mast = template
 
         # NetCDF data output
-        sim_length = self.water_year_start - self.water_year_end
+        sim_length = self.water_year_end - self.water_year_start
 
         file_params = {
             "model": self.metadata.get("model"),
@@ -162,7 +162,7 @@ class VegTransition:
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{sim_length.zfill(2)}",
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
             # "parameter": "NA",  # ?
         }
 
@@ -786,7 +786,18 @@ class VegTransition:
             print("Config file not found at %s", self.config_path)
 
     def _create_output_file(self, params: dict):
-        """Create NetCDF file for data output."""
+        """VegTransition: Create NetCDF file for data output.
+
+        Parameters
+        ----------
+        params : dict
+            Dict of filename attributes, specified in
+            `utils.generate_filename()`
+
+        Returns
+        -------
+        None
+        """
 
         file_name = utils.generate_filename(
             params=params,

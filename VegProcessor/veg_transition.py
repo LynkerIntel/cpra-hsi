@@ -260,7 +260,7 @@ class VegTransition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
 
-        # # brainstorm for saving condition arrays
+        # brainstorm for saving condition arrays
         self.zone_v = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
@@ -268,17 +268,14 @@ class VegTransition:
         )
         self.veg_type_update_1 = self.zone_v["veg_type"]
 
-        # # veg_type array is iteratively updated, for each zone
-        # self.veg_type_update_1 = veg_logic.zone_v(
-        #     self.veg_type,
-        #     self.water_depth,
-        #     self.timestep_output_dir_figs,
-        # )
-        self.veg_type_update_2 = veg_logic.zone_iv(
+        self.zone_iv = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
+
+        self.veg_type_update_2 = self.zone_iv["veg_type"]
+
         self.veg_type_update_3 = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
@@ -797,26 +794,33 @@ class VegTransition:
             freq="YS-OCT",
         )  # Annual start
 
-        # Create a new Dataset with dimensions (time, y, x) and veg_type variable
-        ds = xr.Dataset(
-            data_vars={
-                "veg_type": (
-                    ["time", "y", "x"],
-                    np.full((len(time_range), len(y), len(x)), np.nan),
-                ),
-                "maturity": (
-                    ["time", "y", "x"],
-                    np.full((len(time_range), len(y), len(x)), np.nan),
-                ),
-                "zone_v_condition_1": (
-                    ["time", "y", "x"],
-                    np.full((len(time_range), len(y), len(x)), np.nan),
-                ),
-            },
-            coords={"time": time_range, "y": y, "x": x},
-        )
-
+        # Create an empty Dataset with only coordinates
+        # vars will be appended at timestep update
+        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
         ds = ds.rio.write_crs("EPSG:6344")
+
+        # # Create a new Dataset with dimensions (time, y, x) and veg_type variable
+        # ds = xr.Dataset(
+        #     data_vars={
+        #         "veg_type": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #         "maturity": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #         "zone_v_condition_1": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #         "zone_v_condition_2": (
+        #             ["time", "y", "x"],
+        #             np.full((len(time_range), len(y), len(x)), np.nan),
+        #         ),
+        #     },
+        #     coords={"time": time_range, "y": y, "x": x},
+        # )
 
         # Add metadata
         # ds["veg_type"].attrs["description"] = "Vegetation type classification"
@@ -830,8 +834,8 @@ class VegTransition:
         da.close()
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
 
-    def _append_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """VegTransition: Append timestep data to the NetCDF file.
+    def _append_veg_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append timestep data to the NetCDF file.
 
         Parameters
         ----------
@@ -846,19 +850,48 @@ class VegTransition:
         # Open existing NetCDF file
         ds = xr.open_dataset(self.netcdf_filepath)
 
-        # Modify in-memory dataset
-        ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
-        ds["maturity"].loc[{"time": timestep_str}] = self.maturity
+        veg_variables = {
+            "veg_type": self.veg_type,
+            "maturity": self.maturity,
+            # qc vars below
+            "zone_v_condition_1": self.zone_v["condition_1"],
+            "zone_v_condition_2": self.zone_v["condition_2"],
+            "zone_iv_condition_1": self.zone_iv["condition_1"],
+            "zone_iv_condition_2": self.zone_iv["condition_2"],
+            "zone_iv_condition_3": self.zone_iv["condition_3"],
+            # "alligator_si_3": self.alligator.si_3,
+            # "alligator_si_4": self.alligator.si_4,
+            # "alligator_si_5": self.alligator.si_5,
+            # #
+            # "bald_eagle_hsi": self.baldeagle.hsi,
+            # "bald_eagle_si_1": self.baldeagle.si_1,
+            # "bald_eagle_si_2": self.baldeagle.si_2,
+            # "bald_eagle_si_3": self.baldeagle.si_3,
+            # "bald_eagle_si_4": self.baldeagle.si_4,
+            # "bald_eagle_si_5": self.baldeagle.si_5,
+            # "bald_eagle_si_6": self.baldeagle.si_6,
+            # #
+            # "crawfish_hsi": self.crawfish.hsi,
+            # "crawfish_si_1": self.crawfish.si_1,
+            # "crawfish_si_2": self.crawfish.si_2,
+            # "crawfish_si_3": self.crawfish.si_3,
+            # "crawfish_si_4": self.crawfish.si_4,
+            # "black_bear_hsi": self.black_bear.hsi,
+        }
 
-        # testing
-        ds["zone_v_condition_1"].loc[{"time": timestep_str}] = self.zone_v[
-            "condition_1"
-        ]
+        for var_name, data in veg_variables.items():
+            # create var if not already existing, with full timeseries of nan
+            if var_name not in ds:
+                ds[var_name] = (
+                    ["time", "y", "x"],
+                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
+                )
+
+            # assign values for timestep
+            ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()
-        # Write back to file
         ds.to_netcdf(self.netcdf_filepath, mode="a")
-
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     # def _save_state_vars(self, params: dict):

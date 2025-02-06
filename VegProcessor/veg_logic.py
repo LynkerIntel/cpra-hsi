@@ -327,8 +327,15 @@ def zone_iii(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+    }
+
     logger.info("Finished transitions with input type: Zone III")
-    return veg_type
+    return data_out
 
 
 def zone_ii(
@@ -441,8 +448,16 @@ def zone_ii(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+        "condition_4": condition_4,
+    }
+
     logger.info("Finished transitions with input type: Zone II")
-    return veg_type
+    return data_out
 
 
 def fresh_shrub(
@@ -551,8 +566,15 @@ def fresh_shrub(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+    }
+
     logger.info("Finished transitions with input type: Fresh Shrub")
-    return veg_type
+    return data_out
 
 
 def fresh_marsh(
@@ -686,8 +708,16 @@ def fresh_marsh(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+        "condition_4": condition_4,
+    }
+
     logger.info("Finished transitions with input type: Fresh Marsh")
-    return veg_type
+    return data_out
 
 
 def intermediate_marsh(
@@ -816,8 +846,15 @@ def intermediate_marsh(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+    }
+
     logger.info("Finished transitions with input type: Intermediate Marsh")
-    return veg_type
+    return data_out
 
 
 def brackish_marsh(
@@ -949,8 +986,15 @@ def brackish_marsh(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+    }
+
     logger.info("Finished transitions with input type: Brackish Marsh")
-    return veg_type
+    return data_out
 
 
 def saline_marsh(
@@ -1059,8 +1103,14 @@ def saline_marsh(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+    }
+
     logger.info("Finished transitions with input type: Saline Marsh")
-    return veg_type
+    return data_out
 
 
 def water(
@@ -1213,5 +1263,13 @@ def water(
         out_path=timestep_output_dir,
     )
 
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1_3_5_7": condition_1_3_5_7,
+        "condition_2": condition_2,
+        "condition_4": condition_4,
+        "condition_6": condition_6,
+    }
+
     logger.info("Finished transitions with input type: Water")
-    return veg_type
+    return data_out

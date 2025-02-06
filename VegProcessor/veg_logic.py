@@ -102,14 +102,14 @@ def zone_v(
     )
 
     # create output dict
-    out = {
+    data_out = {
         "veg_type": veg_type,
         "condition_1": condition_1,
         "condition_2": condition_2,
     }
 
     logger.info("Finished transitions with input type: Zone V")
-    return out
+    return data_out
 
 
 def zone_iv(
@@ -213,9 +213,15 @@ def zone_iv(
         out_path=timestep_output_dir,
     )
 
-    logger.info("Finished transitions with input type: Zone IV")
+    data_out = {
+        "veg_type": veg_type,
+        "condition_1": condition_1,
+        "condition_2": condition_2,
+        "condition_3": condition_3,
+    }
 
-    return veg_type
+    logger.info("Finished transitions with input type: Zone IV")
+    return data_out
 
 
 def zone_iii(

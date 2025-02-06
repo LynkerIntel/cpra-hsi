@@ -153,6 +153,8 @@ class VegTransition:
         # self.pct_no_mast = template
 
         # NetCDF data output
+        sim_length = self.water_year_start - self.water_year_end
+
         file_params = {
             "model": self.metadata.get("model"),
             "scenario": self.metadata.get("scenario"),
@@ -160,7 +162,7 @@ class VegTransition:
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            # "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
+            "year_range": f"01_{sim_length.zfill(2)}",
             # "parameter": "NA",  # ?
         }
 

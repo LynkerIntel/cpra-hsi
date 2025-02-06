@@ -589,21 +589,3 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
         return Path(base_path) / filename
     else:
         return Path(filename)
-
-
-def create_wpu_raster():
-    """Placeholder to keep the code necessary to create the WPU zones raster.
-    will need to be modified.
-    """
-    return NotImplementedError
-    # from xarr_tools import xr_rasterize
-    # import xarray as xr
-
-    # da = xr.open_dataarray(
-    # "/Users/dillonragar/data/cpra/VegOut_20250102_091939/19741001/AMP_VEG_2ftSLRdry_LNK_ARS_O_ANN_01_02_VEGTYPE.tif"
-    # )
-    # da = da["band" == 0]
-    # da.rio.write_crs("EPSG:32615", inplace=True)
-
-    # res = xr_rasterize(gdf=gdf, da=da, attribute_col="WPU_ID", crs="EPSG:32615")
-    # res.astype("int").rio.to_raster("WPU_id_60m.tif", driver="GTiff", compress="LZW")

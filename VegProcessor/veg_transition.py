@@ -260,12 +260,20 @@ class VegTransition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
 
-        # veg_type array is iteratively updated, for each zone
-        self.veg_type_update_1 = veg_logic.zone_v(
+        # # brainstorm for saving condition arrays
+        self.zone_v = veg_logic.zone_v(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
         )
+        self.veg_type_update_1 = self.zone_v["veg_type"]
+
+        # # veg_type array is iteratively updated, for each zone
+        # self.veg_type_update_1 = veg_logic.zone_v(
+        #     self.veg_type,
+        #     self.water_depth,
+        #     self.timestep_output_dir_figs,
+        # )
         self.veg_type_update_2 = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
@@ -800,6 +808,10 @@ class VegTransition:
                     ["time", "y", "x"],
                     np.full((len(time_range), len(y), len(x)), np.nan),
                 ),
+                "zone_v_condition_1": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
             },
             coords={"time": time_range, "y": y, "x": x},
         )
@@ -837,6 +849,11 @@ class VegTransition:
         # Modify in-memory dataset
         ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
         ds["maturity"].loc[{"time": timestep_str}] = self.maturity
+
+        # testing
+        ds["zone_v_condition_1"].loc[{"time": timestep_str}] = self.zone_v[
+            "condition_1"
+        ]
 
         ds.close()
         # Write back to file

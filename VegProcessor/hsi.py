@@ -211,10 +211,10 @@ class HSI(vt.VegTransition):
         except Exception as e:
             print(f"Error during logger setup: {e}")
 
-    def step(self, date):
+    def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
 
-        TODO: for memory efficiency, 60m arrays should be deleted after creation of
+        TODO: for memory efficiency, 60m arrays should be garbage collected after creation of
         480m HSI input arrays.
         """
         self.current_timestep = date  # Set the current timestep
@@ -590,9 +590,21 @@ class HSI(vt.VegTransition):
             "alligator_si_3": self.alligator.si_3,
             "alligator_si_4": self.alligator.si_4,
             "alligator_si_5": self.alligator.si_5,
-            # "bald_eagle_hsi": self.bald_eagle.hsi,
-            # "crawfish_hsi": self.crawfish.hsi,
-            # "black_bear_hsi": self.black_bear.hsi,  # Example: add more variables as needed
+            #
+            "bald_eagle_hsi": self.baldeagle.hsi,
+            "bald_eagle_si_1": self.baldeagle.si_1,
+            "bald_eagle_si_2": self.baldeagle.si_2,
+            "bald_eagle_si_3": self.baldeagle.si_3,
+            "bald_eagle_si_4": self.baldeagle.si_4,
+            "bald_eagle_si_5": self.baldeagle.si_5,
+            "bald_eagle_si_6": self.baldeagle.si_6,
+            #
+            "crawfish_hsi": self.crawfish.hsi,
+            "crawfish_si_1": self.crawfish.si_1,
+            "crawfish_si_2": self.crawfish.si_2,
+            "crawfish_si_3": self.crawfish.si_3,
+            "crawfish_si_4": self.crawfish.si_4,
+            # "black_bear_hsi": self.black_bear.hsi,
         }
 
         for var_name, data in hsi_variables.items():

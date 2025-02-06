@@ -164,7 +164,20 @@ class HSI(vt.VegTransition):
         # self.pct_dev_upland = self._calculate_pct_cover_static()
 
         # NetCDF data output
-        self._create_output_file()
+        sim_length = self.water_year_end - self.water_year_start
+
+        file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+            # "parameter": "NA",  # ?
+        }
+
+        self._create_output_file(file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -531,9 +544,27 @@ class HSI(vt.VegTransition):
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _create_output_file(self):
-        """HSI: Create NetCDF file for data output."""
-        self.netcdf_filepath = os.path.join(self.output_dir_path, "hsi.nc")
+    def _create_output_file(self, params: dict):
+        """HSI: Create NetCDF file for data output.
+
+        Parameters
+        ----------
+        params : dict
+            Dict of filename attributes, specified in
+            `utils.generate_filename()`
+
+        Returns
+        -------
+        None
+        """
+
+        file_name = utils.generate_filename(
+            params=params,
+            base_path=self.timestep_output_dir,
+            parameter="DATA",
+        )
+
+        self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
 
         # load DEM, use coords
         da = xr.open_dataarray(self.dem_path)
@@ -622,9 +653,18 @@ class HSI(vt.VegTransition):
         ds.to_netcdf(self.netcdf_filepath, mode="a")
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
-    def _create_timestep_dir(self, date):
+    def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
         self.timestep_output_dir = os.path.join(
             self.output_dir_path, f"{date.strftime('%Y%m%d')}"

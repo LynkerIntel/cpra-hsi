@@ -647,6 +647,7 @@ class HSI(vt.VegTransition):
                 )
 
             # assign values for timestep
+            # not dtype rules needed here as 480m cell is light
             ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()

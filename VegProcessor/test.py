@@ -822,7 +822,7 @@ class TestSalineMarsh(unittest.TestCase):
                         0.5,
                     ],  # NaN
                     [
-                        np.nan,
+                        0.5,
                         0.5,
                         0.5,
                         0.5,
@@ -869,7 +869,7 @@ class TestSalineMarsh(unittest.TestCase):
         correct_result = np.array(
             [
                 [23, 22, np.nan],
-                [26, np.nan, 26],
+                [26, 22, 26],
             ]
         )
 

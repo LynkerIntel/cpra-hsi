@@ -21,7 +21,7 @@ simulation:
 metadata:
   model: HSI
   scenario: "05" # scenario info for plots and metadata
-  group: GXXX
+  group: G500
   wpu: ARS
 
 output:

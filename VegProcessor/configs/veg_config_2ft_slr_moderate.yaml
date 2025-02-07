@@ -22,8 +22,7 @@ simulation:
 metadata: # partial list (static vars)
   model: VEG
   scenario: "04" # scenario info for plots and metadata
-  group: GXXX # TODO: double check this
-  wpu: ARS
+  group: G500
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

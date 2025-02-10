@@ -83,9 +83,9 @@ class HSI(vt.VegTransition):
 
         # metadata
         self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
+        # self.scenario_type = self.config["metadata"].get(
+        #     "scenario", ""
+        # )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")

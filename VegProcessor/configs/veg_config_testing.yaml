@@ -4,7 +4,7 @@ raster_data:
   #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-dry"
   #wse_directory_path: "/Users/dillonragar/data/cpra/AMP_SimulationResults/base/WY2006_base"
-  wse_domain_raster: "/Users/dillonragar/data/cpra/hecras_max_extent_domain.tif"
+  wse_domain_raster: "/Users/dillonragar/data/cpra/HECRAS_domain_60m.tif"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_grid: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU

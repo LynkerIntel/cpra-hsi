@@ -750,6 +750,7 @@ class VegTransition:
         da = da.squeeze(drop="band")
         # reproject match to DEM
         da = self._reproject_match_to_dem(da)
+        da = da.fillna(0)  # fill 0 so that .astype(bool) does not fail
         da = da.astype(bool)
         return da.to_numpy()
 

@@ -19,7 +19,7 @@ def zone_v(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Zone V
 
     MAR, APRIL, MAY, or JUNE
@@ -39,8 +39,8 @@ def zone_v(
         - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Zone V
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Zone V"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -116,7 +116,7 @@ def zone_iv(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transitions for pixels starting in Zone IV
 
     Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <20%
@@ -132,8 +132,8 @@ def zone_iv(
         - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Zone IV
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Zone IV"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -228,7 +228,7 @@ def zone_iii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Zone III
 
 
@@ -246,8 +246,8 @@ def zone_iii(
         - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Zone III
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Zone III"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -342,7 +342,7 @@ def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Zone II
 
 
@@ -360,8 +360,8 @@ def zone_ii(
         - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Zone II
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Zone II"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -464,7 +464,7 @@ def fresh_shrub(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting as fresh shrub
 
 
@@ -484,8 +484,8 @@ def fresh_shrub(
         - timestep_output_dir (str): location for output raster data or plots.
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Fresh Shrub
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Fresh Shrub"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -582,7 +582,7 @@ def fresh_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting as Fresh Marsh
 
     Condition_1: GS Inundation == 100% TIME
@@ -603,8 +603,8 @@ def fresh_marsh(
         - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Fresh Marsh
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Fresh Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -725,7 +725,7 @@ def intermediate_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Intermediate Marsh
 
     Condition_1: GS Inundation > 80% TIME
@@ -746,8 +746,8 @@ def intermediate_marsh(
         - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Intermediate Marsh
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Intermediate Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -862,7 +862,7 @@ def brackish_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Brackish Marsh
 
     Condition_1: GS Inundation > 80% TIME
@@ -884,8 +884,8 @@ def brackish_marsh(
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Brackish Marsh
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Brackish Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -1002,7 +1002,7 @@ def saline_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Saline Marsh
 
     Condition_1: GS Inundation > 80% TIME
@@ -1020,8 +1020,8 @@ def saline_marsh(
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Saline Marsh
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Saline Marsh"
     logger.info("Starting transitions with input type: %s", veg_name)
@@ -1118,7 +1118,7 @@ def water(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
-) -> np.ndarray:
+) -> dict[str, np.ndarray]:
     """Calculate transition for pixels starting in Water
 
     Condition_1: Average ANNUAL depth < 5cm
@@ -1142,8 +1142,8 @@ def water(
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
 
     Returns:
-        - np.ndarray: Modified vegetation type array with updated transitions
-            for pixels starting as Water
+        - dict: dict of str keys and np.ndarray. First array is "veg_type", following arrays
+            are boolean condition arrays for QAQC.
     """
     veg_name = "Water"
     logger.info("Starting transitions with input type: %s", veg_name)

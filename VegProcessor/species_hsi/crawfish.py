@@ -119,7 +119,7 @@ class CrawfishHSI:
         else:
             self._logger.info("Running SI 1")
             # Create an array to store the results
-            si_1 = np.full(self._shape, 999)
+            si_1 = np.full(self._shape, 999.0)
 
             # condition 1
             mask_1 = self.v1_mean_annual_salinity <= 1.5
@@ -141,7 +141,7 @@ class CrawfishHSI:
             mask_4 = self.v1_mean_annual_salinity > 6.0
             si_1[mask_4] = 0.0
 
-            if 999 in si_1:
+            if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_1
@@ -156,7 +156,7 @@ class CrawfishHSI:
 
         else:
             self._logger.info("Running SI 2")
-            si_2 = np.full(self._shape, 999)
+            si_2 = np.full(self._shape, 999.0)
 
             # condition 1 (OR)
             mask_1 = (self.v2_mean_water_depth_jan_aug <= 0.0) | (
@@ -182,7 +182,7 @@ class CrawfishHSI:
             )
             si_2[mask_4] = 1.5 - (0.00457 * self.v2_mean_water_depth_jan_aug[mask_4])
 
-            if 999 in si_2:
+            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
@@ -229,7 +229,7 @@ class CrawfishHSI:
 
         else:
             self._logger.info("Running SI 4")
-            si_4 = np.full(self._shape, 999)
+            si_4 = np.full(self._shape, 999.0)
 
             # condition 1
             mask_1 = self.v4_mean_water_depth_sept_dec <= 0.0  # RHS is in meters
@@ -245,7 +245,7 @@ class CrawfishHSI:
             mask_3 = self.v4_mean_water_depth_sept_dec > 0.15
             si_4[mask_3] = 0.0
 
-            if 999 in si_4:
+            if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_4

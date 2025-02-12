@@ -23,7 +23,7 @@ simulation:
 metadata: # partial list (static vars)
   model: VEG
   scenario: "S06" # scenario info for plots and metadata
-  group: G500
+  group: G504
   wpu: ARS
   # ion: O # identifier: input, output, internal 
 

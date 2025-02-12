@@ -647,3 +647,93 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
 #         return Path(base_path) / filename
 #     else:
 #         return Path(filename)
+
+
+def qc_tree_establishment_bool(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Display Areas where establishment condition is met
+    """
+    mar_june = [3, 4, 5, 6]
+
+    # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
+    tree_establish_bool = (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+    return tree_establish_bool
+
+
+def qc_tree_establishment_info(
+    water_depth: xr.Dataset,
+) -> list[np.ndarray]:
+    """
+    JV: Depth in m for each month.
+    """
+    # .isel() required due to the month selection resulting in a single timestep 3D
+    # dataarray, while the output format requires a 2D numpy array.
+    march = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
+    )
+    april = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
+    )
+    may = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
+    )
+    june = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
+    )
+    return [march.to_numpy(), april.to_numpy(), may.to_numpy(), june.to_numpy()]
+
+
+def qc_growing_season_inundation(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Percentage of time flooded during the period from April 1 through September 30
+    """
+    gs = [4, 5, 6, 7, 8, 9]
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
+    pct_gs_inundation = (filtered["WSE_MEAN"] > 0).mean(dim="time")
+    return pct_gs_inundation.to_numpy()
+
+
+def qc_growing_season_depth(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Average water-depth during the period from April 1 through September 30
+    """
+    gs = [4, 5, 6, 7, 8, 9]
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
+    gs_depth = filtered["WSE_MEAN"].mean(dim="time")
+    return gs_depth.to_numpy()
+
+
+def qc_annual_inundation_duration(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Percentage of time flooded over the year
+    """
+    pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    return pct.to_numpy()
+
+
+def qc_annual_inundation_depth(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Average water depth over the year.
+    """
+    mean_depth = water_depth["WSE_MEAN"].mean(dim="time")
+    return mean_depth.to_numpy()
+
+
+def qc_annual_mean_salinity(salinity: np.ndarray) -> np.ndarray:
+    """
+    WARN: habitat-based salinity is equivalent to mean annual salinity
+    as habitat only changes with yearly veg type update. Keeping this
+    func as a placeholder for when salinity is a model variable.
+    """
+    return salinity

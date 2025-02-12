@@ -203,7 +203,7 @@ class CrawfishHSI:
         ]:
             if array is None:
                 self._logger.info(
-                    "Pct habitat types data not provided. Setting index to 1", array
+                    "Pct habitat types data not provided. Setting index to 1"
                 )
                 array = np.ones(self._shape)
 

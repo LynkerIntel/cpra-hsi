@@ -22,7 +22,7 @@ simulation:
 metadata: # partial list (static vars)
   model: VEG
   scenario: "S03" # scenario info for plots and metadata
-  group: G504 # TODO: double check this
+  group: G503 # TODO: double check this
   wpu: ARS
 
 output:

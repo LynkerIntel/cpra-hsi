@@ -241,8 +241,12 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_water_depth_annual_mean()
-        # self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
-        # self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
+        self.water_depth_monthly_mean_jan_aug = (
+            self._get_water_depth_monthly_mean_jan_aug()
+        )
+        self.water_depth_monthly_mean_sept_dec = (
+            self._get_water_depth_monthly_mean_sept_dec()
+        )
 
         # load veg type
         self.veg_type = self._load_veg_type()

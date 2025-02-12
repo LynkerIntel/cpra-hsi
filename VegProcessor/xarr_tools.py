@@ -1,5 +1,9 @@
 from osgeo import gdal
 
+import xarray as xr
+from geopandas import GeoDataFrame
+import rioxarray
+
 import collections
 import numpy as np
 import xarray as xr
@@ -179,3 +183,66 @@ def xr_rasterize(
             write_geotiff(export_tiff, ds)
 
     return xarr
+
+
+def create_wpu_raster(
+    veg_raster_path: str,
+    gdf: GeoDataFrame,
+    output_raster_path: str,
+    attribute_col: str = "WPU_ID",
+    crs: str = "EPSG:32615",
+):
+    """
+    Create a WPU (Water Planning Unit) zones raster from a vegetation raster and GeoDataFrame.
+
+    Parameters
+    ----------
+    veg_raster_path : str
+        Path to the input vegetation raster file.
+    gdf : GeoDataFrame
+        A GeoDataFrame containing WPU zone boundaries and attributes.
+    output_raster_path : str
+        Path to save the output WPU raster.
+    attribute_col : str, optional
+        Column in the GeoDataFrame that contains the WPU ID. Default is 'WPU_ID'.
+    crs : str, optional
+        Coordinate Reference System (CRS) for the output raster. Default is 'EPSG:32615'.
+
+    Returns
+    -------
+    None
+        Saves the rasterized WPU zones to the specified output path.
+    """
+    # Load the input vegetation raster
+    veg_da = xr.open_dataarray(veg_raster_path)
+    veg_da = veg_da.isel(band=0)  # Select the first band if multiple bands exist
+    veg_da.rio.write_crs(crs, inplace=True)
+
+    # Rasterize the GeoDataFrame to align with the vegetation raster
+    resampled_wpu = xr_rasterize(
+        gdf=gdf, da=veg_da, attribute_col=attribute_col, crs=crs
+    )
+
+    # Save the result as a GeoTIFF with appropriate compression
+    resampled_wpu.astype("int32").rio.to_raster(
+        output_raster_path, driver="GTiff", compress="LZW"
+    )
+
+    print(f"Saved WPU raster to {output_raster_path}")
+
+
+def create_hecras_domain_mask(ds):
+    """Work around method to create a domain mask for HECRAS modeling.
+
+    Calculates max printprint of valid WSE data to create a mask.
+
+    Arguments:
+    ----------
+        ds : xr.Dataset:
+            input dataset
+
+    Returns:
+    --------
+        file save?
+    """
+    raise NotImplementedError

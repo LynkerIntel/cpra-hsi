@@ -8,6 +8,8 @@ import pandas as pd
 import shutil
 import glob
 import os
+import gc
+import copy
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
@@ -29,16 +31,15 @@ class VegTransition:
     Example usage found in `./run.ipynb`
 
     Notes: two dimensinal np.ndarray are used as default, with xr.Dataset for cases
-    where time series awareness is helpful (i.e. subsetting WSE data). vegetation numpy
-    arrays are dtype float32, because int types have limited interoperability with the
-    np.nan type, which is needed.
+    where time series awareness is needed (i.e. subsetting WSE data). vegetation numpy
+    arrays are dtype float32 by default, because int types have limited interoperability
+    with the np.nan type, which is needed.
 
 
     Attributes: (only state variables listed)
     -----------
         self.veg_type
         self.maturity
-        self.elevation
         self.pct_mast_hard
         self.pct_mast_soft
         self.pct_no_mast
@@ -46,11 +47,10 @@ class VegTransition:
 
     Methods
     -------
-    step(date):
+    step():
         Advances the vegetation model by a single timestep.
     run():
         Run the vegetation model, using settings and data defined in `veg_config.yaml`
-
     """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -74,10 +74,15 @@ class VegTransition:
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
         self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
+        self.wse_domain_path = self.config["raster_data"].get("wse_domain_raster")
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
-        self.wpu_path = self.config["raster_data"].get("wpu_path")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.initial_maturity_path = self.config["raster_data"].get("initial_maturity")
+
+        # polygon data
+        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -118,13 +123,15 @@ class VegTransition:
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
-        # print(self.dem.shape)
-        # Load veg base and use as template to create arrays for the main state variables
-        self.veg_type = self._load_veg_initial_raster()
+        self.hecras_domain = self._load_hecras_domain_raster()
+
+        self.initial_veg_type = self._load_veg_initial_raster()  # static
+        self.veg_type = self._load_veg_initial_raster()  # dynamic
+        self.static_veg = self._load_veg_initial_raster(return_static_veg_only=True)
         self.veg_keys = self._load_veg_keys()
 
+        self.maturity = self._load_initial_maturity_raster()
         self.wse = None
-        self.maturity = np.zeros_like(self.dem)
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
         self.salinity = None
@@ -144,6 +151,9 @@ class VegTransition:
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
+
+        # NetCDF data output
+        self._create_output_file()
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -223,16 +233,16 @@ class VegTransition:
                 scenario run.
         """
         self.current_timestep = timestep  # Set the current timestep
-        wy = timestep.year
+        self.wy = timestep.year
 
         self._logger.info("starting timestep: %s", timestep)
         self._create_timestep_dir(timestep)
 
         # copy existing veg types
-        veg_type_in = self.veg_type
+        veg_type_in = self.veg_type.copy()
 
         # calculate depth
-        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
+        self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -245,6 +255,10 @@ class VegTransition:
             out_path=self.timestep_output_dir_figs,
             veg_palette=True,
         )
+
+        # important: mask areas outside of domain before calculting transition:
+        self._logger.info("Masking veg type array to domain.")
+        self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
 
         # veg_type array is iteratively updated, for each zone
         self.veg_type_update_1 = veg_logic.zone_v(
@@ -304,6 +318,9 @@ class VegTransition:
         )
 
         # stack partial update arrays for each zone
+        # the final arrays is the static pixels that
+        # are within the VegTransition domain, but
+        # outside of the HEC-RAS domain.
         stacked_veg = np.stack(
             (
                 self.veg_type_update_1,
@@ -316,6 +333,7 @@ class VegTransition:
                 self.veg_type_update_8,
                 self.veg_type_update_9,
                 self.veg_type_update_10,
+                self.static_veg,
             )
         )
 
@@ -330,17 +348,6 @@ class VegTransition:
         for layer in stacked_veg:
             self.veg_type = np.where(np.isnan(self.veg_type), layer, self.veg_type)
 
-        # get unchanged/unhandled vegetation types from base raster
-        # no_transition_nan_mask = np.isnan(self.veg_type)
-
-        # Replace NaN values in the new array with corresponding values from the veg base raster
-        # self._logger.info(
-        #     "Filling NaN pixels in result array with vegetation base raster."
-        # )
-        # self.veg_type[no_transition_nan_mask] = self._load_veg_initial_raster()[
-        #     no_transition_nan_mask
-        # ]
-
         plotting.np_arr(
             self.veg_type,
             title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
@@ -353,27 +360,39 @@ class VegTransition:
             plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
             out_path=self.timestep_output_dir_figs,
         )
+        # save water depth plots
+        plotting.water_depth(
+            self.water_depth,
+            out_path=self.timestep_output_dir_figs,
+            wpu_polygons_path=self.wpu_polygons,
+        )
 
         self._calculate_maturity(veg_type_in)
-
-        # serialize state variables: veg_type, maturity, mast %
-        self._logger.info("saving state variables for timestep.")
 
         params = {
             "model": self.metadata.get("model"),
             "scenario": self.metadata.get("scenario"),
             "group": self.metadata.get("group"),  # not sure if this is correct,
-            "wpu": "ARS",
+            "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
             "parameter": "NA",  # ?
         }
 
-        self._save_state_vars(params)
+        # serialize state variables: veg_type, maturity, mast %
+        self._logger.info("saving state variables for timestep.")
+        # self._save_state_vars(params)
+        self._append_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
+
+        # clean up mpl objects
+        plt.cla()
+        plt.clf()
+        plt.close("all")
+        gc.collect()
 
     def run(self):
         """
@@ -528,14 +547,15 @@ class VegTransition:
         Temporary fix to match WSE model output to 60m DEM grid.
         """
         ds_dem = xr.open_dataset(self.dem_path)
-        ds_dem = ds_dem.squeeze(drop="band_data")
-        da_dem = ds_dem.to_dataarray(dim="band")
-
-        # self._logger.warning("reprojecting %s to match DEM. TEMPFIX!", ds.variables)
-        return ds.rio.reproject_match(da_dem)
+        da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+        ds_reprojected = ds.rio.reproject_match(da_dem)
+        ds_dem.close()
+        return ds_reprojected
 
     def _get_depth(self) -> xr.Dataset:
-        """Calculate water depth from DEM and Water Surface Elevation.
+        """Calculate water depth from DEM and Water Surface Elevation and subset
+        difference array to valid HECRAS domain. Results is subset to valid HECRAS
+        pixels before being returned.
 
         NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
         equivalent to 0 water depth. This is necessary so that inundation checks do
@@ -548,8 +568,14 @@ class VegTransition:
         self._logger.info(
             "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
         )
-        # fill zeros. This is necessary to get 0 water depth from DEM and WSE!
+        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+        # WSE pixels, where missing data indicates "no inundation"
         ds = ds.fillna(0)
+
+        # after filling zeros for areas with no inundation, apply domain mask,
+        # so that areas outside of HECRAS domain are not classified as
+        # dry (na is 0-filled above) when in fact that are outside of the domain.
+        ds = ds.where(self.hecras_domain)
 
         # ds["WSE_MEAN"].plot(
         #     col="time",  # Create panels for each time step
@@ -564,6 +590,14 @@ class VegTransition:
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
         +1 year maturity for pixels without vegetation changes.
+
+        TODO: Should static veg pixel increment age? Or should only valid WSE pixels
+        advance?
+
+        Parameters
+        ----------
+        veg_type_in : np.ndarray
+            veg_type array at start of timestep, before transition calculations.
         """
         # Ensure both arrays have the same shape
         if veg_type_in.shape != self.veg_type.shape:
@@ -618,7 +652,10 @@ class VegTransition:
         )
 
     def _load_veg_initial_raster(
-        self, xarray: bool = False, all_types: bool = False
+        self,
+        xarray: bool = False,
+        all_types: bool = False,
+        return_static_veg_only: bool = False,
     ) -> np.ndarray | xr.Dataset:
         """This method will load the base veg raster, from which the model will iterate forwards,
         according to the transition logic. The veg types are subset to the DEM boundary before
@@ -626,6 +663,8 @@ class VegTransition:
 
         Parameters
         ----------
+        mask_hecras_domain : bool
+            True if vegetation type data should be masked to the `hecras_domain` array
         xarray : bool
             True if xarray output format is needed. Default is False.
         all_types : bool
@@ -654,9 +693,17 @@ class VegTransition:
             veg_type = np.where(type_mask, veg_type, np.nan)
 
         # Mask the vegetation raster to only include valid DEM pixels
-        self._logger.info("Masking vegetation raster to valid DEM pixels")
+        self._logger.info("Masking vegetation raster to valid DEM pixels.")
         dem_valid_mask = ~np.isnan(self.dem)
-        veg_type = np.where(dem_valid_mask, veg_type, np.nan)
+
+        if return_static_veg_only:
+            self._logger.info("Returning array of static vegetation pixels only.")
+            # combine DEM valid mask and inverse of HEC-RAS domain valid mask
+            veg_type = np.where(dem_valid_mask & ~self.hecras_domain, veg_type, np.nan)
+
+        else:
+            # only apply valid DEM mask
+            veg_type = np.where(dem_valid_mask, veg_type, np.nan)
 
         if xarray:
             # Reassign np.array to origina DataArray. This ensure
@@ -673,6 +720,25 @@ class VegTransition:
         dbf["Value"] = dbf["Value"].astype(int)
         self._logger.info("Loaded Vegetation Keys")
         return dbf
+
+    def _load_initial_maturity_raster(self) -> np.ndarray:
+        """Load initial conditions for vegetation maturity."""
+        self._logger.info("Loading initial maturity raster.")
+        da = xr.open_dataarray(self.initial_maturity_path)
+        da = da["band" == 0]
+        da = self._reproject_match_to_dem(da)
+        return da.to_numpy()
+
+    def _load_hecras_domain_raster(self) -> np.ndarray:
+        """Load raster file specifying the boundary of the HECRAS domain."""
+        # load raster
+        self._logger.info("Loading WSE domain extent raster.")
+        da = xr.open_dataarray(self.wse_domain_path)
+        da = da.squeeze(drop="band")
+        # reproject match to DEM
+        da = self._reproject_match_to_dem(da)
+        da = da.astype(bool)
+        return da.to_numpy()
 
     def _get_salinity(self) -> np.ndarray:
         """Load salinity raster data (if available.)"""
@@ -697,7 +763,7 @@ class VegTransition:
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-input' subdirectory
+        # Create the 'run-metadata' subdirectory
         self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(self.run_metadata_dir, exist_ok=True)
 
@@ -706,38 +772,113 @@ class VegTransition:
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self, params: dict):
-        """The method will save state variables after each timestep.
+    def _create_output_file(self):
+        """Create NetCDF file for data output."""
+        self.netcdf_filepath = os.path.join(self.output_dir_path, "data_output.nc")
 
-        This method should also include the config, input data, and QC plots.
+        # load DEM, use coords
+        da = xr.open_dataarray(self.dem_path)
+        da = da["band" == 0]
+        x = da.coords["x"].values
+        y = da.coords["y"].values
+
+        # Define the new time coordinate
+        time_range = pd.date_range(
+            start=f"{self.water_year_start}-10-01",
+            end=f"{self.water_year_end}-10-01",
+            freq="YS-OCT",
+        )  # Annual start
+
+        # Create a new Dataset with dimensions (time, y, x) and veg_type variable
+        ds = xr.Dataset(
+            data_vars={
+                "veg_type": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+                "maturity": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), len(y), len(x)), np.nan),
+                ),
+            },
+            coords={"time": time_range, "y": y, "x": x},
+        )
+
+        ds = ds.rio.write_crs("EPSG:6344")
+
+        # Add metadata
+        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
+        # ds["veg_type"].attrs["units"] = "Category"
+        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
+        # ds["maturity"].attrs["units"] = "Years"
+
+        # Save initial file
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        ds.close()
+        da.close()
+        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+
+    def _append_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """VegTransition: Append timestep data to the NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
-        template = self.water_depth.isel({"time": 0})  # subset to first month
+        timestep_str = timestep.strftime("%Y-%m-%d")
+        # Open existing NetCDF file
+        ds = xr.open_dataset(self.netcdf_filepath)
 
-        # veg type out
-        filename_vegtype = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            parameter="VEGTYPE",
-        )
-        new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-        self.timestep_out["veg_type"].rio.to_raster(
-            filename_vegtype.with_suffix(".tif")
-        )
+        # Modify in-memory dataset
+        ds["veg_type"].loc[{"time": timestep_str}] = self.veg_type
+        ds["maturity"].loc[{"time": timestep_str}] = self.maturity
 
-        # pct mast out
-        # TODO: add perent mast handling
+        ds.close()
+        # Write back to file
+        ds.to_netcdf(self.netcdf_filepath, mode="a")
 
-        # maturity out
-        filename_maturity = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            parameter="MATURITY",
-        )
-        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-        self.timestep_out["maturity"].rio.to_raster(
-            filename_maturity.with_suffix(".tif")
-        )
+        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+
+    # def _save_state_vars(self, params: dict):
+    #     """The method will save state variables after each timestep.
+
+    #     This method should also include the config, input data, and QC plots.
+    #     """
+    #     template = self.water_depth.isel({"time": 0})  # subset to first month
+
+    #     # veg type out
+    #     filename_vegtype = utils.generate_filename(
+    #         params=params,
+    #         base_path=self.timestep_output_dir,
+    #         parameter="VEGTYPE",
+    #     )
+    #     new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
+    #     # xr.Dataset `timestep_out` will contain all output arrays, defined here first
+    #     self.timestep_out = utils.create_dataset_from_template(template, new_variables)
+    #     self.timestep_out["veg_type"].rio.to_raster(
+    #         filename_vegtype.with_suffix(".tif")
+    #     )
+
+    #     # pct mast out
+    #     # TODO: add perent mast handling
+
+    #     filename_maturity = utils.generate_filename(
+    #         params=params,
+    #         base_path=self.timestep_output_dir,
+    #         parameter="MATURITY",
+    #     )
+    #     self.timestep_out["maturity"] = (("y", "x"), self.maturity)
+    #     self.timestep_out["maturity"].rio.to_raster(
+    #         filename_maturity.with_suffix(".tif")
+    #     )
+
+    #     self.timestep_out.to_netcdf(self.netcdf_filepath, mode="w")
+    #     del self.timestep_out
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where
@@ -754,6 +895,29 @@ class VegTransition:
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
+    # def save_water_depth(self, params: dict):
+    #     """
+    #     Output water depth (calculated from difference of DEM and WSE).
+    #     This method us unique from `save_state_vars` as water depth is
+    #     (1) a model input (not state var), and (2) an xr.Dataset. This
+    #     method is designed to work for either monthly or daily frequency.
+    #     """
+    #     # create dir for monthly or daily water depth files
+
+    #     # create filenames
+    #     dates = self.water_depth.time.values
+
+    #     filenames = []
+    #     for d in dates:
+    #         fn = utils.generate_filename(
+    #             params=params,
+    #             base_path=self.timestep_output_dir,
+    #             parameter="WATER_DEPTH",
+    #         )
+    #         filenames.append(fn)
+
+    #     # for each timestep, output TIF? or do they want a figure?
+
     def post_process(self):
         """After a run has been executed, this method generates a summary
         timeseries, and saves it as CSV in the "run-metadata" directory.
@@ -763,7 +927,7 @@ class VegTransition:
             exection time.
         """
         logging.info("Running post-processing routine.")
-        wpu = xr.open_dataarray(self.wpu_path)
+        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
         wpu = wpu["band" == 0]
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)

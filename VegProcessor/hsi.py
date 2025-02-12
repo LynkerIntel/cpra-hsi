@@ -163,6 +163,9 @@ class HSI(vt.VegTransition):
         self.pct_dev_upland = None  # does not change
         # self.pct_dev_upland = self._calculate_pct_cover_static()
 
+        # NetCDF data output
+        self._create_output_file()
+
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
         self._logger = logging.getLogger("HSI")
@@ -208,10 +211,10 @@ class HSI(vt.VegTransition):
         except Exception as e:
             print(f"Error during logger setup: {e}")
 
-    def step(self, date):
+    def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
 
-        TODO: for memory efficiency, 60m arrays should be deleted after creation of
+        TODO: for memory efficiency, 60m arrays should be garbage collected after creation of
         480m HSI input arrays.
         """
         self.current_timestep = date  # Set the current timestep
@@ -225,8 +228,8 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_water_depth_annual_mean()
-        #self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
-        #self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
+        # self.water_depth_monthly_mean_jan_aug = self._get_water_depth_monthly_mean_jan_aug()
+        # self.water_depth_monthly_mean_sept_dec = self._get_water_depth_monthly_mean_sept_dec()
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -247,13 +250,7 @@ class HSI(vt.VegTransition):
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
-            # save state variables
-            # self._logger.info("saving state variables for timestep.")
-
-            # TODO: update this function to build a dataset out of the
-            # of the suitability indices for each species, i.e.
-            # self._output_indices()
-            # self._save_state_vars()
+            self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -286,26 +283,15 @@ class HSI(vt.VegTransition):
     def _load_veg_type(self) -> xr.DataArray:
         """Load VegTransition output raster data.
 
-        Returns a single WY.
+        Returns : xr.DataArray
+            a single WY, defined by `self.current_timestep`.
         """
         logging.info("Loading vegetation data.")
-        file_path = os.path.join(self.veg_type_path, "**/*VEGTYPE.tif")
-        files = glob.glob(file_path, recursive=True)
+        file_path = os.path.join(self.veg_type_path, "data_output.nc")
         time_str = self.current_timestep.strftime("%Y%m%d")
-        # Filter files by checking only the folder containing the date,
-        # not the model execution timestep in the base dir
-        veg_type_timestep_path = next(
-            (f for f in files if time_str in os.path.basename(os.path.dirname(f))),
-            None,
-        )
-
-        if veg_type_timestep_path is None:
-            raise ValueError(
-                f"File path for VegTransition not found for {self.current_timestep}"
-            )
-
-        da = xr.open_dataarray(veg_type_timestep_path)
-        return da["band" == 0]
+        ds = xr.open_dataset(file_path)
+        da = ds.sel({"time": time_str})["veg_type"]
+        return da
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -313,9 +299,6 @@ class HSI(vt.VegTransition):
 
         Derived from VegTransition Output
         """
-
-        # self._logger.debug("Starting _calculate_pct_cover")
-
         # logical index for coarsening (i.e # of pixels)
         # this generates ds with all veg types.
         # x, y, dims -> 480 / 60 = 8
@@ -326,16 +309,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # x, y, dims -> 480 / 60 = 8
-        # ds_blh = utils.generate_pct_cover_custom(
-        #    data_array=self.veg_type,
-        #    veg_types=[15, 16, 17],  # these are the BLH zones
-        #    x=8,
-        #    y=8,
-        #    boundary="pad",
-        # )
-
-        # self._logger.debug("Generated ds: %s", ds)
 
         ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -344,15 +317,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",  # not needed for partial pixels, fyi
         )
-
-        # this is static
-        # ds_dev_upland = utils.generate_pct_cover_custom(
-        #    data_array=self.veg_type,
-        #    veg_types=[2, 3, 4, 5, 9, 10, 11, 12 ],  # these are the dev'd (4) and upland (4)
-        #    x=8,
-        #    y=8,
-        #    boundary="pad",
-        # )
 
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
@@ -401,11 +365,7 @@ class HSI(vt.VegTransition):
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
-
         # self._logger.debug("Completed _calculate_pct_cover")
-
-        # Developed Land (4 diff types) and Upland (also 4)
-        # self.pct_dev_upland = ds_dev_upland.to_numpy()
 
     def _calculate_pct_cover_static(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
@@ -477,22 +437,14 @@ class HSI(vt.VegTransition):
         Return:
             array of flotant marsh meeting both criteria, at 60m resolution.
         """
-        # Load flotant marsh raster
-        # initial_flotant = self._load_veg_initial_raster(xarray=True)
-        da = xr.open_dataarray(
-            #"/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
-            self.flotant_marsh_path
-        )
+        da = xr.open_dataarray(self.flotant_marsh_path)
         da = da["band" == 0]
-
         # reproject to match hsi grid
         da = self._reproject_match_to_dem(da)
 
         # define which value is flotant marsh in raster key
         flotant_marsh = da == 4
-        # load intial veg type
         fresh_marsh = self.initial_veg_type["veg_type_subset"] == 20
-        # do some magic formating
         combined_flotant = flotant_marsh & fresh_marsh
 
         return combined_flotant
@@ -525,7 +477,9 @@ class HSI(vt.VegTransition):
         filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
 
         # Calc mean
-        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)["WSE_MEAN"]
+        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)[
+            "WSE_MEAN"
+        ]
         height = mean_monthly_wse_jan_aug - self.dem
 
         # upscale to 480m from 60m
@@ -546,7 +500,9 @@ class HSI(vt.VegTransition):
         filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
 
         # Calc mean
-        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)["WSE_MEAN"]
+        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
+            "WSE_MEAN"
+        ]
         height = mean_monthly_wse_sept_dec - self.dem
 
         # upscale to 480m from 60m
@@ -575,29 +531,96 @@ class HSI(vt.VegTransition):
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _save_state_vars(self):
-        """The method will save state variables after each timestep.
+    def _create_output_file(self):
+        """HSI: Create NetCDF file for data output."""
+        self.netcdf_filepath = os.path.join(self.output_dir_path, "hsi.nc")
 
-        This method should also include the config, input data, and QC plots.
+        # load DEM, use coords
+        da = xr.open_dataarray(self.dem_path)
+        da = da["band" == 0]
+        # coarsen to 480m grid cell
+        da = da.coarsen(x=8, y=8, boundary="pad").mean()
+
+        x = da.coords["x"].values
+        y = da.coords["y"].values
+
+        # Define the new time coordinate
+        time_range = pd.date_range(
+            start=f"{self.water_year_start}-10-01",
+            end=f"{self.water_year_end}-10-01",
+            freq="YS-OCT",
+        )  # Annual start
+
+        # Create an empty Dataset with only coordinates
+        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+        ds = ds.rio.write_crs("EPSG:6344")
+
+        # Add metadata
+        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
+        # ds["veg_type"].attrs["units"] = "Category"
+        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
+        # ds["maturity"].attrs["units"] = "Years"
+
+        # Save initial file
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        ds.close()
+        da.close()
+        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+
+    def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """BETA Append timestep data to the NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
-        template = self.water_depth.isel({"time": 0})  # subset to first month
+        timestep_str = timestep.strftime("%Y-%m-%d")
+        # Open existing NetCDF file
+        ds = xr.open_dataset(self.netcdf_filepath)
 
-        # veg type out
-        new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-        self.timestep_out = utils.create_dataset_from_template(template, new_variables)
+        hsi_variables = {
+            "alligator_hsi": self.alligator.hsi,
+            "alligator_si_1": self.alligator.si_1,
+            "alligator_si_2": self.alligator.si_2,
+            "alligator_si_3": self.alligator.si_3,
+            "alligator_si_4": self.alligator.si_4,
+            "alligator_si_5": self.alligator.si_5,
+            #
+            "bald_eagle_hsi": self.baldeagle.hsi,
+            "bald_eagle_si_1": self.baldeagle.si_1,
+            "bald_eagle_si_2": self.baldeagle.si_2,
+            "bald_eagle_si_3": self.baldeagle.si_3,
+            "bald_eagle_si_4": self.baldeagle.si_4,
+            "bald_eagle_si_5": self.baldeagle.si_5,
+            "bald_eagle_si_6": self.baldeagle.si_6,
+            #
+            "crawfish_hsi": self.crawfish.hsi,
+            "crawfish_si_1": self.crawfish.si_1,
+            "crawfish_si_2": self.crawfish.si_2,
+            "crawfish_si_3": self.crawfish.si_3,
+            "crawfish_si_4": self.crawfish.si_4,
+            # "black_bear_hsi": self.black_bear.hsi,
+        }
 
-        self.timestep_out["veg_type"].rio.to_raster(
-            self.timestep_output_dir + "/vegtype.tif"
-        )
+        for var_name, data in hsi_variables.items():
+            # create var if not already existing, with full timeseries of nan
+            if var_name not in ds:
+                ds[var_name] = (
+                    ["time", "y", "x"],
+                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
+                )
 
-        # pct mast out
-        # TODO: add perent mast handling
+            # assign values for timestep
+            ds[var_name].loc[{"time": timestep_str}] = data
 
-        # maturity out
-        self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-        self.timestep_out["maturity"].rio.to_raster(
-            self.timestep_output_dir + "/maturity.tif"
-        )
+        ds.close()
+        ds.to_netcdf(self.netcdf_filepath, mode="a")
+        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     def _create_timestep_dir(self, date):
         """Create output directory for the current timestamp, where
@@ -612,3 +635,24 @@ class HSI(vt.VegTransition):
         )
         os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+
+
+class _TimestepFilter(logging.Filter):
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
+
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True

@@ -156,7 +156,8 @@ class CrawfishHSI:
 
         else:
             self._logger.info("Running SI 2")
-            si_2 = np.full(self._shape, 999.0)
+            # template array with NaN for HH domain
+            si_2 = np.where(np.isnan(self.v2_mean_water_depth_jan_aug), np.nan, 999.0)
 
             # condition 1 (OR)
             mask_1 = (self.v2_mean_water_depth_jan_aug <= 0.0) | (
@@ -229,7 +230,9 @@ class CrawfishHSI:
 
         else:
             self._logger.info("Running SI 4")
-            si_4 = np.full(self._shape, 999.0)
+            # if input var array has NaN, only valid data should be set
+            # (and then checked) for 999.0
+            si_4 = np.where(np.isnan(self.v4_mean_water_depth_sept_dec), np.nan, 999.0)
 
             # condition 1
             mask_1 = self.v4_mean_water_depth_sept_dec <= 0.0  # RHS is in meters

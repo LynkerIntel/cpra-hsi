@@ -258,9 +258,9 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            # self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            # self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
@@ -300,7 +300,7 @@ class HSI(vt.VegTransition):
             a single WY, defined by `self.current_timestep`.
         """
         logging.info("Loading vegetation data.")
-        file_path = os.path.join(self.veg_type_path, "data_output.nc")
+        file_path = os.path.join(self.veg_type_path)
         time_str = self.current_timestep.strftime("%Y%m%d")
         ds = xr.open_dataset(file_path)
         da = ds.sel({"time": time_str})["veg_type"]

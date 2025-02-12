@@ -269,6 +269,8 @@ class VegTransition:
             veg_palette=True,
         )
 
+        self.create_qc_arrays()
+
         # important: mask areas outside of domain before calculting transition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
@@ -799,7 +801,6 @@ class VegTransition:
         -------
         None
         """
-
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
@@ -855,64 +856,66 @@ class VegTransition:
         ds = xr.open_dataset(self.netcdf_filepath)
 
         veg_variables = {
-            "veg_type": self.veg_type,
-            "maturity": self.maturity,
-            # qc vars below
-            "zone_v_condition_1": self.zone_v["condition_1"],
-            "zone_v_condition_2": self.zone_v["condition_2"],
-            #
-            "zone_iv_condition_1": self.zone_iv["condition_1"],
-            "zone_iv_condition_2": self.zone_iv["condition_2"],
-            "zone_iv_condition_3": self.zone_iv["condition_3"],
-            #
-            "zone_iii_condition_1": self.zone_iii["condition_1"],
-            "zone_iii_condition_2": self.zone_iii["condition_2"],
-            "zone_iii_condition_3": self.zone_iii["condition_3"],
-            #
-            "zone_ii_condition_1": self.zone_ii["condition_1"],
-            "zone_ii_condition_2": self.zone_ii["condition_2"],
-            "zone_ii_condition_3": self.zone_ii["condition_3"],
-            "zone_ii_condition_4": self.zone_ii["condition_4"],
-            #
-            "fresh_shrub_condition_1": self.fresh_shrub["condition_1"],
-            "fresh_shrub_condition_2": self.fresh_shrub["condition_2"],
-            "fresh_shrub_condition_3": self.fresh_shrub["condition_3"],
-            #
-            "fresh_marsh_condition_1": self.fresh_marsh["condition_1"],
-            "fresh_marsh_condition_2": self.fresh_marsh["condition_2"],
-            "fresh_marsh_condition_3": self.fresh_marsh["condition_3"],
-            "fresh_marsh_condition_4": self.fresh_marsh["condition_4"],
-            #
-            "intermediate_marsh_condition_1": self.intermediate_marsh["condition_1"],
-            "intermediate_marsh_condition_2": self.intermediate_marsh["condition_2"],
-            "intermediate_marsh_condition_3": self.intermediate_marsh["condition_3"],
-            #
-            "brackish_marsh_condition_1": self.brackish_marsh["condition_1"],
-            "brackish_marsh_condition_2": self.brackish_marsh["condition_2"],
-            "brackish_marsh_condition_3": self.brackish_marsh["condition_3"],
-            #
-            "saline_marsh_condition_1": self.saline_marsh["condition_1"],
-            "saline_marsh_condition_2": self.saline_marsh["condition_2"],
-            #
-            "water_condition_1_3_5_7": self.water["condition_1_3_5_7"],
-            "water_condition_2": self.water["condition_2"],
-            "water_condition_4": self.water["condition_4"],
-            "water_condition_6": self.water["condition_6"],
+            "veg_type": (
+                self.veg_type,
+                np.float32,
+            ),
+            "maturity": (
+                self.maturity,
+                np.float32,
+            ),
+            # QC variables below
+            "qc_annual_mean_salinity": (
+                self.qc_annual_mean_salinity,
+                np.float32,
+            ),
+            "qc_annual_inundation_depth": (
+                self.qc_annual_inundation_depth,
+                np.float32,
+            ),
+            "qc_growing_season_depth": (
+                self.qc_growing_season_depth,
+                np.float32,
+            ),
+            "qc_growing_season_inundation": (
+                self.qc_growing_season_inundation,
+                np.float32,
+            ),
+            "qc_tree_establishment_bool": (
+                self.qc_tree_establishment_bool,
+                bool,
+            ),
+            # Seasonal water depth QC variables
+            "qc_march_water_depth": (
+                self.qc_tree_establishment_info[0],
+                np.float32,
+            ),
+            "qc_april_water_depth": (
+                self.qc_tree_establishment_info[1],
+                np.float32,
+            ),
+            "qc_may_water_depth": (
+                self.qc_tree_establishment_info[2],
+                np.float32,
+            ),
+            "qc_june_water_depth": (
+                self.qc_tree_establishment_info[3],
+                np.float32,
+            ),
         }
 
-        for var_name, data in veg_variables.items():
+        for var_name, (data, dtype) in veg_variables.items():
             # Check if the variable exists in the dataset, if not, initialize it
             if var_name not in ds:
                 shape = (len(ds.time), len(ds.y), len(ds.x))
-                default_value = np.nan if "condition" not in var_name else False
-                dtype = float if "condition" not in var_name else bool
+                default_value = False if dtype == bool else np.nan
                 ds[var_name] = (
                     ["time", "y", "x"],
                     np.full(shape, default_value, dtype=dtype),
                 )
 
-            # Convert 'condition' variables to boolean, replacing NaN values with False
-            if "condition" in var_name:
+            # Handle 'condition' variables (booleans)
+            if dtype == bool:
                 data = np.nan_to_num(data, nan=False).astype(bool)
 
             # Assign the data to the dataset for the specific time step
@@ -921,6 +924,105 @@ class VegTransition:
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+
+    # def _append_veg_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+    #     """Append timestep data to the NetCDF file.
+
+    #     Parameters
+    #     ----------
+    #     timestep : pd.DatetimeTZDtype
+    #         Pandas datetime object of current timestep.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     timestep_str = timestep.strftime("%Y-%m-%d")
+    #     # Open existing NetCDF file
+    #     ds = xr.open_dataset(self.netcdf_filepath)
+
+    #     veg_variables = {
+    #         "veg_type": self.veg_type,
+    #         "maturity": self.maturity,
+    #         # qc vars below
+    #         "qc_annual_mean_salinity": self.qc_annual_mean_salinity,
+    #         "qc_annual_inundation_depth": self.qc_annual_inundation_depth,
+    #         "qc_growing_season_depth": self.qc_growing_season_depth,
+    #         "qc_growing_season_inundation": self.qc_growing_season_inundation,
+    #         "qc_tree_establishment_bool": self.qc_tree_establishment_bool,
+    #         #
+    #         "qc_march_water_depth": self.qc_tree_establishment_info[0],
+    #         "qc_april_water_depth": self.qc_tree_establishment_info[1],
+    #         "qc_may_water_depth": self.qc_tree_establishment_info[2],
+    #         "qc_june_water_depth": self.qc_tree_establishment_info[3],
+    #         #
+    #         # "zone_v_condition_1": self.zone_v["condition_1"],
+    #         # "zone_v_condition_2": self.zone_v["condition_2"],
+    #         # #
+    #         # "zone_iv_condition_1": self.zone_iv["condition_1"],
+    #         # "zone_iv_condition_2": self.zone_iv["condition_2"],
+    #         # "zone_iv_condition_3": self.zone_iv["condition_3"],
+    #         # #
+    #         # "zone_iii_condition_1": self.zone_iii["condition_1"],
+    #         # "zone_iii_condition_2": self.zone_iii["condition_2"],
+    #         # "zone_iii_condition_3": self.zone_iii["condition_3"],
+    #         # #
+    #         # "zone_ii_condition_1": self.zone_ii["condition_1"],
+    #         # "zone_ii_condition_2": self.zone_ii["condition_2"],
+    #         # "zone_ii_condition_3": self.zone_ii["condition_3"],
+    #         # "zone_ii_condition_4": self.zone_ii["condition_4"],
+    #         # #
+    #         # "fresh_shrub_condition_1": self.fresh_shrub["condition_1"],
+    #         # "fresh_shrub_condition_2": self.fresh_shrub["condition_2"],
+    #         # "fresh_shrub_condition_3": self.fresh_shrub["condition_3"],
+    #         # #
+    #         # "fresh_marsh_condition_1": self.fresh_marsh["condition_1"],
+    #         # "fresh_marsh_condition_2": self.fresh_marsh["condition_2"],
+    #         # "fresh_marsh_condition_3": self.fresh_marsh["condition_3"],
+    #         # "fresh_marsh_condition_4": self.fresh_marsh["condition_4"],
+    #         # #
+    #         # "intermediate_marsh_condition_1": self.intermediate_marsh["condition_1"],
+    #         # "intermediate_marsh_condition_2": self.intermediate_marsh["condition_2"],
+    #         # "intermediate_marsh_condition_3": self.intermediate_marsh["condition_3"],
+    #         # #
+    #         # "brackish_marsh_condition_1": self.brackish_marsh["condition_1"],
+    #         # "brackish_marsh_condition_2": self.brackish_marsh["condition_2"],
+    #         # "brackish_marsh_condition_3": self.brackish_marsh["condition_3"],
+    #         # #
+    #         # "saline_marsh_condition_1": self.saline_marsh["condition_1"],
+    #         # "saline_marsh_condition_2": self.saline_marsh["condition_2"],
+    #         # #
+    #         # "water_condition_1_3_5_7": self.water["condition_1_3_5_7"],
+    #         # "water_condition_2": self.water["condition_2"],
+    #         # "water_condition_4": self.water["condition_4"],
+    #         # "water_condition_6": self.water["condition_6"],
+    #     }
+
+    #     for var_name, data in veg_variables.items():
+    #         # Check if the variable exists in the dataset, if not, initialize it
+    #         if var_name not in ds:
+    #             shape = (len(ds.time), len(ds.y), len(ds.x))
+    #             if "condition" in var_name:
+    #                 default_value = False
+    #                 dtype = bool
+    #             else:
+    #                 default_value = np.nan
+    #                 dtype = np.float32  # Use float32 for non-condition variables
+    #             ds[var_name] = (
+    #                 ["time", "y", "x"],
+    #                 np.full(shape, default_value, dtype=dtype),
+    #             )
+
+    #         # Convert 'condition' variables to boolean, replacing NaN values with False
+    #         if "condition" in var_name:
+    #             data = np.nan_to_num(data, nan=False).astype(bool)
+
+    #         # Assign the data to the dataset for the specific time step
+    #         ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+
+    #     ds.close()
+    #     ds.to_netcdf(self.netcdf_filepath, mode="a")
+    #     self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     # def _save_state_vars(self, params: dict):
     #     """The method will save state variables after each timestep.
@@ -1030,6 +1132,31 @@ class VegTransition:
         df_full_domain.to_csv(outpath)
 
         logging.info("Post-processing complete.")
+
+    def create_qc_arrays(self):
+        """
+        Create QC arrays with variables defined by JV, used to ensure
+        vegetation transition ruleset is working as intended.
+        """
+        self._logger.info("Creating QA/QC arrays.")
+        self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
+            self.salinity,
+        )
+        self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
+            self.water_depth
+        )
+        self.qc_growing_season_depth = utils.qc_growing_season_depth(
+            self.water_depth,
+        )
+        self.qc_growing_season_inundation = utils.qc_growing_season_inundation(
+            self.water_depth
+        )
+        self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(
+            self.water_depth
+        )
+        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(
+            self.water_depth
+        )
 
 
 class _TimestepFilter(logging.Filter):

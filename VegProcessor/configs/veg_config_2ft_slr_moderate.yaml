@@ -22,7 +22,7 @@ simulation:
 metadata: # partial list (static vars)
   model: VEG
   scenario: "S04" # scenario info for plots and metadata
-  group: G500
+  group: G504
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

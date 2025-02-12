@@ -300,9 +300,8 @@ class HSI(vt.VegTransition):
             a single WY, defined by `self.current_timestep`.
         """
         logging.info("Loading vegetation data.")
-        file_path = os.path.join(self.veg_type_path)
         time_str = self.current_timestep.strftime("%Y%m%d")
-        ds = xr.open_dataset(file_path)
+        ds = xr.open_dataset(self.veg_type_path)
         da = ds.sel({"time": time_str})["veg_type"]
         return da
 

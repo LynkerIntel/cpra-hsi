@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad
 
 
 # this is a c/p from veg class, not sure why I need it again here.
@@ -137,6 +137,7 @@ class HSI(vt.VegTransition):
         self.alligator = None
         self.crawfish = None
         self.baldeagle = None
+        self.gizzardshad = None
         # self.blackbear = None
 
         # datasets
@@ -161,7 +162,15 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
-        # self.pct_dev_upland = self._calculate_pct_cover_static()
+
+        # gizzard shad vars
+        self.tds_summer_growing_season = None
+        self.avg_num_frost_free_days_growing_season = None
+        self.mean_weekly_summer_temp = None
+        self.max_do_summer = None
+        self.water_lvl_spawning_season = None
+        self.mean_weekly_temp_reservoir_spawning_season = None
+        self.pct_vegetated_and_2m_depth_spawning_season = None # only var to def for hec-ras 2.12.24        
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -263,9 +272,10 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            #self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            #self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            #self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
@@ -335,6 +345,14 @@ class HSI(vt.VegTransition):
             boundary="pad",  # not needed for partial pixels, fyi
         )
 
+        ds_vegetated = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[v for v in range(2, 26)],  # these are everything but open water
+            x=8,
+            y=8,
+            boundary="pad",  # not needed for partial pixels, fyi
+        )
+
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
         # 3  Developed Medium Intensity
@@ -377,8 +395,8 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
-        # Zone V, IV, III
-        # self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
+        # Vegetated 2-25
+        self.pct_vegetated_and_2m_depth_spawning_season = ds_vegetated.to_numpy()
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -619,26 +637,35 @@ class HSI(vt.VegTransition):
         ds = xr.open_dataset(self.netcdf_filepath)
 
         hsi_variables = {
-            "alligator_hsi": self.alligator.hsi,
-            "alligator_si_1": self.alligator.si_1,
-            "alligator_si_2": self.alligator.si_2,
-            "alligator_si_3": self.alligator.si_3,
-            "alligator_si_4": self.alligator.si_4,
-            "alligator_si_5": self.alligator.si_5,
+            # "alligator_hsi": self.alligator.hsi,
+            # "alligator_si_1": self.alligator.si_1,
+            # "alligator_si_2": self.alligator.si_2,
+            # "alligator_si_3": self.alligator.si_3,
+            # "alligator_si_4": self.alligator.si_4,
+            # "alligator_si_5": self.alligator.si_5,
+            # #
+            # "bald_eagle_hsi": self.baldeagle.hsi,
+            # "bald_eagle_si_1": self.baldeagle.si_1,
+            # "bald_eagle_si_2": self.baldeagle.si_2,
+            # "bald_eagle_si_3": self.baldeagle.si_3,
+            # "bald_eagle_si_4": self.baldeagle.si_4,
+            # "bald_eagle_si_5": self.baldeagle.si_5,
+            # "bald_eagle_si_6": self.baldeagle.si_6,
+            # #
+            # "crawfish_hsi": self.crawfish.hsi,
+            # "crawfish_si_1": self.crawfish.si_1,
+            # "crawfish_si_2": self.crawfish.si_2,
+            # "crawfish_si_3": self.crawfish.si_3,
+            # "crawfish_si_4": self.crawfish.si_4,
             #
-            "bald_eagle_hsi": self.baldeagle.hsi,
-            "bald_eagle_si_1": self.baldeagle.si_1,
-            "bald_eagle_si_2": self.baldeagle.si_2,
-            "bald_eagle_si_3": self.baldeagle.si_3,
-            "bald_eagle_si_4": self.baldeagle.si_4,
-            "bald_eagle_si_5": self.baldeagle.si_5,
-            "bald_eagle_si_6": self.baldeagle.si_6,
-            #
-            "crawfish_hsi": self.crawfish.hsi,
-            "crawfish_si_1": self.crawfish.si_1,
-            "crawfish_si_2": self.crawfish.si_2,
-            "crawfish_si_3": self.crawfish.si_3,
-            "crawfish_si_4": self.crawfish.si_4,
+            "gizzard_shad_hsi": self.gizzardshad.hsi,
+            "gizzard_shad_si_1": self.gizzardshad.si_1,
+            "gizzard_shad_si_2": self.gizzardshad.si_2,
+            "gizzard_shad_si_3": self.gizzardshad.si_3,
+            "gizzard_shad_si_4": self.gizzardshad.si_4,
+            "gizzard_shad_si_5": self.gizzardshad.si_5,
+            "gizzard_shad_si_6": self.gizzardshad.si_6,
+            "gizzard_shad_si_7": self.gizzardshad.si_7,
             # "black_bear_hsi": self.black_bear.hsi,
         }
 

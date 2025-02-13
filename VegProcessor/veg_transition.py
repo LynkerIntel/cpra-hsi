@@ -873,6 +873,10 @@ class VegTransition:
                 self.qc_annual_inundation_depth,
                 np.float32,
             ),
+            "qc_annual_inundation_duration": (
+                self.qc_annual_inundation_duration,
+                np.float32,
+            ),
             "qc_growing_season_depth": (
                 self.qc_growing_season_depth,
                 np.float32,
@@ -1143,6 +1147,9 @@ class VegTransition:
             self.salinity,
         )
         self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
+            self.water_depth
+        )
+        self.qc_annual_inundation_duration = utils.qc_annual_inundation_duration(
             self.water_depth
         )
         self.qc_growing_season_depth = utils.qc_growing_season_depth(

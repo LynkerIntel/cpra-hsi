@@ -285,15 +285,13 @@ class GizzardShadHSI:
         # TODO: may want to move these outside calculate_overall_suitability() into their own methods
         # so they can be accessed individually
         food_component = self.si_1 # will be 1 for hec-ras
-        
-        # ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
-        #water_quality = min(self.si_3, self.si_4) * self.si_2 # will be 1 for hec-ras
+        water_quality = np.minimum(self.si_3, self.si_4) * self.si_2 # will be 1 for hec-ras
         reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
         
-        hsi = reproduction
-        #hsi = min(food_component, water_quality, reproduction) # will be reproduction for hec-ras 
-        # jg note: In Python, if both values passed to the min() function are the same, 
-        # the function will return the first value that was passed to it.
+        #hsi = reproduction
+        hsi = np.minimum(food_component, water_quality, reproduction) # will be reproduction for hec-ras
+
+        # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
 
         # Check the final HSI array for invalid values
         invalid_values_hsi = (hsi < 0) | (hsi > 1)

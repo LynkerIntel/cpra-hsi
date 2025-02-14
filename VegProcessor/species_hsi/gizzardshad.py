@@ -22,7 +22,9 @@ class GizzardShadHSI:
     v4_max_do_summer: np.ndarray = None #ideal
     v5_water_lvl_spawning_season: np.ndarray = None #ideal
     v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None #ideal
-    v7_pct_vegetated_and_2m_depth_spawning_season : np.ndarray = None #use curve A
+    #v7_pct_vegetated_and_2m_depth_spawning_season : np.ndarray = None #use curve A
+    v7a_pct_vegetated: np.ndarray = None
+    v7b_water_depth_spawning_season: np.ndarray = None
 
 
     # Suitability indices (calculated)
@@ -47,7 +49,8 @@ class GizzardShadHSI:
             v4_max_do_summer=hsi_instance.max_do_summer,
             v5_water_lvl_spawning_season=hsi_instance.water_lvl_spawning_season,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
-            v7_pct_vegetated_and_2m_depth_spawning_season=hsi_instance.pct_vegetated_and_2m_depth_spawning_season,
+            v7a_pct_vegetated=hsi_instance.pct_vegetated,
+            v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
         )
 
     def __post_init__(self):
@@ -227,27 +230,35 @@ class GizzardShadHSI:
     def calculate_si_7(self) -> np.ndarray:
         """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON."""
         # Use Curve A - Spawning season April-June in Upper Barataria
-        if self.v7_pct_vegetated_and_2m_depth_spawning_season is None:
-            self._logger.info("Pct vegetated and 2m depth data not provided. Setting index to 1.")
-            si_7 = np.ones(self._shape)
-
+        self._logger.info("Running SI 7")
+        
+        for array in [
+            self.v7a_pct_vegetated,
+            self.v7b_water_depth_spawning_season,
+        ]:
+            if array is None:
+                self._logger.info("pct vegetated or water depth during spawning season data not provided. Setting index to 1.", array)
+                array = np.ones(self._shape)
+                #si_7 = np.ones(self._shape)
+        
+        # Create an array to store the results
+        #si_7 = np.full(self._shape, 999.0)
+        
+        if self.v7b_water_depth_spawning_season.any() > 2:
+            si_7 = np.zeros(self._shape) #is this right?
         else:
-            self._logger.info("Running SI 7")
-            # Create an array to store the results
-            si_7 = np.full(self._shape, 999.0)
-
             #calc pct first, shorthand, yey. 
-            self.v7_pct_vegetated_and_2m_depth_spawning_season /= 100
+            self.v7a_pct_vegetated /= 100
             # condition 1
-            mask_1 = self.v7_pct_vegetated_and_2m_depth_spawning_season <= 10
-            si_7[mask_1] = (0.08 * self.v7_pct_vegetated_and_2m_depth_spawning_season[mask_1])
+            mask_1 = self.v7a_pct_vegetated <= 10
+            si_7[mask_1] = (0.08 * self.v7a_pct_vegetated[mask_1])
 
             # condition 2
-            mask_2 = (self.v7_pct_vegetated_and_2m_depth_spawning_season > 10) & (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 15)
-            si_7[mask_2] = (0.04 * self.v7_pct_vegetated_and_2m_depth_spawning_season[mask_2]) + 0.4
+            mask_2 = (self.v7a_pct_vegetated > 10) & (self.v7a_pct_vegetated <= 15)
+            si_7[mask_2] = (0.04 * self.v7a_pct_vegetated[mask_2]) + 0.4
 
             # condition 3 USE CURVE A
-            mask_3 = self.v7_pct_vegetated_and_2m_depth_spawning_season > 15 #& (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 30)
+            mask_3 = self.v7a_pct_vegetated > 15 #& (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 30)
             si_7[mask_3] = 1
 
             # Check for unhandled condition with tolerance

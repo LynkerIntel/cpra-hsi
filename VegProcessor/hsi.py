@@ -170,7 +170,9 @@ class HSI(vt.VegTransition):
         self.max_do_summer = None
         self.water_lvl_spawning_season = None
         self.mean_weekly_temp_reservoir_spawning_season = None
-        self.pct_vegetated_and_2m_depth_spawning_season = None # only var to def for hec-ras 2.12.24        
+        # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
+        self.pct_vegetated = None  
+        self.water_depth_spawning_season = None
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -257,6 +259,10 @@ class HSI(vt.VegTransition):
         self.water_depth_monthly_mean_sept_dec = (
             self._get_water_depth_monthly_mean_sept_dec()
         )
+
+        self.water_depth_spawning_season = (
+            self._get_water_depth_spawning_season()
+        )   
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -396,7 +402,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
         # Vegetated 2-25
-        self.pct_vegetated_and_2m_depth_spawning_season = ds_vegetated.to_numpy()
+        self.pct_vegetated = ds_vegetated.to_numpy()
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -539,6 +545,29 @@ class HSI(vt.VegTransition):
             "WSE_MEAN"
         ]
         height = mean_monthly_wse_sept_dec - self.dem
+
+        # upscale to 480m from 60m
+        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+    
+    def _get_water_depth_spawning_season(self) -> np.ndarray:
+        """
+        Calculates the difference between the WSE value for a
+        selection of months and the DEM.
+
+        Returns : np.ndarray
+            Depth array
+        """
+        # Filter by spawning season
+        april_june = [4, 5, 6]
+        # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
+        filter_april_june = self.wse.sel(time=self.wse["time"].dt.month.isin(april_june))
+
+        #Calc mean
+        mean_monthly_wse_april_june = filter_april_june.mean(dim="time", skipna=True)[
+           "WSE_MEAN"
+        ]
+        height = mean_monthly_wse_april_june - self.dem
 
         # upscale to 480m from 60m
         da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()

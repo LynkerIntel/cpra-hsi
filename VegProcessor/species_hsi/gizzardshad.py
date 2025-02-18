@@ -321,7 +321,7 @@ class GizzardShadHSI:
         reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
         
         #hsi = reproduction
-        hsi = np.minimum(food_component, water_quality, reproduction) # will be reproduction for hec-ras
+        hsi = np.minimum(food_component, np.minimum(water_quality, reproduction)) # will be reproduction for hec-ras
 
         # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
 

@@ -142,13 +142,13 @@ class GizzardShadHSI:
 
     def calculate_si_3(self) -> np.ndarray:
         """MEAN WEEKLY SUMMER TEMPERATURE (EPILIMNION) (°C)."""
-        # Set to ideal
+        # Set to ideal for HecRas only (25 degrees C)
         if self.v3_mean_weekly_summer_temp is None:
             # self._logger.info(
             #     "mean weekly summer temperature data not provided. Setting index to 1."
             # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
+                "mean weekly summer temperature data assumes ideal conditions (25 degrees) for HEC-RAS. Setting index to 1."
             )
             si_3 = np.ones(self._shape)
 
@@ -168,7 +168,7 @@ class GizzardShadHSI:
             #     "mean weekly summer temperature data not provided. Setting index to 1."
             # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
+                "mean weekly summer temperature data assumes ideal conditions (6 ppm) for HEC-RAS. Setting index to 1."
             )
             si_4 = np.ones(self._shape)
 
@@ -211,7 +211,7 @@ class GizzardShadHSI:
             #     "mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
             # )
             self._logger.info(
-                "mean weekly temperature in reservoirs during spawning season data assumes ideal conditions. Setting index to 1."
+                "mean weekly temperature in reservoirs during spawning season data assumes ideal conditions (20 degrees) for HEC-RAS. Setting index to 1."
             )
             si_6 = np.ones(self._shape)
 

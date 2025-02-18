@@ -164,12 +164,12 @@ class HSI(vt.VegTransition):
         self.pct_dev_upland = None  # does not change
 
         # gizzard shad vars
-        self.tds_summer_growing_season = None
-        self.avg_num_frost_free_days_growing_season = None
-        self.mean_weekly_summer_temp = None
-        self.max_do_summer = None
-        self.water_lvl_spawning_season = None
-        self.mean_weekly_temp_reservoir_spawning_season = None
+        self.tds_summer_growing_season = None #ideal always
+        self.avg_num_frost_free_days_growing_season = None #ideal always
+        self.mean_weekly_summer_temp = None #ideal (HEC-RAS?) SI3 = 25 degrees C
+        self.max_do_summer = None #ideal HEC-RAS SI4 = 6ppm
+        self.water_lvl_spawning_season = None #ideal always
+        self.mean_weekly_temp_reservoir_spawning_season = None #ideal HEC-RAS SI6 = 20 degrees
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None  
         self.water_depth_spawning_season = None

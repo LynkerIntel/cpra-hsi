@@ -353,7 +353,7 @@ class HSI(vt.VegTransition):
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[v for v in range(2, 26)],  # these are everything but open water
+            veg_types=[v for v in range(2, 25)],  # these are everything but open water
             x=8,
             y=8,
             boundary="pad",  # not needed for partial pixels, fyi

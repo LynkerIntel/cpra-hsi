@@ -278,9 +278,9 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            #self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            #self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            #self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
@@ -666,26 +666,26 @@ class HSI(vt.VegTransition):
         ds = xr.open_dataset(self.netcdf_filepath)
 
         hsi_variables = {
-            # "alligator_hsi": self.alligator.hsi,
-            # "alligator_si_1": self.alligator.si_1,
-            # "alligator_si_2": self.alligator.si_2,
-            # "alligator_si_3": self.alligator.si_3,
-            # "alligator_si_4": self.alligator.si_4,
-            # "alligator_si_5": self.alligator.si_5,
-            # #
-            # "bald_eagle_hsi": self.baldeagle.hsi,
-            # "bald_eagle_si_1": self.baldeagle.si_1,
-            # "bald_eagle_si_2": self.baldeagle.si_2,
-            # "bald_eagle_si_3": self.baldeagle.si_3,
-            # "bald_eagle_si_4": self.baldeagle.si_4,
-            # "bald_eagle_si_5": self.baldeagle.si_5,
-            # "bald_eagle_si_6": self.baldeagle.si_6,
-            # #
-            # "crawfish_hsi": self.crawfish.hsi,
-            # "crawfish_si_1": self.crawfish.si_1,
-            # "crawfish_si_2": self.crawfish.si_2,
-            # "crawfish_si_3": self.crawfish.si_3,
-            # "crawfish_si_4": self.crawfish.si_4,
+            "alligator_hsi": self.alligator.hsi,
+            "alligator_si_1": self.alligator.si_1,
+            "alligator_si_2": self.alligator.si_2,
+            "alligator_si_3": self.alligator.si_3,
+            "alligator_si_4": self.alligator.si_4,
+            "alligator_si_5": self.alligator.si_5,
+            #
+            "bald_eagle_hsi": self.baldeagle.hsi,
+            "bald_eagle_si_1": self.baldeagle.si_1,
+            "bald_eagle_si_2": self.baldeagle.si_2,
+            "bald_eagle_si_3": self.baldeagle.si_3,
+            "bald_eagle_si_4": self.baldeagle.si_4,
+            "bald_eagle_si_5": self.baldeagle.si_5,
+            "bald_eagle_si_6": self.baldeagle.si_6,
+            #
+            "crawfish_hsi": self.crawfish.hsi,
+            "crawfish_si_1": self.crawfish.si_1,
+            "crawfish_si_2": self.crawfish.si_2,
+            "crawfish_si_3": self.crawfish.si_3,
+            "crawfish_si_4": self.crawfish.si_4,
             #
             "gizzard_shad_hsi": self.gizzardshad.hsi,
             "gizzard_shad_si_1": self.gizzardshad.si_1,

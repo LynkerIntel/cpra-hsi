@@ -157,9 +157,9 @@ class AlligatorHSI:
             )
             si_2[mask_3] = (-2.25 * self.v2_water_depth_annual_mean[mask_3]) + 0.6625
 
-            # # Check for unhandled condition with tolerance
-            # if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
-            #     raise ValueError("Unhandled condition in SI logic!")
+            # Check for unhandled condition with tolerance
+            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+                raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 

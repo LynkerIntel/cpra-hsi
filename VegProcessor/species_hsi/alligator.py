@@ -57,9 +57,6 @@ class AlligatorHSI:
         # Set up the logger
         self._setup_logger()
 
-        # Determine the shape of the arrays
-        self._shape = self._determine_shape()
-
         # Calculate individual suitability indices
         self.si_1 = self.calculate_si_1()
         self.si_2 = self.calculate_si_2()
@@ -89,12 +86,6 @@ class AlligatorHSI:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
-
-    def _determine_shape(self) -> tuple:
-        """Determine the shape of the environmental variable arrays."""
-        # Iterate over instance attributes and return the shape of the first non None numpy array
-        return self.v1_pct_open_water.shape
-        # raise ValueError("At least one S.I. raster input must be provided.")
 
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is open water."""

@@ -88,6 +88,7 @@ class VegTransition:
         self.water_year_start = self.config["simulation"].get("water_year_start")
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
+        self.daily = self.config["simulation"].get("daily")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -255,9 +256,19 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
 
         # calculate depth
-        self.wse = self.load_wse_wy(
-            self.wy, variable_name="WSE_MEAN", date_format="%Y_%m_%d_%H_%M_%S"
-        )
+        if self.daily:
+            self.wse = self.load_wse_wy(
+                self.wy,
+                variable_name="WSE_MEAN",
+                date_format="%Y_%m_%d_%H_%M_%S",
+            )
+        else:
+            self.wse = self.load_wse_wy(
+                self.wy,
+                variable_name="WSE_MEAN",
+                date_format="%Y_%m_%d",
+            )
+
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth = self._get_depth()
 
@@ -509,8 +520,15 @@ class VegTransition:
 
         for f in tif_files:
             print(f)
-            # date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(".tif", "")
-            date_str = "_".join(os.path.basename(f).split("_")[1:7]).replace(".tif", "")
+            try:  # temp fix for daily testing
+                date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
+                    ".tif", ""
+                )
+            except:
+                date_str = "_".join(os.path.basename(f).split("_")[1:7]).replace(
+                    ".tif", ""
+                )
+
             file_date = pd.to_datetime(date_str, format=date_format)
 
             if start_date <= file_date <= end_date:
@@ -521,8 +539,8 @@ class VegTransition:
             self._logger.error("No WSE files found for water year: %s", water_year)
             return None
 
-        # if len(selected_files) < 12:
-        #     raise ValueError(f"month(s) missing from Water Year: {water_year}")
+        if len(selected_files) < 12:
+            raise ValueError(f"month(s) missing from Water Year: {water_year}")
 
         # Preprocess function to remove the 'band' dimension
         def preprocess(da):

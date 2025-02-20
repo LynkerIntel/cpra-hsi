@@ -18,6 +18,7 @@ simulation:
   water_year_start: 2006 # int
   water_year_end: 2006 # int
   wse_sequence_input: False # bool if WSE input is synthetic
+  daily: True
 
 metadata: # partial list (static vars)
   model: VEG

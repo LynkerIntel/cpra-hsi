@@ -1,31 +1,29 @@
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
-  wse_domain_raster: "/Users/dillonragar/data/cpra/HECRAS_domain_60m.tif"
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-wet"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
-  wpu_grid: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
+  wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  initial_maturity:  "/Users/dillonragar/data/tmp/cpra/AMP_Tree_Age/AMP_Tree_Age.tif"
-
-polygon_data:
-  wpu_polygons: /Users/dillonragar/data/tmp/cpra/Atchafalaya MP WPUs/Atchafalaya MP WPUs.shp
-
+  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S05_G504_AB_O_ANN_01_25/AMP_VEG_S05_G504_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
+  flotant_marsh_raster: "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
+  #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
 simulation:
   water_year_start: 1999 # int
   water_year_end: 2023 # int
   wse_sequence_input: True # bool if WSE input is synthetic
+  run_hsi: True
 
-metadata: # partial list (static vars)
-  model: VEG
-  scenario: "S06" # scenario info for plots and metadata
+metadata:
+  model: HSI
+  scenario: "05" # scenario info for plots and metadata
   group: # GXXX
   wpu: ARS
-  # ion: O # identifier: input, output, internal 
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"
+
 
 
 # Scenario codes (20250116)

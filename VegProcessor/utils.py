@@ -433,8 +433,7 @@ def open_veg_multifile(veg_base_path: str) -> xr.Dataset:
 
     Returns:
     --------
-        (xr.Dataset) with expanded *placeholder* time dimension.
-
+        (xr.Dataset) with time dimension.
     """
     dates = os.listdir(veg_base_path)
     dates = [
@@ -465,7 +464,7 @@ def pixel_sums_full_domain(ds: xr.Dataset) -> pd.DataFrame:
     # Use Xarray to count occurrences of each unique value
     # Create a DataArray mask for all unique values at once
     mask = xr.concat(
-        [(ds["band_data"] == value) for value in unique_values], dim="value"
+        [(ds["veg_type"] == value) for value in unique_values], dim="value"
     )
     # Assign unique values as a coordinate to the new dimension
     mask = mask.assign_coords(value=("value", unique_values))
@@ -506,7 +505,7 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     df_list = []
 
     for t in ds_veg.time.values:
-        veg_2d = ds_veg["band_data"].sel(time=t)
+        veg_2d = ds_veg["veg_type"].sel(time=t)
 
         # Convert the dask-backed DataArrays to NumPy
         veg_2d_np = veg_2d.compute()
@@ -519,7 +518,7 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     df_out = pd.concat(df_list)
     df_out.rename(columns={"zone": "wpu"}, inplace=True)
     df_out["wpu"] = df_out["wpu"].astype(int)
-    df_out.drop(columns=0, inplace=True)
+    # df_out.drop(columns=0, inplace=True)
 
     return df_out
 
@@ -527,23 +526,22 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
+    Missing parameters are skipped.
 
     Parameters:
     -----------
     params : dict
-        Dictionary containing the following keys:
+        Dictionary containing optional keys:
         - model : str
         - scenario : str
         - group : str
         - wpu : str
         - io_type : str
-        - time_frame : str
+        - time_freq : str
         - year_range : str
         This dict is created in `VegTransition.step` and includes metadata from the
-        current timestep as well as the model config file. It excludes, "parameter"
-        wich is a required arg, and specified only when this function is called so
-        that the same timestep params dict can be used for different output
-        "parameters".
+        current timestep as well as the model config file. It excludes "parameter",
+        which is specified separately.
 
     parameter : str
         The name of the variable being saved, i.e. "VEGTYPE".
@@ -556,8 +554,8 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
     Path
         A `Path` object representing the full path to the generated file.
     """
-    # Ensure keys are provided in the dictionary
-    required_keys = [
+    # Define the order of keys
+    key_order = [
         "model",
         "scenario",
         "group",
@@ -566,26 +564,176 @@ def generate_filename(params: dict, parameter: str, base_path: str = None) -> Pa
         "time_freq",
         "year_range",
     ]
-    for key in required_keys:
-        if key not in params:
-            raise ValueError(f"Missing required key: '{key}' in params dictionary")
 
-    # Extract and process the values
-    model = params["model"].upper()
-    scenario = params["scenario"]
-    group = params["group"]
-    wpu = params["wpu"]
-    io_type = params["io_type"].upper()
-    time_freq = params["time_freq"].upper()
-    year_range = params["year_range"]
+    # Collect available values from params in order
+    values = [
+        params[key].upper() if isinstance(params.get(key), str) else params.get(key)
+        for key in key_order
+        if key in params and params[key] is not None
+    ]
 
-    # file_extension = params["file_extension"].lower()
+    # Append parameter to the filename
+    values.append(parameter)
 
     # Construct the filename
-    filename = f"AMP_{model}_{scenario}_{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}"
+    filename = "AMP_" + "_".join(map(str, values))
 
     # Combine with base path if provided
-    if base_path:
-        return Path(base_path) / filename
-    else:
-        return Path(filename)
+    return Path(base_path) / filename if base_path else Path(filename)
+
+
+# def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
+#     """
+#     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
+
+#     Parameters:
+#     -----------
+#     params : dict
+#         Dictionary containing the following keys:
+#         - model : str
+#         - scenario : str
+#         - group : str
+#         - wpu : str
+#         - io_type : str
+#         - time_frame : str
+#         - year_range : str
+#         This dict is created in `VegTransition.step` and includes metadata from the
+#         current timestep as well as the model config file. It excludes, "parameter"
+#         wich is a required arg, and specified only when this function is called so
+#         that the same timestep params dict can be used for different output
+#         "parameters".
+
+#     parameter : str
+#         The name of the variable being saved, i.e. "VEGTYPE".
+
+#     base_path : str or Path, optional
+#         Base directory path where the file should be located.
+
+#     Returns:
+#     --------
+#     Path
+#         A `Path` object representing the full path to the generated file.
+#     """
+#     # Ensure keys are provided in the dictionary
+#     required_keys = [
+#         "model",
+#         "scenario",
+#         "group",
+#         "wpu",
+#         "io_type",
+#         "time_freq",
+#         "year_range",
+#     ]
+#     for key in required_keys:
+#         if key not in params:
+#             raise ValueError(f"Missing required key: '{key}' in params dictionary")
+
+#     # Extract and process the values
+#     model = params["model"].upper()
+#     scenario = params["scenario"]
+#     group = params["group"]
+#     wpu = params["wpu"]
+#     io_type = params["io_type"].upper()
+#     time_freq = params["time_freq"].upper()
+#     year_range = params["year_range"]
+
+#     # file_extension = params["file_extension"].lower()
+
+#     # Construct the filename
+#     filename = f"AMP_{model}_{scenario}_{group}_{wpu}_{io_type}_{time_freq}_{year_range}_{parameter}"
+
+#     # Combine with base path if provided
+#     if base_path:
+#         return Path(base_path) / filename
+#     else:
+#         return Path(filename)
+
+
+def qc_tree_establishment_bool(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Display Areas where establishment condition is met
+    """
+    mar_june = [3, 4, 5, 6]
+
+    # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
+    tree_establish_bool = (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+    return tree_establish_bool
+
+
+def qc_tree_establishment_info(
+    water_depth: xr.Dataset,
+) -> list[np.ndarray]:
+    """
+    JV: Depth in m for each month.
+    """
+    # .isel() required due to the month selection resulting in a single timestep 3D
+    # dataarray, while the output format requires a 2D numpy array.
+    march = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
+    )
+    april = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
+    )
+    may = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
+    )
+    june = (
+        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
+    )
+    return [march.to_numpy(), april.to_numpy(), may.to_numpy(), june.to_numpy()]
+
+
+def qc_growing_season_inundation(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Percentage of time flooded during the period from April 1 through September 30
+    """
+    gs = [4, 5, 6, 7, 8, 9]
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
+    pct_gs_inundation = (filtered["WSE_MEAN"] > 0).mean(dim="time")
+    return pct_gs_inundation.to_numpy()
+
+
+def qc_growing_season_depth(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Average water-depth during the period from April 1 through September 30
+    """
+    gs = [4, 5, 6, 7, 8, 9]
+    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
+    gs_depth = filtered["WSE_MEAN"].mean(dim="time")
+    return gs_depth.to_numpy()
+
+
+def qc_annual_inundation_duration(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Percentage of time flooded over the year
+    """
+    pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    return pct.to_numpy()
+
+
+def qc_annual_inundation_depth(
+    water_depth: xr.Dataset,
+) -> np.ndarray:
+    """
+    JV: Average water depth over the year.
+    """
+    mean_depth = water_depth["WSE_MEAN"].mean(dim="time")
+    return mean_depth.to_numpy()
+
+
+def qc_annual_mean_salinity(salinity: np.ndarray) -> np.ndarray:
+    """
+    WARN: habitat-based salinity is equivalent to mean annual salinity
+    as habitat only changes with yearly veg type update. Keeping this
+    func as a placeholder for when salinity is a model variable.
+    """
+    return salinity

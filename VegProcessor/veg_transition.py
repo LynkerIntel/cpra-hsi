@@ -261,6 +261,7 @@ class VegTransition:
                 self.wy,
                 variable_name="WSE_MEAN",
                 date_format="%Y_%m_%d_%H_%M_%S",
+                daily=self.daily,
             )
         else:
             self.wse = self.load_wse_wy(
@@ -466,6 +467,7 @@ class VegTransition:
         water_year: int,
         variable_name: str = "WSE_MEAN",
         date_format: str = "%Y_%m_%d",
+        daily: bool = False,
     ) -> xr.Dataset:
         """
         Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
@@ -520,12 +522,12 @@ class VegTransition:
 
         for f in tif_files:
             print(f)
-            try:  # temp fix for daily testing
-                date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
+            if daily:  # temp fix for daily testing
+                date_str = "_".join(os.path.basename(f).split("_")[1:7]).replace(
                     ".tif", ""
                 )
-            except:
-                date_str = "_".join(os.path.basename(f).split("_")[1:7]).replace(
+            else:
+                date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
                     ".tif", ""
                 )
 

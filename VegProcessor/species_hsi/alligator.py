@@ -167,16 +167,6 @@ class AlligatorHSI:
         """Proportion of cell covered by habitat types."""
         self._logger.info("Running SI 3")
 
-        for array in [
-            self.v3a_pct_swamp_bottom_hardwood,
-            self.v3b_pct_fresh_marsh,
-            self.v3c_pct_intermediate_marsh,
-            self.v3d_pct_brackish_marsh,
-        ]:
-            if array is None:
-                self._logger.info("%s not provided. Setting index to 1.", array)
-                array = np.ones(self._shape)
-
         si_3 = (
             (0.551 * self.v3a_pct_swamp_bottom_hardwood)
             + (0.713 * self.v3b_pct_fresh_marsh)

@@ -1,5 +1,3 @@
-# config.yaml
-
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
   wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-dry"

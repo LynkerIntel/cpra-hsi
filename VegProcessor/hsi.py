@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass
 
 
 # this is a c/p from veg class, not sure why I need it again here.
@@ -41,7 +41,6 @@ class _TimestepFilter(logging.Filter):
             else "N/A"
         )
         return True
-
 
 class HSI(vt.VegTransition):
     """HSI model framework."""
@@ -138,6 +137,7 @@ class HSI(vt.VegTransition):
         self.crawfish = None
         self.baldeagle = None
         self.gizzardshad = None
+        self.bass = None
         # self.blackbear = None
 
         # datasets
@@ -283,6 +283,7 @@ class HSI(vt.VegTransition):
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
+            # self.bass = bass.BassHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 

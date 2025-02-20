@@ -22,8 +22,8 @@ simulation:
 
 metadata: # partial list (static vars)
   model: VEG
-  scenario: "S02" # scenario info for plots and metadata
-  group: "TEST"
+  scenario: # scenario info for plots and metadata
+  group: "G505"
   wpu: AB
 
 

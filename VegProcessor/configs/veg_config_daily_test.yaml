@@ -2,7 +2,7 @@
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str"
   #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/AMP_SimulationResults" # must be unzipped
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/2ft-slr-sequence-dry"
+  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/WY2006_daily_base3"
   #wse_directory_path: "/Users/dillonragar/data/cpra/AMP_SimulationResults/base/WY2006_base"
   wse_domain_raster: "/Users/dillonragar/data/cpra/HECRAS_domain_60m.tif"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str

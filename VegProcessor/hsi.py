@@ -21,6 +21,28 @@ import veg_transition as vt
 from species_hsi import alligator, crawfish, baldeagle
 
 
+# this is a c/p from veg class, not sure why I need it again here.
+class _TimestepFilter(logging.Filter):
+    """A roundabout way to inject the current timestep into log records.
+    Should & could be simplified.
+
+    N/A if log messages occurs while self.current_timestep is not set.
+    """
+
+    def __init__(self, veg_transition_instance):
+        super().__init__()
+        self.veg_transition_instance = veg_transition_instance
+
+    def filter(self, record):
+        # Dynamically add the current timestep to log records
+        record.timestep = (
+            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
+            if self.veg_transition_instance.current_timestep
+            else "N/A"
+        )
+        return True
+
+
 class HSI(vt.VegTransition):
     """HSI model framework."""
 
@@ -117,6 +139,7 @@ class HSI(vt.VegTransition):
         self.alligator = None
         self.crawfish = None
         self.baldeagle = None
+        self.gizzardshad = None
         # self.blackbear = None
 
         # datasets
@@ -141,7 +164,19 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
-        # self.pct_dev_upland = self._calculate_pct_cover_static()
+
+        # gizzard shad vars
+        self.tds_summer_growing_season = None  # ideal always
+        self.avg_num_frost_free_days_growing_season = None  # ideal always
+        self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+        self.water_lvl_spawning_season = None  # ideal always
+        self.mean_weekly_temp_reservoir_spawning_season = (
+            None  # ideal HEC-RAS SI6 = 20 degrees
+        )
+        # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
+        self.pct_vegetated = None
+        self.water_depth_spawning_season = None
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -233,6 +268,8 @@ class HSI(vt.VegTransition):
             months=[9, 10, 11, 12]
         )
 
+        self.water_depth_spawning_season = self._get_water_depth_spawning_season()
+
         # load veg type
         self.veg_type = self._load_veg_type()
 
@@ -246,6 +283,7 @@ class HSI(vt.VegTransition):
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
@@ -314,6 +352,14 @@ class HSI(vt.VegTransition):
             boundary="pad",  # not needed for partial pixels, fyi
         )
 
+        ds_vegetated = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[v for v in range(2, 25)],  # these are everything but open water
+            x=8,
+            y=8,
+            boundary="pad",  # not needed for partial pixels, fyi
+        )
+
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
         # 3  Developed Medium Intensity
@@ -355,6 +401,9 @@ class HSI(vt.VegTransition):
         self.pct_brackish_marsh = ds["pct_cover_22"].to_numpy()
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
+
+        # Vegetated 2-25
+        self.pct_vegetated = ds_vegetated.to_numpy()
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -469,55 +518,86 @@ class HSI(vt.VegTransition):
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 
-    # def _get_water_depth_annual_mean(self) -> np.ndarray:
-    #     """
-    #     Calculates the difference between the avg annual WSE value and the DEM.
+        # def _get_water_depth_annual_mean(self) -> np.ndarray:
+        #     """
+        #     Calculates the difference between the avg annual WSE value and the DEM.
 
-    #     Returns : np.ndarray
-    #         Depth array
-    #     """
-    #     mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
-    #     height = mean_wse - self.dem
+        #     Returns : np.ndarray
+        #         Depth array
+        #     """
+        #     mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
+        #     height = mean_wse - self.dem
 
-    #     # upscale to 480m from 60m
-    #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-    #     return da_coarse.to_numpy()
+        #     # upscale to 480m from 60m
+        #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        #     return da_coarse.to_numpy()
 
-    # def _get_water_depth_monthly_mean_jan_aug(self) -> np.ndarray:
-    #     """
-    #     Calculates the difference between the mean WSE value for a
-    #     selection of months and the DEM.
+        # def _get_water_depth_monthly_mean_jan_aug(self) -> np.ndarray:
+        #     """
+        #     Calculates the difference between the mean WSE value for a
+        #     selection of months and the DEM.
 
-    #     Returns : np.ndarray
-    #         Depth array
-    #     """
-    #     # Filter by month first
-    #     jan_aug = [1, 2, 3, 4, 5, 6, 7, 8]
-    #     # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
-    #     filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
+        #     Returns : np.ndarray
+        #         Depth array
+        #     """
+        #     # Filter by month first
+        #     jan_aug = [1, 2, 3, 4, 5, 6, 7, 8]
+        #     # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
+        #     filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
 
-    #     # Calc mean
-    #     mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)[
-    #         "WSE_MEAN"
-    #     ]
-    #     height = mean_monthly_wse_jan_aug - self.dem
+        #     # Calc mean
+        #     mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)[
+        #         "WSE_MEAN"
+        #     ]
+        #     height = mean_monthly_wse_jan_aug - self.dem
 
-    #     # upscale to 480m from 60m
-    #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-    #     return da_coarse.to_numpy()
+        #     # upscale to 480m from 60m
+        #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        #     return da_coarse.to_numpy()
 
-    # def _get_water_depth_monthly_mean_sept_dec(self) -> np.ndarray:
-    #     """
-    #     Calculates the difference between the mean WSE value for a
-    #     selection of months and the DEM.
+        # def _get_water_depth_monthly_mean_sept_dec(self) -> np.ndarray:
+        #     """
+        #     Calculates the difference between the mean WSE value for a
+        #     selection of months and the DEM.
 
-    #     Returns : np.ndarray
-    #         Depth array
-    #     """
+        #     Returns : np.ndarray
+        #         Depth array
+        #     """
 
-    #     # Filter by month first
-    #     sept_dec = [9, 10, 11, 12]
-    #     filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
+        #     # Filter by month first
+        #     sept_dec = [9, 10, 11, 12]
+        #     filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
+
+        # Calc mean
+        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
+            "WSE_MEAN"
+        ]
+        height = mean_monthly_wse_sept_dec - self.dem
+
+        # upscale to 480m from 60m
+        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _get_water_depth_spawning_season(self) -> np.ndarray:
+        """
+        Calculates the difference between the WSE value for a
+        selection of months and the DEM.
+
+        Returns : np.ndarray
+            Depth array
+        """
+        # Filter by spawning season
+        april_june = [4, 5, 6]
+        # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
+        filter_april_june = self.wse.sel(
+            time=self.wse["time"].dt.month.isin(april_june)
+        )
+
+        # Calc mean
+        mean_monthly_wse_april_june = filter_april_june.mean(dim="time", skipna=True)[
+            "WSE_MEAN"
+        ]
+        height = mean_monthly_wse_april_june - self.dem
 
     #     # Calc mean
     #     mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
@@ -642,6 +722,15 @@ class HSI(vt.VegTransition):
             "crawfish_si_2": self.crawfish.si_2,
             "crawfish_si_3": self.crawfish.si_3,
             "crawfish_si_4": self.crawfish.si_4,
+            #
+            "gizzard_shad_hsi": self.gizzardshad.hsi,
+            "gizzard_shad_si_1": self.gizzardshad.si_1,
+            "gizzard_shad_si_2": self.gizzardshad.si_2,
+            "gizzard_shad_si_3": self.gizzardshad.si_3,
+            "gizzard_shad_si_4": self.gizzardshad.si_4,
+            "gizzard_shad_si_5": self.gizzardshad.si_5,
+            "gizzard_shad_si_6": self.gizzardshad.si_6,
+            "gizzard_shad_si_7": self.gizzardshad.si_7,
             # "black_bear_hsi": self.black_bear.hsi,
         }
 

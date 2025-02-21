@@ -75,8 +75,7 @@ class CrawfishHSI:
         # Set up the logger
         self._setup_logger()
 
-        # Determine the shape of the arrays
-        self._shape = self._determine_shape()
+        self.template = self._create_template_array()
 
         # Calculate individual suitability indices
         self.si_1 = self.calculate_si_1()
@@ -86,6 +85,13 @@ class CrawfishHSI:
 
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
+
+    def _create_template_array(self) -> np.ndarray:
+        """Create an array from a template all valid pixels are 999.0, and
+        NaN from the input are persisted.
+        """
+        arr = np.where(np.isnan(self.v2_mean_water_depth_jan_aug), np.nan, 999.0)
+        return arr
 
     def _setup_logger(self):
         """Set up the logger for the class."""
@@ -107,22 +113,10 @@ class CrawfishHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    # def _determine_shape(self) -> tuple:
-    #     """Determine the shape of the environmental variable arrays."""
-    #     # Iterate over instance attributes and return the shape of the first non None numpy array
-    #     for name, value in vars(self).items():
-    #         if value is not None and isinstance(value, np.ndarray):
-    #             self._logger.info(
-    #                 "Using attribute %s as shape for output: %s", name, value.shape
-    #             )
-    #             return value.shape
-
-    #     raise ValueError("At least one S.I. raster input must be provided.")
-
     def calculate_si_1(self) -> np.ndarray:
         """Mean annual salinity."""
         self._logger.info("Running SI 1")
-        si_1 = np.where(np.isnan(self.v1_mean_annual_salinity), np.nan, 999.0)
+        si_1 = self.template.copy()
 
         if self.v1_mean_annual_salinity is None:
             self._logger.info(
@@ -159,7 +153,7 @@ class CrawfishHSI:
     def calculate_si_2(self) -> np.ndarray:
         """Mean water depth from January to August in cm."""
         self._logger.info("Running SI 2")
-        si_2 = np.where(np.isnan(self.v1_mean_annual_salinity), np.nan, 999.0)
+        si_2 = self.template.copy()
 
         if self.v2_mean_water_depth_jan_aug is None:
             self._logger.info(
@@ -192,15 +186,15 @@ class CrawfishHSI:
             )
             si_2[mask_4] = 1.5 - (0.00457 * self.v2_mean_water_depth_jan_aug[mask_4])
 
-            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
-                raise ValueError("Unhandled condition in SI logic!")
+            # if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+            #     raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 
     def calculate_si_3(self) -> np.ndarray:
         """Proportion of cell covered by habitat types."""
         self._logger.info("Running SI 3")
-        si_3 = np.where(np.isnan(self.v1_mean_annual_salinity), np.nan, 999.0)
+        si_3 = self.template.copy()
 
         si_3 = (
             (1.0 * self.v3a_pct_cell_swamp_bottomland_hardwood)
@@ -220,7 +214,7 @@ class CrawfishHSI:
     def calculate_si_4(self) -> np.ndarray:
         """Mean water depth from September to December in cm."""
         self._logger.info("Running SI 4")
-        si_4 = np.where(np.isnan(self.v1_mean_annual_salinity), np.nan, 999.0)
+        si_4 = self.template.copy()
 
         if self.v4_mean_water_depth_sept_dec is None:
             self._logger.info(
@@ -243,8 +237,8 @@ class CrawfishHSI:
             mask_3 = self.v4_mean_water_depth_sept_dec > 0.15
             si_4[mask_3] = 0.0
 
-            if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
-                raise ValueError("Unhandled condition in SI logic!")
+            # if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
+            #     raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
 

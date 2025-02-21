@@ -66,6 +66,8 @@ class AlligatorHSI:
         # Set up the logger
         self._setup_logger()
 
+        self.template = self._create_template_array()
+
         # Calculate individual suitability indices
         self.si_1 = self.calculate_si_1()
         self.si_2 = self.calculate_si_2()
@@ -75,6 +77,13 @@ class AlligatorHSI:
 
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
+
+    def _create_template_array(self) -> np.ndarray:
+        """Create an array from a template all valid pixels are 999.0, and
+        NaN from the input are persisted.
+        """
+        arr = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        return arr
 
     def _setup_logger(self):
         """Set up the logger for the class."""
@@ -99,7 +108,7 @@ class AlligatorHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is open water."""
         self._logger.info("Running SI 1")
-        si_1 = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        si_1 = self.template.copy()
 
         if self.v1_pct_open_water is None:
             self._logger.info("Pct open water data not provided. Setting index to 1.")
@@ -127,8 +136,7 @@ class AlligatorHSI:
     def calculate_si_2(self) -> np.ndarray:
         """Mean annual water depth relative to the marsh surface."""
         self._logger.info("Running SI 2")
-        # initialize with NaN from depth array, else 999
-        si_2 = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        si_2 = self.template.copy()
 
         if self.v2_water_depth_annual_mean is None:
             self._logger.info(
@@ -166,7 +174,7 @@ class AlligatorHSI:
         """Proportion of cell covered by habitat types."""
         self._logger.info("Running SI 3")
         # initialize with NaN from depth array, else 999
-        si_3 = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        si_3 = self.template.copy()
 
         si_3 = (
             (0.551 * self.v3a_pct_swamp_bottom_hardwood)
@@ -183,8 +191,7 @@ class AlligatorHSI:
     def calculate_si_4(self) -> np.ndarray:
         """Edge."""
         self._logger.info("Running SI 4")
-        # initialize with NaN from depth array, else 999
-        si_4 = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        si_4 = self.template.copy()
 
         if self.v4_edge is None:
             self._logger.info("Edge data not provided. Setting index to 1.")
@@ -207,8 +214,7 @@ class AlligatorHSI:
     def calculate_si_5(self) -> np.ndarray:
         """Mean annual salinity."""
         self._logger.info("Running SI 5")
-        # initialize with NaN from depth array, else 999
-        si_5 = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        si_5 = self.template.copy()
 
         if self.v5_mean_annual_salinity is None:
             self._logger.info(

@@ -591,15 +591,6 @@ class VegTransition:
         # so that areas outside of HECRAS domain are not classified as
         # dry (na is 0-filled above) when in fact that are outside of the domain.
         ds = ds.where(self.hecras_domain)
-
-        # ds["WSE_MEAN"].plot(
-        #     col="time",  # Create panels for each time step
-        #     col_wrap=4,  # Number of panels per row
-        #     cmap="viridis",
-        #     aspect=1.5,  # Adjust aspect ratio
-        #     size=3,  # Adjust figure size
-        # )
-        # plt.show()
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):

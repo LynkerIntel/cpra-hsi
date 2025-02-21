@@ -41,13 +41,20 @@ class AlligatorHSI:
     @classmethod
     def from_hsi(cls, hsi_instance):
         """Create AlligatorHSI instance from an HSI instance."""
+
+        def safe_divide(value, divisor=100):
+            """Helper function to safely divide a value if it's not None."""
+            return value / divisor if value is not None else None
+
         return cls(
-            v1_pct_open_water=hsi_instance.pct_open_water / 100,
+            v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),
             v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
-            v3a_pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood / 100,
-            v3b_pct_fresh_marsh=hsi_instance.pct_fresh_marsh / 100,
-            v3c_pct_intermediate_marsh=hsi_instance.pct_intermediate_marsh / 100,
-            v3d_pct_brackish_marsh=hsi_instance.pct_brackish_marsh / 100,
+            v3a_pct_swamp_bottom_hardwood=safe_divide(
+                hsi_instance.pct_swamp_bottom_hardwood
+            ),
+            v3b_pct_fresh_marsh=safe_divide(hsi_instance.pct_fresh_marsh),
+            v3c_pct_intermediate_marsh=safe_divide(hsi_instance.pct_intermediate_marsh),
+            v3d_pct_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
             v4_edge=hsi_instance.edge,
             v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
         )

@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 import logging
-from math import exp
 import numpy as np
 
 
@@ -18,11 +17,8 @@ class BassHSI:
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
     v1a_mean_annual_salinity: np.ndarray = None
-
-    # TODO implement these two variables/inputs in hsi.py
     v1b_mean_annual_temperature: np.ndarray = None
     v2_pct_emergent_vegetation: np.ndarray = None
-
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -36,10 +32,8 @@ class BassHSI:
         """Create BassHSI instance from an HSI instance."""
         return cls(
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-
-            # TODO implement these two variables/inputs in hsi.py
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
-            v2_pct_emergent_vegetation=hsi_instance.pct_emergent_vegetation
+            v2_pct_emergent_vegetation=hsi_instance.pct_marsh
         )
 
     def __post_init__(self):
@@ -80,8 +74,12 @@ class BassHSI:
     def _determine_shape(self) -> tuple:
         """Determine the shape of the environmental variable arrays."""
         # Iterate over instance attributes and return the shape of the first non None numpy array
-        return self.v1a_mean_annual_salinity.shape
-        # raise ValueError("At least one S.I. raster input must be provided.")
+        for name, value in vars(self).items():
+            if value is not None and isinstance(value, np.ndarray):
+                self._logger.info(
+                    "Using attribute %s as shape for output: %s", name, value.shape
+                )
+                return value.shape
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
@@ -89,20 +87,29 @@ class BassHSI:
             self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
             si_1 = np.ones(self._shape)
 
-        elif self.v1b_mean_annual_temperature is None:
-            self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
-            si_1 = np.ones(self._shape)
-
         else:
+            # Setup ideal values for mean annual temperature (HEC-RAS)
+            if self.v1b_mean_annual_temperature is None:
+                # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
+                # si_1 = np.ones(self._shape)
+                self._logger.info("Mean annual temperature data not provided. Using ideal conditions of 18 degrees C.")
+                self.v1b_mean_annual_temperature = np.full(self._shape, 18)
+            
             # SI Logic
             self._logger.info("Running SI 1")
+            # Create an array to store the results
+            si_1 = np.full(self._shape, 999.0)
+            
             S_si = (self.v1a_mean_annual_salinity - 0.84) / 1.84
             T_si = (self.v1b_mean_annual_temperature - 22.68) / 4.64
             S_si_2 = ((self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08) / 24.91
             T_si_2 = ((self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature) - 535.99) / 206.16
 
-            si_1 = exp(2.50 - (0.25 * S_si) + (0.30 * T_si) + (0.04 * S_si_2) - (0.33 * T_si_2) - (0.05 * (S_si * T_si))) / 14.3
+            si_1 = np.exp(2.50 - (0.25 * S_si) + (0.30 * T_si) + (0.04 * S_si_2) - (0.33 * T_si_2) - (0.05 * (S_si * T_si))) / 14.3
 
+            if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+                raise ValueError("Unhandled condition in SI logic!")
+        
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -118,27 +125,27 @@ class BassHSI:
             si_2 = np.full(self._shape, 999.0)
 
             # condition 1
-            mask_1 = self.v2_pct_emergent_vegetation < 0.2
+            mask_1 = self.v2_pct_emergent_vegetation < 20
             si_2[mask_1] = 0.01
 
             # condition 2
-            mask_2 = (self.v2_pct_emergent_vegetation >= 0.2) & (self.v2_pct_emergent_vegetation < 0.3)
+            mask_2 = (self.v2_pct_emergent_vegetation >= 20) & (self.v2_pct_emergent_vegetation < 30)
             si_2[mask_2] = (0.099 * self.v2_pct_emergent_vegetation[mask_2]) - 1.997
 
             # condition 3
-            mask_3 = (self.v2_pct_emergent_vegetation >= 0.3) & (self.v2_pct_emergent_vegetation < 0.5)
+            mask_3 = (self.v2_pct_emergent_vegetation >= 30) & (self.v2_pct_emergent_vegetation < 50)
             si_2[mask_3] = 1.0
 
             # condition 4
-            mask_4 = (self.v2_pct_emergent_vegetation >= 0.5) & (self.v2_pct_emergent_vegetation < 0.85)
+            mask_4 = (self.v2_pct_emergent_vegetation >= 50) & (self.v2_pct_emergent_vegetation < 85)
             si_2[mask_4] = (-0.0283 * self.v2_pct_emergent_vegetation[mask_4]) + 2.414
 
             # condition 5
-            mask_5 = (self.v2_pct_emergent_vegetation >= 0.85) & (self.v2_pct_emergent_vegetation < 1.0)
+            mask_5 = (self.v2_pct_emergent_vegetation >= 85) & (self.v2_pct_emergent_vegetation < 100)
             si_2[mask_5] = 0.01
 
             # condition 6
-            mask_3 = self.v2_pct_emergent_vegetation == 1.0
+            mask_3 = self.v2_pct_emergent_vegetation == 100
             si_2[mask_3] = 0.0
 
             # Check for unhandled condition with tolerance

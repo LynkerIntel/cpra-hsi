@@ -147,6 +147,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
+        self.mean_annual_temperature = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -162,6 +163,7 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
+        self.pct_marsh = None
 
         # gizzard shad vars
         self.tds_summer_growing_season = None #ideal always
@@ -278,12 +280,12 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
-            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
+            # self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            # self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            # self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            # self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
-            # self.bass = bass.BassHSI.from_hsi(self)
+            self.bass = bass.BassHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -360,6 +362,14 @@ class HSI(vt.VegTransition):
             boundary="pad",  # not needed for partial pixels, fyi
         )
 
+        ds_marsh = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
+            x=8,
+            y=8,
+            boundary="pad",  # not needed for partial pixels, fyi
+        )
+
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
         # 3  Developed Medium Intensity
@@ -404,6 +414,9 @@ class HSI(vt.VegTransition):
 
         # Vegetated 2-25
         self.pct_vegetated = ds_vegetated.to_numpy()
+
+        # Marsh 20-23
+        self.pct_marsh = ds_marsh.to_numpy()
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -696,6 +709,10 @@ class HSI(vt.VegTransition):
             "gizzard_shad_si_5": self.gizzardshad.si_5,
             "gizzard_shad_si_6": self.gizzardshad.si_6,
             "gizzard_shad_si_7": self.gizzardshad.si_7,
+            #
+            "bass_hsi": self.bass.hsi,
+            "bass_si_1": self.bass.si_1,
+            "bass_si_2": self.bass.si_2,
             # "black_bear_hsi": self.black_bear.hsi,
         }
 

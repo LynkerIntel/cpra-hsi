@@ -209,6 +209,11 @@ class HSI(vt.VegTransition):
 
         TODO: for memory efficiency, 60m arrays should be garbage collected after creation of
         480m HSI input arrays.
+
+        Params
+        -------
+        date: pd.DatetimeTZDtype
+            current datetime as pandas dt type
         """
         self.current_timestep = date  # Set the current timestep
         wy = date.year
@@ -251,7 +256,6 @@ class HSI(vt.VegTransition):
     def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
-
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
@@ -352,12 +356,8 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
-        # Zone V, IV, III
-        # self.pct_swamp_bottom_hardwood = ds_blh.to_numpy()
-
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
-        # self._logger.debug("Completed _calculate_pct_cover")
 
     def _calculate_pct_cover_static(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.

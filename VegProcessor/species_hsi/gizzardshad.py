@@ -244,8 +244,8 @@ class GizzardShadHSI:
         # Create an array to store the results
         si_7 = np.full(self._shape, 0.0) #should thid be 999?
         
-        # calc pct first, shorthand, yey.
-        self.v7a_pct_vegetated /= 100
+        # Note: equations use % values not decimals
+        # self.v7a_pct_vegetated /= 100
         
         # condition 1
         mask_1 = (self.v7a_pct_vegetated <= 10) & (self.v7b_water_depth_spawning_season <= 2)

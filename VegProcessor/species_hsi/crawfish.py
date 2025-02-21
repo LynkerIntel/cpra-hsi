@@ -28,12 +28,6 @@ class CrawfishHSI:
     v3g_pct_cell_bare_ground: np.ndarray = None
     v4_mean_water_depth_sept_dec: np.ndarray = None
 
-    # Species-specific parameters (example values)
-    # for cases where static values are used
-
-    # optimal_temperature: float = 20.0  # EXAMPLE
-    # temperature_tolerance: float = 10.0  # EXAMPLE
-
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -186,8 +180,8 @@ class CrawfishHSI:
             )
             si_2[mask_4] = 1.5 - (0.00457 * self.v2_mean_water_depth_jan_aug[mask_4])
 
-            # if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
-            #     raise ValueError("Unhandled condition in SI logic!")
+            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+                raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 
@@ -237,8 +231,8 @@ class CrawfishHSI:
             mask_3 = self.v4_mean_water_depth_sept_dec > 0.15
             si_4[mask_3] = 0.0
 
-            # if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
-            #     raise ValueError("Unhandled condition in SI logic!")
+            if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
+                raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
 

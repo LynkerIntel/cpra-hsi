@@ -18,29 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle
-
-
-# this is a c/p from veg class, not sure why I need it again here.
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad
 
 
 class HSI(vt.VegTransition):
@@ -267,8 +245,9 @@ class HSI(vt.VegTransition):
         self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
             months=[9, 10, 11, 12]
         )
-
-        self.water_depth_spawning_season = self._get_water_depth_spawning_season()
+        self.water_depth_spawning_season = self._get_depth_filtered(
+            months=[4, 5, 6],
+        )
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -568,46 +547,46 @@ class HSI(vt.VegTransition):
         #     sept_dec = [9, 10, 11, 12]
         #     filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
 
-        # Calc mean
-        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
-            "WSE_MEAN"
-        ]
-        height = mean_monthly_wse_sept_dec - self.dem
+        # # Calc mean
+        # mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
+        #     "WSE_MEAN"
+        # ]
+        # height = mean_monthly_wse_sept_dec - self.dem
 
-        # upscale to 480m from 60m
-        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+        # # upscale to 480m from 60m
+        # da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        # return da_coarse.to_numpy()
 
-    def _get_water_depth_spawning_season(self) -> np.ndarray:
-        """
-        Calculates the difference between the WSE value for a
-        selection of months and the DEM.
+    # def _get_water_depth_spawning_season(self) -> np.ndarray:
+    #     """
+    #     Calculates the difference between the WSE value for a
+    #     selection of months and the DEM.
 
-        Returns : np.ndarray
-            Depth array
-        """
-        # Filter by spawning season
-        april_june = [4, 5, 6]
-        # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
-        filter_april_june = self.wse.sel(
-            time=self.wse["time"].dt.month.isin(april_june)
-        )
-
-        # Calc mean
-        mean_monthly_wse_april_june = filter_april_june.mean(dim="time", skipna=True)[
-            "WSE_MEAN"
-        ]
-        height = mean_monthly_wse_april_june - self.dem
+    #     Returns : np.ndarray
+    #         Depth array
+    #     """
+    #     # Filter by spawning season
+    #     april_june = [4, 5, 6]
+    #     # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
+    #     filter_april_june = self.wse.sel(
+    #         time=self.wse["time"].dt.month.isin(april_june)
+    #     )
 
     #     # Calc mean
-    #     mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
+    #     mean_monthly_wse_april_june = filter_april_june.mean(dim="time", skipna=True)[
     #         "WSE_MEAN"
     #     ]
-    #     height = mean_monthly_wse_sept_dec - self.dem
+    #     height = mean_monthly_wse_april_june - self.dem
 
-    #     # upscale to 480m from 60m
-    #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-    #     return da_coarse.to_numpy()
+    # #     # Calc mean
+    # #     mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
+    # #         "WSE_MEAN"
+    # #     ]
+    # #     height = mean_monthly_wse_sept_dec - self.dem
+
+    # #     # upscale to 480m from 60m
+    # #     da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+    # #     return da_coarse.to_numpy()
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

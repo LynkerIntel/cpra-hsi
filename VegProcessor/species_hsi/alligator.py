@@ -43,7 +43,9 @@ class AlligatorHSI:
         """Create AlligatorHSI instance from an HSI instance."""
 
         def safe_divide(array: np.ndarray, divisor: int = 100) -> np.ndarray:
-            """Helper function to safely divide a value if it's not None."""
+            """Helper function to divide arrays when decimal values are required
+            by the SI logic. In the case of None (no array) it is preserved and
+            passed to SI methods."""
             return array / divisor if array is not None else None
 
         return cls(

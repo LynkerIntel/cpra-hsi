@@ -33,7 +33,7 @@ class BassHSI:
         return cls(
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
-            v2_pct_emergent_vegetation=hsi_instance.pct_marsh
+            v2_pct_emergent_vegetation=hsi_instance.pct_vegetated
         )
 
     def __post_init__(self):

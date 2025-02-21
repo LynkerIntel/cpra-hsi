@@ -163,7 +163,7 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
-        self.pct_marsh = None
+        #self.pct_marsh = None # not currently in use
 
         # gizzard shad vars
         self.tds_summer_growing_season = None #ideal always
@@ -356,19 +356,20 @@ class HSI(vt.VegTransition):
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[v for v in range(2, 25)],  # these are everything but open water
+            veg_types=[v for v in range(15, 25)],  # these are everything but open water
             x=8,
             y=8,
             boundary="pad",  # not needed for partial pixels, fyi
         )
 
-        ds_marsh = utils.generate_pct_cover_custom(
-            data_array=self.veg_type,
-            veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
-            x=8,
-            y=8,
-            boundary="pad",  # not needed for partial pixels, fyi
-        )
+        # not currently in use
+        # ds_marsh = utils.generate_pct_cover_custom(
+        #     data_array=self.veg_type,
+        #     veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
+        #     x=8,
+        #     y=8,
+        #     boundary="pad",  # not needed for partial pixels, fyi
+        # )
 
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
@@ -412,11 +413,11 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
-        # Vegetated 2-25
+        # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
 
         # Marsh 20-23
-        self.pct_marsh = ds_marsh.to_numpy()
+        #self.pct_marsh = ds_marsh.to_numpy() # not currently in use
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()

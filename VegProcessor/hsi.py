@@ -280,10 +280,10 @@ class HSI(vt.VegTransition):
         # run HSI models for timestep
         if self.run_hsi:
 
-            # self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            # self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            # self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
-            # self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
+            self.alligator = alligator.AlligatorHSI.from_hsi(self)
+            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
+            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
+            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
             self.bass = bass.BassHSI.from_hsi(self)
 

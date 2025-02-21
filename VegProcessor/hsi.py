@@ -21,28 +21,6 @@ import veg_transition as vt
 from species_hsi import alligator, crawfish, baldeagle
 
 
-# this is a c/p from veg class, not sure why I need it again here.
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True
-
-
 class HSI(vt.VegTransition):
     """HSI model framework."""
 

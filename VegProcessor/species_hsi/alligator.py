@@ -42,9 +42,9 @@ class AlligatorHSI:
     def from_hsi(cls, hsi_instance):
         """Create AlligatorHSI instance from an HSI instance."""
 
-        def safe_divide(value, divisor=100):
+        def safe_divide(array: np.ndarray, divisor: int = 100) -> np.ndarray:
             """Helper function to safely divide a value if it's not None."""
-            return value / divisor if value is not None else None
+            return array / divisor if array is not None else None
 
         return cls(
             v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),

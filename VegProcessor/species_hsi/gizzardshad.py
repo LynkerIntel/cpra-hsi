@@ -278,9 +278,6 @@ class GizzardShadHSI:
         mask_4 = self.v7b_water_depth_spawning_season > 2
         si_7[mask_4] = 0
 
-        # Create an array to store the results
-        # si_7 = np.full(self._shape, 999.0)
-
         # if self.v7b_water_depth_spawning_season.any() > 2.0:
         #     si_7 = np.zeros(self._shape) #is this right?
         # else:
@@ -299,8 +296,8 @@ class GizzardShadHSI:
         #     si_7[mask_3] = 1
 
         # Check for unhandled condition with tolerance
-        # if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
-        #     raise ValueError("Unhandled condition in SI logic!")
+        if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_7
 

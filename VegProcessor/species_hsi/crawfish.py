@@ -28,6 +28,8 @@ class CrawfishHSI:
     v3g_pct_cell_bare_ground: np.ndarray = None
     v4_mean_water_depth_sept_dec: np.ndarray = None
 
+    dem: np.ndarray = None
+
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -62,6 +64,7 @@ class CrawfishHSI:
             v3f_pct_cell_saline_marsh=safe_divide(hsi_instance.pct_saline_marsh),
             v3g_pct_cell_bare_ground=safe_divide(hsi_instance.pct_bare_ground),
             v4_mean_water_depth_sept_dec=hsi_instance.water_depth_monthly_mean_sept_dec,
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -268,4 +271,8 @@ class CrawfishHSI:
                 num_invalid,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

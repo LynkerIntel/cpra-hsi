@@ -26,6 +26,8 @@ class GizzardShadHSI:
     v7a_pct_vegetated: np.ndarray = None
     v7b_water_depth_spawning_season: np.ndarray = None
 
+    dem: np.ndarray = None
+
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -50,6 +52,7 @@ class GizzardShadHSI:
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -58,7 +61,7 @@ class GizzardShadHSI:
         self._setup_logger()
 
         # Determine the shape of the arrays
-        self._shape = self._determine_shape()
+        self.template = self._create_template_array()
 
         # Calculate individual suitability indices
         self.si_1 = self.calculate_si_1()
@@ -92,27 +95,25 @@ class GizzardShadHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _determine_shape(self) -> tuple:
-        """Determine the shape of the environmental variable arrays."""
-        # Iterate over instance attributes and return the shape of the first non None numpy array
-        for name, value in vars(self).items():
-            if value is not None and isinstance(value, np.ndarray):
-                self._logger.info(
-                    "Using attribute %s as shape for output: %s", name, value.shape
-                )
-                return value.shape
-
-        raise ValueError("At least one S.I. raster input must be provided.")
+    def _create_template_array(self) -> np.ndarray:
+        """Create an array from a template all valid pixels are 999.0, and
+        NaN from the input are persisted.
+        """
+        arr = np.where(np.isnan(self.v7b_water_depth_spawning_season), np.nan, 999.0)
+        return arr
 
     def calculate_si_1(self) -> np.ndarray:
         """LOG10 TOTAL DISSOLVED SOLIDS (PPM) DURING SUMMER GROWING SEASON"""
+        self._logger.info("Running SI 1")
+        si_1 = self.template.copy()
+
         # Set to ideal – there is no food limitation
         if self.v1_tds_summer_growing_season is None:
             # self._logger.info("TDS during summer growing season data not provided. Setting index to 1.")
             self._logger.info(
                 "TDS during summer growing season data assumes ideal conditions. Setting index to 1."
             )
-            si_1 = np.ones(self._shape)
+            si_1[~np.isnan(si_1)] = 1
 
         # TODO: This will ALWAYS be set to ideal per hsi specs
         # consider include a diff if/else statement to handle ALWAYS IDEAL cases
@@ -123,6 +124,9 @@ class GizzardShadHSI:
 
     def calculate_si_2(self) -> np.ndarray:
         """GROWING SEASON (AVERAGE NUMBER OF DAYS BETWEEN LAST SPRING AND FIRST FALL FROST ANUALLY."""
+        self._logger.info("Running SI 2")
+        si_2 = self.template.copy()
+
         # Set to Ideal
         if self.v2_avg_num_frost_free_days_growing_season is None:
             # self._logger.info(
@@ -131,7 +135,8 @@ class GizzardShadHSI:
             self._logger.info(
                 "avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
             )
-            si_2 = np.ones(self._shape)
+            # Replace all non-NaN values with 1
+            si_2[~np.isnan(si_2)] = 1
 
         # TODO: This will ALWAYS be set to ideal per hsi specs
         # consider include a diff if/else statement to handle ALWAYS IDEAL cases
@@ -143,6 +148,10 @@ class GizzardShadHSI:
 
     def calculate_si_3(self) -> np.ndarray:
         """MEAN WEEKLY SUMMER TEMPERATURE (EPILIMNION) (°C)."""
+        self._logger.info("Running SI 3")
+        # initialize with NaN from depth array, else 999
+        si_3 = self.template.copy()
+
         # Set to ideal for HecRas only (25 degrees C)
         if self.v3_mean_weekly_summer_temp is None:
             # self._logger.info(
@@ -151,7 +160,7 @@ class GizzardShadHSI:
             self._logger.info(
                 "mean weekly summer temperature data assumes ideal conditions (25 degrees) for HEC-RAS. Setting index to 1."
             )
-            si_3 = np.ones(self._shape)
+            si_3[~np.isnan(si_3)] = 1
 
         # TODO: This will ALWAYS be set to ideal per hsi specs
         # consider include a diff if/else statement to handle ALWAYS IDEAL cases
@@ -163,6 +172,9 @@ class GizzardShadHSI:
 
     def calculate_si_4(self) -> np.ndarray:
         """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        self._logger.info("Running SI 4")
+        si_4 = self.template.copy()
+
         # TMP: Set to ideal for HecRas only
         if self.v4_max_do_summer is None:
             # self._logger.info(
@@ -171,7 +183,7 @@ class GizzardShadHSI:
             self._logger.info(
                 "mean weekly summer temperature data assumes ideal conditions (6 ppm) for HEC-RAS. Setting index to 1."
             )
-            si_4 = np.ones(self._shape)
+            si_4[~np.isnan(si_4)] = 1
 
         # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
         # SI4 = 0, when V4 (ppm) ≤ 1
@@ -185,6 +197,9 @@ class GizzardShadHSI:
 
     def calculate_si_5(self) -> np.ndarray:
         """WATER LEVEL DURING SPAWNING SEASON AND EMBRYO DEVELOPMENT."""
+        self._logger.info("Running SI 5")
+        si_5 = self.template.copy()
+
         # Set to ideal
         if self.v5_water_lvl_spawning_season is None:
             # self._logger.info(
@@ -193,7 +208,7 @@ class GizzardShadHSI:
             self._logger.info(
                 "water level during spawning season assumes ideal conditions. Setting index to 1."
             )
-            si_5 = np.ones(self._shape)
+            si_5[~np.isnan(si_5)] = 1
 
         # TODO: This will ALWAYS be set to ideal per hsi specs
         # consider include a diff if/else statement to handle ALWAYS IDEAL cases
@@ -205,6 +220,9 @@ class GizzardShadHSI:
 
     def calculate_si_6(self) -> np.ndarray:
         """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        self._logger.info("Running SI 6")
+        si_6 = self.template.copy()
+
         # TMP: Set to ideal for HecRas only (20 degrees C)
         # April - June is considered spawning season
         if self.v6_mean_weekly_temp_reservoir_spawning_season is None:
@@ -214,7 +232,7 @@ class GizzardShadHSI:
             self._logger.info(
                 "mean weekly temperature in reservoirs during spawning season data assumes ideal conditions (20 degrees) for HEC-RAS. Setting index to 1."
             )
-            si_6 = np.ones(self._shape)
+            si_6[~np.isnan(si_6)] = 1
 
         # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
         # SI6 = 0, when V6 ≤ 10
@@ -232,18 +250,7 @@ class GizzardShadHSI:
         """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON."""
         # Use Curve A - Spawning season April-June in Upper Barataria
         self._logger.info("Running SI 7")
-
-        # for array in [
-        #     self.v7a_pct_vegetated,
-        #     self.v7b_water_depth_spawning_season,
-        # ]:
-        #     if array is None:
-        #         self._logger.info("pct vegetated or water depth during spawning season data not provided. Setting index to 1.", array)
-        #         array = np.ones(self._shape)
-        #         #si_7 = np.ones(self._shape)
-
-        # Create an array to store the results
-        si_7 = np.full(self._shape, 0.0)  # should thid be 999?
+        si_7 = self.template.copy()
 
         # Note: equations use % values not decimals
         # self.v7a_pct_vegetated /= 100
@@ -347,4 +354,8 @@ class GizzardShadHSI:
                 num_invalid_hsi,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

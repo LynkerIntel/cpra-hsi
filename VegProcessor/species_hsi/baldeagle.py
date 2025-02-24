@@ -24,11 +24,7 @@ class BaldEagleHSI:
     v5_pct_cell_intermediate_marsh: np.ndarray = None
     v6_pct_cell_open_water: np.ndarray = None
 
-    # Species-specific parameters (example values)
-    # for cases where static values are used
-
-    # optimal_temperature: float = 20.0  # EXAMPLE
-    # temperature_tolerance: float = 10.0  # EXAMPLE
+    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -70,6 +66,7 @@ class BaldEagleHSI:
             v6_pct_cell_open_water=safe_divide(
                 hsi_instance.pct_open_water,
             ),
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -120,18 +117,6 @@ class BaldEagleHSI:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
-
-    # def _determine_shape(self) -> tuple:
-    #     """Determine the shape of the environmental variable arrays."""
-    #     # Iterate over instance attributes and return the shape of the first non None numpy array
-    #     for name, value in vars(self).items():
-    #         if value is not None and isinstance(value, np.ndarray):
-    #             self._logger.info(
-    #                 "Using attribute %s as shape for output: %s", name, value.shape
-    #             )
-    #             return value.shape
-
-    #     raise ValueError("At least one S.I. raster input must be provided.")
 
     def calculate_si_1(self) -> np.ndarray:
         """Percent of cell that is developed land or upland."""
@@ -336,4 +321,8 @@ class BaldEagleHSI:
             # Clip the combined_score to ensure it's between 0 and 1
             # hsi = np.clip(hsi, 0, 1)
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

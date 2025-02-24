@@ -20,6 +20,8 @@ class BassHSI:
     v1b_mean_annual_temperature: np.ndarray = None
     v2_pct_emergent_vegetation: np.ndarray = None
 
+    dem: np.ndarray = None
+
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -34,6 +36,7 @@ class BassHSI:
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -218,4 +221,8 @@ class BassHSI:
                 num_invalid_hsi,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

@@ -28,6 +28,8 @@ class AlligatorHSI:
     v4_edge: np.ndarray = None
     v5_mean_annual_salinity: np.ndarray = None
 
+    dem: np.ndarray = None
+
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -59,6 +61,7 @@ class AlligatorHSI:
             v3d_pct_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
             v4_edge=hsi_instance.edge,
             v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -270,4 +273,8 @@ class AlligatorHSI:
                 num_invalid_hsi,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

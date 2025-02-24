@@ -62,9 +62,6 @@ class HSI(vt.VegTransition):
 
         # metadata
         self.metadata = self.config["metadata"]
-        # self.scenario_type = self.config["metadata"].get(
-        #     "scenario", ""
-        # )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -166,12 +163,12 @@ class HSI(vt.VegTransition):
         file_params = {
             "model": self.metadata.get("model"),
             "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",  # ?
+            # "parameter": "NA",
         }
 
         self._create_output_file(file_params)
@@ -232,7 +229,7 @@ class HSI(vt.VegTransition):
         date: pd.DatetimeTZDtype
             current datetime as pandas dt type
         """
-        self.current_timestep = date  # Set the current timestep
+        self.current_timestep = date
         wy = date.year
 
         self._logger.info("starting timestep: %s", date)
@@ -742,7 +739,6 @@ class HSI(vt.VegTransition):
                 )
 
             # assign values for timestep
-            # not dtype rules needed here as 480m cell is light
             ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()

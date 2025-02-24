@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass
 
 
 class HSI(vt.VegTransition):
@@ -118,6 +118,7 @@ class HSI(vt.VegTransition):
         self.crawfish = None
         self.baldeagle = None
         self.gizzardshad = None
+        self.bass = None
         # self.blackbear = None
 
         # datasets
@@ -127,6 +128,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
+        self.mean_annual_temperature = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -142,6 +144,7 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
+        # self.pct_marsh = None # not currently in use
 
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
@@ -264,6 +267,7 @@ class HSI(vt.VegTransition):
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
+            self.bass = bass.BassHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -333,11 +337,20 @@ class HSI(vt.VegTransition):
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[v for v in range(2, 25)],  # these are everything but open water
+            veg_types=[v for v in range(15, 25)],  # these are everything but open water
             x=8,
             y=8,
             boundary="pad",  # not needed for partial pixels, fyi
         )
+
+        # not currently in use
+        # ds_marsh = utils.generate_pct_cover_custom(
+        #     data_array=self.veg_type,
+        #     veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
+        #     x=8,
+        #     y=8,
+        #     boundary="pad",  # not needed for partial pixels, fyi
+        # )
 
         # VEG TYPES AND THIER MAPPED NUMBERS FROM
         # 2  Developed High Intensity
@@ -381,8 +394,11 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
-        # Vegetated 2-25
+        # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
+
+        # Marsh 20-23
+        # self.pct_marsh = ds_marsh.to_numpy() # not currently in use
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -710,6 +726,10 @@ class HSI(vt.VegTransition):
             "gizzard_shad_si_5": self.gizzardshad.si_5,
             "gizzard_shad_si_6": self.gizzardshad.si_6,
             "gizzard_shad_si_7": self.gizzardshad.si_7,
+            #
+            "bass_hsi": self.bass.hsi,
+            "bass_si_1": self.bass.si_1,
+            "bass_si_2": self.bass.si_2,
             # "black_bear_hsi": self.black_bear.hsi,
         }
 

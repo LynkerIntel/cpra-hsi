@@ -93,6 +93,7 @@ class HSI(vt.VegTransition):
 
         # Generate static variables
         self.dem = self._load_dem()
+        self.dem_480 = self._load_dem(cell=True)
         self.veg_keys = self._load_veg_keys()
         self.edge = self._calculate_edge()
         self.initial_veg_type = self._load_veg_initial_raster(
@@ -509,7 +510,6 @@ class HSI(vt.VegTransition):
         filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
         ds = filtered_ds.mean(dim="time", skipna=True)["WSE_MEAN"]
 
-        # upscale to 480m from 60m
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 

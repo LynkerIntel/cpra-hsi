@@ -439,13 +439,27 @@ class VegTransition:
         self._logger.info("Simulation complete")
         logging.shutdown()
 
-    def _load_dem(self) -> np.ndarray:
-        """Load project domain DEM."""
+    def _load_dem(self, cell: bool = False) -> np.ndarray:
+        """Load project domain DEM.
+
+        Params
+        ------
+        cell : bool
+            If DEM should be downscaled to 480m cell size, default False
+
+        Return
+        ------
+        domain : np.ndarray
+            model domain in 60m or 480m resolution.
+        """
         ds = xr.open_dataset(self.dem_path)
         ds = ds.squeeze(drop="band_data")
         da = ds.to_dataarray(dim="band")
         self._logger.info("Loaded DEM")
-        # TODO: where is extra dim coming from? i.e. da[0] is needed!
+
+        if cell:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+
         return da[0].to_numpy()
 
     def load_wse_wy(

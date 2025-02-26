@@ -127,7 +127,7 @@ hsi_model.run()
     ```python
     import matplotlib.pyplot as plt
 
-    plt.matshow(hsi_model.alligator.si_1)
+    plt.matshow(hsi_model.alligator.si_1) # np.ndarray
     plt.colorbar()
     ```
 

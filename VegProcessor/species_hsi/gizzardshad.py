@@ -278,23 +278,6 @@ class GizzardShadHSI:
         mask_4 = self.v7b_water_depth_spawning_season > 2
         si_7[mask_4] = 0
 
-        # if self.v7b_water_depth_spawning_season.any() > 2.0:
-        #     si_7 = np.zeros(self._shape) #is this right?
-        # else:
-        #     #calc pct first, shorthand, yey.
-        #     self.v7a_pct_vegetated /= 100
-        #     # condition 1
-        #     mask_1 = self.v7a_pct_vegetated <= 10
-        #     si_7[mask_1] = (0.08 * self.v7a_pct_vegetated[mask_1])
-
-        #     # condition 2
-        #     mask_2 = (self.v7a_pct_vegetated > 10) & (self.v7a_pct_vegetated <= 15)
-        #     si_7[mask_2] = (0.04 * self.v7a_pct_vegetated[mask_2]) + 0.4
-
-        #     # condition 3 USE CURVE A
-        #     mask_3 = self.v7a_pct_vegetated > 15 #& (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 30)
-        #     si_7[mask_3] = 1
-
         # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -341,7 +324,6 @@ class GizzardShadHSI:
         )  # will be reproduction for hec-ras
 
         # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
-
         # Check the final HSI array for invalid values
         invalid_values_hsi = (hsi < 0) | (hsi > 1)
         if np.any(invalid_values_hsi):

@@ -499,7 +499,7 @@ class HSI(vt.VegTransition):
             A water depth data, averaged over a list of months (if provided)
             and then downscaled to 480m.
         """
-        ds = super()._get_depth()
+        ds = super()._get_depth()  # VegTransition._get_depth()
 
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]

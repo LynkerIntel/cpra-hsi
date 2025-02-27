@@ -11,7 +11,6 @@ import gc
 from typing import Optional
 
 
-matplotlib.use("Agg")  # may be needed to prevent mpl memory leak
 logger = logging.getLogger("VegTransition")
 
 

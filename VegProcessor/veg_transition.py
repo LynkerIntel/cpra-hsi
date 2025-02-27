@@ -415,29 +415,39 @@ class VegTransition:
 
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
-        # run model forwards
-        # steps = int(self.simulation_duration / self.simulation_time_step)
-        self._logger.info(
-            "Starting simulation at %s. Period: %s - %s",
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            self.water_year_start,
-            self.water_year_end,
-        )
+        # Store the default plotting backend
+        default_backend = plt.get_backend()
 
-        # plus 1 to make inclusive
-        simulation_period = range(self.water_year_start, self.water_year_end + 1)
+        try:
+            # change to non-gui backend to prevent
+            # memory leak if running in notebook
+            plt.switch_backend("Agg")
 
-        self._logger.info("Running model for: %s timesteps", len(simulation_period))
-
-        for i, wy in enumerate(simulation_period):
-            self.step(
-                timestep=pd.to_datetime(f"{wy}-10-01"),
-                counter=str(i + 1),
-                simulation_period=str(len(simulation_period)),
+            # run model forwards
+            # steps = int(self.simulation_duration / self.simulation_time_step)
+            self._logger.info(
+                "Starting simulation at %s. Period: %s - %s",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                self.water_year_start,
+                self.water_year_end,
             )
 
-        self._logger.info("Simulation complete")
-        logging.shutdown()
+            # plus 1 to make inclusive
+            simulation_period = range(self.water_year_start, self.water_year_end + 1)
+            self._logger.info("Running model for: %s timesteps", len(simulation_period))
+
+            for i, wy in enumerate(simulation_period):
+                self.step(
+                    timestep=pd.to_datetime(f"{wy}-10-01"),
+                    counter=str(i + 1),
+                    simulation_period=str(len(simulation_period)),
+                )
+
+            self._logger.info("Simulation complete")
+            logging.shutdown()
+
+        finally:
+            plt.switch_backend(default_backend)
 
     def _load_dem(self, cell: bool = False) -> np.ndarray:
         """Load project domain DEM.

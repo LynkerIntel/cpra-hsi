@@ -112,8 +112,8 @@ class BlueCrabHSI:
                 # TODO check if we need to clamp the sal_m and wtemp_m values like the CPRA HSI code does (lines 294-295 in their HSI.py)
                 sal_m = round(sal_m, 1)
                 wtemp_m = round(wtemp_m, 1)
-                sal_m_column = self.v1c_bluecrab_lookup_table["sal_m"]
-                wtemp_m_column = self.v1c_bluecrab_lookup_table["wtemp_m"]
+                sal_m_column: pd.Series = self.v1c_bluecrab_lookup_table["sal_m"]
+                wtemp_m_column: pd.Series = self.v1c_bluecrab_lookup_table["wtemp_m"]
 
                 # rudimentary lookup code - could definitely be improved
                 if sal_m in sal_m_column.values and wtemp_m in wtemp_m_column.values:

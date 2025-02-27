@@ -89,7 +89,9 @@ class BlueCrabHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         if self.v1a_mean_annual_salinity is None:
-            self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
+            self._logger.info(
+                "Mean annual salinity data not provided. Setting index to 1."
+            )
             si_1 = np.ones(self._shape)
 
         else:
@@ -97,7 +99,9 @@ class BlueCrabHSI:
             if self.v1b_mean_annual_temperature is None:
                 # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
                 # si_1 = np.ones(self._shape)
-                self._logger.info("Mean annual temperature data not provided. Using ideal conditions of 18 degrees C.")
+                self._logger.info(
+                    "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."
+                )
                 self.v1b_mean_annual_temperature = np.full(self._shape, 18)
 
             # SI Logic
@@ -127,13 +131,15 @@ class BlueCrabHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-        
+
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is covered by emergent vegetation."""
         if self.v2_pct_emergent_vegetation is None:
-            self._logger.info("Pct emergent vegetation data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct emergent vegetation data not provided. Setting index to 1."
+            )
             si_2 = np.ones(self._shape)
 
         else:
@@ -147,9 +153,7 @@ class BlueCrabHSI:
             si_2[mask_1] = (0.03 * self.v2_pct_emergent_vegetation[mask_1]) + 0.25
 
             # condition 2
-            mask_2 = (self.v2_pct_emergent_vegetation >= 0.25) & (
-                self.v2_pct_emergent_vegetation <= 0.8
-            )
+            mask_2 = (self.v2_pct_emergent_vegetation >= 0.25) & (self.v2_pct_emergent_vegetation <= 0.8)
             si_2[mask_2] = 1.0
 
             # condition 3

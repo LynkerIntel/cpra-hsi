@@ -149,15 +149,15 @@ class BlueCrabHSI:
             si_2 = np.full(self._shape, 999.0)
 
             # condition 1
-            mask_1 = self.v2_pct_emergent_vegetation < 0.25
+            mask_1 = self.v2_pct_emergent_vegetation < 25
             si_2[mask_1] = (0.03 * self.v2_pct_emergent_vegetation[mask_1]) + 0.25
 
             # condition 2
-            mask_2 = (self.v2_pct_emergent_vegetation >= 0.25) & (self.v2_pct_emergent_vegetation <= 0.8)
+            mask_2 = (self.v2_pct_emergent_vegetation >= 25) & (self.v2_pct_emergent_vegetation <= 80)
             si_2[mask_2] = 1.0
 
             # condition 3
-            mask_3 = self.v2_pct_emergent_vegetation > 0.8
+            mask_3 = self.v2_pct_emergent_vegetation > 80
             si_2[mask_3] = 5.0 - (0.05 * self.v2_pct_emergent_vegetation[mask_3])
 
             # Check for unhandled condition with tolerance

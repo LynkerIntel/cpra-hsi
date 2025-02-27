@@ -41,6 +41,7 @@ Description: this folder contains the individual species HSI logic.
 - `bald_eagle.py`
 - `bass.py`
 - `gizzardshad.py`
+- `crawfish.py`
 
 ___
 ### Setup for Model Runs & Development

@@ -20,6 +20,8 @@ class BassHSI:
     v1b_mean_annual_temperature: np.ndarray = None
     v2_pct_emergent_vegetation: np.ndarray = None
 
+    dem: np.ndarray = None
+
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
     si_2: np.ndarray = field(init=False)
@@ -33,7 +35,8 @@ class BassHSI:
         return cls(
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
-            v2_pct_emergent_vegetation=hsi_instance.pct_vegetated
+            v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
+            dem=hsi_instance.dem_480,
         )
 
     def __post_init__(self):
@@ -71,6 +74,13 @@ class BassHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
+    def _create_template_array(self) -> np.ndarray:
+        """Create an array from a template all valid pixels are 999.0, and
+        NaN from the input are persisted.
+        """
+        arr = np.full(self.v2_pct_emergent_vegetation.shape, 999.0)
+        return arr
+
     def _determine_shape(self) -> tuple:
         """Determine the shape of the environmental variable arrays."""
         # Iterate over instance attributes and return the shape of the first non None numpy array
@@ -84,7 +94,9 @@ class BassHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         if self.v1a_mean_annual_salinity is None:
-            self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
+            self._logger.info(
+                "Mean annual salinity data not provided. Setting index to 1."
+            )
             si_1 = np.ones(self._shape)
 
         else:
@@ -92,30 +104,49 @@ class BassHSI:
             if self.v1b_mean_annual_temperature is None:
                 # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
                 # si_1 = np.ones(self._shape)
-                self._logger.info("Mean annual temperature data not provided. Using ideal conditions of 18 degrees C.")
+                self._logger.info(
+                    "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."
+                )
                 self.v1b_mean_annual_temperature = np.full(self._shape, 18)
-            
+
             # SI Logic
             self._logger.info("Running SI 1")
             # Create an array to store the results
             si_1 = np.full(self._shape, 999.0)
-            
+
             S_si = (self.v1a_mean_annual_salinity - 0.84) / 1.84
             T_si = (self.v1b_mean_annual_temperature - 22.68) / 4.64
-            S_si_2 = ((self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08) / 24.91
-            T_si_2 = ((self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature) - 535.99) / 206.16
+            S_si_2 = (
+                (self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08
+            ) / 24.91
+            T_si_2 = (
+                (self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature)
+                - 535.99
+            ) / 206.16
 
-            si_1 = np.exp(2.50 - (0.25 * S_si) + (0.30 * T_si) + (0.04 * S_si_2) - (0.33 * T_si_2) - (0.05 * (S_si * T_si))) / 14.3
+            si_1 = (
+                np.exp(
+                    2.50
+                    - (0.25 * S_si)
+                    + (0.30 * T_si)
+                    + (0.04 * S_si_2)
+                    - (0.33 * T_si_2)
+                    - (0.05 * (S_si * T_si))
+                )
+                / 14.3
+            )
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-        
+
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is covered by emergent vegetation."""
         if self.v2_pct_emergent_vegetation is None:
-            self._logger.info("Pct emergent vegetation data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct emergent vegetation data not provided. Setting index to 1."
+            )
             si_2 = np.ones(self._shape)
 
         else:
@@ -129,19 +160,27 @@ class BassHSI:
             si_2[mask_1] = 0.01
 
             # condition 2
-            mask_2 = (self.v2_pct_emergent_vegetation >= 20) & (self.v2_pct_emergent_vegetation < 30)
+            mask_2 = (self.v2_pct_emergent_vegetation >= 20) & (
+                self.v2_pct_emergent_vegetation < 30
+            )
             si_2[mask_2] = (0.099 * self.v2_pct_emergent_vegetation[mask_2]) - 1.997
 
             # condition 3
-            mask_3 = (self.v2_pct_emergent_vegetation >= 30) & (self.v2_pct_emergent_vegetation < 50)
+            mask_3 = (self.v2_pct_emergent_vegetation >= 30) & (
+                self.v2_pct_emergent_vegetation < 50
+            )
             si_2[mask_3] = 1.0
 
             # condition 4
-            mask_4 = (self.v2_pct_emergent_vegetation >= 50) & (self.v2_pct_emergent_vegetation < 85)
+            mask_4 = (self.v2_pct_emergent_vegetation >= 50) & (
+                self.v2_pct_emergent_vegetation < 85
+            )
             si_2[mask_4] = (-0.0283 * self.v2_pct_emergent_vegetation[mask_4]) + 2.414
 
             # condition 5
-            mask_5 = (self.v2_pct_emergent_vegetation >= 85) & (self.v2_pct_emergent_vegetation < 100)
+            mask_5 = (self.v2_pct_emergent_vegetation >= 85) & (
+                self.v2_pct_emergent_vegetation < 100
+            )
             si_2[mask_5] = 0.01
 
             # condition 6
@@ -151,7 +190,6 @@ class BassHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
 
         return si_2
 
@@ -183,4 +221,8 @@ class BassHSI:
                 num_invalid_hsi,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+
+        return masked_hsi

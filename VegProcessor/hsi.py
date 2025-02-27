@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab
 
 
 # this is a c/p from veg class, not sure why I need it again here.
@@ -73,6 +73,9 @@ class HSI(vt.VegTransition):
 
         self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # TODO Add this path to config - Issue #40 on GitHub
+        # self.bluecrab_lookup_table_path = self.config["???"].get("bluecrab_lookup_table")
 
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
@@ -139,6 +142,7 @@ class HSI(vt.VegTransition):
         self.gizzardshad = None
         self.bass = None
         # self.blackbear = None
+        self.bluecrab = None
 
         # datasets
         self.pct_cover_veg = None
@@ -147,7 +151,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None
+        self.mean_annual_temperature = None # TODO: is never assigned a value
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -175,6 +179,9 @@ class HSI(vt.VegTransition):
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None  
         self.water_depth_spawning_season = None
+
+        # TODO load pandas dataframe into this from bluecrab_lookup_table_path
+        # self.bluecrab_lookup_table = pd.read_excel(self.bluecrab_lookup_table_path)
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -286,6 +293,7 @@ class HSI(vt.VegTransition):
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
             # self.black_bear = BlackBearHSI(self)
             self.bass = bass.BassHSI.from_hsi(self)
+            self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -715,6 +723,10 @@ class HSI(vt.VegTransition):
             "bass_si_1": self.bass.si_1,
             "bass_si_2": self.bass.si_2,
             # "black_bear_hsi": self.black_bear.hsi,
+            #
+            "bluecrab_hsi": self.bluecrab.hsi,
+            "bluecrab_si_1": self.bluecrab.si_1,
+            "bluecrab_si_2": self.bluecrab.si_2,
         }
 
         for var_name, data in hsi_variables.items():

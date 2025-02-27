@@ -119,7 +119,7 @@ def zone_iv(
 ) -> np.ndarray:
     """Calculate transitions for pixels starting in Zone IV
 
-    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <20%
+    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <15%
     Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation ≥ 35%
 
     Zone IV: 16
@@ -163,12 +163,12 @@ def zone_iv(
     filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Growing Season (GS) inundation < 20%
+    # Condition 2: Growing Season (GS) inundation < 15%
     filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct < 0.2).to_numpy()
+    condition_2 = (condition_2_pct < 0.15).to_numpy()
 
     # Condition 3:  Growing Season (GS) inundation >= 35%
     condition_3_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
@@ -232,7 +232,7 @@ def zone_iii(
     """Calculate transition for pixels starting in Zone III
 
 
-    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <15%
+    Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <20%
     Conditions: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation ≥ 80%
 
     Zone IV: 16
@@ -277,12 +277,12 @@ def zone_iii(
     filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Growing Season (GS) inundation < 15%
+    # Condition 2: Growing Season (GS) inundation < 20%
     filtered_2 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     # Note: this assumes time is serially complete
     condition_2_pct = (filtered_2["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct < 0.15).to_numpy()
+    condition_2 = (condition_2_pct < 0.20).to_numpy()
 
     # Condition 3:  ANNUAL inundation >= 80%
     condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
@@ -346,8 +346,8 @@ def zone_ii(
     """Calculate transition for pixels starting in Zone II
 
 
-    Condition_1: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <70% TIME
-    Condition_2: Annual Inundation == 100% AND annual inundation depth > 30cm
+    Condition_1: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm AND GS Inundation <50% TIME
+    Condition_2: Annual Inundation == 100% AND annual inundation depth > 70cm
 
     Fresh Shrub: 16
     Zone III: 17 Lower BLH
@@ -391,17 +391,17 @@ def zone_ii(
     filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Annual inundation < 70% TIME
+    # Condition 2: Annual inundation < 50% TIME
     # Note: this assumes time is serially complete
     condition_2_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct < 0.7).to_numpy()
+    condition_2 = (condition_2_pct < 0.5).to_numpy()
 
     # Condition 3:  Annual inundation == 100%
     condition_3_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
     condition_3 = (condition_3_pct == 1).to_numpy()
 
-    # Condition 4: Annual inundation depth > 30cm #UNIT
-    condition_4 = (water_depth["WSE_MEAN"] > 0.3).all(dim="time").to_numpy()
+    # Condition 4: Annual inundation depth > 70cm #UNIT
+    condition_4 = (water_depth["WSE_MEAN"] > 0.7).all(dim="time").to_numpy()
 
     # get pixels that meet zone iii criteria
     stacked_masks_iii = np.stack((condition_1, condition_2))
@@ -469,8 +469,8 @@ def fresh_shrub(
 
 
     Condition_1: MAR, APR, MAY, or JUN inundation depth ≤ 0 cm
-    Condition_2: Annual Inundation >= 80% TIME
-    Condition_3: Annual inundation > 40% TIME
+    Condition_2: Annual Inundation >= 60% TIME
+    Condition_3: Annual inundation >= 45% TIME
 
     Zone IV: 16
     Zone III: 17
@@ -515,15 +515,15 @@ def fresh_shrub(
     filtered_1 = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
     condition_1 = (filtered_1["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
 
-    # Condition 2: Annual inundation >= 80% TIME
+    # Condition 2: Annual inundation >= 60% TIME
     condition_2_pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
-    condition_2 = (condition_2_pct >= 0.8).to_numpy()
+    condition_2 = (condition_2_pct >= 0.6).to_numpy()
 
-    # Condition 3: Growing Season (GS) inundation >= 40%
+    # Condition 3: Growing Season (GS) inundation >= 45%
     filtered_3 = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
     # get pct duration of inundation (i.e. depth > 0)
     condition_3_pct = (filtered_3["WSE_MEAN"] > 0).mean(dim="time")
-    condition_3 = (condition_3_pct >= 0.4).to_numpy()
+    condition_3 = (condition_3_pct >= 0.45).to_numpy()
 
     # get pixels that meet zone ii criteria
     # Use logical AND to find locations where all arrays are True
@@ -586,7 +586,7 @@ def fresh_marsh(
     """Calculate transition for pixels starting as Fresh Marsh
 
     Condition_1: GS Inundation == 100% TIME
-    Condition_2: mean GS depth > 20cm
+    Condition_2: mean GS depth > 50cm
     Condition_3: mean ANNUAL salinity >= 2ppt
     Condition_4: APR:SEP inundation < 30% TIME
 
@@ -636,8 +636,8 @@ def fresh_marsh(
     condition_1_pct = (filtered_1["WSE_MEAN"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct == 1).to_numpy()
 
-    # Condition_2: MEAN GS depth > 20cm
-    condition_2 = (filtered_1["WSE_MEAN"].mean(dim="time") > 0.2).to_numpy()
+    # Condition_2: MEAN GS depth > 50cm
+    condition_2 = (filtered_1["WSE_MEAN"].mean(dim="time") > 0.5).to_numpy()
 
     # Condition_3: mean ANNUAL salinity >= 2ppt
     # TODO: when monthly inputs are available, this will need

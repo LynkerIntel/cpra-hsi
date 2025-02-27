@@ -100,9 +100,9 @@ class BlueCrabHSI:
                 # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
                 # si_1 = np.ones(self._shape)
                 self._logger.info(
-                    "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."
+                    "Mean annual temperature data not provided. Using ideal conditions of 17 degrees C."
                 )
-                self.v1b_mean_annual_temperature = np.full(self._shape, 18)
+                self.v1b_mean_annual_temperature = np.full(self._shape, 17)
 
             # SI Logic
             self._logger.info("Running SI 1")

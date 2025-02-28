@@ -18,7 +18,7 @@ simulation:
 
 metadata:
   model: HSI
-  scenario: "S05" # scenario info for plots and metadata
+  scenario: "S04" # scenario info for plots and metadata
   group: G507
   wpu: AB
 

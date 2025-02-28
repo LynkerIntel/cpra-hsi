@@ -259,7 +259,9 @@ class CrawfishHSI:
 
         # Combine individual suitability indices
         hsi = (
-            ((self.si_1 * self.si_2) ** 1 / 6) * (self.si_3**1 / 3) * (self.si_4**1 / 3)
+            ((self.si_1 * self.si_2) ** (1 / 6))
+            * (self.si_3 ** (1 / 3))
+            * (self.si_4 ** (1 / 3))
         )
 
         # Quality control check: Ensure combined_score is between 0 and 1

@@ -124,7 +124,7 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        self.avg_water_depth_rlt_marsh_surface = None
+        # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
         self.mean_annual_temperature = None
 
@@ -694,13 +694,14 @@ class HSI(vt.VegTransition):
         ds = xr.open_dataset(self.netcdf_filepath)
 
         hsi_variables = {
+            # alligator
             "alligator_hsi": self.alligator.hsi,
             "alligator_si_1": self.alligator.si_1,
             "alligator_si_2": self.alligator.si_2,
             "alligator_si_3": self.alligator.si_3,
             "alligator_si_4": self.alligator.si_4,
             "alligator_si_5": self.alligator.si_5,
-            #
+            # bald eagle
             "bald_eagle_hsi": self.baldeagle.hsi,
             "bald_eagle_si_1": self.baldeagle.si_1,
             "bald_eagle_si_2": self.baldeagle.si_2,
@@ -708,13 +709,13 @@ class HSI(vt.VegTransition):
             "bald_eagle_si_4": self.baldeagle.si_4,
             "bald_eagle_si_5": self.baldeagle.si_5,
             "bald_eagle_si_6": self.baldeagle.si_6,
-            #
+            # crawfish
             "crawfish_hsi": self.crawfish.hsi,
             "crawfish_si_1": self.crawfish.si_1,
             "crawfish_si_2": self.crawfish.si_2,
             "crawfish_si_3": self.crawfish.si_3,
             "crawfish_si_4": self.crawfish.si_4,
-            #
+            # gizzard shad
             "gizzard_shad_hsi": self.gizzardshad.hsi,
             "gizzard_shad_si_1": self.gizzardshad.si_1,
             "gizzard_shad_si_2": self.gizzardshad.si_2,
@@ -723,11 +724,32 @@ class HSI(vt.VegTransition):
             "gizzard_shad_si_5": self.gizzardshad.si_5,
             "gizzard_shad_si_6": self.gizzardshad.si_6,
             "gizzard_shad_si_7": self.gizzardshad.si_7,
-            #
+            # bass
             "bass_hsi": self.bass.hsi,
             "bass_si_1": self.bass.si_1,
             "bass_si_2": self.bass.si_2,
-            # "black_bear_hsi": self.black_bear.hsi,
+            # species input vars
+            "water_depth_annual_mean": self.water_depth_annual_mean,
+            "water_depth_monthly_mean_jan_aug": self.water_depth_monthly_mean_jan_aug,
+            "water_depth_monthly_mean_sept_dec": self.water_depth_monthly_mean_sept_dec,
+            "water_depth_spawning_season": self.water_depth_spawning_season,
+            "pct_open_water": self.pct_open_water,
+            "mean_annual_salinity": self.mean_annual_salinity,
+            "mean_annual_temperature": self.mean_annual_temperature,
+            "pct_swamp_bottom_hardwood": self.pct_swamp_bottom_hardwood,
+            "pct_fresh_marsh": self.pct_fresh_marsh,
+            "pct_intermediate_marsh": self.pct_intermediate_marsh,
+            "pct_brackish_marsh": self.pct_brackish_marsh,
+            "pct_saline_marsh": self.pct_saline_marsh,
+            "pct_zone_v": self.pct_zone_v,
+            "pct_zone_iv": self.pct_zone_iv,
+            "pct_zone_iii": self.pct_zone_iii,
+            "pct_zone_ii": self.pct_zone_ii,
+            "pct_fresh_shrubs": self.pct_fresh_shrubs,
+            "pct_bare_ground": self.pct_bare_ground,
+            "pct_dev_upland": self.pct_dev_upland,
+            "pct_flotant_marsh": self.pct_flotant_marsh,
+            "pct_vegetated": self.pct_vegetated,
         }
 
         for var_name, data in hsi_variables.items():

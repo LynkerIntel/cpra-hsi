@@ -19,7 +19,7 @@ simulation:
 metadata: # partial list (static vars)
   model: VEG
   scenario: "S05" # scenario info for plots and metadata
-  group: # GXXX
+  group: G507
   wpu: ARS
 
 output:

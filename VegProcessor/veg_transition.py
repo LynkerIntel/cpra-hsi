@@ -539,7 +539,7 @@ class VegTransition:
 
         if not selected_files:
             self._logger.error("No WSE files found for water year: %s", water_year)
-            return None
+            raise RuntimeError(f"No WSE files found for water year: {water_year}")
 
         if len(selected_files) < 12:
             raise ValueError(f"month(s) missing from Water Year: {water_year}")

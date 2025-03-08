@@ -123,7 +123,7 @@ class VegTransition:
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
-        self.hecras_domain = self._load_hecras_domain_raster()
+        self.hydro_domain = self._load_hecras_domain_raster()
 
         self.initial_veg_type = self._load_veg_initial_raster()  # static
         self.veg_type = self._load_veg_initial_raster()  # dynamic
@@ -273,7 +273,7 @@ class VegTransition:
 
         # important: mask areas outside of domain before calculting transition:
         self._logger.info("Masking veg type array to domain.")
-        self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
+        self.veg_type = np.where(self.hydro_domain, self.veg_type, np.nan)
 
         # note: arrays are named for their starting veg type
         self.zone_v = veg_logic.zone_v(
@@ -614,7 +614,7 @@ class VegTransition:
         # after filling zeros for areas with no inundation, apply domain mask,
         # so that areas outside of HECRAS domain are not classified as
         # dry (na is 0-filled above) when in fact that are outside of the domain.
-        ds = ds.where(self.hecras_domain)
+        ds = ds.where(self.hydro_domain)
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
@@ -693,8 +693,6 @@ class VegTransition:
 
         Parameters
         ----------
-        mask_hecras_domain : bool
-            True if vegetation type data should be masked to the `hecras_domain` array
         xarray : bool
             True if xarray output format is needed. Default is False.
         all_types : bool
@@ -729,7 +727,7 @@ class VegTransition:
         if return_static_veg_only:
             self._logger.info("Returning array of static vegetation pixels only.")
             # combine DEM valid mask and inverse of HEC-RAS domain valid mask
-            veg_type = np.where(dem_valid_mask & ~self.hecras_domain, veg_type, np.nan)
+            veg_type = np.where(dem_valid_mask & ~self.hydro_domain, veg_type, np.nan)
 
         else:
             # only apply valid DEM mask
@@ -759,14 +757,27 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hecras_domain_raster(self) -> np.ndarray:
-        """Load raster file specifying the boundary of the HECRAS domain."""
+    def _load_hecras_domain_raster(self, cell : bool = False) -> np.ndarray:
+        """Load raster file specifying the boundary of the HECRAS domain.
+        
+        Params
+        -------
+        cell : bool
+            True if array should be downscaled to 480m "cell" resolution. If True,
+            the array is returned as "data" with NaN. If False, data is returned as
+            boolean (the format expected by `VegTransition` methods).
+        """
         # load raster
         self._logger.info("Loading WSE domain extent raster.")
         da = xr.open_dataarray(self.wse_domain_path)
         da = da.squeeze(drop="band")
         # reproject match to DEM
         da = self._reproject_match_to_dem(da)
+
+        if cell:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da.to_numpy()
+
         da = da.fillna(0)  # fill 0 so that .astype(bool) does not fail
         da = da.astype(bool)
         return da.to_numpy()

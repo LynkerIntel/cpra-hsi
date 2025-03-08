@@ -59,6 +59,7 @@ class HSI(vt.VegTransition):
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
+        self.hydro_domain_flag = self.config['simulation'].get("hydro_domain_flag")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -98,7 +99,8 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
-        self.hecras_domain = self._load_hecras_domain_raster()
+        self.hydro_domain = self._load_hecras_domain_raster()
+        self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
         self._calculate_pct_cover_static()
@@ -604,73 +606,83 @@ class HSI(vt.VegTransition):
 
         hsi_variables = {
             # alligator
-            "alligator_hsi": self.alligator.hsi,
-            "alligator_si_1": self.alligator.si_1,
-            "alligator_si_2": self.alligator.si_2,
-            "alligator_si_3": self.alligator.si_3,
-            "alligator_si_4": self.alligator.si_4,
-            "alligator_si_5": self.alligator.si_5,
+            "alligator_hsi": (self.alligator.hsi, np.float32),
+            "alligator_si_1": (self.alligator.si_1, np.float32),
+            "alligator_si_2": (self.alligator.si_2, np.float32),
+            "alligator_si_3": (self.alligator.si_3, np.float32),
+            "alligator_si_4": (self.alligator.si_4, np.float32),
+            "alligator_si_5": (self.alligator.si_5, np.float32),
             # bald eagle
-            "bald_eagle_hsi": self.baldeagle.hsi,
-            "bald_eagle_si_1": self.baldeagle.si_1,
-            "bald_eagle_si_2": self.baldeagle.si_2,
-            "bald_eagle_si_3": self.baldeagle.si_3,
-            "bald_eagle_si_4": self.baldeagle.si_4,
-            "bald_eagle_si_5": self.baldeagle.si_5,
-            "bald_eagle_si_6": self.baldeagle.si_6,
+            "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
+            "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
+            "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
+            "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
+            "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
+            "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
+            "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
             # crawfish
-            "crawfish_hsi": self.crawfish.hsi,
-            "crawfish_si_1": self.crawfish.si_1,
-            "crawfish_si_2": self.crawfish.si_2,
-            "crawfish_si_3": self.crawfish.si_3,
-            "crawfish_si_4": self.crawfish.si_4,
+            "crawfish_hsi": (self.crawfish.hsi, np.float32),
+            "crawfish_si_1": (self.crawfish.si_1, np.float32),
+            "crawfish_si_2": (self.crawfish.si_2, np.float32),
+            "crawfish_si_3": (self.crawfish.si_3, np.float32),
+            "crawfish_si_4": (self.crawfish.si_4, np.float32),
             # gizzard shad
-            "gizzard_shad_hsi": self.gizzardshad.hsi,
-            "gizzard_shad_si_1": self.gizzardshad.si_1,
-            "gizzard_shad_si_2": self.gizzardshad.si_2,
-            "gizzard_shad_si_3": self.gizzardshad.si_3,
-            "gizzard_shad_si_4": self.gizzardshad.si_4,
-            "gizzard_shad_si_5": self.gizzardshad.si_5,
-            "gizzard_shad_si_6": self.gizzardshad.si_6,
-            "gizzard_shad_si_7": self.gizzardshad.si_7,
+            "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
+            "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
+            "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
+            "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
+            "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
+            "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
+            "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
+            "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
             # bass
-            "bass_hsi": self.bass.hsi,
-            "bass_si_1": self.bass.si_1,
-            "bass_si_2": self.bass.si_2,
+            "bass_hsi": (self.bass.hsi, np.float32),
+            "bass_si_1": (self.bass.si_1, np.float32),
+            "bass_si_2": (self.bass.si_2, np.float32),
             # species input vars
-            "water_depth_annual_mean": self.water_depth_annual_mean,
-            "water_depth_monthly_mean_jan_aug": self.water_depth_monthly_mean_jan_aug,
-            "water_depth_monthly_mean_sept_dec": self.water_depth_monthly_mean_sept_dec,
-            "water_depth_spawning_season": self.water_depth_spawning_season,
-            "pct_open_water": self.pct_open_water,
-            "mean_annual_salinity": self.mean_annual_salinity,
-            "mean_annual_temperature": self.mean_annual_temperature,
-            "pct_swamp_bottom_hardwood": self.pct_swamp_bottom_hardwood,
-            "pct_fresh_marsh": self.pct_fresh_marsh,
-            "pct_intermediate_marsh": self.pct_intermediate_marsh,
-            "pct_brackish_marsh": self.pct_brackish_marsh,
-            "pct_saline_marsh": self.pct_saline_marsh,
-            "pct_zone_v": self.pct_zone_v,
-            "pct_zone_iv": self.pct_zone_iv,
-            "pct_zone_iii": self.pct_zone_iii,
-            "pct_zone_ii": self.pct_zone_ii,
-            "pct_fresh_shrubs": self.pct_fresh_shrubs,
-            "pct_bare_ground": self.pct_bare_ground,
-            "pct_dev_upland": self.pct_dev_upland,
-            "pct_flotant_marsh": self.pct_flotant_marsh,
-            "pct_vegetated": self.pct_vegetated,
+            "water_depth_annual_mean": (self.water_depth_annual_mean, np.float32),
+            "water_depth_monthly_mean_jan_aug": (self.water_depth_monthly_mean_jan_aug, np.float32),
+            "water_depth_monthly_mean_sept_dec": (self.water_depth_monthly_mean_sept_dec, np.float32),
+            "water_depth_spawning_season": (self.water_depth_spawning_season, np.float32),
+            "pct_open_water": (self.pct_open_water, np.float32),
+            "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
+            "mean_annual_temperature": (self.mean_annual_temperature, np.float32),
+            "pct_swamp_bottom_hardwood": (self.pct_swamp_bottom_hardwood, np.float32),
+            "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
+            "pct_intermediate_marsh": (self.pct_intermediate_marsh, np.float32),
+            "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
+            "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
+            "pct_zone_v": (self.pct_zone_v, np.float32),
+            "pct_zone_iv": (self.pct_zone_iv, np.float32),
+            "pct_zone_iii": (self.pct_zone_iii, np.float32),
+            "pct_zone_ii": (self.pct_zone_ii, np.float32),
+            "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
+            "pct_bare_ground": (self.pct_bare_ground, np.float32),
+            "pct_dev_upland": (self.pct_dev_upland, np.float32),
+            "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
+            "pct_vegetated": (self.pct_vegetated, np.float32),
         }
 
-        for var_name, data in hsi_variables.items():
-            # create var if not already existing, with full timeseries of nan
-            if var_name not in ds:
-                ds[var_name] = (
-                    ["time", "y", "x"],
-                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
-                )
+        for var_name, (data, dtype) in hsi_variables.items():
+            if data is None:
+                self._logger.warning("Array '%s' is None, skipping save.", var_name)
+                
+            else:
+                # Check if the variable exists in the dataset, if not, initialize it
+                if var_name not in ds:
+                    shape = (len(ds.time), len(ds.y), len(ds.x))
+                    default_value = False if dtype == bool else np.nan
+                    ds[var_name] = (
+                        ["time", "y", "x"],
+                        np.full(shape, default_value, dtype=dtype),
+                    )
 
-            # assign values for timestep
-            ds[var_name].loc[{"time": timestep_str}] = data
+                # Handle 'condition' variables (booleans)
+                if dtype == bool:
+                    data = np.nan_to_num(data, nan=False).astype(bool)
+
+                # Assign the data to the dataset for the specific time step
+                ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")

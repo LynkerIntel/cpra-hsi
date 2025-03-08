@@ -13,7 +13,12 @@ class AlligatorHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-
+    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
+    
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
     v1_pct_open_water: np.ndarray = None
@@ -27,8 +32,6 @@ class AlligatorHSI:
 
     v4_edge: np.ndarray = None
     v5_mean_annual_salinity: np.ndarray = None
-
-    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -61,7 +64,9 @@ class AlligatorHSI:
             v3d_pct_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
             v4_edge=hsi_instance.edge,
             v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            dem=hsi_instance.dem_480,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480 = hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag
         )
 
     def __post_init__(self):
@@ -85,7 +90,7 @@ class AlligatorHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
+        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
 
     def _setup_logger(self):
@@ -133,6 +138,10 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+
 
         return si_1
 
@@ -170,6 +179,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -188,6 +200,9 @@ class AlligatorHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
+        
+        if self.hydro_domain_flag:
+                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -211,6 +226,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -239,6 +257,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 
@@ -275,6 +296,6 @@ class AlligatorHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

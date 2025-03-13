@@ -39,7 +39,7 @@ class HSI(vt.VegTransition):
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file
 
-        with open(config_file, "r") as file:
+        with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
         # fetch raster data paths

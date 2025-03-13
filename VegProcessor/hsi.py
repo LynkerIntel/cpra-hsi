@@ -45,6 +45,7 @@ class HSI(vt.VegTransition):
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
         self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
+        self.wse_domain_path = self.config["raster_data"].get("wse_domain_raster")
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
@@ -65,9 +66,6 @@ class HSI(vt.VegTransition):
 
         # metadata
         self.metadata = self.config["metadata"]
-        # self.scenario_type = self.config["metadata"].get(
-        #     "scenario", ""
-        # )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -96,6 +94,7 @@ class HSI(vt.VegTransition):
 
         # Generate static variables
         self.dem = self._load_dem()
+        self.dem_480 = self._load_dem(cell=True)
         self.veg_keys = self._load_veg_keys()
         self.edge = self._calculate_edge()
         self.initial_veg_type = self._load_veg_initial_raster(
@@ -103,6 +102,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
+        self.hecras_domain = self._load_hecras_domain_raster()
 
         # Get pct cover for prevously defined static variables
         self._calculate_pct_cover_static()
@@ -148,17 +148,19 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_dev_upland = None  # does not change
-        #self.pct_marsh = None # not currently in use
+        # self.pct_marsh = None # not currently in use
 
         # gizzard shad vars
-        self.tds_summer_growing_season = None #ideal always
-        self.avg_num_frost_free_days_growing_season = None #ideal always
-        self.mean_weekly_summer_temp = None #ideal (HEC-RAS?) SI3 = 25 degrees C
-        self.max_do_summer = None #ideal HEC-RAS SI4 = 6ppm
-        self.water_lvl_spawning_season = None #ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = None #ideal HEC-RAS SI6 = 20 degrees
+        self.tds_summer_growing_season = None  # ideal always
+        self.avg_num_frost_free_days_growing_season = None  # ideal always
+        self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+        self.water_lvl_spawning_season = None  # ideal always
+        self.mean_weekly_temp_reservoir_spawning_season = (
+            None  # ideal HEC-RAS SI6 = 20 degrees
+        )
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
-        self.pct_vegetated = None  
+        self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
         # TODO load pandas dataframe into this from bluecrab_lookup_table_path
@@ -170,12 +172,12 @@ class HSI(vt.VegTransition):
         file_params = {
             "model": self.metadata.get("model"),
             "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),  # not sure if this is correct,
+            "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",  # ?
+            # "parameter": "NA",
         }
 
         self._create_output_file(file_params)
@@ -230,8 +232,13 @@ class HSI(vt.VegTransition):
 
         TODO: for memory efficiency, 60m arrays should be garbage collected after creation of
         480m HSI input arrays.
+
+        Params
+        -------
+        date: pd.DatetimeTZDtype
+            current datetime as pandas dt type
         """
-        self.current_timestep = date  # Set the current timestep
+        self.current_timestep = date
         wy = date.year
 
         self._logger.info("starting timestep: %s", date)
@@ -241,18 +248,16 @@ class HSI(vt.VegTransition):
         # avg_water_depth_rlt_marsh_surface
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
-        self.water_depth_annual_mean = self._get_water_depth_annual_mean()
-
-        self.water_depth_monthly_mean_jan_aug = (
-            self._get_water_depth_monthly_mean_jan_aug()
+        self.water_depth_annual_mean = self._get_depth_filtered()
+        self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+            months=[1, 2, 3, 4, 5, 6, 7, 8]
         )
-        self.water_depth_monthly_mean_sept_dec = (
-            self._get_water_depth_monthly_mean_sept_dec()
+        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+            months=[9, 10, 11, 12]
         )
-
-        self.water_depth_spawning_season = (
-            self._get_water_depth_spawning_season()
-        )   
+        self.water_depth_spawning_season = self._get_depth_filtered(
+            months=[4, 5, 6],
+        )
 
         # load veg type
         self.veg_type = self._load_veg_type()
@@ -260,10 +265,6 @@ class HSI(vt.VegTransition):
         # calculate pct cover for all veg types
         self._calculate_pct_cover()
         self.mean_annual_salinity = hydro_logic.habitat_based_salinity(self.veg_type)
-
-        # bald eagle
-
-        # SAVE ALL SI INDICES INDIVIDUALLY
 
         # run HSI models for timestep
         if self.run_hsi:
@@ -284,7 +285,6 @@ class HSI(vt.VegTransition):
     def run(self):
         """
         Run the vegetation transition model, with parameters defined in the configuration file.
-
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
@@ -406,11 +406,10 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = ds_vegetated.to_numpy()
 
         # Marsh 20-23
-        #self.pct_marsh = ds_marsh.to_numpy() # not currently in use
+        # self.pct_marsh = ds_marsh.to_numpy() # not currently in use
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
-        # self._logger.debug("Completed _calculate_pct_cover")
 
     def _calculate_pct_cover_static(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels.
@@ -494,87 +493,31 @@ class HSI(vt.VegTransition):
 
         return combined_flotant
 
-    def _get_water_depth_annual_mean(self) -> np.ndarray:
+    def _get_depth_filtered(self, months: None | list[int] = None) -> np.ndarray:
+        """Calls the VegTransition _get_depth(), then adds a time
+        filter (if supplied) and then resample to 480m cell size.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to average water depth over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : xr.DataArray
+            A water depth data, averaged over a list of months (if provided)
+            and then downscaled to 480m.
         """
-        Calculates the difference between the avg annual WSE value and the DEM.
+        ds = super()._get_depth()  # VegTransition._get_depth()
 
-        Returns : np.ndarray
-            Depth array
-        """
-        mean_wse = self.wse.mean(dim="time", skipna=True)["WSE_MEAN"]
-        height = mean_wse - self.dem
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
-        # upscale to 480m from 60m
-        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+        filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
+        ds = filtered_ds.mean(dim="time", skipna=True)["WSE_MEAN"]
 
-    def _get_water_depth_monthly_mean_jan_aug(self) -> np.ndarray:
-        """
-        Calculates the difference between the mean WSE value for a
-        selection of months and the DEM.
-
-        Returns : np.ndarray
-            Depth array
-        """
-        # Filter by month first
-        jan_aug = [1, 2, 3, 4, 5, 6, 7, 8]
-        # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
-        filter_jan_aug = self.wse.sel(time=self.wse["time"].dt.month.isin(jan_aug))
-
-        # Calc mean
-        mean_monthly_wse_jan_aug = filter_jan_aug.mean(dim="time", skipna=True)[
-            "WSE_MEAN"
-        ]
-        height = mean_monthly_wse_jan_aug - self.dem
-
-        # upscale to 480m from 60m
-        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
-
-    def _get_water_depth_monthly_mean_sept_dec(self) -> np.ndarray:
-        """
-        Calculates the difference between the mean WSE value for a
-        selection of months and the DEM.
-
-        Returns : np.ndarray
-            Depth array
-        """
-
-        # Filter by month first
-        sept_dec = [9, 10, 11, 12]
-        filter_sept_dec = self.wse.sel(time=self.wse["time"].dt.month.isin(sept_dec))
-
-        # Calc mean
-        mean_monthly_wse_sept_dec = filter_sept_dec.mean(dim="time", skipna=True)[
-            "WSE_MEAN"
-        ]
-        height = mean_monthly_wse_sept_dec - self.dem
-
-        # upscale to 480m from 60m
-        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
-    
-    def _get_water_depth_spawning_season(self) -> np.ndarray:
-        """
-        Calculates the difference between the WSE value for a
-        selection of months and the DEM.
-
-        Returns : np.ndarray
-            Depth array
-        """
-        # Filter by spawning season
-        april_june = [4, 5, 6]
-        # filter_jan_aug = self.wse.sel(dim="time".dt.month.isin(jan_aug))
-        filter_april_june = self.wse.sel(time=self.wse["time"].dt.month.isin(april_june))
-
-        #Calc mean
-        mean_monthly_wse_april_june = filter_april_june.mean(dim="time", skipna=True)[
-           "WSE_MEAN"
-        ]
-        height = mean_monthly_wse_april_june - self.dem
-
-        # upscale to 480m from 60m
-        da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
+        da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
     
     def _load_blue_crab_lookup(self):
@@ -725,7 +668,6 @@ class HSI(vt.VegTransition):
                 )
 
             # assign values for timestep
-            # not dtype rules needed here as 480m cell is light
             ds[var_name].loc[{"time": timestep_str}] = data
 
         ds.close()

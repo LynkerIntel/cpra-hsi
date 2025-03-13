@@ -415,37 +415,61 @@ class VegTransition:
 
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
-        # run model forwards
-        # steps = int(self.simulation_duration / self.simulation_time_step)
-        self._logger.info(
-            "Starting simulation at %s. Period: %s - %s",
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            self.water_year_start,
-            self.water_year_end,
-        )
+        # Store the default plotting backend
+        default_backend = plt.get_backend()
 
-        # plus 1 to make inclusive
-        simulation_period = range(self.water_year_start, self.water_year_end + 1)
+        try:
+            # change to non-gui backend to prevent
+            # memory leak if running in notebook
+            plt.switch_backend("Agg")
 
-        self._logger.info("Running model for: %s timesteps", len(simulation_period))
-
-        for i, wy in enumerate(simulation_period):
-            self.step(
-                timestep=pd.to_datetime(f"{wy}-10-01"),
-                counter=str(i + 1),
-                simulation_period=str(len(simulation_period)),
+            # run model forwards
+            # steps = int(self.simulation_duration / self.simulation_time_step)
+            self._logger.info(
+                "Starting simulation at %s. Period: %s - %s",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                self.water_year_start,
+                self.water_year_end,
             )
 
-        self._logger.info("Simulation complete")
-        logging.shutdown()
+            # plus 1 to make inclusive
+            simulation_period = range(self.water_year_start, self.water_year_end + 1)
+            self._logger.info("Running model for: %s timesteps", len(simulation_period))
 
-    def _load_dem(self) -> np.ndarray:
-        """Load project domain DEM."""
+            for i, wy in enumerate(simulation_period):
+                self.step(
+                    timestep=pd.to_datetime(f"{wy}-10-01"),
+                    counter=str(i + 1),
+                    simulation_period=str(len(simulation_period)),
+                )
+
+            self._logger.info("Simulation complete")
+            logging.shutdown()
+
+        finally:
+            plt.switch_backend(default_backend)
+
+    def _load_dem(self, cell: bool = False) -> np.ndarray:
+        """Load project domain DEM.
+
+        Params
+        ------
+        cell : bool
+            If DEM should be downscaled to 480m cell size, default False
+
+        Return
+        ------
+        domain : np.ndarray
+            model domain in 60m or 480m resolution.
+        """
         ds = xr.open_dataset(self.dem_path)
         ds = ds.squeeze(drop="band_data")
         da = ds.to_dataarray(dim="band")
         self._logger.info("Loaded DEM")
-        # TODO: where is extra dim coming from? i.e. da[0] is needed!
+
+        if cell:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+
         return da[0].to_numpy()
 
     def load_wse_wy(
@@ -591,15 +615,6 @@ class VegTransition:
         # so that areas outside of HECRAS domain are not classified as
         # dry (na is 0-filled above) when in fact that are outside of the domain.
         ds = ds.where(self.hecras_domain)
-
-        # ds["WSE_MEAN"].plot(
-        #     col="time",  # Create panels for each time step
-        #     col_wrap=4,  # Number of panels per row
-        #     cmap="viridis",
-        #     aspect=1.5,  # Adjust aspect ratio
-        #     size=3,  # Adjust figure size
-        # )
-        # plt.show()
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):

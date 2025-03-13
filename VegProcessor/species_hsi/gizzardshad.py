@@ -13,6 +13,11 @@ class GizzardShadHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
+    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
@@ -25,8 +30,6 @@ class GizzardShadHSI:
     # v7_pct_vegetated_and_2m_depth_spawning_season : np.ndarray = None #use curve A
     v7a_pct_vegetated: np.ndarray = None
     v7b_water_depth_spawning_season: np.ndarray = None
-
-    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -52,7 +55,9 @@ class GizzardShadHSI:
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
-            dem=hsi_instance.dem_480,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480 = hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag
         )
 
     def __post_init__(self):
@@ -120,6 +125,10 @@ class GizzardShadHSI:
         # else:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
+
+        if self.hydro_domain_flag:
+                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -144,6 +153,9 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
+        if self.hydro_domain_flag:
+                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+
         return si_2
 
     def calculate_si_3(self) -> np.ndarray:
@@ -167,6 +179,9 @@ class GizzardShadHSI:
         # else:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
+
+        if self.hydro_domain_flag:
+                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -193,6 +208,9 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
+        if self.hydro_domain_flag:
+                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+
         return si_4
 
     def calculate_si_5(self) -> np.ndarray:
@@ -215,6 +233,9 @@ class GizzardShadHSI:
         # else:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
+
+        if self.hydro_domain_flag:
+                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 
@@ -243,6 +264,9 @@ class GizzardShadHSI:
         # else:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
+
+        if self.hydro_domain_flag:
+                si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
 
         return si_6
 
@@ -281,6 +305,9 @@ class GizzardShadHSI:
         # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
+        
+        if self.hydro_domain_flag:
+                si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
 
         return si_7
 
@@ -335,6 +362,6 @@ class GizzardShadHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

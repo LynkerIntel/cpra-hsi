@@ -13,6 +13,11 @@ class CrawfishHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
+    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
@@ -27,8 +32,6 @@ class CrawfishHSI:
     v3f_pct_cell_saline_marsh: np.ndarray = None
     v3g_pct_cell_bare_ground: np.ndarray = None
     v4_mean_water_depth_sept_dec: np.ndarray = None
-
-    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -64,8 +67,11 @@ class CrawfishHSI:
             v3f_pct_cell_saline_marsh=safe_divide(hsi_instance.pct_saline_marsh),
             v3g_pct_cell_bare_ground=safe_divide(hsi_instance.pct_bare_ground),
             v4_mean_water_depth_sept_dec=hsi_instance.water_depth_monthly_mean_sept_dec,
-            dem=hsi_instance.dem_480,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480 = hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag
         )
+        
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
@@ -144,6 +150,9 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -185,6 +194,9 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -205,6 +217,9 @@ class CrawfishHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
+        
+        if self.hydro_domain_flag:
+                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -236,6 +251,9 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -275,6 +293,6 @@ class CrawfishHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

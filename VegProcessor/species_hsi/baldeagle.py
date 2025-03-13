@@ -13,18 +13,18 @@ class BaldEagleHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-
-    # gridded data as numpy arrays or None
-    # init with None to be distinct from np.nan
-
+    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
+    
     v1_pct_cell_developed_or_upland: np.ndarray = None
     v2_pct_cell_flotant_marsh: np.ndarray = None
     v3_pct_cell_forested_wetland: np.ndarray = None
     v4_pct_cell_fresh_marsh: np.ndarray = None
     v5_pct_cell_intermediate_marsh: np.ndarray = None
     v6_pct_cell_open_water: np.ndarray = None
-
-    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -66,7 +66,9 @@ class BaldEagleHSI:
             v6_pct_cell_open_water=safe_divide(
                 hsi_instance.pct_open_water,
             ),
-            dem=hsi_instance.dem_480,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480 = hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag
         )
 
     def __post_init__(self):
@@ -146,6 +148,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -173,6 +178,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -199,6 +207,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -223,6 +234,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -248,6 +262,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 
@@ -277,6 +294,9 @@ class BaldEagleHSI:
 
             if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
 
         return si_6
 
@@ -323,6 +343,6 @@ class BaldEagleHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

@@ -523,7 +523,7 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     return df_out
 
 
-def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
+def generate_filename(params: dict, parameter: str = None, base_path: str = None) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
     Missing parameters are skipped.

@@ -17,6 +17,7 @@ simulation:
   water_year_end: 2005 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   run_hsi: True
+  blue_crab_lookup_table: "/Users/dillonragar/data/cpra/seine_bluecrab_gamm_table_1dec.csv"
 
 metadata:
   model: HSI

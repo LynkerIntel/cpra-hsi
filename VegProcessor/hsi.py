@@ -21,27 +21,6 @@ import veg_transition as vt
 from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab
 
 
-# this is a c/p from veg class, not sure why I need it again here.
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True
-
 class HSI(vt.VegTransition):
     """HSI model framework."""
 
@@ -82,6 +61,7 @@ class HSI(vt.VegTransition):
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
+        self.blue_crab_lookup_path = self.config['simulation'].get("blue_crab_lookup_table")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -146,6 +126,7 @@ class HSI(vt.VegTransition):
 
         # datasets
         self.pct_cover_veg = None
+        self.blue_crab_lookup_table = self._load_blue_crab_lookup()
 
         # HSI Variables
         self.pct_open_water = None
@@ -595,6 +576,12 @@ class HSI(vt.VegTransition):
         # upscale to 480m from 60m
         da_coarse = height.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+    
+    def _load_blue_crab_lookup(self):
+        """
+        Read blue crab lookup table
+        """
+        self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

@@ -15,6 +15,11 @@ class BlueCrabHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
+    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
@@ -39,15 +44,16 @@ class BlueCrabHSI:
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             # TODO implement these variables/inputs in hsi.py
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480 = hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag
         )
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
         self._setup_logger()
-
-        # Determine the shape of the arrays
-        self._shape = self._determine_shape()
+        self.template = self._create_template_array()
 
         # Calculate individual suitability indices
         self.si_1 = self.calculate_si_1()
@@ -76,80 +82,84 @@ class BlueCrabHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _determine_shape(self) -> tuple:
-        """Determine the shape of the environmental variable arrays."""
-        # Iterate over instance attributes and return the shape of the first non None numpy array
-        for name, value in vars(self).items():
-            if value is not None and isinstance(value, np.ndarray):
-                self._logger.info(
-                    "Using attribute %s as shape for output: %s", name, value.shape
-                )
-                return value.shape
+    # def _determine_shape(self) -> tuple:
+    #     """Determine the shape of the environmental variable arrays."""
+    #     # Iterate over instance attributes and return the shape of the first non None numpy array
+    #     for name, value in vars(self).items():
+    #         if value is not None and isinstance(value, np.ndarray):
+    #             self._logger.info(
+    #                 "Using attribute %s as shape for output: %s", name, value.shape
+    #             )
+    #             return value.shape
+
+    def _create_template_array(self) -> np.ndarray:
+        """Create an array from a template all valid pixels are 999.0, and
+        NaN from the input are persisted.
+        """
+        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+        return arr
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
-        if self.v1a_mean_annual_salinity is None:
+        self._logger.info("Running SI 1")
+        si_1 = self.template.copy()
+
+        # Setup ideal values for mean annual temperature (HEC-RAS)
+        if self.v1b_mean_annual_temperature is None:
             self._logger.info(
-                "Mean annual salinity data not provided. Setting index to 1."
+                "Mean annual temperature data not provided. Using ideal conditions of 17 degrees C."
             )
-            si_1 = np.ones(self._shape)
+            self.v1b_mean_annual_temperature = np.where(~np.isnan(self.template), 17, np.nan)
 
-        else:
-            # Setup ideal values for mean annual temperature (HEC-RAS)
-            if self.v1b_mean_annual_temperature is None:
-                # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
-                # si_1 = np.ones(self._shape)
-                self._logger.info(
-                    "Mean annual temperature data not provided. Using ideal conditions of 17 degrees C."
-                )
-                self.v1b_mean_annual_temperature = np.full(self._shape, 17)
 
-            # SI Logic
-            self._logger.info("Running SI 1")
+        def get_CPUE_value(sal_m: float, wtemp_m: float) -> float:
+            """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m' 
+            are equal to the inputs in the lookup table, returning 999.0 if not found
+            """
+            # TODO check if we need to clamp the sal_m and wtemp_m values like the 
+            # CPRA HSI code does (lines 294-295 in their HSI.py)
+            sal_m = round(sal_m, 1)
+            wtemp_m = round(wtemp_m, 1)
+            sal_m_column: pd.Series = self.v1c_bluecrab_lookup_table["sal_m"]
+            wtemp_m_column: pd.Series = self.v1c_bluecrab_lookup_table["wtemp_m"]
 
-            def get_CPUE_value(sal_m: float, wtemp_m: float) -> float:
-                """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m' 
-                are equal to the inputs in the lookup table, returning 999.0 if not found
-                """
-                # TODO check if we need to clamp the sal_m and wtemp_m values like the CPRA HSI code does (lines 294-295 in their HSI.py)
-                sal_m = round(sal_m, 1)
-                wtemp_m = round(wtemp_m, 1)
-                sal_m_column: pd.Series = self.v1c_bluecrab_lookup_table["sal_m"]
-                wtemp_m_column: pd.Series = self.v1c_bluecrab_lookup_table["wtemp_m"]
+            # rudimentary lookup code - could definitely be improved
+            if sal_m in sal_m_column.values and wtemp_m in wtemp_m_column.values:
+                return self.v1c_bluecrab_lookup_table.loc[
+                    (sal_m_column == sal_m) & (wtemp_m_column == wtemp_m),
+                    "cpue_scaled",
+                ].values[0]
+            else:
+                return 999.0
 
-                # rudimentary lookup code - could definitely be improved
-                if sal_m in sal_m_column.values and wtemp_m in wtemp_m_column.values:
-                    return self.v1c_bluecrab_lookup_table.loc[
-                        (sal_m_column == sal_m) & (wtemp_m_column == wtemp_m),
-                        "cpue_scaled",
-                    ].values[0]
-                else:
-                    return 999.0
+        si_1 = np.vectorize(get_CPUE_value)(
+            self.v1a_mean_annual_salinity, self.v1b_mean_annual_temperature
+        )
 
-            si_1 = np.vectorize(get_CPUE_value)(
-                self.v1a_mean_annual_salinity, self.v1b_mean_annual_temperature
-            )
-
-            # Check for unhandled condition with tolerance
-            if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
-                raise ValueError("Unhandled condition in SI logic!")
+        # Check for unhandled condition with tolerance
+        if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
+        
+        if self.hydro_domain_flag:
+                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is covered by emergent vegetation."""
+        # SI Logic
+        self._logger.info("Running SI 2")
+        # Create an array to store the results
+        si_2 = self.template.copy()
+
+
         if self.v2_pct_emergent_vegetation is None:
             self._logger.info(
                 "Pct emergent vegetation data not provided. Setting index to 1."
             )
-            si_2 = np.ones(self._shape)
+            si_2[~np.isnan(si_2)] = 1
 
         else:
-            # SI Logic
-            self._logger.info("Running SI 2")
-            # Create an array to store the results
-            si_2 = np.full(self._shape, 999.0)
-
             # condition 1
             mask_1 = self.v2_pct_emergent_vegetation < 25
             si_2[mask_1] = (0.03 * self.v2_pct_emergent_vegetation[mask_1]) + 0.25
@@ -165,6 +175,9 @@ class BlueCrabHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+            
+            if self.hydro_domain_flag:
+                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -196,4 +209,8 @@ class BlueCrabHSI:
                 num_invalid_hsi,
             )
 
-        return hsi
+        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
+
+        return masked_hsi

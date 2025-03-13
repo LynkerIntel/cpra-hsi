@@ -272,7 +272,7 @@ class HSI(vt.VegTransition):
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            # self.black_bear = BlackBearHSI(self)
+            
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
 

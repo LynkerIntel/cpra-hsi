@@ -38,7 +38,7 @@ class BlueCrabHSI:
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             # TODO implement these variables/inputs in hsi.py
-            v1c_bluecrab_lookup_table=hsi_instance.bluecrab_lookup_table,
+            v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
         )
 
     def __post_init__(self):
@@ -108,7 +108,9 @@ class BlueCrabHSI:
             self._logger.info("Running SI 1")
 
             def get_CPUE_value(sal_m: float, wtemp_m: float) -> float:
-                """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m' are equal to the inputs in the lookup table, returning 999.0 if not found"""
+                """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m' 
+                are equal to the inputs in the lookup table, returning 999.0 if not found
+                """
                 # TODO check if we need to clamp the sal_m and wtemp_m values like the CPRA HSI code does (lines 294-295 in their HSI.py)
                 sal_m = round(sal_m, 1)
                 wtemp_m = round(wtemp_m, 1)

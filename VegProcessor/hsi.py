@@ -18,7 +18,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab
 
 
 class HSI(vt.VegTransition):
@@ -54,12 +54,16 @@ class HSI(vt.VegTransition):
         self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
+        # TODO Add this path to config - Issue #40 on GitHub
+        # self.bluecrab_lookup_table_path = self.config["???"].get("bluecrab_lookup_table")
+
         # simulation
         self.water_year_start = self.config["simulation"].get("water_year_start")
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
         self.hydro_domain_flag = self.config['simulation'].get("hydro_domain_flag")
+        self.blue_crab_lookup_path = self.config['simulation'].get("blue_crab_lookup_table")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -134,15 +138,17 @@ class HSI(vt.VegTransition):
         self.gizzardshad = None
         self.bass = None
         # self.blackbear = None
+        self.bluecrab = None
 
         # datasets
         self.pct_cover_veg = None
+        self._load_blue_crab_lookup()
 
         # HSI Variables
         self.pct_open_water = None
         # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None
+        self.mean_annual_temperature = None # TODO: is never assigned a value
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -172,6 +178,9 @@ class HSI(vt.VegTransition):
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
+
+        # TODO load pandas dataframe into this from bluecrab_lookup_table_path
+        # self.bluecrab_lookup_table = pd.read_excel(self.bluecrab_lookup_table_path)
 
         # # NetCDF data output
         # sim_length = self.water_year_end - self.water_year_start
@@ -280,8 +289,9 @@ class HSI(vt.VegTransition):
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            # self.black_bear = BlackBearHSI(self)
+            
             self.bass = bass.BassHSI.from_hsi(self)
+            self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -525,14 +535,20 @@ class HSI(vt.VegTransition):
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+    
+    def _load_blue_crab_lookup(self):
+        """
+        Read blue crab lookup table
+        """
+        self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    # def _create_output_dirs(self):
-    #     """Create an output location for state variables, model config,
-    #     input data, and QC plots.
+    def _create_output_dirs(self):
+        """Create an output location for state variables, model config,
+        input data, and QC plots.
 
-    #     (No logging because logger needs output location for log file first.)
-    #     """
-    #     output_dir_name = f"HSI_{self.sim_start_time}"
+        (No logging because logger needs output location for log file first.)
+        """
+        output_dir_name = f"HSI_{self.sim_start_time}"
 
     #     # Combine base directory and new directory name
     #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)

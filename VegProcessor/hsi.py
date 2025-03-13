@@ -74,6 +74,20 @@ class HSI(vt.VegTransition):
             sort_keys=False,
         )
 
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+            # "parameter": "NA",
+        }
+
         self._create_output_dirs()
         self.current_timestep = None  # set in step() method
         self._setup_logger(log_level)
@@ -159,21 +173,21 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        # # NetCDF data output
+        # sim_length = self.water_year_end - self.water_year_start
 
-        file_params = {
-            "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",
-        }
+        # file_params = {
+        #     "model": self.metadata.get("model"),
+        #     "scenario": self.metadata.get("scenario"),
+        #     "group": self.metadata.get("group"),
+        #     "wpu": "AB",
+        #     "io_type": "O",
+        #     "time_freq": "ANN",  # for annual output
+        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        #     # "parameter": "NA",
+        # }
 
-        self._create_output_file(file_params)
+        self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -512,27 +526,27 @@ class HSI(vt.VegTransition):
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 
-    def _create_output_dirs(self):
-        """Create an output location for state variables, model config,
-        input data, and QC plots.
+    # def _create_output_dirs(self):
+    #     """Create an output location for state variables, model config,
+    #     input data, and QC plots.
 
-        (No logging because logger needs output location for log file first.)
-        """
-        output_dir_name = f"HSI_{self.sim_start_time}"
+    #     (No logging because logger needs output location for log file first.)
+    #     """
+    #     output_dir_name = f"HSI_{self.sim_start_time}"
 
-        # Combine base directory and new directory name
-        self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
-        # Create the directory if it does not exist
-        os.makedirs(self.output_dir_path, exist_ok=True)
+    #     # Combine base directory and new directory name
+    #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
+    #     # Create the directory if it does not exist
+    #     os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-input' subdirectory
-        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-        os.makedirs(run_metadata_dir, exist_ok=True)
+    #     # Create the 'run-input' subdirectory
+    #     run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+    #     os.makedirs(run_metadata_dir, exist_ok=True)
 
-        if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, run_metadata_dir)
-        else:
-            print("Config file not found at %s", self.config_path)
+    #     if os.path.exists(self.config_path):
+    #         shutil.copy(self.config_path, run_metadata_dir)
+    #     else:
+    #         print("Config file not found at %s", self.config_path)
 
     def _create_output_file(self, params: dict):
         """HSI: Create NetCDF file for data output.
@@ -547,7 +561,6 @@ class HSI(vt.VegTransition):
         -------
         None
         """
-
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
@@ -556,11 +569,11 @@ class HSI(vt.VegTransition):
 
         self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
 
-        # load DEM, use coords
+        # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
-        da = da["band" == 0]
-        # coarsen to 480m grid cell
-        da = da.coarsen(x=8, y=8, boundary="pad").mean()
+        da = da.squeeze(drop="band")  # Drop 'band' dimension if it exists
+        da = da.rio.write_crs("EPSG:6344")  # Assign CRS
+        da = da.coarsen(x=8, y=8, boundary="pad").mean()  # Match 480m resolution
 
         x = da.coords["x"].values
         y = da.coords["y"].values
@@ -569,24 +582,21 @@ class HSI(vt.VegTransition):
         time_range = pd.date_range(
             start=f"{self.water_year_start}-10-01",
             end=f"{self.water_year_end}-10-01",
-            freq="YS-OCT",
-        )  # Annual start
+            freq="YS-OCT",  # Annual start
+        )
 
         # Create an empty Dataset with only coordinates
         ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+
+        # Assign CRS using rioxarray
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Add metadata
-        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
-        # ds["veg_type"].attrs["units"] = "Category"
-        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
-        # ds["maturity"].attrs["units"] = "Years"
-
-        # Save initial file
+        # Save the initial NetCDF file
         ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
         ds.close()
         da.close()
-        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+
+        self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append timestep data to the NetCDF file.
@@ -688,28 +698,28 @@ class HSI(vt.VegTransition):
         ds.to_netcdf(self.netcdf_filepath, mode="a")
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
-    def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
-        """Create output directory for the current timestamp, where
-        figures and output rasters will be saved.
+    # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
+    #     """Create output directory for the current timestamp, where
+    #     figures and output rasters will be saved.
 
-        Parameters
-        ----------
-        timestep : pd.DatetimeTZDtype
-            Pandas datetime object of current timestep.
+    #     Parameters
+    #     ----------
+    #     timestep : pd.DatetimeTZDtype
+    #         Pandas datetime object of current timestep.
 
-        Returns
-        -------
-        None
-        """
-        self.timestep_output_dir = os.path.join(
-            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-        )
-        self.timestep_output_dir_figs = os.path.join(
-            self.timestep_output_dir,
-            "figs",
-        )
-        os.makedirs(self.timestep_output_dir, exist_ok=True)
-        os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     self.timestep_output_dir = os.path.join(
+    #         self.output_dir_path, f"{date.strftime('%Y%m%d')}"
+    #     )
+    #     self.timestep_output_dir_figs = os.path.join(
+    #         self.timestep_output_dir,
+    #         "figs",
+    #     )
+    #     os.makedirs(self.timestep_output_dir, exist_ok=True)
+    #     os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
 
 class _TimestepFilter(logging.Filter):

@@ -108,6 +108,19 @@ class VegTransition:
             self.config, default_flow_style=False, sort_keys=False
         )
 
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        }
+
         self._create_output_dirs()
         self.current_timestep = None
         self._setup_logger(log_level)
@@ -152,21 +165,20 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        # # NetCDF data output
+        # sim_length = self.water_year_end - self.water_year_start
 
-        file_params = {
-            "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),  # not sure if this is correct,
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",  # ?
-        }
+        # file_params = {
+        #     "model": self.metadata.get("model"),
+        #     "scenario": self.metadata.get("scenario"),
+        #     "group": self.metadata.get("group"),
+        #     "wpu": "AB",
+        #     "io_type": "O",
+        #     "time_freq": "ANN",  # for annual output
+        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        # }
 
-        self._create_output_file(file_params)
+        self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -232,7 +244,7 @@ class VegTransition:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
 
-    def step(self, timestep: pd.DatetimeTZDtype, counter: int, simulation_period: int):
+    def step(self, timestep: pd.DatetimeTZDtype):
         """Advance the transition model by one step.
 
         Parameters:
@@ -439,8 +451,8 @@ class VegTransition:
             for i, wy in enumerate(simulation_period):
                 self.step(
                     timestep=pd.to_datetime(f"{wy}-10-01"),
-                    counter=str(i + 1),
-                    simulation_period=str(len(simulation_period)),
+                    #counter=str(i + 1),
+                    #simulation_period=str(len(simulation_period)),
                 )
 
             self._logger.info("Simulation complete")
@@ -798,16 +810,26 @@ class VegTransition:
 
         (No logging because logger needs output location for log file first.)
         """
-        output_dir_name = f"VegOut_{self.sim_start_time}"
+        folder_name = utils.generate_filename(
+            params=self.file_params,
+            #base_path=self.timestep_output_dir,
+            parameter="DATA",
+        )
+
+        output_dir_name = f"{folder_name}_{self.sim_start_time}"
 
         # Combine base directory and new directory name
         self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-metadata' subdirectory
+        # create the 'run-metadata' subdirectory
         self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(self.run_metadata_dir, exist_ok=True)
+
+         # create the 'figs' subdirectory
+        self.run_figs_dir = os.path.join(self.run_metadata_dir, "figs")
+        os.makedirs(self.run_figs_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
             shutil.copy(self.config_path, self.run_metadata_dir)
@@ -1090,19 +1112,28 @@ class VegTransition:
     #     self.timestep_out.to_netcdf(self.netcdf_filepath, mode="w")
     #     del self.timestep_out
 
-    def _create_timestep_dir(self, date):
+    def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
 
-        self.timestep_output_dir = os.path.join(
-            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-        )
         self.timestep_output_dir_figs = os.path.join(
-            self.timestep_output_dir,
-            "figs",
+            self.run_figs_dir, f"{date.strftime('%Y%m%d')}"
         )
-        os.makedirs(self.timestep_output_dir, exist_ok=True)
+        # self.timestep_output_dir_figs = os.path.join(
+        #     self.timestep_output_dir,
+        #     "figs",
+        # )
+        #os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
     # def save_water_depth(self, params: dict):

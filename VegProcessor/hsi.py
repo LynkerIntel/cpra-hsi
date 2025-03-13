@@ -126,7 +126,7 @@ class HSI(vt.VegTransition):
 
         # datasets
         self.pct_cover_veg = None
-        self.blue_crab_lookup_table = self._load_blue_crab_lookup()
+        self._load_blue_crab_lookup()
 
         # HSI Variables
         self.pct_open_water = None

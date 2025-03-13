@@ -542,13 +542,13 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    def _create_output_dirs(self):
-        """Create an output location for state variables, model config,
-        input data, and QC plots.
+    # def _create_output_dirs(self):
+    #     """Create an output location for state variables, model config,
+    #     input data, and QC plots.
 
-        (No logging because logger needs output location for log file first.)
-        """
-        output_dir_name = f"HSI_{self.sim_start_time}"
+    #     (No logging because logger needs output location for log file first.)
+    #     """
+    #     output_dir_name = f"HSI_{self.sim_start_time}"
 
     #     # Combine base directory and new directory name
     #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)

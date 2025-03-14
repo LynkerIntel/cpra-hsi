@@ -73,7 +73,6 @@ class AlligatorHSI:
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
         self._setup_logger()
-
         self.template = self._create_template_array()
 
         # Calculate individual suitability indices

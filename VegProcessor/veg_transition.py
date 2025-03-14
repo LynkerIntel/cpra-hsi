@@ -800,7 +800,7 @@ class VegTransition:
             # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
-            self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
+            self.salinity = hydro_logic.habitat_based_salinity(veg_type = self.veg_type, domain = self.hydro_domain)
             self._logger.info("Creating salinity defaults from veg type array.")
             return self.salinity
 

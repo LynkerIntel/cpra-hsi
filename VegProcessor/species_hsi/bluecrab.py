@@ -130,7 +130,7 @@ class BlueCrabHSI:
                     "cpue_scaled",
                 ].values[0]
             else:
-                return 999.0
+                return np.nan
 
         si_1 = np.vectorize(get_CPUE_value)(
             self.v1a_mean_annual_salinity, self.v1b_mean_annual_temperature

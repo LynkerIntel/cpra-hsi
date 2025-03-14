@@ -280,7 +280,11 @@ class HSI(vt.VegTransition):
 
         # calculate pct cover for all veg types
         self._calculate_pct_cover()
-        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(self.veg_type)
+        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
+            self.veg_type, 
+            domain=self.hydro_domain, 
+            cell=True
+        )
 
         # run HSI models for timestep
         if self.run_hsi:

@@ -6,12 +6,14 @@ def model_based_salinity():
     return NotImplementedError
 
 
-def habitat_based_salinity(veg_type: np.ndarray | xr.DataArray) -> np.ndarray:
-    """Get salinity defaults based on habitat type. If supplied a numpy array
-    (as by VegTransition) the numpy array is returned with the same dims. If
-    supplied an xr.DataArray, the same logic is applied, by the returned DataArray
-    is downsampled from 60m to 480m using a spatial average (as in HSI).
-
+def habitat_based_salinity(
+        veg_type: np.ndarray | xr.DataArray, 
+        domain : np.ndarray, 
+        cell : bool = False
+    ) -> np.ndarray:
+    """
+    Get salinity defaults based on habitat type. Can be supplied a numpy array or
+    xr.DataArray. A np.ndarray is always returned.
 
     From Jenneke:
 
@@ -23,37 +25,36 @@ def habitat_based_salinity(veg_type: np.ndarray | xr.DataArray) -> np.ndarray:
     TODO properly implement 12 month salinity (static as of now)
 
     Params:
-        - veg_type (np.ndarray | xr.DataArray): array of current vegetation types.
-    Returns:
-        - np.ndarray: Salinty array with default values, for use
-            when no salinity data is available.
+    --------
+    veg_type : (np.ndarray | xr.DataArray) 
+        array of current vegetation types.
+    cell : bool
+        True if output should be downsampled to 480m grid cell size.
+    domain : np.ndarray
+        Domain to mask output array by.
+    
+    Returns
+    --------
+    salinity : np.ndarray
+        Salinty array with default values, for use when no salinity 
+        data is available.
     """
-    if isinstance(veg_type, xr.DataArray):
-        # Create salinity array initialized with default value of 1
-        da = xr.full_like(veg_type, 1.0, dtype=float)
+    if not isinstance(veg_type, xr.DataArray):
+        veg_type = xr.DataArray(veg_type)
 
-        # Apply conditions
-        da = da.where(veg_type != 23, 18)
-        da = da.where(veg_type != 22, 8)
-        da = da.where(veg_type != 21, 3.5)
+    salinity = xr.full_like(veg_type, 1.0, dtype=float)
 
-        # NaN is added (pad) for non-exact downscaling dims
-        da = da.coarsen(x=8, y=8, boundary="pad").mean()
-        return da.to_numpy()
+    salinity = xr.where(veg_type == 23, 18, salinity)
+    salinity = xr.where(veg_type == 22, 8, salinity)
+    salinity = xr.where(veg_type == 21, 3.5, salinity)
 
-    # creat salinity, set all elements to 1
-    salinity = np.ones_like(veg_type)
+    # mask to veg domain
+    salinity = salinity.where(domain, np.nan)
 
-    # create masks
-    saline_marsh_mask = veg_type == 23
-    brackish_marsh_mask = veg_type == 22
-    intermediate_marsh_mask = veg_type == 21
-
-    salinity[saline_marsh_mask] = 18
-    salinity[brackish_marsh_mask] = 8
-    salinity[intermediate_marsh_mask] = 3.5
-
-    return salinity
+    if cell:
+        salinity = salinity.coarsen(x=8, y=8, boundary="pad").mean()
+    
+    return salinity.to_numpy()
 
 
 # def downsampled_habitat_based_salinity(veg_type: xr.DataArray) -> xr.DataArray:

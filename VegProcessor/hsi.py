@@ -330,6 +330,7 @@ class HSI(vt.VegTransition):
         time_str = self.current_timestep.strftime("%Y%m%d")
         ds = xr.open_dataset(self.veg_type_path)
         da = ds.sel({"time": time_str})["veg_type"]
+        ds.close()  # Ensure file closure
         return da
 
     def _calculate_pct_cover(self):
@@ -596,9 +597,9 @@ class HSI(vt.VegTransition):
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save the initial NetCDF file
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
         ds.close()
         da.close()
-        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
 
         self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
 
@@ -615,8 +616,6 @@ class HSI(vt.VegTransition):
         None
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
-        # Open existing NetCDF file
-        ds = xr.open_dataset(self.netcdf_filepath)
 
         hsi_variables = {
             # alligator
@@ -680,34 +679,55 @@ class HSI(vt.VegTransition):
             "pct_vegetated": (self.pct_vegetated, np.float32),
         }
 
-        for var_name, (data, dtype) in hsi_variables.items():
-            if data is None:
-                self._logger.warning("Array '%s' is None, skipping save.", var_name)
+        # Open existing NetCDF file
+        with xr.open_dataset(self.netcdf_filepath) as ds:
 
-            else:
-                # Check if the variable exists in the dataset, if not, initialize it
-                if var_name not in ds:
-                    shape = (len(ds.time), len(ds.y), len(ds.x))
-                    default_value = False if dtype == bool else np.nan
-                    ds[var_name] = (
-                        ["time", "y", "x"],
-                        np.full(shape, default_value, dtype=dtype),
-                    )
+            for var_name, (data, dtype) in hsi_variables.items():
+                if data is None:
+                    self._logger.warning("Array '%s' is None, skipping save.", var_name)
 
-                # Handle 'condition' variables (booleans)
-                if dtype == bool:
-                    data = np.nan_to_num(data, nan=False).astype(bool)
+                else:
+                    # Check if the variable exists in the dataset, if not, initialize it
+                    if var_name not in ds:
+                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        default_value = False if dtype == bool else np.nan
+                        ds[var_name] = (
+                            ["time", "y", "x"],
+                            np.full(shape, default_value, dtype=dtype),
+                        )
 
-                # Assign the data to the dataset for the specific time step
-                ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+                    # Handle 'condition' variables (booleans)
+                    if dtype == bool:
+                        data = np.nan_to_num(data, nan=False).astype(bool)
 
-        # if self.hydro_domain_flag:
-        #     # mask all vars to hydro domain
-        #     ds = ds.where(~np.isnan(self.dem_480))
+                    # Assign the data to the dataset for the specific time step
+                    ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
 
         ds.close()
-        ds.to_netcdf(self.netcdf_filepath, mode="a")
+        ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+
+    def post_process(self):
+        """HSI post process
+
+        Currently opens file and then crops to hydro domain
+        """
+        with xr.open_dataset(self.netcdf_filepath) as ds:
+            ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
+
+            # hack: remove the file before writing to prevent conflicts
+            # not sure why the file would be open at this point
+            if os.path.exists(self.netcdf_filepath):
+                os.remove(self.netcdf_filepath)
+
+            ds_out.close()
+            ds_out.to_netcdf(self.netcdf_filepath, mode="w")
+
+        # print(ds_out["spatial_ref"])
+        # print(ds.variables)
+
+        # Ensure file is closed before overwriting
+        # ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
 
     # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
     #     """Create output directory for the current timestamp, where

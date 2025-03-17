@@ -144,8 +144,8 @@ class BassHSI:
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+            # if self.hydro_domain_flag:
+            #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -199,8 +199,8 @@ class BassHSI:
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+            # if self.hydro_domain_flag:
+            #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 

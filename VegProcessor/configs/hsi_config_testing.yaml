@@ -12,7 +12,7 @@ raster_data:
 
 simulation:
   water_year_start: 1967 # int
-  water_year_end: 1968 # int
+  water_year_end: 1967 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   run_hsi: True
   hydro_domain_flag: True

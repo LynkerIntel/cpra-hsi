@@ -6,7 +6,7 @@ raster_data:
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S05_G504_AB_O_ANN_01_25/AMP_VEG_S05_G504_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
+  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S06_AB_O_ANN_01_25_DATA_20250313_104415/AMP_VEG_S06_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
   flotant_marsh_raster: "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
   #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
@@ -16,6 +16,7 @@ simulation:
   wse_sequence_input: True # bool if WSE input is synthetic
   run_hsi: True
   hydro_domain_flag: True
+  blue_crab_lookup_table: "/Users/dillonragar/data/cpra/seine_bluecrab_gamm_table_1dec.csv"
 
 metadata:
   model: HSI

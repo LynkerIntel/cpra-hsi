@@ -710,7 +710,7 @@ class HSI(vt.VegTransition):
     def post_process(self):
         """HSI post process
 
-        Currently opens file and then crops to hydro domain
+        Opens file and then crops to hydro domain
         """
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
@@ -722,12 +722,6 @@ class HSI(vt.VegTransition):
 
             ds_out.close()
             ds_out.to_netcdf(self.netcdf_filepath, mode="w")
-
-        # print(ds_out["spatial_ref"])
-        # print(ds.variables)
-
-        # Ensure file is closed before overwriting
-        # ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
 
     # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
     #     """Create output directory for the current timestamp, where

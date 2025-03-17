@@ -11,6 +11,7 @@ import os
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
+from rasterio.enums import Resampling
 
 # import veg_logic
 import hydro_logic
@@ -578,8 +579,13 @@ class HSI(vt.VegTransition):
         da = xr.open_dataarray(self.dem_path)
         da = da.squeeze(drop="band")  # Drop 'band' dimension if it exists
         da = da.rio.write_crs("EPSG:6344")  # Assign CRS
-        da = da.coarsen(x=8, y=8, boundary="pad").mean()  # Match 480m resolution
 
+        # Resample to 480m resolution, using rioxarray, with preserved correct coords and
+        # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
+        # projected coords.
+        da = da.rio.reproject(da.rio.crs, resolution=480, resampling=Resampling.average)
+
+        # use new 480m coords
         x = da.coords["x"].values
         y = da.coords["y"].values
 
@@ -590,17 +596,55 @@ class HSI(vt.VegTransition):
             freq="YS-OCT",  # Annual start
         )
 
-        # Create an empty Dataset with only coordinates
-        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+        # OLD METHOD
+        # # Create an empty Dataset with only coordinates
+        # ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
 
-        # Assign CRS using rioxarray
+        # # Assign CRS using rioxarray
+        # ds = ds.rio.write_crs("EPSG:6344")
+
+        # # Save the initial NetCDF file
+        # ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        # ds.close()
+        # da.close()
+
+        ds = xr.Dataset(
+            # initialize w/ no data vars
+            # {
+            #     "initial_conditions": (
+            #         ["time", "y", "x"],
+            #         data_values,
+            #         {"grid_mapping": "crs"},
+            #     ),  # Link CRS variable
+            # },
+            coords={
+                "x": (
+                    "x",
+                    x,
+                    {
+                        "units": "m",
+                        "long_name": "Easting",
+                        "standard_name": "projection_x_coordinate",
+                    },
+                ),
+                "y": (
+                    "y",
+                    y,
+                    {
+                        "units": "m",
+                        "long_name": "Northing",
+                        "standard_name": "projection_y_coordinate",
+                    },
+                ),
+                "time": ("time", time_range, {"long_name": "Time"}),
+            },
+            attrs={"title": "HSI"},
+        )
+
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Save the initial NetCDF file
-        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
-        ds.close()
-        da.close()
-
+        # Save dataset to NetCDF
+        ds.to_netcdf(self.netcdf_filepath)
         self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
@@ -694,6 +738,7 @@ class HSI(vt.VegTransition):
                         ds[var_name] = (
                             ["time", "y", "x"],
                             np.full(shape, default_value, dtype=dtype),
+                            {"grid_mapping": "crs"},
                         )
 
                     # Handle 'condition' variables (booleans)
@@ -704,7 +749,11 @@ class HSI(vt.VegTransition):
                     ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
 
         ds.close()
-        ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
+        ds.to_netcdf(
+            self.netcdf_filepath,
+            mode="a",
+        )
+        # ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     def post_process(self):

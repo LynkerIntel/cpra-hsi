@@ -3,11 +3,12 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python=3.12.6
   - gdal
   - appdirs
   - boto3
   - dash
+  - dask
   - dash-bootstrap-components
   - nbformat
   - pip
@@ -24,9 +25,13 @@ dependencies:
   - plotly
   - requests
   - xarray
+  - xarray-spatial
   - rioxarray
   - cartopy
   - pyyaml
   - mypy
   - geoviews
   - geocube
+  - h5netcdf
+  - scipy
+  - netcdf4

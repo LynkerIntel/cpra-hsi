@@ -126,8 +126,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -153,8 +153,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -180,8 +180,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -208,8 +208,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -234,8 +234,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 
@@ -265,8 +265,8 @@ class GizzardShadHSI:
         #    self._logger.info("Running SI 1")
         #    si_1 = np.full(self._shape, 999.0)
 
-        if self.hydro_domain_flag:
-                si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
 
         return si_6
 
@@ -306,8 +306,8 @@ class GizzardShadHSI:
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
         
-        if self.hydro_domain_flag:
-                si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
+        # if self.hydro_domain_flag:
+        #         si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
 
         return si_7
 

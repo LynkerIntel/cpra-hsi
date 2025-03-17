@@ -96,8 +96,8 @@ class BaldEagleHSI:
         """
         # bald eagle does not have depth related vars, and is therfore not
         # limited to hyrologic model domain
-        # arr = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
-        arr = np.full(self.v6_pct_cell_open_water.shape, 999.0)
+        arr = np.where(np.isnan(self.dem_480), np.nan, 999.0)
+        #arr = np.full(self.v6_pct_cell_open_water.shape, 999.0)
         return arr
 
     def _setup_logger(self):
@@ -149,8 +149,9 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+            
+        # if self.hydro_domain_flag:
+        #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -179,8 +180,8 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+        # if self.hydro_domain_flag:
+        #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -208,8 +209,8 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+        # if self.hydro_domain_flag:
+        #     si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -235,8 +236,8 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+            # if self.hydro_domain_flag:
+            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -263,8 +264,8 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+            # if self.hydro_domain_flag:
+            #     si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 
@@ -295,8 +296,8 @@ class BaldEagleHSI:
             if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
             
-            if self.hydro_domain_flag:
-                si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
+            # if self.hydro_domain_flag:
+            #     si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
 
         return si_6
 

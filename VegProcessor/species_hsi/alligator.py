@@ -13,12 +13,13 @@ class AlligatorHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+
+    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
-    
+
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
     v1_pct_open_water: np.ndarray = None
@@ -56,17 +57,15 @@ class AlligatorHSI:
         return cls(
             v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),
             v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
-            v3a_pct_swamp_bottom_hardwood=safe_divide(
-                hsi_instance.pct_swamp_bottom_hardwood
-            ),
+            v3a_pct_swamp_bottom_hardwood=safe_divide(hsi_instance.pct_swamp_bottom_hardwood),
             v3b_pct_fresh_marsh=safe_divide(hsi_instance.pct_fresh_marsh),
             v3c_pct_intermediate_marsh=safe_divide(hsi_instance.pct_intermediate_marsh),
             v3d_pct_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
             v4_edge=hsi_instance.edge,
             v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
             dem_480=hsi_instance.dem_480,
-            hydro_domain_480 = hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag
+            hydro_domain_480=hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
@@ -104,9 +103,7 @@ class AlligatorHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -137,10 +134,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
-            if self.hydro_domain_flag:
-                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
+            # if self.hydro_domain_flag:
+            #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -178,9 +174,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
-            if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+
+            # if self.hydro_domain_flag:
+            #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -199,9 +195,9 @@ class AlligatorHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
-        if self.hydro_domain_flag:
-                si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+
+        # if self.hydro_domain_flag:
+        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -225,9 +221,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
-            if self.hydro_domain_flag:
-                si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+
+            # if self.hydro_domain_flag:
+            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -237,16 +233,12 @@ class AlligatorHSI:
         si_5 = self.template.copy()
 
         if self.v5_mean_annual_salinity is None:
-            self._logger.info(
-                "mean annual salinity data not provided. Setting index to 1."
-            )
+            self._logger.info("mean annual salinity data not provided. Setting index to 1.")
             # Replace all non-NaN values with 1
             si_5[~np.isnan(si_5)] = 1
 
         else:
-            mask_1 = (self.v5_mean_annual_salinity >= 0) & (
-                self.v5_mean_annual_salinity <= 10
-            )
+            mask_1 = (self.v5_mean_annual_salinity >= 0) & (self.v5_mean_annual_salinity <= 10)
 
             si_5[mask_1] = (-0.1 * self.v5_mean_annual_salinity[mask_1]) + 1
 
@@ -256,9 +248,9 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
-            if self.hydro_domain_flag:
-                si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+
+            # if self.hydro_domain_flag:
+            #     si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 

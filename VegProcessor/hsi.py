@@ -62,8 +62,8 @@ class HSI(vt.VegTransition):
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.hydro_domain_flag = self.config['simulation'].get("hydro_domain_flag")
-        self.blue_crab_lookup_path = self.config['simulation'].get("blue_crab_lookup_table")
+        self.hydro_domain_flag = self.config["simulation"].get("hydro_domain_flag")
+        self.blue_crab_lookup_path = self.config["simulation"].get("blue_crab_lookup_table")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -148,7 +148,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None # TODO: is never assigned a value
+        self.mean_annual_temperature = None  # TODO: is never assigned a value
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -172,9 +172,7 @@ class HSI(vt.VegTransition):
         self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = (
-            None  # ideal HEC-RAS SI6 = 20 degrees
-        )
+        self.mean_weekly_temp_reservoir_spawning_season = None  # ideal HEC-RAS SI6 = 20 degrees
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
@@ -265,12 +263,10 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+        self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8]
         )
-        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-            months=[9, 10, 11, 12]
-        )
+        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(months=[9, 10, 11, 12])
         self.water_depth_spawning_season = self._get_depth_filtered(
             months=[4, 5, 6],
         )
@@ -281,9 +277,7 @@ class HSI(vt.VegTransition):
         # calculate pct cover for all veg types
         self._calculate_pct_cover()
         self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
-            self.veg_type, 
-            domain=self.hydro_domain, 
-            cell=True
+            self.veg_type, domain=self.hydro_domain, cell=True
         )
 
         # run HSI models for timestep
@@ -293,7 +287,7 @@ class HSI(vt.VegTransition):
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            
+
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
 
@@ -343,10 +337,37 @@ class HSI(vt.VegTransition):
         function is called for every HSI timestep.
 
         Derived from VegTransition Output
+
+        VEG TYPES AND THIER MAPPED NUMBERS FROM
+        2  Developed High Intensity
+        3  Developed Medium Intensity
+        4  Developed Low Intensity
+        5  Developed Open Space
+        6  Cultivated Crops
+        7  Pasture/Hay
+        8  Grassland/Herbaceous
+        9  Upland - Mixed Deciduous Forest
+        10  Upland - Mixed Evergreen Forest
+        11  Upland Mixed Forest
+        12  Upland Scrub/Shrub
+        13  Unconsolidated Shore
+        14  Bare Land
+        15  Zone V (Upper BLH)
+        16  Zone IV (Middle BLH)
+        17  Zone III (Lower BLH)
+        18  Zone II (Swamp)
+        19  Fresh Shrubs
+        20  Fresh Marsh
+        21  Intermediate Marsh
+        22  Brackish Marsh
+        23  Saline Marsh
+        24  Palustrine Aquatic Bed
+        25  Estuarine Aquatic Bed
+        26  Open Water
         """
-        # logical index for coarsening (i.e # of pixels)
-        # this generates ds with all veg types.
-        # x, y, dims -> 480 / 60 = 8
+        # note: masking for pct cover vars cannot occur here, because there
+        # are limited pixels where the hydro domain exceeds the dem domain.
+        # (these are masked out later)
         ds = utils.generate_pct_cover(
             data_array=self.veg_type,
             veg_keys=self.veg_keys,
@@ -354,60 +375,23 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-
         ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[15, 16, 17, 18],  # these are the BLH zones + swamp
             x=8,
             y=8,
-            boundary="pad",  # not needed for partial pixels, fyi
+            boundary="pad",
         )
+        # ds_swamp_blh = ds_swamp_blh.where(~np.isnan(self.hydro_domain_480))
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[v for v in range(15, 25)],  # these are everything but open water
             x=8,
             y=8,
-            boundary="pad",  # not needed for partial pixels, fyi
+            boundary="pad",
         )
-
-        # not currently in use
-        # ds_marsh = utils.generate_pct_cover_custom(
-        #     data_array=self.veg_type,
-        #     veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
-        #     x=8,
-        #     y=8,
-        #     boundary="pad",  # not needed for partial pixels, fyi
-        # )
-
-        # VEG TYPES AND THIER MAPPED NUMBERS FROM
-        # 2  Developed High Intensity
-        # 3  Developed Medium Intensity
-        # 4  Developed Low Intensity
-        # 5  Developed Open Space
-        # 6  Cultivated Crops
-        # 7  Pasture/Hay
-        # 8  Grassland/Herbaceous
-        # 9  Upland - Mixed Deciduous Forest
-        # 10  Upland - Mixed Evergreen Forest
-        # 11  Upland Mixed Forest
-        # 12  Upland Scrub/Shrub
-        # 13  Unconsolidated Shore
-        # 14  Bare Land
-        # 15  Zone V (Upper BLH)
-        # 16  Zone IV (Middle BLH)
-        # 17  Zone III (Lower BLH)
-        # 18  Zone II (Swamp)
-        # 19  Fresh Shrubs
-        # 20  Fresh Marsh
-        # 21  Intermediate Marsh
-        # 22  Brackish Marsh
-        # 23  Saline Marsh
-        # 24  Palustrine Aquatic Bed
-        # 25  Estuarine Aquatic Bed
-        # 26  Open Water
-
-        # self._logger.debug("Generated ds_swamp_blh: %s", ds_swamp_blh)
+        # ds_vegetated = ds_vegetated.where(~np.isnan(self.hydro_domain_480))
 
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
@@ -539,7 +523,7 @@ class HSI(vt.VegTransition):
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
-    
+
     def _load_blue_crab_lookup(self):
         """
         Read blue crab lookup table
@@ -612,9 +596,9 @@ class HSI(vt.VegTransition):
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save the initial NetCDF file
-        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
         ds.close()
         da.close()
+        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
 
         self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
 
@@ -672,7 +656,10 @@ class HSI(vt.VegTransition):
             # species input vars
             "water_depth_annual_mean": (self.water_depth_annual_mean, np.float32),
             "water_depth_monthly_mean_jan_aug": (self.water_depth_monthly_mean_jan_aug, np.float32),
-            "water_depth_monthly_mean_sept_dec": (self.water_depth_monthly_mean_sept_dec, np.float32),
+            "water_depth_monthly_mean_sept_dec": (
+                self.water_depth_monthly_mean_sept_dec,
+                np.float32,
+            ),
             "water_depth_spawning_season": (self.water_depth_spawning_season, np.float32),
             "pct_open_water": (self.pct_open_water, np.float32),
             "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
@@ -696,7 +683,7 @@ class HSI(vt.VegTransition):
         for var_name, (data, dtype) in hsi_variables.items():
             if data is None:
                 self._logger.warning("Array '%s' is None, skipping save.", var_name)
-                
+
             else:
                 # Check if the variable exists in the dataset, if not, initialize it
                 if var_name not in ds:
@@ -713,6 +700,10 @@ class HSI(vt.VegTransition):
 
                 # Assign the data to the dataset for the specific time step
                 ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+
+        # if self.hydro_domain_flag:
+        #     # mask all vars to hydro domain
+        #     ds = ds.where(~np.isnan(self.dem_480))
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")

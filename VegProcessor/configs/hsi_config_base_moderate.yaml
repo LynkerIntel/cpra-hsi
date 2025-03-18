@@ -20,7 +20,7 @@ simulation:
 
 metadata:
   model: HSI
-  scenario: "03" # scenario info for plots and metadata
+  scenario: "S03" # scenario info for plots and metadata
   group: # GXXX
   wpu: ARS
 

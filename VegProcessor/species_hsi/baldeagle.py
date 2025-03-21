@@ -97,6 +97,15 @@ class BaldEagleHSI:
         # arr = np.full(self.v6_pct_cell_open_water.shape, 999.0)
         return arr
 
+    def clip_array(self, result: np.ndarray) -> np.ndarray:
+        """Clip array values to between 0 and 1, for cases
+        where equations may result in slightly higher than 1.
+        """
+        clipped = np.clip(result, 0.0, 1.0)
+        if not np.array_equal(result, clipped):
+            self._logger.warning("SI output clipped to [0, 1] range.")
+        return clipped
+
     def _setup_logger(self):
         """Set up the logger for the class."""
         self._logger = logging.getLogger("BaldEagleHSI")
@@ -143,7 +152,7 @@ class BaldEagleHSI:
         # if self.hydro_domain_flag:
         #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
-        return si_1
+        return self.clip_array(si_1)
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is flotant marsh."""
@@ -171,7 +180,7 @@ class BaldEagleHSI:
         # if self.hydro_domain_flag:
         #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
-        return si_2
+        return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
         """Percent of cell that is covered by forested wetland."""
@@ -198,7 +207,7 @@ class BaldEagleHSI:
         # if self.hydro_domain_flag:
         #     si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
-        return si_3
+        return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
         """Percent of cell that is covered by fresh marsh."""
@@ -225,7 +234,7 @@ class BaldEagleHSI:
             # if self.hydro_domain_flag:
             #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
-        return si_4
+        return self.clip_array(si_4)
 
     def calculate_si_5(self) -> np.ndarray:
         """Percent of cell that is covered by intermediate marsh."""
@@ -251,7 +260,7 @@ class BaldEagleHSI:
             # if self.hydro_domain_flag:
             #     si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
-        return si_5
+        return self.clip_array(si_5)
 
     def calculate_si_6(self) -> np.ndarray:
         """Percent of cell that is open water."""
@@ -281,7 +290,7 @@ class BaldEagleHSI:
             # if self.hydro_domain_flag:
             #     si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
 
-        return si_6
+        return self.clip_array(si_6)
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""

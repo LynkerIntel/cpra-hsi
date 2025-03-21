@@ -160,9 +160,9 @@ class BaldEagleHSI:
             si_2 = (
                 0.282
                 + (0.047 * self.v2_pct_cell_flotant_marsh)
-                - (1.105 * np.exp(-3) * self.v2_pct_cell_flotant_marsh**2)
-                + (1.101 * np.exp(-5) * self.v2_pct_cell_flotant_marsh**3)
-                - (3.967 * np.exp(-8) * self.v2_pct_cell_flotant_marsh**4)
+                - (1.105e-3 * self.v2_pct_cell_flotant_marsh**2)
+                + (1.101e-5 * self.v2_pct_cell_flotant_marsh**3)
+                - (3.967e-8 * self.v2_pct_cell_flotant_marsh**4)
             )
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
@@ -187,9 +187,9 @@ class BaldEagleHSI:
             si_3 = (
                 0.015
                 + (0.048 * self.v3_pct_cell_forested_wetland)
-                - (1.178 * np.exp(-3) * self.v3_pct_cell_forested_wetland**2)
-                + (1.366 * np.exp(-5) * self.v3_pct_cell_forested_wetland**3)
-                - (5.673 * np.exp(-8) * self.v3_pct_cell_forested_wetland**4)
+                - (1.178e-3 * self.v3_pct_cell_forested_wetland**2)
+                + (1.366e-5 * self.v3_pct_cell_forested_wetland**3)
+                - (5.673e-8 * self.v3_pct_cell_forested_wetland**4)
             )
 
             if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
@@ -214,9 +214,9 @@ class BaldEagleHSI:
             si_4 = (
                 0.370
                 + (0.07 * self.v4_pct_cell_fresh_marsh)
-                - (2.655 * np.exp(-3) * self.v4_pct_cell_fresh_marsh**2)
-                + (3.691 * np.exp(-5) * self.v4_pct_cell_fresh_marsh**3)
-                - (1.701 * np.exp(-7) * self.v4_pct_cell_fresh_marsh**4)
+                - (2.655e-3 * self.v4_pct_cell_fresh_marsh**2)
+                + (3.691e-5 * self.v4_pct_cell_fresh_marsh**3)
+                - (1.701e-7 * self.v4_pct_cell_fresh_marsh**4)
             )
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
@@ -240,9 +240,9 @@ class BaldEagleHSI:
             # condition 1 (there is just one function here, so no need for mask)
             si_5 = (
                 0.263
-                - (9.406 * np.exp(-3) * self.v5_pct_cell_intermediate_marsh)
-                + (5.432 * np.exp(-4) * self.v5_pct_cell_intermediate_marsh**2)
-                - (3.817 * np.exp(-6) * self.v5_pct_cell_intermediate_marsh**3)
+                - (9.406e-3 * self.v5_pct_cell_intermediate_marsh)
+                + (5.432e-4 * self.v5_pct_cell_intermediate_marsh**2)
+                - (3.817e-6 * self.v5_pct_cell_intermediate_marsh**3)
             )
 
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):

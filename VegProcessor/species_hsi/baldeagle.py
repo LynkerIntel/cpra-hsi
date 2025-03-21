@@ -65,8 +65,6 @@ class BaldEagleHSI:
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
         self._setup_logger()
-
-        # Determine the shape of the arrays
         self.template = self._create_template_array()
 
         # Calculate individual suitability indices
@@ -261,7 +259,7 @@ class BaldEagleHSI:
 
     def calculate_si_6(self) -> np.ndarray:
         """Percent of cell that is open water."""
-        self._logger.info("Running SI 1")
+        self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
         if self.v6_pct_cell_open_water is None:
@@ -274,11 +272,11 @@ class BaldEagleHSI:
             si_6[mask_1] = 0.01
 
             # condition 2 (AND)
-            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 0.95)
+            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 95.0)
             si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1))
 
             # condition 3
-            mask_3 = self.v6_pct_cell_open_water > 0.95
+            mask_3 = self.v6_pct_cell_open_water > 95.0
             si_6[mask_3] = 0.0
 
             if np.any(np.isclose(si_6, 999.0, atol=1e-5)):

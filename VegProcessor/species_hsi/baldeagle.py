@@ -49,20 +49,13 @@ class BaldEagleHSI:
             return array / divisor if array is not None else None
 
         return cls(
-            v1_pct_cell_developed_or_upland=safe_divide(
-                hsi_instance.pct_dev_upland,
-            ),
-            v2_pct_cell_flotant_marsh=safe_divide(
-                hsi_instance.pct_flotant_marsh,
-            ),
-            v3_pct_cell_forested_wetland=safe_divide(
-                hsi_instance.pct_swamp_bottom_hardwood
-            ),  # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
-            v4_pct_cell_fresh_marsh=safe_divide(
-                hsi_instance.pct_fresh_marsh,
-            ),
-            v5_pct_cell_intermediate_marsh=safe_divide(hsi_instance.pct_intermediate_marsh),
-            v6_pct_cell_open_water=hsi_instance.pct_open_water,  # keep %
+            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland,
+            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh,
+            # "forested wetland" = BLH (lower, middle, upper) + swamp
+            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood,
+            v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
+            v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
+            v6_pct_cell_open_water=hsi_instance.pct_open_water,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_flag=hsi_instance.hydro_domain_flag,
@@ -100,10 +93,14 @@ class BaldEagleHSI:
     def clip_array(self, result: np.ndarray) -> np.ndarray:
         """Clip array values to between 0 and 1, for cases
         where equations may result in slightly higher than 1.
+        Only logs a warning if the input array has values greater than 1.1,
+        for cases where there may be a logical error.
         """
         clipped = np.clip(result, 0.0, 1.0)
-        if not np.array_equal(result, clipped):
-            self._logger.warning("SI output clipped to [0, 1] range.")
+        if np.any(result > 1.1):
+            self._logger.warning(
+                "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
+            )
         return clipped
 
     def _setup_logger(self):

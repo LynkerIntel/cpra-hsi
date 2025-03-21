@@ -164,7 +164,6 @@ class HSI(vt.VegTransition):
         self.pct_fresh_shrubs = None
 
         self.pct_bare_ground = None
-        self.pct_dev_upland = None  # does not change
         # self.pct_marsh = None # not currently in use
 
         # gizzard shad vars

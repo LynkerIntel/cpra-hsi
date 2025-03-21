@@ -13,7 +13,8 @@ class BassHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+
+    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -40,8 +41,8 @@ class BassHSI:
             v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             dem_480=hsi_instance.dem_480,
-            hydro_domain_480 = hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag
+            hydro_domain_480=hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
@@ -71,9 +72,7 @@ class BassHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -91,17 +90,13 @@ class BassHSI:
         # Iterate over instance attributes and return the shape of the first non None numpy array
         for name, value in vars(self).items():
             if value is not None and isinstance(value, np.ndarray):
-                self._logger.info(
-                    "Using attribute %s as shape for output: %s", name, value.shape
-                )
+                self._logger.info("Using attribute %s as shape for output: %s", name, value.shape)
                 return value.shape
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         if self.v1a_mean_annual_salinity is None:
-            self._logger.info(
-                "Mean annual salinity data not provided. Setting index to 1."
-            )
+            self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
             si_1 = np.ones(self._shape)
 
         else:
@@ -125,8 +120,7 @@ class BassHSI:
                 (self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08
             ) / 24.91
             T_si_2 = (
-                (self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature)
-                - 535.99
+                (self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature) - 535.99
             ) / 206.16
 
             si_1 = (
@@ -143,7 +137,7 @@ class BassHSI:
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
             # if self.hydro_domain_flag:
             #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
@@ -152,9 +146,7 @@ class BassHSI:
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is covered by emergent vegetation."""
         if self.v2_pct_emergent_vegetation is None:
-            self._logger.info(
-                "Pct emergent vegetation data not provided. Setting index to 1."
-            )
+            self._logger.info("Pct emergent vegetation data not provided. Setting index to 1.")
             si_2 = np.ones(self._shape)
 
         else:
@@ -198,7 +190,7 @@ class BassHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
             # if self.hydro_domain_flag:
             #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 

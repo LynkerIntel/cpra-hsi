@@ -91,9 +91,7 @@ class VegTransition:
 
         # metadata
         self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
+        self.scenario_type = self.config["metadata"].get("scenario", "")  # empty str if missing
 
         # self.model = self.config["metadata"].get("model")
         # self.group = self.config["metadata"].get("group")
@@ -104,9 +102,7 @@ class VegTransition:
         self.output_base_dir = self.config["output"].get("output_base")
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        config_pretty = yaml.dump(self.config, default_flow_style=False, sort_keys=False)
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -127,9 +123,7 @@ class VegTransition:
         self.timestep_output_dir = None
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        config_pretty = yaml.dump(self.config, default_flow_style=False, sort_keys=False)
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
@@ -230,9 +224,7 @@ class VegTransition:
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=os.path.dirname(
-                    self.config_path
-                ),  # Ensure it's run in the repo directory
+                cwd=os.path.dirname(self.config_path),  # Ensure it's run in the repo directory
                 capture_output=True,
                 text=True,
                 check=True,
@@ -365,9 +357,7 @@ class VegTransition:
         )
 
         if utils.has_overlapping_non_nan(stacked_veg):
-            raise ValueError(
-                "New vegetation stacked arrays cannot have overlapping values."
-            )
+            raise ValueError("New vegetation stacked arrays cannot have overlapping values.")
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
@@ -451,8 +441,8 @@ class VegTransition:
             for i, wy in enumerate(simulation_period):
                 self.step(
                     timestep=pd.to_datetime(f"{wy}-10-01"),
-                    #counter=str(i + 1),
-                    #simulation_period=str(len(simulation_period)),
+                    # counter=str(i + 1),
+                    # simulation_period=str(len(simulation_period)),
                 )
 
             self._logger.info("Simulation complete")
@@ -577,9 +567,7 @@ class VegTransition:
 
         if self.analog_sequence:
             self._logger.info("Using sequence loading method.")
-            new_timesteps = pd.date_range(
-                f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
-            )
+            new_timesteps = pd.date_range(f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS")
 
             if not len(new_timesteps) == len(ds["time"]):
                 raise ValueError("Timestep must be monthly.")
@@ -591,9 +579,7 @@ class VegTransition:
         self._logger.info("Loaded HEC-RAS WSE Datset for water-year: %s", water_year)
         return ds
 
-    def _reproject_match_to_dem(
-        self, ds: xr.Dataset | xr.DataArray
-    ) -> xr.Dataset | xr.DataArray:
+    def _reproject_match_to_dem(self, ds: xr.Dataset | xr.DataArray) -> xr.Dataset | xr.DataArray:
         """
         Temporary fix to match WSE model output to 60m DEM grid.
         """
@@ -672,9 +658,7 @@ class VegTransition:
         if not combined_mask_change.any():
             self._logger.warning("No forested pixels changed in prior timestep.")
 
-        if utils.common_true_locations(
-            np.stack((combined_mask_change, combined_mask_no_change))
-        ):
+        if utils.common_true_locations(np.stack((combined_mask_change, combined_mask_no_change))):
             raise ValueError("Forested types have overlapping True location(s)")
 
         # if forested pixels change, reset age to 0
@@ -769,9 +753,9 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hecras_domain_raster(self, cell : bool = False) -> np.ndarray:
+    def _load_hecras_domain_raster(self, cell: bool = False) -> np.ndarray:
         """Load raster file specifying the boundary of the HECRAS domain.
-        
+
         Params
         -------
         cell : bool
@@ -800,7 +784,9 @@ class VegTransition:
             # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
-            self.salinity = hydro_logic.habitat_based_salinity(veg_type = self.veg_type, domain = self.hydro_domain)
+            self.salinity = hydro_logic.habitat_based_salinity(
+                veg_type=self.veg_type, domain=self.hydro_domain
+            )
             self._logger.info("Creating salinity defaults from veg type array.")
             return self.salinity
 
@@ -812,7 +798,7 @@ class VegTransition:
         """
         folder_name = utils.generate_filename(
             params=self.file_params,
-            #base_path=self.timestep_output_dir,
+            # base_path=self.timestep_output_dir,
             parameter="DATA",
         )
 
@@ -827,7 +813,7 @@ class VegTransition:
         self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(self.run_metadata_dir, exist_ok=True)
 
-         # create the 'figs' subdirectory
+        # create the 'figs' subdirectory
         self.run_figs_dir = os.path.join(self.run_metadata_dir, "figs")
         os.makedirs(self.run_figs_dir, exist_ok=True)
 
@@ -872,7 +858,40 @@ class VegTransition:
 
         # Create an empty Dataset with only coordinates
         # vars will be appended at timestep update
-        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+
+        ds = xr.Dataset(
+            # initialize w/ no data vars
+            # {
+            #     "initial_conditions": (
+            #         ["time", "y", "x"],
+            #         data_values,
+            #         {"grid_mapping": "crs"},
+            #     ),  # Link CRS variable
+            # },
+            coords={
+                "x": (
+                    "x",
+                    x,
+                    {
+                        "units": "m",
+                        "long_name": "Easting",
+                        "standard_name": "projection_x_coordinate",
+                    },
+                ),
+                "y": (
+                    "y",
+                    y,
+                    {
+                        "units": "m",
+                        "long_name": "Northing",
+                        "standard_name": "projection_y_coordinate",
+                    },
+                ),
+                "time": ("time", time_range, {"long_name": "Time"}),
+            },
+            attrs={"title": "HSI"},
+        )
+
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Add metadata
@@ -1133,7 +1152,7 @@ class VegTransition:
         #     self.timestep_output_dir,
         #     "figs",
         # )
-        #os.makedirs(self.timestep_output_dir, exist_ok=True)
+        # os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
     # def save_water_depth(self, params: dict):
@@ -1203,24 +1222,14 @@ class VegTransition:
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
             self.salinity,
         )
-        self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
-            self.water_depth
-        )
-        self.qc_annual_inundation_duration = utils.qc_annual_inundation_duration(
-            self.water_depth
-        )
+        self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(self.water_depth)
+        self.qc_annual_inundation_duration = utils.qc_annual_inundation_duration(self.water_depth)
         self.qc_growing_season_depth = utils.qc_growing_season_depth(
             self.water_depth,
         )
-        self.qc_growing_season_inundation = utils.qc_growing_season_inundation(
-            self.water_depth
-        )
-        self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(
-            self.water_depth
-        )
-        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(
-            self.water_depth
-        )
+        self.qc_growing_season_inundation = utils.qc_growing_season_inundation(self.water_depth)
+        self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(self.water_depth)
+        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(self.water_depth)
 
 
 class _TimestepFilter(logging.Filter):

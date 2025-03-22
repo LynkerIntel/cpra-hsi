@@ -83,7 +83,7 @@ class BassHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.full(self.hydro_domain_480, 999.0)
+        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
 
     # def _determine_shape(self) -> tuple:

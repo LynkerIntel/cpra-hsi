@@ -14,8 +14,11 @@ class BaldEagleHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    # gridded data as numpy arrays or None
-    # init with None to be distinct from np.nan
+    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
+    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
+    # veg type domain, which is a greate area then hydro domain.
+    hydro_domain_480: np.ndarray = None
+    dem_480: np.ndarray = None
 
     v1_pct_cell_developed_or_upland: np.ndarray = None
     v2_pct_cell_flotant_marsh: np.ndarray = None
@@ -23,8 +26,6 @@ class BaldEagleHSI:
     v4_pct_cell_fresh_marsh: np.ndarray = None
     v5_pct_cell_intermediate_marsh: np.ndarray = None
     v6_pct_cell_open_water: np.ndarray = None
-
-    dem: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -48,33 +49,22 @@ class BaldEagleHSI:
             return array / divisor if array is not None else None
 
         return cls(
-            v1_pct_cell_developed_or_upland=safe_divide(
-                hsi_instance.pct_dev_upland,
-            ),
-            v2_pct_cell_flotant_marsh=safe_divide(
-                hsi_instance.pct_flotant_marsh,
-            ),
-            v3_pct_cell_forested_wetland=safe_divide(
-                hsi_instance.pct_swamp_bottom_hardwood
-            ),  # Note: "forested wetland" = BLH (lower, middle, upper) + swamp
-            v4_pct_cell_fresh_marsh=safe_divide(
-                hsi_instance.pct_fresh_marsh,
-            ),
-            v5_pct_cell_intermediate_marsh=safe_divide(
-                hsi_instance.pct_intermediate_marsh
-            ),
-            v6_pct_cell_open_water=safe_divide(
-                hsi_instance.pct_open_water,
-            ),
-            dem=hsi_instance.dem_480,
+            v1_pct_cell_developed_or_upland=hsi_instance.pct_dev_upland,
+            v2_pct_cell_flotant_marsh=hsi_instance.pct_flotant_marsh,
+            # "forested wetland" = BLH (lower, middle, upper) + swamp
+            v3_pct_cell_forested_wetland=hsi_instance.pct_swamp_bottom_hardwood,
+            v4_pct_cell_fresh_marsh=hsi_instance.pct_fresh_marsh,
+            v5_pct_cell_intermediate_marsh=hsi_instance.pct_intermediate_marsh,
+            v6_pct_cell_open_water=hsi_instance.pct_open_water,
+            dem_480=hsi_instance.dem_480,
+            hydro_domain_480=hsi_instance.hydro_domain_480,
+            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
         self._setup_logger()
-
-        # Determine the shape of the arrays
         self.template = self._create_template_array()
 
         # Calculate individual suitability indices
@@ -94,9 +84,22 @@ class BaldEagleHSI:
         """
         # bald eagle does not have depth related vars, and is therfore not
         # limited to hyrologic model domain
-        # arr = np.where(np.isnan(self.v2_water_depth_annual_mean), np.nan, 999.0)
-        arr = np.full(self.v6_pct_cell_open_water.shape, 999.0)
+        arr = np.where(np.isnan(self.dem_480), np.nan, 999.0)
+        # arr = np.full(self.v6_pct_cell_open_water.shape, 999.0)
         return arr
+
+    def clip_array(self, result: np.ndarray) -> np.ndarray:
+        """Clip array values to between 0 and 1, for cases
+        where equations may result in slightly higher than 1.
+        Only logs a warning if the input array has values greater than 1.1,
+        for cases where there may be a logical error.
+        """
+        clipped = np.clip(result, 0.0, 1.0)
+        if np.any(result > 1.1):
+            self._logger.warning(
+                "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
+            )
+        return clipped
 
     def _setup_logger(self):
         """Set up the logger for the class."""
@@ -110,9 +113,7 @@ class BaldEagleHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -126,9 +127,7 @@ class BaldEagleHSI:
 
         # if self.v1a_pct_cell_developed_land is None | self.v1b_pct_cell_upland is None:
         if self.v1_pct_cell_developed_or_upland is None:
-            self._logger.info(
-                "Pct developed land or upland data not provided. Setting index to 1."
-            )
+            self._logger.info("Pct developed land or upland data not provided. Setting index to 1.")
             si_1[~np.isnan(si_1)] = 1
 
         else:
@@ -140,14 +139,15 @@ class BaldEagleHSI:
 
             # condition 2 (otherwise)
             mask_2 = self.v1_pct_cell_developed_or_upland > 0.0
-            si_1[mask_2] = 0.408 + 0.142 * np.log(
-                self.v1_pct_cell_developed_or_upland[mask_2]
-            )
+            si_1[mask_2] = 0.408 + 0.142 * np.log(self.v1_pct_cell_developed_or_upland[mask_2])
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_1
+        # if self.hydro_domain_flag:
+        #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+
+        return self.clip_array(si_1)
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent of cell that is flotant marsh."""
@@ -156,9 +156,7 @@ class BaldEagleHSI:
         # Calculate for inital conditions and use for all time periods
 
         if self.v2_pct_cell_flotant_marsh is None:
-            self._logger.info(
-                "Pct flotant marsh data not provided. Setting index to 1."
-            )
+            self._logger.info("Pct flotant marsh data not provided. Setting index to 1.")
             si_2[~np.isnan(si_2)] = 1
 
         else:
@@ -166,15 +164,18 @@ class BaldEagleHSI:
             si_2 = (
                 0.282
                 + (0.047 * self.v2_pct_cell_flotant_marsh)
-                - (1.105 * np.exp(-3) * self.v2_pct_cell_flotant_marsh**2)
-                + (1.101 * np.exp(-5) * self.v2_pct_cell_flotant_marsh**3)
-                - (3.967 * np.exp(-8) * self.v2_pct_cell_flotant_marsh**4)
+                - (1.105e-3 * self.v2_pct_cell_flotant_marsh**2)
+                + (1.101e-5 * self.v2_pct_cell_flotant_marsh**3)
+                - (3.967e-8 * self.v2_pct_cell_flotant_marsh**4)
             )
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_2
+        # if self.hydro_domain_flag:
+        #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+
+        return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
         """Percent of cell that is covered by forested wetland."""
@@ -182,9 +183,7 @@ class BaldEagleHSI:
         si_3 = self.template.copy()
 
         if self.v3_pct_cell_forested_wetland is None:
-            self._logger.info(
-                "Pct forested wetland data not provided. Setting index to 1."
-            )
+            self._logger.info("Pct forested wetland data not provided. Setting index to 1.")
             si_3[~np.isnan(si_3)] = 1
 
         else:
@@ -192,15 +191,18 @@ class BaldEagleHSI:
             si_3 = (
                 0.015
                 + (0.048 * self.v3_pct_cell_forested_wetland)
-                - (1.178 * np.exp(-3) * self.v3_pct_cell_forested_wetland**2)
-                + (1.366 * np.exp(-5) * self.v3_pct_cell_forested_wetland**3)
-                - (5.673 * np.exp(-8) * self.v3_pct_cell_forested_wetland**4)
+                - (1.178e-3 * self.v3_pct_cell_forested_wetland**2)
+                + (1.366e-5 * self.v3_pct_cell_forested_wetland**3)
+                - (5.673e-8 * self.v3_pct_cell_forested_wetland**4)
             )
 
             if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_3
+        # if self.hydro_domain_flag:
+        #     si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+
+        return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
         """Percent of cell that is covered by fresh marsh."""
@@ -216,15 +218,18 @@ class BaldEagleHSI:
             si_4 = (
                 0.370
                 + (0.07 * self.v4_pct_cell_fresh_marsh)
-                - (2.655 * np.exp(-3) * self.v4_pct_cell_fresh_marsh**2)
-                + (3.691 * np.exp(-5) * self.v4_pct_cell_fresh_marsh**3)
-                - (1.701 * np.exp(-7) * self.v4_pct_cell_fresh_marsh**4)
+                - (2.655e-3 * self.v4_pct_cell_fresh_marsh**2)
+                + (3.691e-5 * self.v4_pct_cell_fresh_marsh**3)
+                - (1.701e-7 * self.v4_pct_cell_fresh_marsh**4)
             )
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_4
+            # if self.hydro_domain_flag:
+            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+
+        return self.clip_array(si_4)
 
     def calculate_si_5(self) -> np.ndarray:
         """Percent of cell that is covered by intermediate marsh."""
@@ -232,28 +237,29 @@ class BaldEagleHSI:
         si_5 = self.template.copy()
 
         if self.v5_pct_cell_intermediate_marsh is None:
-            self._logger.info(
-                "Pct intermediate marsh data not provided. Setting index to 1."
-            )
+            self._logger.info("Pct intermediate marsh data not provided. Setting index to 1.")
             si_5[~np.isnan(si_5)] = 1
 
         else:
             # condition 1 (there is just one function here, so no need for mask)
             si_5 = (
                 0.263
-                - (9.406 * np.exp(-3) * self.v5_pct_cell_intermediate_marsh)
-                + (5.432 * np.exp(-4) * self.v5_pct_cell_intermediate_marsh**2)
-                - (3.817 * np.exp(-6) * self.v5_pct_cell_intermediate_marsh**3)
+                - (9.406e-3 * self.v5_pct_cell_intermediate_marsh)
+                + (5.432e-4 * self.v5_pct_cell_intermediate_marsh**2)
+                - (3.817e-6 * self.v5_pct_cell_intermediate_marsh**3)
             )
 
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_5
+            # if self.hydro_domain_flag:
+            #     si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+
+        return self.clip_array(si_5)
 
     def calculate_si_6(self) -> np.ndarray:
         """Percent of cell that is open water."""
-        self._logger.info("Running SI 1")
+        self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
         if self.v6_pct_cell_open_water is None:
@@ -266,19 +272,20 @@ class BaldEagleHSI:
             si_6[mask_1] = 0.01
 
             # condition 2 (AND)
-            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (
-                self.v6_pct_cell_open_water <= 0.95
-            )
+            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 95.0)
             si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1))
 
             # condition 3
-            mask_3 = self.v6_pct_cell_open_water > 0.95
+            mask_3 = self.v6_pct_cell_open_water > 95.0
             si_6[mask_3] = 0.0
 
             if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-        return si_6
+            # if self.hydro_domain_flag:
+            #     si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
+
+        return self.clip_array(si_6)
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
@@ -323,6 +330,6 @@ class BaldEagleHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        masked_hsi = np.where(np.isnan(self.dem), np.nan, hsi)
+        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

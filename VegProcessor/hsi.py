@@ -11,6 +11,7 @@ import os
 from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
+from rasterio.enums import Resampling
 
 # import veg_logic
 import hydro_logic
@@ -39,7 +40,7 @@ class HSI(vt.VegTransition):
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file
 
-        with open(config_file, "r") as file:
+        with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
         # fetch raster data paths
@@ -62,7 +63,8 @@ class HSI(vt.VegTransition):
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
         self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.blue_crab_lookup_path = self.config['simulation'].get("blue_crab_lookup_table")
+        self.hydro_domain_flag = self.config["simulation"].get("hydro_domain_flag")
+        self.blue_crab_lookup_path = self.config["simulation"].get("blue_crab_lookup_table")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -76,6 +78,20 @@ class HSI(vt.VegTransition):
             default_flow_style=False,
             sort_keys=False,
         )
+
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+            # "parameter": "NA",
+        }
 
         self._create_output_dirs()
         self.current_timestep = None  # set in step() method
@@ -102,7 +118,8 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
-        self.hecras_domain = self._load_hecras_domain_raster()
+        self.hydro_domain = self._load_hecras_domain_raster()
+        self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
         self._calculate_pct_cover_static()
@@ -130,9 +147,9 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        self.avg_water_depth_rlt_marsh_surface = None
+        # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None # TODO: is never assigned a value
+        self.mean_annual_temperature = None  # TODO: is never assigned a value
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -147,7 +164,6 @@ class HSI(vt.VegTransition):
         self.pct_fresh_shrubs = None
 
         self.pct_bare_ground = None
-        self.pct_dev_upland = None  # does not change
         # self.pct_marsh = None # not currently in use
 
         # gizzard shad vars
@@ -156,9 +172,7 @@ class HSI(vt.VegTransition):
         self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = (
-            None  # ideal HEC-RAS SI6 = 20 degrees
-        )
+        self.mean_weekly_temp_reservoir_spawning_season = None  # ideal HEC-RAS SI6 = 20 degrees
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
@@ -166,21 +180,21 @@ class HSI(vt.VegTransition):
         # TODO load pandas dataframe into this from bluecrab_lookup_table_path
         # self.bluecrab_lookup_table = pd.read_excel(self.bluecrab_lookup_table_path)
 
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        # # NetCDF data output
+        # sim_length = self.water_year_end - self.water_year_start
 
-        file_params = {
-            "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",
-        }
+        # file_params = {
+        #     "model": self.metadata.get("model"),
+        #     "scenario": self.metadata.get("scenario"),
+        #     "group": self.metadata.get("group"),
+        #     "wpu": "AB",
+        #     "io_type": "O",
+        #     "time_freq": "ANN",  # for annual output
+        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        #     # "parameter": "NA",
+        # }
 
-        self._create_output_file(file_params)
+        self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -249,12 +263,10 @@ class HSI(vt.VegTransition):
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+        self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8]
         )
-        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-            months=[9, 10, 11, 12]
-        )
+        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(months=[9, 10, 11, 12])
         self.water_depth_spawning_season = self._get_depth_filtered(
             months=[4, 5, 6],
         )
@@ -264,7 +276,9 @@ class HSI(vt.VegTransition):
 
         # calculate pct cover for all veg types
         self._calculate_pct_cover()
-        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(self.veg_type)
+        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
+            self.veg_type, domain=self.hydro_domain, cell=True
+        )
 
         # run HSI models for timestep
         if self.run_hsi:
@@ -273,7 +287,7 @@ class HSI(vt.VegTransition):
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            
+
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
 
@@ -316,6 +330,7 @@ class HSI(vt.VegTransition):
         time_str = self.current_timestep.strftime("%Y%m%d")
         ds = xr.open_dataset(self.veg_type_path)
         da = ds.sel({"time": time_str})["veg_type"]
+        ds.close()  # Ensure file closure
         return da
 
     def _calculate_pct_cover(self):
@@ -323,10 +338,37 @@ class HSI(vt.VegTransition):
         function is called for every HSI timestep.
 
         Derived from VegTransition Output
+
+        VEG TYPES AND THIER MAPPED NUMBERS FROM
+        2  Developed High Intensity
+        3  Developed Medium Intensity
+        4  Developed Low Intensity
+        5  Developed Open Space
+        6  Cultivated Crops
+        7  Pasture/Hay
+        8  Grassland/Herbaceous
+        9  Upland - Mixed Deciduous Forest
+        10  Upland - Mixed Evergreen Forest
+        11  Upland Mixed Forest
+        12  Upland Scrub/Shrub
+        13  Unconsolidated Shore
+        14  Bare Land
+        15  Zone V (Upper BLH)
+        16  Zone IV (Middle BLH)
+        17  Zone III (Lower BLH)
+        18  Zone II (Swamp)
+        19  Fresh Shrubs
+        20  Fresh Marsh
+        21  Intermediate Marsh
+        22  Brackish Marsh
+        23  Saline Marsh
+        24  Palustrine Aquatic Bed
+        25  Estuarine Aquatic Bed
+        26  Open Water
         """
-        # logical index for coarsening (i.e # of pixels)
-        # this generates ds with all veg types.
-        # x, y, dims -> 480 / 60 = 8
+        # note: masking for pct cover vars cannot occur here, because there
+        # are limited pixels where the hydro domain exceeds the dem domain.
+        # (these are masked out later)
         ds = utils.generate_pct_cover(
             data_array=self.veg_type,
             veg_keys=self.veg_keys,
@@ -334,60 +376,23 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-
         ds_swamp_blh = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[15, 16, 17, 18],  # these are the BLH zones + swamp
             x=8,
             y=8,
-            boundary="pad",  # not needed for partial pixels, fyi
+            boundary="pad",
         )
+        # ds_swamp_blh = ds_swamp_blh.where(~np.isnan(self.hydro_domain_480))
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[v for v in range(15, 25)],  # these are everything but open water
             x=8,
             y=8,
-            boundary="pad",  # not needed for partial pixels, fyi
+            boundary="pad",
         )
-
-        # not currently in use
-        # ds_marsh = utils.generate_pct_cover_custom(
-        #     data_array=self.veg_type,
-        #     veg_types=[20, 21, 22, 23],  # fresh, intermediate, brackish, saline
-        #     x=8,
-        #     y=8,
-        #     boundary="pad",  # not needed for partial pixels, fyi
-        # )
-
-        # VEG TYPES AND THIER MAPPED NUMBERS FROM
-        # 2  Developed High Intensity
-        # 3  Developed Medium Intensity
-        # 4  Developed Low Intensity
-        # 5  Developed Open Space
-        # 6  Cultivated Crops
-        # 7  Pasture/Hay
-        # 8  Grassland/Herbaceous
-        # 9  Upland - Mixed Deciduous Forest
-        # 10  Upland - Mixed Evergreen Forest
-        # 11  Upland Mixed Forest
-        # 12  Upland Scrub/Shrub
-        # 13  Unconsolidated Shore
-        # 14  Bare Land
-        # 15  Zone V (Upper BLH)
-        # 16  Zone IV (Middle BLH)
-        # 17  Zone III (Lower BLH)
-        # 18  Zone II (Swamp)
-        # 19  Fresh Shrubs
-        # 20  Fresh Marsh
-        # 21  Intermediate Marsh
-        # 22  Brackish Marsh
-        # 23  Saline Marsh
-        # 24  Palustrine Aquatic Bed
-        # 25  Estuarine Aquatic Bed
-        # 26  Open Water
-
-        # self._logger.debug("Generated ds_swamp_blh: %s", ds_swamp_blh)
+        # ds_vegetated = ds_vegetated.where(~np.isnan(self.hydro_domain_480))
 
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
@@ -519,34 +524,34 @@ class HSI(vt.VegTransition):
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
-    
+
     def _load_blue_crab_lookup(self):
         """
         Read blue crab lookup table
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    def _create_output_dirs(self):
-        """Create an output location for state variables, model config,
-        input data, and QC plots.
+    # def _create_output_dirs(self):
+    #     """Create an output location for state variables, model config,
+    #     input data, and QC plots.
 
-        (No logging because logger needs output location for log file first.)
-        """
-        output_dir_name = f"HSI_{self.sim_start_time}"
+    #     (No logging because logger needs output location for log file first.)
+    #     """
+    #     output_dir_name = f"HSI_{self.sim_start_time}"
 
-        # Combine base directory and new directory name
-        self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
-        # Create the directory if it does not exist
-        os.makedirs(self.output_dir_path, exist_ok=True)
+    #     # Combine base directory and new directory name
+    #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
+    #     # Create the directory if it does not exist
+    #     os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-input' subdirectory
-        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-        os.makedirs(run_metadata_dir, exist_ok=True)
+    #     # Create the 'run-input' subdirectory
+    #     run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+    #     os.makedirs(run_metadata_dir, exist_ok=True)
 
-        if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, run_metadata_dir)
-        else:
-            print("Config file not found at %s", self.config_path)
+    #     if os.path.exists(self.config_path):
+    #         shutil.copy(self.config_path, run_metadata_dir)
+    #     else:
+    #         print("Config file not found at %s", self.config_path)
 
     def _create_output_file(self, params: dict):
         """HSI: Create NetCDF file for data output.
@@ -561,7 +566,6 @@ class HSI(vt.VegTransition):
         -------
         None
         """
-
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
@@ -570,12 +574,17 @@ class HSI(vt.VegTransition):
 
         self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
 
-        # load DEM, use coords
+        # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
-        da = da["band" == 0]
-        # coarsen to 480m grid cell
-        da = da.coarsen(x=8, y=8, boundary="pad").mean()
+        da = da.squeeze(drop="band")  # Drop 'band' dimension if it exists
+        da = da.rio.write_crs("EPSG:6344")  # Assign CRS
 
+        # Resample to 480m resolution, using rioxarray, with preserved correct coords and
+        # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
+        # projected coords.
+        da = da.rio.reproject(da.rio.crs, resolution=480, resampling=Resampling.average)
+
+        # use new 480m coords
         x = da.coords["x"].values
         y = da.coords["y"].values
 
@@ -583,24 +592,59 @@ class HSI(vt.VegTransition):
         time_range = pd.date_range(
             start=f"{self.water_year_start}-10-01",
             end=f"{self.water_year_end}-10-01",
-            freq="YS-OCT",
-        )  # Annual start
+            freq="YS-OCT",  # Annual start
+        )
 
-        # Create an empty Dataset with only coordinates
-        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+        # OLD METHOD
+        # # Create an empty Dataset with only coordinates
+        # ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+
+        # # Assign CRS using rioxarray
+        # ds = ds.rio.write_crs("EPSG:6344")
+
+        # # Save the initial NetCDF file
+        # ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        # ds.close()
+        # da.close()
+
+        ds = xr.Dataset(
+            # initialize w/ no data vars
+            # {
+            #     "initial_conditions": (
+            #         ["time", "y", "x"],
+            #         data_values,
+            #         {"grid_mapping": "crs"},
+            #     ),  # Link CRS variable
+            # },
+            coords={
+                "x": (
+                    "x",
+                    x,
+                    {
+                        "units": "m",
+                        "long_name": "Easting",
+                        "standard_name": "projection_x_coordinate",
+                    },
+                ),
+                "y": (
+                    "y",
+                    y,
+                    {
+                        "units": "m",
+                        "long_name": "Northing",
+                        "standard_name": "projection_y_coordinate",
+                    },
+                ),
+                "time": ("time", time_range, {"long_name": "Time"}),
+            },
+            attrs={"title": "HSI"},
+        )
+
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Add metadata
-        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
-        # ds["veg_type"].attrs["units"] = "Category"
-        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
-        # ds["maturity"].attrs["units"] = "Years"
-
-        # Save initial file
-        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
-        ds.close()
-        da.close()
-        self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
+        # Save dataset to NetCDF
+        ds.to_netcdf(self.netcdf_filepath)
+        self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append timestep data to the NetCDF file.
@@ -615,87 +659,140 @@ class HSI(vt.VegTransition):
         None
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
-        # Open existing NetCDF file
-        ds = xr.open_dataset(self.netcdf_filepath)
 
         hsi_variables = {
-            "alligator_hsi": self.alligator.hsi,
-            "alligator_si_1": self.alligator.si_1,
-            "alligator_si_2": self.alligator.si_2,
-            "alligator_si_3": self.alligator.si_3,
-            "alligator_si_4": self.alligator.si_4,
-            "alligator_si_5": self.alligator.si_5,
-            #
-            "bald_eagle_hsi": self.baldeagle.hsi,
-            "bald_eagle_si_1": self.baldeagle.si_1,
-            "bald_eagle_si_2": self.baldeagle.si_2,
-            "bald_eagle_si_3": self.baldeagle.si_3,
-            "bald_eagle_si_4": self.baldeagle.si_4,
-            "bald_eagle_si_5": self.baldeagle.si_5,
-            "bald_eagle_si_6": self.baldeagle.si_6,
-            #
-            "crawfish_hsi": self.crawfish.hsi,
-            "crawfish_si_1": self.crawfish.si_1,
-            "crawfish_si_2": self.crawfish.si_2,
-            "crawfish_si_3": self.crawfish.si_3,
-            "crawfish_si_4": self.crawfish.si_4,
-            #
-            "gizzard_shad_hsi": self.gizzardshad.hsi,
-            "gizzard_shad_si_1": self.gizzardshad.si_1,
-            "gizzard_shad_si_2": self.gizzardshad.si_2,
-            "gizzard_shad_si_3": self.gizzardshad.si_3,
-            "gizzard_shad_si_4": self.gizzardshad.si_4,
-            "gizzard_shad_si_5": self.gizzardshad.si_5,
-            "gizzard_shad_si_6": self.gizzardshad.si_6,
-            "gizzard_shad_si_7": self.gizzardshad.si_7,
-            #
-            "bass_hsi": self.bass.hsi,
-            "bass_si_1": self.bass.si_1,
-            "bass_si_2": self.bass.si_2,
-            # "black_bear_hsi": self.black_bear.hsi,
-            #
-            "bluecrab_hsi": self.bluecrab.hsi,
-            "bluecrab_si_1": self.bluecrab.si_1,
-            "bluecrab_si_2": self.bluecrab.si_2,
+            # alligator
+            "alligator_hsi": (self.alligator.hsi, np.float32),
+            "alligator_si_1": (self.alligator.si_1, np.float32),
+            "alligator_si_2": (self.alligator.si_2, np.float32),
+            "alligator_si_3": (self.alligator.si_3, np.float32),
+            "alligator_si_4": (self.alligator.si_4, np.float32),
+            "alligator_si_5": (self.alligator.si_5, np.float32),
+            # bald eagle
+            "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
+            "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
+            "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
+            "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
+            "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
+            "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
+            "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
+            # crawfish
+            "crawfish_hsi": (self.crawfish.hsi, np.float32),
+            "crawfish_si_1": (self.crawfish.si_1, np.float32),
+            "crawfish_si_2": (self.crawfish.si_2, np.float32),
+            "crawfish_si_3": (self.crawfish.si_3, np.float32),
+            "crawfish_si_4": (self.crawfish.si_4, np.float32),
+            # gizzard shad
+            "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
+            "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
+            "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
+            "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
+            "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
+            "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
+            "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
+            "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
+            # bass
+            "bass_hsi": (self.bass.hsi, np.float32),
+            "bass_si_1": (self.bass.si_1, np.float32),
+            "bass_si_2": (self.bass.si_2, np.float32),
+            # species input vars
+            "water_depth_annual_mean": (self.water_depth_annual_mean, np.float32),
+            "water_depth_monthly_mean_jan_aug": (self.water_depth_monthly_mean_jan_aug, np.float32),
+            "water_depth_monthly_mean_sept_dec": (
+                self.water_depth_monthly_mean_sept_dec,
+                np.float32,
+            ),
+            "water_depth_spawning_season": (self.water_depth_spawning_season, np.float32),
+            "pct_open_water": (self.pct_open_water, np.float32),
+            "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
+            "mean_annual_temperature": (self.mean_annual_temperature, np.float32),
+            "pct_swamp_bottom_hardwood": (self.pct_swamp_bottom_hardwood, np.float32),
+            "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
+            "pct_intermediate_marsh": (self.pct_intermediate_marsh, np.float32),
+            "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
+            "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
+            "pct_zone_v": (self.pct_zone_v, np.float32),
+            "pct_zone_iv": (self.pct_zone_iv, np.float32),
+            "pct_zone_iii": (self.pct_zone_iii, np.float32),
+            "pct_zone_ii": (self.pct_zone_ii, np.float32),
+            "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
+            "pct_bare_ground": (self.pct_bare_ground, np.float32),
+            "pct_dev_upland": (self.pct_dev_upland, np.float32),
+            "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
+            "pct_vegetated": (self.pct_vegetated, np.float32),
         }
 
-        for var_name, data in hsi_variables.items():
-            # create var if not already existing, with full timeseries of nan
-            if var_name not in ds:
-                ds[var_name] = (
-                    ["time", "y", "x"],
-                    np.full((len(ds.time), len(ds.y), len(ds.x)), np.nan),
-                )
+        # Open existing NetCDF file
+        with xr.open_dataset(self.netcdf_filepath) as ds:
 
-            # assign values for timestep
-            ds[var_name].loc[{"time": timestep_str}] = data
+            for var_name, (data, dtype) in hsi_variables.items():
+                if data is None:
+                    self._logger.warning("Array '%s' is None, skipping save.", var_name)
+
+                else:
+                    # Check if the variable exists in the dataset, if not, initialize it
+                    if var_name not in ds:
+                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        default_value = False if dtype == bool else np.nan
+                        ds[var_name] = (
+                            ["time", "y", "x"],
+                            np.full(shape, default_value, dtype=dtype),
+                            {"grid_mapping": "crs"},
+                        )
+
+                    # Handle 'condition' variables (booleans)
+                    if dtype == bool:
+                        data = np.nan_to_num(data, nan=False).astype(bool)
+
+                    # Assign the data to the dataset for the specific time step
+                    ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
 
         ds.close()
-        ds.to_netcdf(self.netcdf_filepath, mode="a")
+        ds.to_netcdf(
+            self.netcdf_filepath,
+            mode="a",
+        )
+        # ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
-    def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
-        """Create output directory for the current timestamp, where
-        figures and output rasters will be saved.
+    def post_process(self):
+        """HSI post process
 
-        Parameters
-        ----------
-        timestep : pd.DatetimeTZDtype
-            Pandas datetime object of current timestep.
-
-        Returns
-        -------
-        None
+        Opens file and then crops to hydro domain
         """
-        self.timestep_output_dir = os.path.join(
-            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-        )
-        self.timestep_output_dir_figs = os.path.join(
-            self.timestep_output_dir,
-            "figs",
-        )
-        os.makedirs(self.timestep_output_dir, exist_ok=True)
-        os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+        with xr.open_dataset(self.netcdf_filepath) as ds:
+            ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
+
+            # hack: remove the file before writing to prevent conflicts
+            # not sure why the file would be open at this point
+            if os.path.exists(self.netcdf_filepath):
+                os.remove(self.netcdf_filepath)
+
+            ds_out.close()
+            ds_out.to_netcdf(self.netcdf_filepath, mode="w")
+
+    # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
+    #     """Create output directory for the current timestamp, where
+    #     figures and output rasters will be saved.
+
+    #     Parameters
+    #     ----------
+    #     timestep : pd.DatetimeTZDtype
+    #         Pandas datetime object of current timestep.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     self.timestep_output_dir = os.path.join(
+    #         self.output_dir_path, f"{date.strftime('%Y%m%d')}"
+    #     )
+    #     self.timestep_output_dir_figs = os.path.join(
+    #         self.timestep_output_dir,
+    #         "figs",
+    #     )
+    #     os.makedirs(self.timestep_output_dir, exist_ok=True)
+    #     os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
 
 class _TimestepFilter(logging.Filter):

@@ -91,9 +91,7 @@ class VegTransition:
 
         # metadata
         self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
+        self.scenario_type = self.config["metadata"].get("scenario", "")  # empty str if missing
 
         # self.model = self.config["metadata"].get("model")
         # self.group = self.config["metadata"].get("group")
@@ -104,9 +102,20 @@ class VegTransition:
         self.output_base_dir = self.config["output"].get("output_base")
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        config_pretty = yaml.dump(self.config, default_flow_style=False, sort_keys=False)
+
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get("model"),
+            "scenario": self.metadata.get("scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        }
 
         self._create_output_dirs()
         self.current_timestep = None
@@ -114,16 +123,14 @@ class VegTransition:
         self.timestep_output_dir = None
 
         # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        config_pretty = yaml.dump(self.config, default_flow_style=False, sort_keys=False)
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
-        self.hecras_domain = self._load_hecras_domain_raster()
+        self.hydro_domain = self._load_hecras_domain_raster()
 
         self.initial_veg_type = self._load_veg_initial_raster()  # static
         self.veg_type = self._load_veg_initial_raster()  # dynamic
@@ -152,21 +159,20 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        # # NetCDF data output
+        # sim_length = self.water_year_end - self.water_year_start
 
-        file_params = {
-            "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
-            "group": self.metadata.get("group"),  # not sure if this is correct,
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",  # ?
-        }
+        # file_params = {
+        #     "model": self.metadata.get("model"),
+        #     "scenario": self.metadata.get("scenario"),
+        #     "group": self.metadata.get("group"),
+        #     "wpu": "AB",
+        #     "io_type": "O",
+        #     "time_freq": "ANN",  # for annual output
+        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+        # }
 
-        self._create_output_file(file_params)
+        self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
         """Set up the logger for the VegTransition class."""
@@ -218,9 +224,7 @@ class VegTransition:
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=os.path.dirname(
-                    self.config_path
-                ),  # Ensure it's run in the repo directory
+                cwd=os.path.dirname(self.config_path),  # Ensure it's run in the repo directory
                 capture_output=True,
                 text=True,
                 check=True,
@@ -232,7 +236,7 @@ class VegTransition:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
 
-    def step(self, timestep: pd.DatetimeTZDtype, counter: int, simulation_period: int):
+    def step(self, timestep: pd.DatetimeTZDtype):
         """Advance the transition model by one step.
 
         Parameters:
@@ -273,7 +277,7 @@ class VegTransition:
 
         # important: mask areas outside of domain before calculting transition:
         self._logger.info("Masking veg type array to domain.")
-        self.veg_type = np.where(self.hecras_domain, self.veg_type, np.nan)
+        self.veg_type = np.where(self.hydro_domain, self.veg_type, np.nan)
 
         # note: arrays are named for their starting veg type
         self.zone_v = veg_logic.zone_v(
@@ -353,9 +357,7 @@ class VegTransition:
         )
 
         if utils.has_overlapping_non_nan(stacked_veg):
-            raise ValueError(
-                "New vegetation stacked arrays cannot have overlapping values."
-            )
+            raise ValueError("New vegetation stacked arrays cannot have overlapping values.")
 
         # combine arrays while preserving NaN
         self._logger.info("Combining new vegetation types into full array.")
@@ -439,8 +441,8 @@ class VegTransition:
             for i, wy in enumerate(simulation_period):
                 self.step(
                     timestep=pd.to_datetime(f"{wy}-10-01"),
-                    counter=str(i + 1),
-                    simulation_period=str(len(simulation_period)),
+                    # counter=str(i + 1),
+                    # simulation_period=str(len(simulation_period)),
                 )
 
             self._logger.info("Simulation complete")
@@ -539,7 +541,7 @@ class VegTransition:
 
         if not selected_files:
             self._logger.error("No WSE files found for water year: %s", water_year)
-            return None
+            raise RuntimeError(f"No WSE files found for water year: {water_year}")
 
         if len(selected_files) < 12:
             raise ValueError(f"month(s) missing from Water Year: {water_year}")
@@ -565,9 +567,7 @@ class VegTransition:
 
         if self.analog_sequence:
             self._logger.info("Using sequence loading method.")
-            new_timesteps = pd.date_range(
-                f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
-            )
+            new_timesteps = pd.date_range(f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS")
 
             if not len(new_timesteps) == len(ds["time"]):
                 raise ValueError("Timestep must be monthly.")
@@ -579,9 +579,7 @@ class VegTransition:
         self._logger.info("Loaded HEC-RAS WSE Datset for water-year: %s", water_year)
         return ds
 
-    def _reproject_match_to_dem(
-        self, ds: xr.Dataset | xr.DataArray
-    ) -> xr.Dataset | xr.DataArray:
+    def _reproject_match_to_dem(self, ds: xr.Dataset | xr.DataArray) -> xr.Dataset | xr.DataArray:
         """
         Temporary fix to match WSE model output to 60m DEM grid.
         """
@@ -614,7 +612,7 @@ class VegTransition:
         # after filling zeros for areas with no inundation, apply domain mask,
         # so that areas outside of HECRAS domain are not classified as
         # dry (na is 0-filled above) when in fact that are outside of the domain.
-        ds = ds.where(self.hecras_domain)
+        ds = ds.where(self.hydro_domain)
         return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
@@ -660,9 +658,7 @@ class VegTransition:
         if not combined_mask_change.any():
             self._logger.warning("No forested pixels changed in prior timestep.")
 
-        if utils.common_true_locations(
-            np.stack((combined_mask_change, combined_mask_no_change))
-        ):
+        if utils.common_true_locations(np.stack((combined_mask_change, combined_mask_no_change))):
             raise ValueError("Forested types have overlapping True location(s)")
 
         # if forested pixels change, reset age to 0
@@ -693,8 +689,6 @@ class VegTransition:
 
         Parameters
         ----------
-        mask_hecras_domain : bool
-            True if vegetation type data should be masked to the `hecras_domain` array
         xarray : bool
             True if xarray output format is needed. Default is False.
         all_types : bool
@@ -729,7 +723,7 @@ class VegTransition:
         if return_static_veg_only:
             self._logger.info("Returning array of static vegetation pixels only.")
             # combine DEM valid mask and inverse of HEC-RAS domain valid mask
-            veg_type = np.where(dem_valid_mask & ~self.hecras_domain, veg_type, np.nan)
+            veg_type = np.where(dem_valid_mask & ~self.hydro_domain, veg_type, np.nan)
 
         else:
             # only apply valid DEM mask
@@ -759,14 +753,27 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hecras_domain_raster(self) -> np.ndarray:
-        """Load raster file specifying the boundary of the HECRAS domain."""
+    def _load_hecras_domain_raster(self, cell: bool = False) -> np.ndarray:
+        """Load raster file specifying the boundary of the HECRAS domain.
+
+        Params
+        -------
+        cell : bool
+            True if array should be downscaled to 480m "cell" resolution. If True,
+            the array is returned as "data" with NaN. If False, data is returned as
+            boolean (the format expected by `VegTransition` methods).
+        """
         # load raster
         self._logger.info("Loading WSE domain extent raster.")
         da = xr.open_dataarray(self.wse_domain_path)
         da = da.squeeze(drop="band")
         # reproject match to DEM
         da = self._reproject_match_to_dem(da)
+
+        if cell:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da.to_numpy()
+
         da = da.fillna(0)  # fill 0 so that .astype(bool) does not fail
         da = da.astype(bool)
         return da.to_numpy()
@@ -777,7 +784,9 @@ class VegTransition:
             # add loading code here
             self._logger.info("Loaded salinity from raster")
         else:
-            self.salinity = hydro_logic.habitat_based_salinity(self.veg_type)
+            self.salinity = hydro_logic.habitat_based_salinity(
+                veg_type=self.veg_type, domain=self.hydro_domain
+            )
             self._logger.info("Creating salinity defaults from veg type array.")
             return self.salinity
 
@@ -787,16 +796,26 @@ class VegTransition:
 
         (No logging because logger needs output location for log file first.)
         """
-        output_dir_name = f"VegOut_{self.sim_start_time}"
+        folder_name = utils.generate_filename(
+            params=self.file_params,
+            # base_path=self.timestep_output_dir,
+            parameter="DATA",
+        )
+
+        output_dir_name = f"{folder_name}_{self.sim_start_time}"
 
         # Combine base directory and new directory name
         self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
         # Create the directory if it does not exist
         os.makedirs(self.output_dir_path, exist_ok=True)
 
-        # Create the 'run-metadata' subdirectory
+        # create the 'run-metadata' subdirectory
         self.run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(self.run_metadata_dir, exist_ok=True)
+
+        # create the 'figs' subdirectory
+        self.run_figs_dir = os.path.join(self.run_metadata_dir, "figs")
+        os.makedirs(self.run_figs_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
             shutil.copy(self.config_path, self.run_metadata_dir)
@@ -839,7 +858,40 @@ class VegTransition:
 
         # Create an empty Dataset with only coordinates
         # vars will be appended at timestep update
-        ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
+
+        ds = xr.Dataset(
+            # initialize w/ no data vars
+            # {
+            #     "initial_conditions": (
+            #         ["time", "y", "x"],
+            #         data_values,
+            #         {"grid_mapping": "crs"},
+            #     ),  # Link CRS variable
+            # },
+            coords={
+                "x": (
+                    "x",
+                    x,
+                    {
+                        "units": "m",
+                        "long_name": "Easting",
+                        "standard_name": "projection_x_coordinate",
+                    },
+                ),
+                "y": (
+                    "y",
+                    y,
+                    {
+                        "units": "m",
+                        "long_name": "Northing",
+                        "standard_name": "projection_y_coordinate",
+                    },
+                ),
+                "time": ("time", time_range, {"long_name": "Time"}),
+            },
+            attrs={"title": "HSI"},
+        )
+
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Add metadata
@@ -1079,19 +1131,28 @@ class VegTransition:
     #     self.timestep_out.to_netcdf(self.netcdf_filepath, mode="w")
     #     del self.timestep_out
 
-    def _create_timestep_dir(self, date):
+    def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
         """Create output directory for the current timestamp, where
         figures and output rasters will be saved.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
         """
 
-        self.timestep_output_dir = os.path.join(
-            self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-        )
         self.timestep_output_dir_figs = os.path.join(
-            self.timestep_output_dir,
-            "figs",
+            self.run_figs_dir, f"{date.strftime('%Y%m%d')}"
         )
-        os.makedirs(self.timestep_output_dir, exist_ok=True)
+        # self.timestep_output_dir_figs = os.path.join(
+        #     self.timestep_output_dir,
+        #     "figs",
+        # )
+        # os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
     # def save_water_depth(self, params: dict):
@@ -1161,24 +1222,14 @@ class VegTransition:
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
             self.salinity,
         )
-        self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
-            self.water_depth
-        )
-        self.qc_annual_inundation_duration = utils.qc_annual_inundation_duration(
-            self.water_depth
-        )
+        self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(self.water_depth)
+        self.qc_annual_inundation_duration = utils.qc_annual_inundation_duration(self.water_depth)
         self.qc_growing_season_depth = utils.qc_growing_season_depth(
             self.water_depth,
         )
-        self.qc_growing_season_inundation = utils.qc_growing_season_inundation(
-            self.water_depth
-        )
-        self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(
-            self.water_depth
-        )
-        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(
-            self.water_depth
-        )
+        self.qc_growing_season_inundation = utils.qc_growing_season_inundation(self.water_depth)
+        self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(self.water_depth)
+        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(self.water_depth)
 
 
 class _TimestepFilter(logging.Filter):

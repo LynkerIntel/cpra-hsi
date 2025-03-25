@@ -3,3 +3,6 @@
 **/data/tmp/scratch/
 test.ipynb
 hsi_testing.ipynb
+run_lhg.ipynb
+/VegProcessor/_pycache_/*
+/VegProcessor/species_hsi/_pycache_/*

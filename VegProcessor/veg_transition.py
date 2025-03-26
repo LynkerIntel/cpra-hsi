@@ -497,7 +497,7 @@ class VegTransition:
 
         Parameters
         ----------
-        folder_path : str
+        0 : str
             Path to the folder containing the .tif files.
         water_year : int
             The water year to filter files by. Files from October 1 of the previous year
@@ -547,18 +547,27 @@ class VegTransition:
             raise ValueError(f"month(s) missing from Water Year: {water_year}")
 
         # Preprocess function to remove the 'band' dimension
-        def preprocess(da):
-            return da.squeeze(dim="band").expand_dims(
-                time=[time_stamps[selected_files.index(da.encoding["source"])]]
-            )
-
+        #def preprocess(da):
+            #return da.squeeze(dim="band").expand_dims(
+                #time=[time_stamps[selected_files.index(da.encoding["source"])]]
+            #)
+        
+        def remove_band_dimension(da): 
+            if "band" in da.dims:
+                da= da.squeeze(dim="band")
+                print("Band dimension removed.")
+            else:
+                print("No 'band' dimension found.")
+            return da
+            
+        
         # Load selected files into a single Dataset with open_mfdataset
         ds = xr.open_mfdataset(
             selected_files,
             concat_dim="time",
             combine="nested",
             parallel=True,
-            preprocess=preprocess,
+            preprocess=remove_band_dimension,
         )
         # rename
         ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
@@ -889,7 +898,7 @@ class VegTransition:
                 ),
                 "time": ("time", time_range, {"long_name": "Time"}),
             },
-            attrs={"title": "HSI"},
+            attrs={"title": "VEG"},
         )
 
         ds = ds.rio.write_crs("EPSG:6344")

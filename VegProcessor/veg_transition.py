@@ -93,11 +93,6 @@ class VegTransition:
         self.metadata = self.config["metadata"]
         self.scenario_type = self.config["metadata"].get("scenario", "")  # empty str if missing
 
-        # self.model = self.config["metadata"].get("model")
-        # self.group = self.config["metadata"].get("group")
-        # self.wpu = self.config["metadata"].get("wpu")
-        # self.ion = self.config["metadata"].get("ion")
-
         # output
         self.output_base_dir = self.config["output"].get("output_base")
 
@@ -158,19 +153,6 @@ class VegTransition:
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
-
-        # # NetCDF data output
-        # sim_length = self.water_year_end - self.water_year_start
-
-        # file_params = {
-        #     "model": self.metadata.get("model"),
-        #     "scenario": self.metadata.get("scenario"),
-        #     "group": self.metadata.get("group"),
-        #     "wpu": "AB",
-        #     "io_type": "O",
-        #     "time_freq": "ANN",  # for annual output
-        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-        # }
 
         self._create_output_file(self.file_params)
 
@@ -851,23 +833,25 @@ class VegTransition:
 
         # Define the new time coordinate
         time_range = pd.date_range(
-            start=f"{self.water_year_start}-10-01",
+            # start year minus 1 for initial conditions year
+            start=f"{self.water_year_start - 1}-10-01",
             end=f"{self.water_year_end}-10-01",
             freq="YS-OCT",
         )  # Annual start
 
-        # Create an empty Dataset with only coordinates
-        # vars will be appended at timestep update
-
         ds = xr.Dataset(
-            # initialize w/ no data vars
-            # {
-            #     "initial_conditions": (
-            #         ["time", "y", "x"],
-            #         data_values,
-            #         {"grid_mapping": "crs"},
-            #     ),  # Link CRS variable
-            # },
+            {  # init with arrays that have t=0 values
+                "veg_type": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), *self.dem.shape), np.nan, dtype=np.float32),
+                    {"grid_mapping": "crs"},  # Link CRS variable
+                ),
+                "maturity": (
+                    ["time", "y", "x"],
+                    np.full((len(time_range), *self.dem.shape), np.nan, dtype=np.float32),
+                    {"grid_mapping": "crs"},
+                ),
+            },
             coords={
                 "x": (
                     "x",
@@ -889,8 +873,12 @@ class VegTransition:
                 ),
                 "time": ("time", time_range, {"long_name": "Time"}),
             },
-            attrs={"title": "HSI"},
+            attrs={"title": "VEG"},
         )
+
+        # add initial conditions to first timestep
+        ds["veg_type"].loc[{"time": time_range[0]}] = self.initial_veg_type.astype(np.float32)
+        ds["maturity"].loc[{"time": time_range[0]}] = self.maturity.astype(np.float32)
 
         ds = ds.rio.write_crs("EPSG:6344")
 
@@ -983,6 +971,7 @@ class VegTransition:
                 ds[var_name] = (
                     ["time", "y", "x"],
                     np.full(shape, default_value, dtype=dtype),
+                    {"grid_mapping": "crs"},
                 )
 
             # Handle 'condition' variables (booleans)

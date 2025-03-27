@@ -848,10 +848,10 @@ class VegTransition:
                         "grid_mapping": "crs",  # Link CRS variable
                         "units": "unitless",
                         "long_name": "veg type",
-                        "description": (
-                            "Time 0 is initial conditions. Model output starts at "
-                            f"{time_range[1].strftime('%Y-%m-%d')}"
-                        ),
+                        # "description": (
+                        #     "Time 0 is initial conditions. Model output starts at "
+                        #     f"{time_range[1].strftime('%Y-%m-%d')}"
+                        # ),
                     },
                 ),
                 "maturity": (
@@ -970,6 +970,7 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "ppt",
+                    "long_name": "test",
                 },
             ],
             "qc_annual_inundation_depth": [
@@ -978,6 +979,7 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
+                    "long_name": "test",
                 },
             ],
             "qc_annual_inundation_duration": [
@@ -986,7 +988,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "%",
-                    "description": "Percentage of time flooded over the year",
+                    "long_name": "test",
+                    # "description": "Percentage of time flooded over the year",
                 },
             ],
             "qc_growing_season_depth": [
@@ -995,9 +998,10 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "description": (
-                        "Average water-depth during the period from April 1 through September 30"
-                    ),
+                    "long_name": "test",
+                    # "description": (
+                    #     "Average water-depth during the period from April 1 through September 30"
+                    # ),
                 },
             ],
             "qc_growing_season_inundation": [
@@ -1006,9 +1010,10 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "%",
-                    "description": (
-                        "Percentage of time flooded during the period from April 1 through September 30"
-                    ),
+                    "long_name": "test",
+                    # "description": (
+                    #     "Percentage of time flooded during the period from April 1 through September 30"
+                    # ),
                 },
             ],
             "qc_tree_establishment_bool": [
@@ -1017,7 +1022,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "unitless",
-                    "description": "Areas where establishment condition is met",
+                    "long_name": "test",
+                    # "description": "Areas where establishment condition is met",
                 },
             ],
             # Seasonal water depth QC variables
@@ -1027,7 +1033,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "description": "Depth in m for the month.",
+                    "long_name": "test",
+                    # "description": "Depth in m for the month.",
                 },
             ],
             "qc_april_water_depth": [
@@ -1036,7 +1043,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "description": "Depth in m for the month.",
+                    "long_name": "test",
+                    # "description": "Depth in m for the month.",
                 },
             ],
             "qc_may_water_depth": [
@@ -1045,7 +1053,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "description": "Depth in m for the month.",
+                    "long_name": "test",
+                    # "description": "Depth in m for the month.",
                 },
             ],
             "qc_june_water_depth": [
@@ -1054,7 +1063,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "description": "Depth in m for the month.",
+                    "long_name": "test",
+                    # "description": "Depth in m for the month.",
                 },
             ],
         }

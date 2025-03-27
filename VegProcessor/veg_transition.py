@@ -844,12 +844,24 @@ class VegTransition:
                 "veg_type": (
                     ["time", "y", "x"],
                     np.full((len(time_range), *self.dem.shape), np.nan, dtype=np.float32),
-                    {"grid_mapping": "crs"},  # Link CRS variable
+                    {
+                        "grid_mapping": "crs",  # Link CRS variable
+                        "units": "unitless",
+                        "long_name": "veg type",
+                        "description": (
+                            "Time 0 is initial conditions. Model output starts at "
+                            f"{time_range[1].strftime('%Y-%m-%d')}"
+                        ),
+                    },
                 ),
                 "maturity": (
                     ["time", "y", "x"],
                     np.full((len(time_range), *self.dem.shape), np.nan, dtype=np.float32),
-                    {"grid_mapping": "crs"},
+                    {
+                        "grid_mapping": "crs",
+                        "units": "years",
+                        "long_name": "forested pixel maturity",
+                    },  # Link CRS variable
                 ),
             },
             coords={
@@ -882,12 +894,6 @@ class VegTransition:
 
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Add metadata
-        # ds["veg_type"].attrs["description"] = "Vegetation type classification"
-        # ds["veg_type"].attrs["units"] = "Category"
-        # ds["maturity"].attrs["description"] = "Vegetation maturity in years"
-        # ds["maturity"].attrs["units"] = "Years"
-
         # Save initial file
         ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
         ds.close()
@@ -895,75 +901,165 @@ class VegTransition:
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
 
     def _append_veg_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """Append timestep data to the NetCDF file.
+        """
+        Append timestep data to the NetCDF file for all vegetation variables.
+
+        This method opens the NetCDF file, updates or initializes the following variables
+        for the current timestep, and writes the changes back to disk.
+
+        Vegetation variables are stored in a dictionary `veg_variables` with the following structure:
+
+            {
+                <variable_name>: [<data_array>, <data_type>, <nc_attributes_dict>],
+                ...
+            }
+
+        Where:
+            <variable_name>: a string representing the name of the variable (e.g., "veg_type", "maturity", "qc_annual_mean_salinity", etc.).
+            <data_array>: the corresponding data array for the variable at the current timestep.
+            <data_type>: the NumPy data type (e.g., np.float32 or bool).
+            <nc_attributes_dict>: a dictionary containing attributes for the NetCDF variable, typically including:
+                - "grid_mapping": a string linking the variable to its coordinate reference system (e.g., "crs"),
+                - "units": a string indicating the measurement units (e.g., "unitless", "years", "meters", etc.),
+                - "long_name": a descriptive name for the variable,
+                - "description": (optional) additional details about the variable.
 
         Parameters
         ----------
         timestep : pd.DatetimeTZDtype
-            Pandas datetime object of current timestep.
+            Pandas datetime object representing the current timestep.
 
         Returns
         -------
         None
+
+        Notes
+        -----
+        - The method assumes that the time coordinate in the NetCDF file is formatted as YYYY-MM-DD.
+        - If a variable does not exist in the file, it is initialized with a default value (NaN for floats and False for booleans).
+        - Boolean data arrays are converted to boolean type after replacing NaN with False.
+        - The dataset is saved in append mode before closing it.
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
         # Open existing NetCDF file
         ds = xr.open_dataset(self.netcdf_filepath)
 
         veg_variables = {
-            "veg_type": (
+            "veg_type": [
                 self.veg_type,
                 np.float32,
-            ),
-            "maturity": (
+                {
+                    "grid_mapping": "crs",  # Link CRS variable
+                    "units": "unitless",
+                    "long_name": "veg type",
+                },
+            ],
+            "maturity": [
                 self.maturity,
                 np.float32,
-            ),
+                {
+                    "grid_mapping": "crs",
+                    "units": "years",
+                    "long_name": "forested vegetation age",
+                },
+            ],
             # QC variables below
-            "qc_annual_mean_salinity": (
+            "qc_annual_mean_salinity": [
                 self.qc_annual_mean_salinity,
                 np.float32,
-            ),
-            "qc_annual_inundation_depth": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "ppt",
+                },
+            ],
+            "qc_annual_inundation_depth": [
                 self.qc_annual_inundation_depth,
                 np.float32,
-            ),
-            "qc_annual_inundation_duration": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                },
+            ],
+            "qc_annual_inundation_duration": [
                 self.qc_annual_inundation_duration,
                 np.float32,
-            ),
-            "qc_growing_season_depth": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "%",
+                    "description": "Percentage of time flooded over the year",
+                },
+            ],
+            "qc_growing_season_depth": [
                 self.qc_growing_season_depth,
                 np.float32,
-            ),
-            "qc_growing_season_inundation": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                    "description": (
+                        "Average water-depth during the period from April 1 through September 30"
+                    ),
+                },
+            ],
+            "qc_growing_season_inundation": [
                 self.qc_growing_season_inundation,
                 np.float32,
-            ),
-            "qc_tree_establishment_bool": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "%",
+                    "description": (
+                        "Percentage of time flooded during the period from April 1 through September 30"
+                    ),
+                },
+            ],
+            "qc_tree_establishment_bool": [
                 self.qc_tree_establishment_bool,
                 bool,
-            ),
+                {
+                    "grid_mapping": "crs",
+                    "units": "unitless",
+                    "description": "Areas where establishment condition is met",
+                },
+            ],
             # Seasonal water depth QC variables
-            "qc_march_water_depth": (
+            "qc_march_water_depth": [
                 self.qc_tree_establishment_info[0],
                 np.float32,
-            ),
-            "qc_april_water_depth": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                    "description": "Depth in m for the month.",
+                },
+            ],
+            "qc_april_water_depth": [
                 self.qc_tree_establishment_info[1],
                 np.float32,
-            ),
-            "qc_may_water_depth": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                    "description": "Depth in m for the month.",
+                },
+            ],
+            "qc_may_water_depth": [
                 self.qc_tree_establishment_info[2],
                 np.float32,
-            ),
-            "qc_june_water_depth": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                    "description": "Depth in m for the month.",
+                },
+            ],
+            "qc_june_water_depth": [
                 self.qc_tree_establishment_info[3],
                 np.float32,
-            ),
+                {
+                    "grid_mapping": "crs",
+                    "units": "meters",
+                    "description": "Depth in m for the month.",
+                },
+            ],
         }
 
-        for var_name, (data, dtype) in veg_variables.items():
+        for var_name, (data, dtype, nc_attrs) in veg_variables.items():
             # Check if the variable exists in the dataset, if not, initialize it
             if var_name not in ds:
                 shape = (len(ds.time), len(ds.y), len(ds.x))
@@ -971,7 +1067,7 @@ class VegTransition:
                 ds[var_name] = (
                     ["time", "y", "x"],
                     np.full(shape, default_value, dtype=dtype),
-                    {"grid_mapping": "crs"},
+                    nc_attrs,
                 )
 
             # Handle 'condition' variables (booleans)
@@ -981,144 +1077,9 @@ class VegTransition:
             # Assign the data to the dataset for the specific time step
             ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
 
-        ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a")
+        ds.close()
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
-
-    # def _append_veg_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-    #     """Append timestep data to the NetCDF file.
-
-    #     Parameters
-    #     ----------
-    #     timestep : pd.DatetimeTZDtype
-    #         Pandas datetime object of current timestep.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     timestep_str = timestep.strftime("%Y-%m-%d")
-    #     # Open existing NetCDF file
-    #     ds = xr.open_dataset(self.netcdf_filepath)
-
-    #     veg_variables = {
-    #         "veg_type": self.veg_type,
-    #         "maturity": self.maturity,
-    #         # qc vars below
-    #         "qc_annual_mean_salinity": self.qc_annual_mean_salinity,
-    #         "qc_annual_inundation_depth": self.qc_annual_inundation_depth,
-    #         "qc_growing_season_depth": self.qc_growing_season_depth,
-    #         "qc_growing_season_inundation": self.qc_growing_season_inundation,
-    #         "qc_tree_establishment_bool": self.qc_tree_establishment_bool,
-    #         #
-    #         "qc_march_water_depth": self.qc_tree_establishment_info[0],
-    #         "qc_april_water_depth": self.qc_tree_establishment_info[1],
-    #         "qc_may_water_depth": self.qc_tree_establishment_info[2],
-    #         "qc_june_water_depth": self.qc_tree_establishment_info[3],
-    #         #
-    #         # "zone_v_condition_1": self.zone_v["condition_1"],
-    #         # "zone_v_condition_2": self.zone_v["condition_2"],
-    #         # #
-    #         # "zone_iv_condition_1": self.zone_iv["condition_1"],
-    #         # "zone_iv_condition_2": self.zone_iv["condition_2"],
-    #         # "zone_iv_condition_3": self.zone_iv["condition_3"],
-    #         # #
-    #         # "zone_iii_condition_1": self.zone_iii["condition_1"],
-    #         # "zone_iii_condition_2": self.zone_iii["condition_2"],
-    #         # "zone_iii_condition_3": self.zone_iii["condition_3"],
-    #         # #
-    #         # "zone_ii_condition_1": self.zone_ii["condition_1"],
-    #         # "zone_ii_condition_2": self.zone_ii["condition_2"],
-    #         # "zone_ii_condition_3": self.zone_ii["condition_3"],
-    #         # "zone_ii_condition_4": self.zone_ii["condition_4"],
-    #         # #
-    #         # "fresh_shrub_condition_1": self.fresh_shrub["condition_1"],
-    #         # "fresh_shrub_condition_2": self.fresh_shrub["condition_2"],
-    #         # "fresh_shrub_condition_3": self.fresh_shrub["condition_3"],
-    #         # #
-    #         # "fresh_marsh_condition_1": self.fresh_marsh["condition_1"],
-    #         # "fresh_marsh_condition_2": self.fresh_marsh["condition_2"],
-    #         # "fresh_marsh_condition_3": self.fresh_marsh["condition_3"],
-    #         # "fresh_marsh_condition_4": self.fresh_marsh["condition_4"],
-    #         # #
-    #         # "intermediate_marsh_condition_1": self.intermediate_marsh["condition_1"],
-    #         # "intermediate_marsh_condition_2": self.intermediate_marsh["condition_2"],
-    #         # "intermediate_marsh_condition_3": self.intermediate_marsh["condition_3"],
-    #         # #
-    #         # "brackish_marsh_condition_1": self.brackish_marsh["condition_1"],
-    #         # "brackish_marsh_condition_2": self.brackish_marsh["condition_2"],
-    #         # "brackish_marsh_condition_3": self.brackish_marsh["condition_3"],
-    #         # #
-    #         # "saline_marsh_condition_1": self.saline_marsh["condition_1"],
-    #         # "saline_marsh_condition_2": self.saline_marsh["condition_2"],
-    #         # #
-    #         # "water_condition_1_3_5_7": self.water["condition_1_3_5_7"],
-    #         # "water_condition_2": self.water["condition_2"],
-    #         # "water_condition_4": self.water["condition_4"],
-    #         # "water_condition_6": self.water["condition_6"],
-    #     }
-
-    #     for var_name, data in veg_variables.items():
-    #         # Check if the variable exists in the dataset, if not, initialize it
-    #         if var_name not in ds:
-    #             shape = (len(ds.time), len(ds.y), len(ds.x))
-    #             if "condition" in var_name:
-    #                 default_value = False
-    #                 dtype = bool
-    #             else:
-    #                 default_value = np.nan
-    #                 dtype = np.float32  # Use float32 for non-condition variables
-    #             ds[var_name] = (
-    #                 ["time", "y", "x"],
-    #                 np.full(shape, default_value, dtype=dtype),
-    #             )
-
-    #         # Convert 'condition' variables to boolean, replacing NaN values with False
-    #         if "condition" in var_name:
-    #             data = np.nan_to_num(data, nan=False).astype(bool)
-
-    #         # Assign the data to the dataset for the specific time step
-    #         ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
-
-    #     ds.close()
-    #     ds.to_netcdf(self.netcdf_filepath, mode="a")
-    #     self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
-
-    # def _save_state_vars(self, params: dict):
-    #     """The method will save state variables after each timestep.
-
-    #     This method should also include the config, input data, and QC plots.
-    #     """
-    #     template = self.water_depth.isel({"time": 0})  # subset to first month
-
-    #     # veg type out
-    #     filename_vegtype = utils.generate_filename(
-    #         params=params,
-    #         base_path=self.timestep_output_dir,
-    #         parameter="VEGTYPE",
-    #     )
-    #     new_variables = {"veg_type": (self.veg_type, {"units": "veg_type"})}
-    #     # xr.Dataset `timestep_out` will contain all output arrays, defined here first
-    #     self.timestep_out = utils.create_dataset_from_template(template, new_variables)
-    #     self.timestep_out["veg_type"].rio.to_raster(
-    #         filename_vegtype.with_suffix(".tif")
-    #     )
-
-    #     # pct mast out
-    #     # TODO: add perent mast handling
-
-    #     filename_maturity = utils.generate_filename(
-    #         params=params,
-    #         base_path=self.timestep_output_dir,
-    #         parameter="MATURITY",
-    #     )
-    #     self.timestep_out["maturity"] = (("y", "x"), self.maturity)
-    #     self.timestep_out["maturity"].rio.to_raster(
-    #         filename_maturity.with_suffix(".tif")
-    #     )
-
-    #     self.timestep_out.to_netcdf(self.netcdf_filepath, mode="w")
-    #     del self.timestep_out
 
     def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
         """Create output directory for the current timestamp, where

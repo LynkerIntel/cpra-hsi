@@ -177,22 +177,10 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
-        # TODO load pandas dataframe into this from bluecrab_lookup_table_path
-        # self.bluecrab_lookup_table = pd.read_excel(self.bluecrab_lookup_table_path)
-
-        # # NetCDF data output
-        # sim_length = self.water_year_end - self.water_year_start
-
-        # file_params = {
-        #     "model": self.metadata.get("model"),
-        #     "scenario": self.metadata.get("scenario"),
-        #     "group": self.metadata.get("group"),
-        #     "wpu": "AB",
-        #     "io_type": "O",
-        #     "time_freq": "ANN",  # for annual output
-        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-        #     # "parameter": "NA",
-        # }
+        # black bear
+        self.pct_soft_mast = None
+        self.pct_hard_mast = None
+        self.pct_no_mast = None
 
         self._create_output_file(self.file_params)
 
@@ -525,33 +513,50 @@ class HSI(vt.VegTransition):
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 
+    def _calculate_mast_percentage(self):
+        """Calculate percetange of canopy cover for mast classifications, as a
+        summation of `%_cover * %_mast` for zones II through V.
+
+
+        | Zone | Growth (cm/yr) | Hard Mast (%) | Soft Mast (%) | No Mast (%) |
+        |------|----------------|---------------|---------------|-------------|
+        | II   | 0.52           | 0.00          | 0.53          | 0.47        |
+        | III  | 0.63           | 0.39          | 0.61          | 0.00        |
+        | IV   | 0.66           | 0.28          | 0.42          | 0.30        |
+        | V    | 0.68           | 1.00          | 0.00          | 0.00        |
+
+        """
+        soft_mast = {"II": 0.53, "III": 0.61, "IV": 0.42, "V": 0.00}
+        hard_mast = {"II": 0.0, "III": 0.39, "IV": 0.28, "V": 1.00}
+        no_mast = {"II": 0.47, "III": 0.0, "IV": 0.3, "V": 0.0}
+
+        # calculate si2 as a weighted sum across zones
+        self.pct_soft_mast = (
+            self.pct_zone_ii * soft_mast["II"]
+            + self.pct_zone_iii * soft_mast["III"]
+            + self.pct_zone_iv * soft_mast["IV"]
+            + self.pct_zone_v * soft_mast["V"]
+        ) * 100
+
+        self.pct_hard_mast = (
+            self.pct_zone_ii * hard_mast["II"]
+            + self.pct_zone_iii * hard_mast["III"]
+            + self.pct_zone_iv * hard_mast["IV"]
+            + self.pct_zone_v * hard_mast["V"]
+        ) * 100
+
+        self.pct_no_mast = (
+            self.pct_zone_ii * no_mast["II"]
+            + self.pct_zone_iii * no_mast["III"]
+            + self.pct_zone_iv * no_mast["IV"]
+            + self.pct_zone_v * no_mast["V"]
+        ) * 100
+
     def _load_blue_crab_lookup(self):
         """
         Read blue crab lookup table
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
-
-    # def _create_output_dirs(self):
-    #     """Create an output location for state variables, model config,
-    #     input data, and QC plots.
-
-    #     (No logging because logger needs output location for log file first.)
-    #     """
-    #     output_dir_name = f"HSI_{self.sim_start_time}"
-
-    #     # Combine base directory and new directory name
-    #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
-    #     # Create the directory if it does not exist
-    #     os.makedirs(self.output_dir_path, exist_ok=True)
-
-    #     # Create the 'run-input' subdirectory
-    #     run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-    #     os.makedirs(run_metadata_dir, exist_ok=True)
-
-    #     if os.path.exists(self.config_path):
-    #         shutil.copy(self.config_path, run_metadata_dir)
-    #     else:
-    #         print("Config file not found at %s", self.config_path)
 
     def _create_output_file(self, params: dict):
         """HSI: Create NetCDF file for data output.
@@ -594,18 +599,6 @@ class HSI(vt.VegTransition):
             end=f"{self.water_year_end}-10-01",
             freq="YS-OCT",  # Annual start
         )
-
-        # OLD METHOD
-        # # Create an empty Dataset with only coordinates
-        # ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
-
-        # # Assign CRS using rioxarray
-        # ds = ds.rio.write_crs("EPSG:6344")
-
-        # # Save the initial NetCDF file
-        # ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
-        # ds.close()
-        # da.close()
 
         ds = xr.Dataset(
             # initialize w/ no data vars

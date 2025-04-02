@@ -12,7 +12,6 @@ import logging
 import re
 from pathlib import Path
 
-
 # Configure the logger in VegTransition
 logger = logging.getLogger("VegTransition")
 
@@ -57,9 +56,7 @@ def generate_combined_sequence(
         start = datetime(source_year - 1, 10, 1)
         end = datetime(source_year, 9, 30)
 
-        source_year_paths = [
-            path for path in source_files if start <= extract_date(path) <= end
-        ]
+        source_year_paths = [path for path in source_files if start <= extract_date(path) <= end]
         source_year_paths.sort()
 
         print(f"Mapping {source_year} to {analog_year}")
@@ -78,7 +75,9 @@ def generate_combined_sequence(
                 replacement_year = analog_year
 
             # Reconstruct the string with the new water year (with zero padding)
-            new_file_name = f"WSE_MEAN_{replacement_year}_{file_date.month:02d}_{file_date.day:02d}.tif"
+            new_file_name = (
+                f"WSE_MEAN_{replacement_year}_{file_date.month:02d}_{file_date.day:02d}.tif"
+            )
             print(f"output name: {new_file_name}")
 
             dest_file = os.path.join(output_folder, new_file_name)
@@ -145,9 +144,7 @@ def create_dataset_from_template(
                 f"the template shape ({template['WSE_MEAN'].shape})."
             )
         # Add the variable
-        new_ds[var_name] = xr.DataArray(
-            data, dims=template["WSE_MEAN"].dims, attrs=attrs
-        )
+        new_ds[var_name] = xr.DataArray(data, dims=template["WSE_MEAN"].dims, attrs=attrs)
 
     # Optionally, copy global attributes from the template
     new_ds.attrs = template.attrs
@@ -211,16 +208,12 @@ def load_mf_tifs(
     )
 
     # convert data variable keys to a list and rename the main variable
-    xr_dataset = xr_dataset.rename(
-        {list(xr_dataset.data_vars.keys())[0]: variable_name}
-    )
+    xr_dataset = xr_dataset.rename({list(xr_dataset.data_vars.keys())[0]: variable_name})
 
     return xr_dataset
 
 
-def coarsen_and_reduce(
-    da: xr.DataArray, veg_type: int | bool, **kwargs
-) -> xr.DataArray:
+def coarsen_and_reduce(da: xr.DataArray, veg_type: int | bool, **kwargs) -> xr.DataArray:
     """execute `.coarsen` and `.reduce`, with args handled
     by this function, due to xarray bug (described below).
 
@@ -260,9 +253,7 @@ def coarsen_and_reduce(
     return result
 
 
-def generate_pct_cover(
-    data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs
-) -> xr.Dataset:
+def generate_pct_cover(data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs) -> xr.Dataset:
     """iterate vegetation types, merge all arrays, serialize to NetCDF.
 
     The creates a pct cover .nc for each veg types list in the veg_keys
@@ -463,9 +454,7 @@ def pixel_sums_full_domain(ds: xr.Dataset) -> pd.DataFrame:
 
     # Use Xarray to count occurrences of each unique value
     # Create a DataArray mask for all unique values at once
-    mask = xr.concat(
-        [(ds["veg_type"] == value) for value in unique_values], dim="value"
-    )
+    mask = xr.concat([(ds["veg_type"] == value) for value in unique_values], dim="value")
     # Assign unique values as a coordinate to the new dimension
     mask = mask.assign_coords(value=("value", unique_values))
     # Sum across spatial dimensions (y, x) to get counts for each value over time
@@ -671,18 +660,10 @@ def qc_tree_establishment_info(
     """
     # .isel() required due to the month selection resulting in a single timestep 3D
     # dataarray, while the output format requires a 2D numpy array.
-    march = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
-    )
-    april = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
-    )
-    may = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
-    )
-    june = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
-    )
+    march = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
+    april = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
+    may = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
+    june = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
     return [march.to_numpy(), april.to_numpy(), may.to_numpy(), june.to_numpy()]
 
 
@@ -737,3 +718,26 @@ def qc_annual_mean_salinity(salinity: np.ndarray) -> np.ndarray:
     func as a placeholder for when salinity is a model variable.
     """
     return salinity
+
+
+def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
+    """
+    Convert an xarray Dataset's variables and their attributes into a pandas DataFrame.
+    Only attributes whose keys are present in the supplied list (selected_attrs) are included.
+
+    Parameters:
+        ds (xr.Dataset): The input xarray Dataset.
+        selected_attrs (list of str): A list of attribute keys to include (e.g., ['units', 'description']).
+
+    Returns:
+        pd.DataFrame: A DataFrame with a 'variable' column for the variable name and additional
+                      columns for each attribute in selected_attrs. If a variable does not have a given
+                      attribute, the value will be None.
+    """
+    rows = []
+    for var_name, var in ds.variables.items():
+        row = {"variable": var_name}
+        for key in selected_attrs:
+            row[key] = var.attrs.get(key, None)
+        rows.append(row)
+    return pd.DataFrame(rows)

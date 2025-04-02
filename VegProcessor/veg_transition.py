@@ -848,10 +848,6 @@ class VegTransition:
                         "grid_mapping": "crs",  # Link CRS variable
                         "units": "unitless",
                         "long_name": "veg type",
-                        # "description": (
-                        #     "Time 0 is initial conditions. Model output starts at "
-                        #     f"{time_range[1].strftime('%Y-%m-%d')}"
-                        # ),
                     },
                 ),
                 "maturity": (
@@ -860,8 +856,8 @@ class VegTransition:
                     {
                         "grid_mapping": "crs",
                         "units": "years",
-                        "long_name": "forested pixel maturity",
-                    },  # Link CRS variable
+                        "long_name": "forested vegetation age",
+                    },
                 ),
             },
             coords={
@@ -895,7 +891,7 @@ class VegTransition:
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save initial file
-        ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
+        ds.to_netcdf(self.netcdf_filepath)
         ds.close()
         da.close()
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
@@ -941,9 +937,11 @@ class VegTransition:
         - The dataset is saved in append mode before closing it.
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
-        # Open existing NetCDF file
-        ds = xr.open_dataset(self.netcdf_filepath)
 
+        with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
+            ds_loaded = ds.load()  # This loads the data into memory and closes file
+
+        # with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
         veg_variables = {
             "veg_type": [
                 self.veg_type,
@@ -970,7 +968,7 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "ppt",
-                    "long_name": "test",
+                    "long_name": "mean annual salinity",
                 },
             ],
             "qc_annual_inundation_depth": [
@@ -979,7 +977,7 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
+                    "long_name": "annual inundation depth",
                 },
             ],
             "qc_annual_inundation_duration": [
@@ -988,8 +986,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "%",
-                    "long_name": "test",
-                    # "description": "Percentage of time flooded over the year",
+                    "long_name": "annual inundation duration",
+                    "description": "Percentage of time flooded over the year",
                 },
             ],
             "qc_growing_season_depth": [
@@ -998,10 +996,10 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
-                    # "description": (
-                    #     "Average water-depth during the period from April 1 through September 30"
-                    # ),
+                    "long_name": "growing season depth",
+                    "description": (
+                        "Average water-depth during the period from April 1 through September 30"
+                    ),
                 },
             ],
             "qc_growing_season_inundation": [
@@ -1010,10 +1008,10 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "%",
-                    "long_name": "test",
-                    # "description": (
-                    #     "Percentage of time flooded during the period from April 1 through September 30"
-                    # ),
+                    "long_name": "growing season inundation",
+                    "description": (
+                        "Percentage of time flooded during the period from April 1 through September 30"
+                    ),
                 },
             ],
             "qc_tree_establishment_bool": [
@@ -1022,8 +1020,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "unitless",
-                    "long_name": "test",
-                    # "description": "Areas where establishment condition is met",
+                    "long_name": "tree establishment (true or false)",
+                    "description": "Areas where establishment condition is met",
                 },
             ],
             # Seasonal water depth QC variables
@@ -1033,8 +1031,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
-                    # "description": "Depth in m for the month.",
+                    "long_name": "march water depth",
+                    "description": "Depth in m for the month of march.",
                 },
             ],
             "qc_april_water_depth": [
@@ -1043,8 +1041,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
-                    # "description": "Depth in m for the month.",
+                    "long_name": "april water depth",
+                    "description": "Depth in m for the month of april.",
                 },
             ],
             "qc_may_water_depth": [
@@ -1053,8 +1051,8 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
-                    # "description": "Depth in m for the month.",
+                    "long_name": "may water depth",
+                    "description": "Depth in m for the month of may.",
                 },
             ],
             "qc_june_water_depth": [
@@ -1063,18 +1061,18 @@ class VegTransition:
                 {
                     "grid_mapping": "crs",
                     "units": "meters",
-                    "long_name": "test",
-                    # "description": "Depth in m for the month.",
+                    "long_name": "june water depth",
+                    "description": "Depth in m for the month of june.",
                 },
             ],
         }
 
         for var_name, (data, dtype, nc_attrs) in veg_variables.items():
             # Check if the variable exists in the dataset, if not, initialize it
-            if var_name not in ds:
-                shape = (len(ds.time), len(ds.y), len(ds.x))
+            if var_name not in ds_loaded:
+                shape = (len(ds_loaded.time), len(ds_loaded.y), len(ds_loaded.x))
                 default_value = False if dtype == bool else np.nan
-                ds[var_name] = (
+                ds_loaded[var_name] = (
                     ["time", "y", "x"],
                     np.full(shape, default_value, dtype=dtype),
                     nc_attrs,
@@ -1085,10 +1083,11 @@ class VegTransition:
                 data = np.nan_to_num(data, nan=False).astype(bool)
 
             # Assign the data to the dataset for the specific time step
-            ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+            ds_loaded[var_name].loc[{"time": timestep_str}] = data.astype(ds_loaded[var_name].dtype)
 
-        ds.to_netcdf(self.netcdf_filepath, mode="a")
-        ds.close()
+        # ds.close()
+        ds_loaded.to_netcdf(self.netcdf_filepath, mode="a", engine="h5netcdf")
+        ds_loaded.close()
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
@@ -1170,6 +1169,18 @@ class VegTransition:
         df_full_domain = utils.pixel_sums_full_domain(ds=ds)
         outpath = os.path.join(self.run_metadata_dir, "vegtype_timeseries.csv")
         df_full_domain.to_csv(outpath)
+
+        logging.info("Creating variable name text file")
+        outpath = os.path.join(self.run_metadata_dir, "veg_netcdf_variables.csv")
+        attrs_df = utils.dataset_attrs_to_df(
+            ds,
+            selected_attrs=[
+                "long_name",
+                "description",
+                "units",
+            ],
+        )
+        attrs_df.to_csv(outpath, index=False)
 
         logging.info("Post-processing complete.")
 

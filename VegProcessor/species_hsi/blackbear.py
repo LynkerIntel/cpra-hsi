@@ -57,7 +57,7 @@ class BlackBearHSI:
             v1_pct_area_wetland_cover=hsi_instance.pct_area_wetland,
             v2_pct_canopy_cover_soft_mast_prod_species=hsi_instance.pct_cover_soft_mast,
             v3_num_soft_mast_prod_species_greaterthanorequalto_1pct_canopy_cover=hsi_instance.num_soft_mast_species, #set to ideal
-            v4_basal_area_mast_prod_species_greaterthanorequalto_30yr=hsi_instance.basal_area_hard_mast,
+            v4_basal_area_mast_prod_species_greaterthanorequalto_30yr=hsi_instance.basal_area_hard_mast, #set to ideal
             v5_num_hard_mast_prod_species_w_atleast_one_mature_tree_per_0_4ha=hsi_instance.num_hard_mast_species, #set to ideal
             v6_pct_area_nonforested_cover_lessthanorqualto_250m_from_forestcover=hsi_instance.pct_area_nonforested,
             v7_pct_area_cover_type_w_greaterthanorequalto_1pct_hard_mast_cover=hsi_instance.pct_cover_hard_mast,
@@ -208,23 +208,24 @@ class BlackBearHSI:
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
-        #if ft^2/ac
-        #if self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr is None:
-        #    self._logger.info("Basal area of hard mast producing species ≥ 30 years in age not provided. "
-        #    "Setting index to 1.")
-        #    si_4[~np.isnan(si_4)] = 1
+        #Set to ideal
+        if self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr is None:
+            self._logger.info("Basal area of hard mast producing species ≥ 30 years assumes ideal conditions. "
+            "Setting index to 1.")
+            si_4[~np.isnan(si_4)] = 1
 
+        #if ft2/ac
         #else:
-        #    # condition 1 (basal area units in m2/0.4ha)
-        #   mask_1 = self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr < 70
+        #    # condition 1 (basal area units in ft2/ac)
+        #    mask_1 = self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr < 70
         #    si_4[mask_1] = (0.0129 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_1]) + 0.1
 
-        #   # condition 2
+        #   # condition 2 (basal area units in ft2/ac)
         #    mask_2 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr >= 70) & (
         #        self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr <= 90)
         #    si_4[mask_2] = 1
 
-        #    #condition 3
+        #    #condition 3 (basal area units in ft2/ac)
         #    mask_3 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr) > 90 
         #    si_4[mask_3] = (-0.01 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_3]) + 1.9
 
@@ -234,31 +235,26 @@ class BlackBearHSI:
             # if self.hydro_domain_flag:
             #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
-        #if m^2/0.4ha
-        if self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr is None:
-            self._logger.info("Basal area of hard mast producing species ≥ 30 years in age not provided. "
-            "Setting index to 1.")
-            si_4[~np.isnan(si_4)] = 1
+        #if m2/0.4ha
+        #else:
+        #    # condition 1 (basal area units in m2/0.4ha)
+        #    mask_1 = self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr < 6.5
+        #    si_4[mask_1] = (0.1385 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_1]) + 0.1
 
-        else:
-            # condition 1 (basal area units in m2/0.4ha)
-            mask_1 = self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr < 6.5
-            si_4[mask_1] = (0.1385 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_1]) + 0.1
+        #    # condition 2 (basal area units in m2/0.4ha)
+        #    mask_2 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr >= 6.5) & (
+        #        self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr <= 8.4)
+        #    si_4[mask_2] = 1
 
-            # condition 2
-            mask_2 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr >= 6.5) & (
-                self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr <= 8.4)
-            si_4[mask_2] = 1
-
-            #condition 3
-            mask_3 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr) > 8.4 
-            si_4[mask_3] = (-0.1111 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_3]) + 1.9333
+        #    #condition 3 (basal area units in m2/0.4ha)
+        #    mask_3 = (self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr) > 8.4 
+        #    si_4[mask_3] = (-0.1111 * self.v4_basal_area_mast_prod_species_greaterthanorequalto_30yr[mask_3]) + 1.9333
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # if self.hydro_domain_flag:
-            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+        #    # if self.hydro_domain_flag:
+        #    #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return self.clip_array(si_4)
 

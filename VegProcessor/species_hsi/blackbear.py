@@ -36,7 +36,7 @@ class BlackBearHSI:
     si_7: np.ndarray = field(init=False)
     si_8: np.ndarray = field(init=False)
 
-    # Set up components and equations
+    # components and equations
     spring_food: np.ndarray = field(init=False)
     summer_food: np.ndarray = field(init=False)
     fall_food: np.ndarray = field(init=False)
@@ -55,14 +55,13 @@ class BlackBearHSI:
             passed to SI methods."""
             return array / divisor if array is not None else None
 
-        # TO DO: provide correct names for hsi_instances
         return cls(
             v1_pct_area_wetland_cover=hsi_instance.pct_vegetated,
-            v2_pct_canopy_cover_s_mast_species=hsi_instance.pct_cover_soft_mast,
+            v2_pct_canopy_cover_s_mast_species=hsi_instance.pct_soft_mast,
             v3_soft_mast_prod_species_above1pct_canopy=hsi_instance.num_soft_mast_species,  # set to ideal
             v4_basal_area_mast_prod_species_above_30yr=hsi_instance.basal_area_hard_mast,  # set to ideal
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
-            v6_pct_area_nonforested_cover_250m=hsi_instance.pct_area_nonforested,
+            v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
             v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_cover_hard_mast,
             v8_pct_eval_area_inside_zones=hsi_instance.pct_area_zone_influence,
             dem_480=hsi_instance.dem_480,

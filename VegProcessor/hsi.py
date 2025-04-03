@@ -12,6 +12,7 @@ from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
 from rasterio.enums import Resampling
+from skimage.morphology import disk, dilation
 
 # import veg_logic
 import hydro_logic
@@ -19,7 +20,7 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab
+from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab, blackbear
 
 
 class HSI(vt.VegTransition):
@@ -131,6 +132,7 @@ class HSI(vt.VegTransition):
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
+        self.water_depth_monthly_mean_jan_aug_cm = None
 
         # HSI models
         self.alligator = None
@@ -138,7 +140,7 @@ class HSI(vt.VegTransition):
         self.baldeagle = None
         self.gizzardshad = None
         self.bass = None
-        # self.blackbear = None
+        self.blackbear = None
         self.bluecrab = None
 
         # datasets
@@ -181,6 +183,10 @@ class HSI(vt.VegTransition):
         self.pct_soft_mast = None
         self.pct_hard_mast = None
         self.pct_no_mast = None
+
+        self.num_soft_mast_species = None  # always ideal
+        self.basal_area_hard_mast = None  # always ideal
+        self.num_hard_mast_species = None  # always ideal
 
         self._create_output_file(self.file_params)
 
@@ -246,8 +252,7 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # calculate depth
-        # avg_water_depth_rlt_marsh_surface
+        # water depth vars --------------------------------------
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
         self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
         self.water_depth_annual_mean = self._get_depth_filtered()
@@ -255,29 +260,31 @@ class HSI(vt.VegTransition):
             months=[1, 2, 3, 4, 5, 6, 7, 8]
         )
         self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(months=[9, 10, 11, 12])
-        self.water_depth_spawning_season = self._get_depth_filtered(
-            months=[4, 5, 6],
-        )
+        self.water_depth_spawning_season = self._get_depth_filtered(months=[4, 5, 6])
 
-        # load veg type
+        # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
 
-        # calculate pct cover for all veg types
+        # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
-            self.veg_type, domain=self.hydro_domain, cell=True
+            self.veg_type,
+            domain=self.hydro_domain,
+            cell=True,
         )
+        self._calculate_mast_percentage()
+        self._calculate_near_forest(radius=4)
 
-        # run HSI models for timestep
+        # run ---------------------------------------------------------
         if self.run_hsi:
 
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
+            self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -405,20 +412,18 @@ class HSI(vt.VegTransition):
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
 
     def _calculate_pct_cover_static(self):
-        """Get percent coverage for each 480m cell, based on 60m veg type pixels.
-        This method is called during initialization, for static variables.
+        """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
+        This method is called during initialization, for static variables that
+        vary spatially but not temporally.
         """
-        ds_dev_upland = utils.generate_pct_cover_custom(
+        self.pct_dev_upland = utils.generate_pct_cover_custom(
             data_array=self.initial_veg_type,
             # these are the dev'd (4) and upland (4)
             veg_types=[2, 3, 4, 5, 9, 10, 11, 12],
             x=8,
             y=8,
             boundary="pad",
-        )
-
-        # Developed Land (4 diff types) and Upland (also 4)
-        self.pct_dev_upland = ds_dev_upland.to_numpy()
+        ).to_numpy()
 
         # Flotant marsh for baldeagle
         self.pct_flotant_marsh = utils.coarsen_and_reduce(
@@ -428,6 +433,17 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         ).to_numpy()
+
+    def _calculate_pct_area_influence(self):
+        # """Percent of evaluation area inside of zones of influence defined by
+        # radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
+        # residences.
+        # """
+        towns = [2, 3, 4, 5]
+        croplands = [6, 7, 8]
+        # residences = []
+
+        self.initial_veg_type
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -515,7 +531,8 @@ class HSI(vt.VegTransition):
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a
-        summation of `%_cover * %_mast` for zones II through V.
+        summation of `%_cover * %_mast` for zones II through V. The pct_cover
+        arrays are 480m, so the output is also 480m.
 
 
         | Zone | Growth (cm/yr) | Hard Mast (%) | Soft Mast (%) | No Mast (%) |
@@ -530,7 +547,7 @@ class HSI(vt.VegTransition):
         hard_mast = {"II": 0.0, "III": 0.39, "IV": 0.28, "V": 1.00}
         no_mast = {"II": 0.47, "III": 0.0, "IV": 0.3, "V": 0.0}
 
-        # calculate si2 as a weighted sum across zones
+        # calculate as a weighted sum of zones
         self.pct_soft_mast = (
             self.pct_zone_ii * soft_mast["II"]
             + self.pct_zone_iii * soft_mast["III"]
@@ -551,6 +568,32 @@ class HSI(vt.VegTransition):
             + self.pct_zone_iv * no_mast["IV"]
             + self.pct_zone_v * no_mast["V"]
         ) * 100
+
+    def _calculate_near_forest(self, radius: int) -> np.ndarray:
+        """Percent of area in nonforested cover types ≤ 250m from forested cover types.
+        Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
+        with radius=4 (i.e. 240m).
+
+        TODO: confirm forest pixels
+
+        parameters
+        ----------
+        radius : int
+            radius of the neighborhood in pixels
+        """
+        forest_types = [15, 16, 17, 18]
+
+        forested_mask = np.isin(self.veg_type, forest_types)
+        non_forested_mask = ~forested_mask  # invert mask, i.e. everything else
+
+        disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
+        dilated_forest = dilation(forested_mask, disk_kernel)
+
+        # mask to keep only non-forested near forest
+        near_forest_mask = dilated_forest & non_forested_mask
+        near_forest_mask = xr.DataArray(near_forest_mask.astype(float), coords=self.veg_type.coords)
+
+        self.pct_near_forest = near_forest_mask.coarsen(x=8, y=8, boundary="pad").mean() * 100
 
     def _load_blue_crab_lookup(self):
         """

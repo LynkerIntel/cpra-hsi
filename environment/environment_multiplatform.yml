@@ -35,3 +35,4 @@ dependencies:
   - h5netcdf
   - scipy
   - netcdf4
+  - scikit-image

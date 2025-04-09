@@ -20,7 +20,15 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab, blackbear
+from species_hsi import (
+    alligator,
+    crawfish,
+    baldeagle,
+    gizzardshad,
+    bass,
+    bluecrab,
+    blackbear,
+)
 
 
 class HSI(vt.VegTransition):
@@ -46,26 +54,40 @@ class HSI(vt.VegTransition):
 
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
-        self.wse_domain_path = self.config["raster_data"].get("wse_domain_raster")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.wse_domain_path = self.config["raster_data"].get(
+            "wse_domain_raster"
+        )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
-        self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
+        self.flotant_marsh_path = self.config["raster_data"].get(
+            "flotant_marsh_raster"
+        )
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # TODO Add this path to config - Issue #40 on GitHub
         # self.bluecrab_lookup_table_path = self.config["???"].get("bluecrab_lookup_table")
 
         # simulation
-        self.water_year_start = self.config["simulation"].get("water_year_start")
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
-        self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.hydro_domain_flag = self.config["simulation"].get("hydro_domain_flag")
-        self.blue_crab_lookup_path = self.config["simulation"].get("blue_crab_lookup_table")
+        self.analog_sequence = self.config["simulation"].get(
+            "wse_sequence_input"
+        )
+        self.hydro_domain_flag = self.config["simulation"].get(
+            "hydro_domain_flag"
+        )
+        self.blue_crab_lookup_path = self.config["simulation"].get(
+            "blue_crab_lookup_table"
+        )
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -171,10 +193,14 @@ class HSI(vt.VegTransition):
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
         self.avg_num_frost_free_days_growing_season = None  # ideal always
-        self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        self.mean_weekly_summer_temp = (
+            None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = None  # ideal HEC-RAS SI6 = 20 degrees
+        self.mean_weekly_temp_reservoir_spawning_season = (
+            None  # ideal HEC-RAS SI6 = 20 degrees
+        )
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
@@ -209,8 +235,12 @@ class HSI(vt.VegTransition):
             ch.setLevel(log_level)
 
             # file handler for logs in `run-input` folder
-            run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-            os.makedirs(run_metadata_dir, exist_ok=True)  # Ensure directory exists
+            run_metadata_dir = os.path.join(
+                self.output_dir_path, "run-metadata"
+            )
+            os.makedirs(
+                run_metadata_dir, exist_ok=True
+            )  # Ensure directory exists
             log_file_path = os.path.join(run_metadata_dir, "simulation.log")
             fh = logging.FileHandler(log_file_path)
             fh.setLevel(log_level)
@@ -259,8 +289,12 @@ class HSI(vt.VegTransition):
         self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8]
         )
-        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(months=[9, 10, 11, 12])
-        self.water_depth_spawning_season = self._get_depth_filtered(months=[4, 5, 6])
+        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+            months=[9, 10, 11, 12]
+        )
+        self.water_depth_spawning_season = self._get_depth_filtered(
+            months=[4, 5, 6]
+        )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -306,8 +340,12 @@ class HSI(vt.VegTransition):
         )
 
         # plus 1 to make inclusive
-        simulation_period = range(self.water_year_start, self.water_year_end + 1)
-        self._logger.info("Running model for: %s timesteps", len(simulation_period))
+        simulation_period = range(
+            self.water_year_start, self.water_year_end + 1
+        )
+        self._logger.info(
+            "Running model for: %s timesteps", len(simulation_period)
+        )
 
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
@@ -382,7 +420,9 @@ class HSI(vt.VegTransition):
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[v for v in range(15, 25)],  # these are everything but open water
+            veg_types=[
+                v for v in range(15, 25)
+            ],  # these are everything but open water
             x=8,
             y=8,
             boundary="pad",
@@ -435,15 +475,39 @@ class HSI(vt.VegTransition):
         ).to_numpy()
 
     def _calculate_pct_area_influence(self):
-        # """Percent of evaluation area inside of zones of influence defined by
-        # radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
-        # residences.
-        # """
+        """Percent of evaluation area inside of zones of influence defined by
+        radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
+        residences.
+
+        Radiuses are defined by circular (disk) kernel, which expands True
+        pixels outward by r.
+
+        5,700 / 60 = 95 pixels
+        3,500 / 60 = 58.33 pixels
+
+        """
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
         # residences = []
 
-        self.initial_veg_type
+        towns_boolean = np.isin(self.initial_veg_type, towns)
+        not_towns_boolean = ~towns_boolean
+        # split by radius, then calculate boolean for 60m pixels first
+        disk_kernel_towns = disk(radius=95)  # circular grid w/ radius (kernel)
+        towns_expanded = dilation(towns_boolean, disk_kernel_towns)
+
+        # mask to keep only non-town near town
+        near_towns = towns_expanded & not_towns_boolean
+
+        near_towns = xr.DataArray(
+            near_towns.astype(float), coords=self.veg_type.coords
+        )
+        self.pct_near_towns = (
+            near_towns.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        )
+
+        # disk_kernel_croplands = disk(radius=58)  # circular grid w/ radius (kernel)
+        # croplands_expanded = dilation(towns_boolean, disk_kernel_towns)
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -467,7 +531,8 @@ class HSI(vt.VegTransition):
 
         # Combine all neighbor comparisons
         edge_pixels = xr.concat(
-            [(neighbor == open_water) for neighbor in neighbors], dim="direction"
+            [(neighbor == open_water) for neighbor in neighbors],
+            dim="direction",
         ).any(dim="direction")
 
         logging.info("Calculating percent of water edge pixels in cell.")
@@ -502,7 +567,9 @@ class HSI(vt.VegTransition):
 
         return combined_flotant
 
-    def _get_depth_filtered(self, months: None | list[int] = None) -> np.ndarray:
+    def _get_depth_filtered(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
         """Calls the VegTransition _get_depth(), then adds a time
         filter (if supplied) and then resample to 480m cell size.
 
@@ -569,7 +636,7 @@ class HSI(vt.VegTransition):
             + self.pct_zone_v * no_mast["V"]
         ) * 100
 
-    def _calculate_near_forest(self, radius: int) -> np.ndarray:
+    def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.
         Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
         with radius=4 (i.e. 240m).
@@ -587,13 +654,17 @@ class HSI(vt.VegTransition):
         non_forested_mask = ~forested_mask  # invert mask, i.e. everything else
 
         disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
-        dilated_forest = dilation(forested_mask, disk_kernel)
-
+        expanded_forest = dilation(forested_mask, disk_kernel)
         # mask to keep only non-forested near forest
-        near_forest_mask = dilated_forest & non_forested_mask
-        near_forest_mask = xr.DataArray(near_forest_mask.astype(float), coords=self.veg_type.coords)
+        near_forest_mask = expanded_forest & non_forested_mask
 
-        self.pct_near_forest = near_forest_mask.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        near_forest_mask_da = xr.DataArray(near_forest_mask.astype(float))
+
+        self.pct_near_forest = (
+            near_forest_mask_da.coarsen(
+                dim_0=8, dim_1=8, boundary="pad"
+            ).mean()  # uses default coord names (dim_0, 1)
+        ) * 100  # UNIT: index to percent
 
     def _load_blue_crab_lookup(self):
         """
@@ -620,7 +691,9 @@ class HSI(vt.VegTransition):
             parameter="DATA",
         )
 
-        self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
+        self.netcdf_filepath = os.path.join(
+            self.output_dir_path, f"{file_name}.nc"
+        )
 
         # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
@@ -630,7 +703,9 @@ class HSI(vt.VegTransition):
         # Resample to 480m resolution, using rioxarray, with preserved correct coords and
         # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
         # projected coords.
-        da = da.rio.reproject(da.rio.crs, resolution=480, resampling=Resampling.average)
+        da = da.rio.reproject(
+            da.rio.crs, resolution=480, resampling=Resampling.average
+        )
 
         # use new 480m coords
         x = da.coords["x"].values
@@ -680,7 +755,9 @@ class HSI(vt.VegTransition):
 
         # Save dataset to NetCDF
         ds.to_netcdf(self.netcdf_filepath)
-        self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
+        self._logger.info(
+            "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
+        )
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append timestep data to the NetCDF file.
@@ -732,19 +809,37 @@ class HSI(vt.VegTransition):
             "bass_si_1": (self.bass.si_1, np.float32),
             "bass_si_2": (self.bass.si_2, np.float32),
             # species input vars
-            "water_depth_annual_mean": (self.water_depth_annual_mean, np.float32),
-            "water_depth_monthly_mean_jan_aug": (self.water_depth_monthly_mean_jan_aug, np.float32),
+            "water_depth_annual_mean": (
+                self.water_depth_annual_mean,
+                np.float32,
+            ),
+            "water_depth_monthly_mean_jan_aug": (
+                self.water_depth_monthly_mean_jan_aug,
+                np.float32,
+            ),
             "water_depth_monthly_mean_sept_dec": (
                 self.water_depth_monthly_mean_sept_dec,
                 np.float32,
             ),
-            "water_depth_spawning_season": (self.water_depth_spawning_season, np.float32),
+            "water_depth_spawning_season": (
+                self.water_depth_spawning_season,
+                np.float32,
+            ),
             "pct_open_water": (self.pct_open_water, np.float32),
             "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
-            "mean_annual_temperature": (self.mean_annual_temperature, np.float32),
-            "pct_swamp_bottom_hardwood": (self.pct_swamp_bottom_hardwood, np.float32),
+            "mean_annual_temperature": (
+                self.mean_annual_temperature,
+                np.float32,
+            ),
+            "pct_swamp_bottom_hardwood": (
+                self.pct_swamp_bottom_hardwood,
+                np.float32,
+            ),
             "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
-            "pct_intermediate_marsh": (self.pct_intermediate_marsh, np.float32),
+            "pct_intermediate_marsh": (
+                self.pct_intermediate_marsh,
+                np.float32,
+            ),
             "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
             "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
             "pct_zone_v": (self.pct_zone_v, np.float32),
@@ -763,7 +858,9 @@ class HSI(vt.VegTransition):
 
             for var_name, (data, dtype) in hsi_variables.items():
                 if data is None:
-                    self._logger.warning("Array '%s' is None, skipping save.", var_name)
+                    self._logger.warning(
+                        "Array '%s' is None, skipping save.", var_name
+                    )
 
                 else:
                     # Check if the variable exists in the dataset, if not, initialize it
@@ -781,7 +878,9 @@ class HSI(vt.VegTransition):
                         data = np.nan_to_num(data, nan=False).astype(bool)
 
                     # Assign the data to the dataset for the specific time step
-                    ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+                    ds[var_name].loc[{"time": timestep_str}] = data.astype(
+                        ds[var_name].dtype
+                    )
 
         ds.close()
         ds.to_netcdf(

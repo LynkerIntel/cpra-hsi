@@ -474,6 +474,45 @@ class HSI(vt.VegTransition):
             boundary="pad",
         ).to_numpy()
 
+    @staticmethod
+    def _calculate_near_landtype(
+        landcover_arr: np.ndarray, landtype_true: list, radius: int
+    ) -> np.ndarray:
+        """Generalized method to get percentage of 480m cell with within
+        radius of a land cover type or list of land cover types. Uses
+        "initial vegtype" array, i.e. the initial conditions, with non-veg
+        land cover classes included.
+
+        Parameters
+        -----------
+        landtype : list
+            list of land type int values considered "True", i.e. non-vegetated land
+
+        radius : int
+            radius to use for the circular kernel, to determine nearby land cover
+
+        Returns
+        --------
+        istype_array : np.ndarray
+            Array of pct cover of pixels meeting the defined criteria
+        """
+        istype_bool = np.isin(landcover_arr, landtype_true)
+        nottype_bool = ~istype_bool
+
+        disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
+        istype_expanded = dilation(istype_bool, disk_kernel)
+
+        # mask to keep only non-type near type
+        near_types = istype_expanded & nottype_bool
+
+        # get percent (% of 480m cell, from 60m pixels)
+        near_types_da = xr.DataArray(near_types.astype(float))
+        pct_near = (
+            near_types_da.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        ).to_numpy()
+
+        return pct_near
+
     def _calculate_pct_area_influence(self):
         """Percent of evaluation area inside of zones of influence defined by
         radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
@@ -488,26 +527,24 @@ class HSI(vt.VegTransition):
         """
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
-        # residences = []
 
-        towns_boolean = np.isin(self.initial_veg_type, towns)
-        not_towns_boolean = ~towns_boolean
-        # split by radius, then calculate boolean for 60m pixels first
-        disk_kernel_towns = disk(radius=95)  # circular grid w/ radius (kernel)
-        towns_expanded = dilation(towns_boolean, disk_kernel_towns)
-
-        # mask to keep only non-town near town
-        near_towns = towns_expanded & not_towns_boolean
-
-        near_towns = xr.DataArray(
-            near_towns.astype(float), coords=self.veg_type.coords
-        )
-        self.pct_near_towns = (
-            near_towns.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        # ---------- towns --------------
+        self.pct_near_towns = self._calculate_near_landtype(
+            landcover_arr=self.veg_type,
+            landtype_true=towns,
+            radius=95,
         )
 
-        # disk_kernel_croplands = disk(radius=58)  # circular grid w/ radius (kernel)
-        # croplands_expanded = dilation(towns_boolean, disk_kernel_towns)
+        # ---------- croplands ------------
+        self.pct_near_croplands = self._calculate_near_landtype(
+            landcover_arr=self.veg_type,
+            landtype_true=croplands,
+            radius=58,
+        )
+
+        self.pct_near_towns_croplands = (
+            self.pct_near_croplands & self.pct_near_towns
+        )
 
     def _calculate_edge(self) -> np.ndarray:
         """

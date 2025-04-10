@@ -62,8 +62,8 @@ class BlackBearHSI:
             v4_basal_area_mast_prod_species_above_30yr=hsi_instance.basal_area_hard_mast,  # set to ideal
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
             v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
-            v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_cover_hard_mast,
-            v8_pct_eval_area_inside_zones=hsi_instance.pct_area_zone_influence,
+            v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_hard_mast,
+            v8_pct_eval_area_inside_zones=hsi_instance.pct_human_influence,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )

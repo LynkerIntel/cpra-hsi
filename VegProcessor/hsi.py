@@ -141,6 +141,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
+        self.pct_human_influence = self._calculate_pct_area_influence()
         self.hydro_domain = self._load_hecras_domain_raster()
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
@@ -171,9 +172,8 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None  # TODO: is never assigned a value
+        self.mean_annual_temperature = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -213,6 +213,7 @@ class HSI(vt.VegTransition):
         self.num_soft_mast_species = None  # always ideal
         self.basal_area_hard_mast = None  # always ideal
         self.num_hard_mast_species = None  # always ideal
+        self.pct_near_forest = None
 
         self._create_output_file(self.file_params)
 
@@ -284,7 +285,7 @@ class HSI(vt.VegTransition):
 
         # water depth vars --------------------------------------
         self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
-        self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
+        self.wse = self._reproject_match_to_dem(self.wse)
         self.water_depth_annual_mean = self._get_depth_filtered()
         self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8]
@@ -331,7 +332,6 @@ class HSI(vt.VegTransition):
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
-        # steps = int(self.simulation_duration / self.simulation_time_step)
         self._logger.info(
             "Starting simulation at %s. Period: %s - %s",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -465,7 +465,6 @@ class HSI(vt.VegTransition):
             boundary="pad",
         ).to_numpy()
 
-        # Flotant marsh for baldeagle
         self.pct_flotant_marsh = utils.coarsen_and_reduce(
             da=self.flotant_marsh,
             veg_type=True,
@@ -527,6 +526,14 @@ class HSI(vt.VegTransition):
         5,700 / 60 = 95 pixels
         3,500 / 60 = 58.33 pixels
 
+        Parameters
+        ----------
+        None
+
+        Returns
+        --------
+        near_landtypes_da : np.ndarray
+            Percent coverage array (480m grid cell)
         """
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
@@ -547,10 +554,13 @@ class HSI(vt.VegTransition):
         stacked = np.stack([near_towns, near_croplands])
         influence_bool = np.any(stacked, axis=0)
 
-        near_types_da = xr.DataArray(influence_bool.astype(float))
-        self.pct_near_crops_towns = (
-            near_types_da.coarsen(x=8, y=8, boundary="pad").mean() * 100
-        ).to_numpy()
+        near_landtypes_da = xr.DataArray(influence_bool.astype(float))
+        near_landtypes_da = (
+            near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
+            * 100
+        )  # UNIT: index to pct
+
+        return near_landtypes_da.to_numpy()
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -696,7 +706,7 @@ class HSI(vt.VegTransition):
             landcover_arr=self.initial_veg_type,
             landtype_true=forest_types,
             radius=radius,
-            include_source=False,  # only non-forested pixels NEAR forested are True
+            include_source=False,  # only non-forested pixels NEAR forested
         )
 
         near_forest_mask_da = xr.DataArray(near_forest_mask.astype(float))

@@ -12,7 +12,8 @@ from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
 from rasterio.enums import Resampling
-from skimage.morphology import disk, dilation
+from scipy.ndimage import binary_dilation
+from skimage.morphology import disk
 
 # import veg_logic
 import hydro_logic
@@ -141,7 +142,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
-        self.pct_human_influence = self._calculate_pct_area_influence()
+        self.pct_human_influence = None
         self.hydro_domain = self._load_hecras_domain_raster()
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
@@ -347,6 +348,10 @@ class HSI(vt.VegTransition):
             "Running model for: %s timesteps", len(simulation_period)
         )
 
+        # run expensive static var creation (other static vars
+        # are created in _init_)
+        self.pct_human_influence = self._calculate_pct_area_influence()
+
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
 
@@ -456,6 +461,7 @@ class HSI(vt.VegTransition):
         This method is called during initialization, for static variables that
         vary spatially but not temporally.
         """
+        self._logger.info("Calculating static var: % developed and upland")
         self.pct_dev_upland = utils.generate_pct_cover_custom(
             data_array=self.initial_veg_type,
             # these are the dev'd (4) and upland (4)
@@ -465,6 +471,7 @@ class HSI(vt.VegTransition):
             boundary="pad",
         ).to_numpy()
 
+        self._logger.info("Calculating static var: % flotant marsh")
         self.pct_flotant_marsh = utils.coarsen_and_reduce(
             da=self.flotant_marsh,
             veg_type=True,
@@ -504,11 +511,13 @@ class HSI(vt.VegTransition):
         istype_array : np.ndarray
             A boolean array where criteria is met
         """
+        # make sure np array is used, w/ no Dask overhead from xarray
+        landcover_arr = np.asarray(landcover_arr)
         istype_bool = np.isin(landcover_arr, landtype_true)
         nottype_bool = ~istype_bool
 
         disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
-        istype_expanded = dilation(istype_bool, disk_kernel)
+        istype_expanded = binary_dilation(istype_bool, structure=disk_kernel)
 
         if include_source:
             return istype_expanded
@@ -538,11 +547,15 @@ class HSI(vt.VegTransition):
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
 
+        self._logger.info("Calculating static var: human influence - towns.")
         near_towns = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
             landtype_true=towns,
             radius=95,
             include_source=True,
+        )
+        self._logger.info(
+            "Calculating static var: human influence - croplands."
         )
         near_croplands = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
@@ -608,6 +621,9 @@ class HSI(vt.VegTransition):
         Return:
             array of flotant marsh meeting both criteria, at 60m resolution.
         """
+        self._logger.info(
+            "Creating flotant marsh from initial veg and flotant marsh arrays."
+        )
         da = xr.open_dataarray(self.flotant_marsh_path)
         da = da["band" == 0]
         # reproject to match hsi grid

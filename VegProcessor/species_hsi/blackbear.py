@@ -122,7 +122,9 @@ class BlackBearHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -145,7 +147,9 @@ class BlackBearHSI:
             # self.v1_pct_area_wetland_cover /= 100
             # condition 1
             mask_1 = self.v1_pct_area_wetland_cover < 7.0
-            si_1[mask_1] = (0.0714 * self.v1_pct_area_wetland_cover[mask_1]) + 0.5
+            si_1[mask_1] = (
+                0.0714 * self.v1_pct_area_wetland_cover[mask_1]
+            ) + 0.5
 
             # condition 2
             mask_2 = (self.v1_pct_area_wetland_cover >= 7.0) & (
@@ -155,7 +159,9 @@ class BlackBearHSI:
 
             # condition 3
             mask_3 = self.v1_pct_area_wetland_cover > 50
-            si_1[mask_3] = (-0.01 * self.v1_pct_area_wetland_cover[mask_3]) + 1.5
+            si_1[mask_3] = (
+                -0.01 * self.v1_pct_area_wetland_cover[mask_3]
+            ) + 1.5
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -176,7 +182,9 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v2_pct_canopy_cover_s_mast_species < 25.0
-            si_2[mask_1] = (0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]) + 0.1
+            si_2[mask_1] = (
+                0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]
+            ) + 0.1
 
             # condition 2
             mask_2 = self.v2_pct_canopy_cover_s_mast_species >= 25.0
@@ -306,13 +314,17 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v6_pct_area_nonforested_cover_250m < 25
-            si_6[mask_1] = (0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]) + 0.2
+            si_6[mask_1] = (
+                0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]
+            ) + 0.2
 
             # condition 2
             mask_2 = (self.v6_pct_area_nonforested_cover_250m >= 25) & (
                 self.v6_pct_area_nonforested_cover_250m <= 50
             )
-            si_6[mask_2] = (-0.04 * self.v6_pct_area_nonforested_cover_250m[mask_2]) + 3
+            si_6[mask_2] = (
+                -0.04 * self.v6_pct_area_nonforested_cover_250m[mask_2]
+            ) + 3
 
             # condition 3
             mask_3 = self.v6_pct_area_nonforested_cover_250m > 75
@@ -337,12 +349,15 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v7_pct_cover_over1pct_cover_h_mast_species < 35
-            si_7[mask_1] = (0.0257 * self.v7_pct_cover_over1pct_cover_h_mast_species[mask_1]) + 0.1
+            si_7[mask_1] = (
+                0.0257
+                * self.v7_pct_cover_over1pct_cover_h_mast_species[mask_1]
+            ) + 0.1
 
             # condition 2
-            mask_2 = (self.v7_pct_cover_over1pct_cover_h_mast_species >= 35) & (
-                self.v7_pct_cover_over1pct_cover_h_mast_species <= 100
-            )
+            mask_2 = (
+                self.v7_pct_cover_over1pct_cover_h_mast_species >= 35
+            ) & (self.v7_pct_cover_over1pct_cover_h_mast_species <= 100)
             si_7[mask_2] = 1.0
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
@@ -401,7 +416,8 @@ class BlackBearHSI:
 
         # Combine individual suitability indices
         hsi = (
-            (spring_food + (summer_food * self.si_6) + (fall_food * self.si_7)) / 3
+            (spring_food + (summer_food * self.si_6) + (fall_food * self.si_7))
+            / 3
         ) * human_intolerance
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1

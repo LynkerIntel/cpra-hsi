@@ -310,7 +310,6 @@ class HSI(vt.VegTransition):
         )
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
-
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -679,6 +678,9 @@ class HSI(vt.VegTransition):
         | V    | 0.68           | 1.00          | 0.00          | 0.00        |
 
         """
+        self._logging.info(
+            "Calculating percent of canopy cover for mast types."
+        )
         soft_mast = {"II": 0.53, "III": 0.61, "IV": 0.42, "V": 0.00}
         hard_mast = {"II": 0.0, "III": 0.39, "IV": 0.28, "V": 1.00}
         no_mast = {"II": 0.47, "III": 0.0, "IV": 0.3, "V": 0.0}
@@ -717,6 +719,7 @@ class HSI(vt.VegTransition):
         radius : int
             radius of the neighborhood in pixels
         """
+        self._logger.info("Calculating percent non-forested near forest.")
         forest_types = [15, 16, 17, 18]
         near_forest_mask = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,
@@ -734,7 +737,7 @@ class HSI(vt.VegTransition):
             ).mean()  # uses default coord names (dim_0, 1)
         ) * 100  # UNIT: index to percent
 
-        self.pct_near_forest = near_forest_mask.to_numpy()
+        self.pct_near_forest = near_forest_mask_da.to_numpy()
 
     def _load_blue_crab_lookup(self):
         """

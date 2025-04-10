@@ -322,13 +322,19 @@ class BlackBearHSI:
             mask_2 = (self.v6_pct_area_nonforested_cover_250m >= 25) & (
                 self.v6_pct_area_nonforested_cover_250m <= 50
             )
-            si_6[mask_2] = (
-                -0.04 * self.v6_pct_area_nonforested_cover_250m[mask_2]
-            ) + 3
+            si_6[mask_2] = 1.0
 
             # condition 3
-            mask_3 = self.v6_pct_area_nonforested_cover_250m > 75
-            si_6[mask_3] = 0
+            mask_3 = (self.v6_pct_area_nonforested_cover_250m > 50) & (
+                self.v6_pct_area_nonforested_cover_250m <= 75
+            )
+            si_6[mask_3] = (
+                -0.04 * self.v6_pct_area_nonforested_cover_250m[mask_3]
+            ) + 3
+
+            # condition 4
+            mask_4 = self.v6_pct_area_nonforested_cover_250m > 75
+            si_6[mask_4] = 0
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

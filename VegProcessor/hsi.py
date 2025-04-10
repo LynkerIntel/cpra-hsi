@@ -678,7 +678,7 @@ class HSI(vt.VegTransition):
         | V    | 0.68           | 1.00          | 0.00          | 0.00        |
 
         """
-        self._logging.info(
+        self._logger.info(
             "Calculating percent of canopy cover for mast types."
         )
         soft_mast = {"II": 0.53, "III": 0.61, "IV": 0.42, "V": 0.00}

@@ -476,7 +476,10 @@ class HSI(vt.VegTransition):
 
     @staticmethod
     def _calculate_near_landtype(
-        landcover_arr: np.ndarray, landtype_true: list, radius: int
+        landcover_arr: np.ndarray,
+        landtype_true: list,
+        radius: int,
+        include_source: bool,
     ) -> np.ndarray:
         """Generalized method to get percentage of 480m cell with within
         radius of a land cover type or list of land cover types. Uses
@@ -486,15 +489,21 @@ class HSI(vt.VegTransition):
         Parameters
         -----------
         landtype : list
-            list of land type int values considered "True", i.e. non-vegetated land
+            list of land type int values considered "True", i.e. non-vegetated land.
+            these are the "source" pixels.
 
         radius : int
             radius to use for the circular kernel, to determine nearby land cover
 
+        include_source : bool
+            if true, returns all pixels in the zone of influence (including source
+            pixels). If false, source pixels (i.e. non forested) are not considered
+            as within the zone.
+
         Returns
         --------
         istype_array : np.ndarray
-            Array of pct cover of pixels meeting the defined criteria
+            A boolean array where criteria is met
         """
         istype_bool = np.isin(landcover_arr, landtype_true)
         nottype_bool = ~istype_bool
@@ -502,16 +511,10 @@ class HSI(vt.VegTransition):
         disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
         istype_expanded = dilation(istype_bool, disk_kernel)
 
-        # mask to keep only non-type near type
-        near_types = istype_expanded & nottype_bool
-
-        # get percent (% of 480m cell, from 60m pixels)
-        near_types_da = xr.DataArray(near_types.astype(float))
-        pct_near = (
-            near_types_da.coarsen(x=8, y=8, boundary="pad").mean() * 100
-        ).to_numpy()
-
-        return pct_near
+        if include_source:
+            return istype_expanded
+        else:
+            return istype_expanded & nottype_bool
 
     def _calculate_pct_area_influence(self):
         """Percent of evaluation area inside of zones of influence defined by
@@ -528,23 +531,26 @@ class HSI(vt.VegTransition):
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
 
-        # ---------- towns --------------
-        self.pct_near_towns = self._calculate_near_landtype(
-            landcover_arr=self.veg_type,
+        near_towns = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,  # initial
             landtype_true=towns,
             radius=95,
+            include_source=True,
         )
-
-        # ---------- croplands ------------
-        self.pct_near_croplands = self._calculate_near_landtype(
-            landcover_arr=self.veg_type,
+        near_croplands = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,  # initial
             landtype_true=croplands,
             radius=58,
+            include_source=True,
         )
 
-        self.pct_near_towns_croplands = (
-            self.pct_near_croplands & self.pct_near_towns
-        )
+        stacked = np.stack([near_towns, near_croplands])
+        influence_bool = np.any(stacked, axis=0)
+
+        near_types_da = xr.DataArray(influence_bool.astype(float))
+        self.pct_near_crops_towns = (
+            near_types_da.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        ).to_numpy()
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -686,20 +692,19 @@ class HSI(vt.VegTransition):
             radius of the neighborhood in pixels
         """
         forest_types = [15, 16, 17, 18]
-
-        forested_mask = np.isin(self.veg_type, forest_types)
-        non_forested_mask = ~forested_mask  # invert mask, i.e. everything else
-
-        disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
-        expanded_forest = dilation(forested_mask, disk_kernel)
-        # mask to keep only non-forested near forest
-        near_forest_mask = expanded_forest & non_forested_mask
+        near_forest_mask = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,
+            landtype_true=forest_types,
+            radius=radius,
+            include_source=False,  # only non-forested pixels NEAR forested are True
+        )
 
         near_forest_mask_da = xr.DataArray(near_forest_mask.astype(float))
-
         self.pct_near_forest = (
             near_forest_mask_da.coarsen(
-                dim_0=8, dim_1=8, boundary="pad"
+                dim_0=8,
+                dim_1=8,
+                boundary="pad",
             ).mean()  # uses default coord names (dim_0, 1)
         ) * 100  # UNIT: index to percent
 

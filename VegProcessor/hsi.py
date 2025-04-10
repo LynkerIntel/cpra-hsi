@@ -726,13 +726,15 @@ class HSI(vt.VegTransition):
         )
 
         near_forest_mask_da = xr.DataArray(near_forest_mask.astype(float))
-        self.pct_near_forest = (
+        near_forest_mask_da = (
             near_forest_mask_da.coarsen(
                 dim_0=8,
                 dim_1=8,
                 boundary="pad",
             ).mean()  # uses default coord names (dim_0, 1)
         ) * 100  # UNIT: index to percent
+
+        self.pct_near_forest = near_forest_mask.to_numpy()
 
     def _load_blue_crab_lookup(self):
         """

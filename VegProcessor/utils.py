@@ -3,6 +3,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 from xrspatial.zonal import crosstab
+import yaml
 
 import os
 import shutil
@@ -47,7 +48,9 @@ def generate_combined_sequence(
     source_files = list(path.rglob("*.tif"))
 
     if not source_files:
-        raise FileNotFoundError(f"No .tif files found for year in {source_folder}")
+        raise FileNotFoundError(
+            f"No .tif files found for year in {source_folder}"
+        )
 
     # Loop through the 25-year quintile sequence
     for _, i in quintile_sequence.iterrows():
@@ -56,13 +59,17 @@ def generate_combined_sequence(
         start = datetime(source_year - 1, 10, 1)
         end = datetime(source_year, 9, 30)
 
-        source_year_paths = [path for path in source_files if start <= extract_date(path) <= end]
+        source_year_paths = [
+            path for path in source_files if start <= extract_date(path) <= end
+        ]
         source_year_paths.sort()
 
         print(f"Mapping {source_year} to {analog_year}")
 
         if len(source_year_paths) < 12:
-            raise ValueError(f"Missing data in source files for {source_year}.")
+            raise ValueError(
+                f"Missing data in source files for {source_year}."
+            )
 
         for p in source_year_paths:
             print(f"input path: {p}")
@@ -75,9 +82,7 @@ def generate_combined_sequence(
                 replacement_year = analog_year
 
             # Reconstruct the string with the new water year (with zero padding)
-            new_file_name = (
-                f"WSE_MEAN_{replacement_year}_{file_date.month:02d}_{file_date.day:02d}.tif"
-            )
+            new_file_name = f"WSE_MEAN_{replacement_year}_{file_date.month:02d}_{file_date.day:02d}.tif"
             print(f"output name: {new_file_name}")
 
             dest_file = os.path.join(output_folder, new_file_name)
@@ -86,7 +91,9 @@ def generate_combined_sequence(
         print("All months completed.")
 
     print(f"Generated 25-year sequence in {output_folder}")
-    print("WARN: only files NAMES were modified, original timestamps still in place.")
+    print(
+        "WARN: only files NAMES were modified, original timestamps still in place."
+    )
 
 
 def extract_date(path: pathlib.Path) -> datetime:
@@ -144,7 +151,9 @@ def create_dataset_from_template(
                 f"the template shape ({template['WSE_MEAN'].shape})."
             )
         # Add the variable
-        new_ds[var_name] = xr.DataArray(data, dims=template["WSE_MEAN"].dims, attrs=attrs)
+        new_ds[var_name] = xr.DataArray(
+            data, dims=template["WSE_MEAN"].dims, attrs=attrs
+        )
 
     # Optionally, copy global attributes from the template
     new_ds.attrs = template.attrs
@@ -208,12 +217,16 @@ def load_mf_tifs(
     )
 
     # convert data variable keys to a list and rename the main variable
-    xr_dataset = xr_dataset.rename({list(xr_dataset.data_vars.keys())[0]: variable_name})
+    xr_dataset = xr_dataset.rename(
+        {list(xr_dataset.data_vars.keys())[0]: variable_name}
+    )
 
     return xr_dataset
 
 
-def coarsen_and_reduce(da: xr.DataArray, veg_type: int | bool, **kwargs) -> xr.DataArray:
+def coarsen_and_reduce(
+    da: xr.DataArray, veg_type: int | bool, **kwargs
+) -> xr.DataArray:
     """execute `.coarsen` and `.reduce`, with args handled
     by this function, due to xarray bug (described below).
 
@@ -248,12 +261,16 @@ def coarsen_and_reduce(da: xr.DataArray, veg_type: int | bool, **kwargs) -> xr.D
         total_cells = block.shape[axis[0]] * block.shape[axis[1]]
         return (count / total_cells) * 100
 
-    result = da.coarsen(**kwargs).reduce(_count_vegtype_and_calculate_percentage)
+    result = da.coarsen(**kwargs).reduce(
+        _count_vegtype_and_calculate_percentage
+    )
 
     return result
 
 
-def generate_pct_cover(data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs) -> xr.Dataset:
+def generate_pct_cover(
+    data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwargs
+) -> xr.Dataset:
     """iterate vegetation types, merge all arrays, serialize to NetCDF.
 
     The creates a pct cover .nc for each veg types list in the veg_keys
@@ -270,7 +287,9 @@ def generate_pct_cover(data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwarg
     veg_arrays = []
 
     for n, i in enumerate(veg_types):
-        logging.info("processing veg type: %s, (number %s out of %s)", i, n, veg_types)
+        logging.info(
+            "processing veg type: %s, (number %s out of %s)", i, n, veg_types
+        )
         new_da = coarsen_and_reduce(data_array, veg_type=i, **kwargs)
         new_da = new_da.rename(f"pct_cover_{i}")
         veg_arrays.append(new_da)
@@ -280,7 +299,9 @@ def generate_pct_cover(data_array: xr.DataArray, veg_keys: pd.DataFrame, **kwarg
     return ds_out
 
 
-def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwargs):
+def generate_pct_cover_custom(
+    data_array: xr.DataArray, veg_types: list, **kwargs
+):
     """Generate pct cover for combinations of veg types
 
     Uses `coarsen_and_reduce` with an intermediate array with bools
@@ -295,7 +316,9 @@ def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwarg
     # create new binary var with tuple of dims, data
     data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))
     # run coarsen w/ True as valid veg type
-    da_out = coarsen_and_reduce(da=data_array["boolean"], veg_type=True, **kwargs)
+    da_out = coarsen_and_reduce(
+        da=data_array["boolean"], veg_type=True, **kwargs
+    )
     # da_out.to_netcdf("./pct_cover.nc")
     return da_out
 
@@ -454,7 +477,9 @@ def pixel_sums_full_domain(ds: xr.Dataset) -> pd.DataFrame:
 
     # Use Xarray to count occurrences of each unique value
     # Create a DataArray mask for all unique values at once
-    mask = xr.concat([(ds["veg_type"] == value) for value in unique_values], dim="value")
+    mask = xr.concat(
+        [(ds["veg_type"] == value) for value in unique_values], dim="value"
+    )
     # Assign unique values as a coordinate to the new dimension
     mask = mask.assign_coords(value=("value", unique_values))
     # Sum across spatial dimensions (y, x) to get counts for each value over time
@@ -512,7 +537,9 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     return df_out
 
 
-def generate_filename(params: dict, parameter: str = None, base_path: str = None) -> Path:
+def generate_filename(
+    params: dict, parameter: str = None, base_path: str = None
+) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
     Missing parameters are skipped.
@@ -556,7 +583,11 @@ def generate_filename(params: dict, parameter: str = None, base_path: str = None
 
     # Collect available values from params in order
     values = [
-        params[key].upper() if isinstance(params.get(key), str) else params.get(key)
+        (
+            params[key].upper()
+            if isinstance(params.get(key), str)
+            else params.get(key)
+        )
         for key in key_order
         if key in params and params[key] is not None
     ]
@@ -647,8 +678,12 @@ def qc_tree_establishment_bool(
     mar_june = [3, 4, 5, 6]
 
     # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
-    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
-    tree_establish_bool = (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+    filtered = water_depth.sel(
+        time=water_depth["time"].dt.month.isin(mar_june)
+    )
+    tree_establish_bool = (
+        (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+    )
     return tree_establish_bool
 
 
@@ -660,11 +695,32 @@ def qc_tree_establishment_info(
     """
     # .isel() required due to the month selection resulting in a single timestep 3D
     # dataarray, while the output format requires a 2D numpy array.
-    march = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
-    april = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
-    may = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
-    june = water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
-    return [march.to_numpy(), april.to_numpy(), may.to_numpy(), june.to_numpy()]
+    march = (
+        water_depth["WSE_MEAN"]
+        .sel(time=water_depth["time"].dt.month == 3)
+        .isel(time=0)
+    )
+    april = (
+        water_depth["WSE_MEAN"]
+        .sel(time=water_depth["time"].dt.month == 4)
+        .isel(time=0)
+    )
+    may = (
+        water_depth["WSE_MEAN"]
+        .sel(time=water_depth["time"].dt.month == 5)
+        .isel(time=0)
+    )
+    june = (
+        water_depth["WSE_MEAN"]
+        .sel(time=water_depth["time"].dt.month == 6)
+        .isel(time=0)
+    )
+    return [
+        march.to_numpy(),
+        april.to_numpy(),
+        may.to_numpy(),
+        june.to_numpy(),
+    ]
 
 
 def qc_growing_season_inundation(
@@ -726,10 +782,12 @@ def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
     Only attributes whose keys are present in the supplied list (selected_attrs) are included.
 
     Parameters:
+    -----------
         ds (xr.Dataset): The input xarray Dataset.
         selected_attrs (list of str): A list of attribute keys to include (e.g., ['units', 'description']).
 
     Returns:
+    ---------
         pd.DataFrame: A DataFrame with a 'variable' column for the variable name and additional
                       columns for each attribute in selected_attrs. If a variable does not have a given
                       attribute, the value will be None.
@@ -741,3 +799,23 @@ def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
             row[key] = var.attrs.get(key, None)
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+# def load_netcdf_variable_definitions(instance, filename: str) -> dict:
+#     with open(filename, "r") as f:
+#         raw_definitions = yaml.safe_load(f)
+
+#     def resolve_path(obj, path_str):
+#         # recursively get nested attributes
+#         for attr in path_str.split("."):
+#             obj = getattr(obj, attr)
+#         return obj
+
+#     variable_defs = {}
+#     for varname, props in raw_definitions.items():
+#         array_ref = resolve_path(instance, props["path"])
+#         dtype = getattr(np, props["dtype"])
+#         attrs = props["attrs"]
+#         variable_defs[varname] = [array_ref, dtype, attrs]
+
+#     return variable_defs

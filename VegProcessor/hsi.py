@@ -856,117 +856,748 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
 
         hsi_variables = {
-            # alligator
-            "alligator_hsi": (self.alligator.hsi, np.float32),
-            "alligator_si_1": (self.alligator.si_1, np.float32),
-            "alligator_si_2": (self.alligator.si_2, np.float32),
-            "alligator_si_3": (self.alligator.si_3, np.float32),
-            "alligator_si_4": (self.alligator.si_4, np.float32),
-            "alligator_si_5": (self.alligator.si_5, np.float32),
-            # bald eagle
-            "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
-            "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
-            "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
-            "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
-            "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
-            "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
-            "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
-            # crawfish
-            "crawfish_hsi": (self.crawfish.hsi, np.float32),
-            "crawfish_si_1": (self.crawfish.si_1, np.float32),
-            "crawfish_si_2": (self.crawfish.si_2, np.float32),
-            "crawfish_si_3": (self.crawfish.si_3, np.float32),
-            "crawfish_si_4": (self.crawfish.si_4, np.float32),
-            # gizzard shad
-            "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
-            "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
-            "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
-            "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
-            "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
-            "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
-            "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
-            "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
-            # bass
-            "bass_hsi": (self.bass.hsi, np.float32),
-            "bass_si_1": (self.bass.si_1, np.float32),
-            "bass_si_2": (self.bass.si_2, np.float32),
-            # black bear
-            "blackbear_hsi": (self.blackbear.hsi, np.float32),
-            "blackbear_si_1": (self.blackbear.si_1, np.float32),
-            "blackbear_si_2": (self.blackbear.si_2, np.float32),
-            "blackbear_si_3": (self.blackbear.si_3, np.float32),
-            "blackbear_si_4": (self.blackbear.si_4, np.float32),
-            "blackbear_si_5": (self.blackbear.si_5, np.float32),
-            "blackbear_si_6": (self.blackbear.si_6, np.float32),
-            "blackbear_si_7": (self.blackbear.si_7, np.float32),
-            "blackbear_si_8": (self.blackbear.si_8, np.float32),
-            # species input vars
-            "water_depth_annual_mean": (
-                self.water_depth_annual_mean,
+            "alligator_hsi": [
+                self.alligator.hsi,
                 np.float32,
-            ),
-            "water_depth_monthly_mean_jan_aug": (
-                self.water_depth_monthly_mean_jan_aug,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_1": [
+                self.alligator.si_1,
                 np.float32,
-            ),
-            "water_depth_monthly_mean_sept_dec": (
-                self.water_depth_monthly_mean_sept_dec,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_2": [
+                self.alligator.si_2,
                 np.float32,
-            ),
-            "water_depth_spawning_season": (
-                self.water_depth_spawning_season,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_3": [
+                self.alligator.si_3,
                 np.float32,
-            ),
-            "pct_open_water": (self.pct_open_water, np.float32),
-            "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
-            "mean_annual_temperature": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_4": [
+                self.alligator.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_5": [
+                self.alligator.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_hsi": [
+                self.baldeagle.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_1": [
+                self.baldeagle.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_2": [
+                self.baldeagle.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_3": [
+                self.baldeagle.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_4": [
+                self.baldeagle.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_5": [
+                self.baldeagle.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_6": [
+                self.baldeagle.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_hsi": [
+                self.crawfish.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_1": [
+                self.crawfish.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_2": [
+                self.crawfish.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_3": [
+                self.crawfish.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_4": [
+                self.crawfish.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_hsi": [
+                self.gizzardshad.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_1": [
+                self.gizzardshad.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_2": [
+                self.gizzardshad.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_3": [
+                self.gizzardshad.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_4": [
+                self.gizzardshad.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_5": [
+                self.gizzardshad.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_6": [
+                self.gizzardshad.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_7": [
+                self.gizzardshad.si_7,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_hsi": [
+                self.bass.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_si_1": [
+                self.bass.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_si_2": [
+                self.bass.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_hsi": [
+                self.blackbear.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_1": [
+                self.blackbear.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_2": [
+                self.blackbear.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_3": [
+                self.blackbear.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_4": [
+                self.blackbear.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_5": [
+                self.blackbear.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_6": [
+                self.blackbear.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_7": [
+                self.blackbear.si_7,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_8": [
+                self.blackbear.si_8,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_open_water": [
+                self.pct_open_water,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "mean_annual_salinity": [
+                self.mean_annual_salinity,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "mean_annual_temperature": [
                 self.mean_annual_temperature,
                 np.float32,
-            ),
-            "pct_swamp_bottom_hardwood": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_swamp_bottom_hardwood": [
                 self.pct_swamp_bottom_hardwood,
                 np.float32,
-            ),
-            "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
-            "pct_intermediate_marsh": (
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_fresh_marsh": [
+                self.pct_fresh_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_intermediate_marsh": [
                 self.pct_intermediate_marsh,
                 np.float32,
-            ),
-            "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
-            "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
-            "pct_zone_v": (self.pct_zone_v, np.float32),
-            "pct_zone_iv": (self.pct_zone_iv, np.float32),
-            "pct_zone_iii": (self.pct_zone_iii, np.float32),
-            "pct_zone_ii": (self.pct_zone_ii, np.float32),
-            "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
-            "pct_bare_ground": (self.pct_bare_ground, np.float32),
-            "pct_dev_upland": (self.pct_dev_upland, np.float32),
-            "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
-            "pct_vegetated": (self.pct_vegetated, np.float32),
-            "pct_soft_mast": (self.pct_soft_mast, np.float32),
-            "pct_hard_mast": (self.pct_hard_mast, np.float32),
-            "pct_no_mast": (self.pct_no_mast, np.float32),
-            "pct_near_forest": (self.pct_near_forest, np.float32),
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_brackish_marsh": [
+                self.pct_brackish_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_saline_marsh": [
+                self.pct_saline_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_v": [
+                self.pct_zone_v,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_iv": [
+                self.pct_zone_iv,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_iii": [
+                self.pct_zone_iii,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_ii": [
+                self.pct_zone_ii,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_fresh_shrubs": [
+                self.pct_fresh_shrubs,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_bare_ground": [
+                self.pct_bare_ground,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_dev_upland": [
+                self.pct_dev_upland,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_flotant_marsh": [
+                self.pct_flotant_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_vegetated": [
+                self.pct_vegetated,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_soft_mast": [
+                self.pct_soft_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_hard_mast": [
+                self.pct_hard_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_no_mast": [
+                self.pct_no_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_near_forest": [
+                self.pct_near_forest,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_annual_mean": [
+                self.water_depth_annual_mean,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_monthly_mean_jan_aug": [
+                self.water_depth_monthly_mean_jan_aug,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_monthly_mean_sept_dec": [
+                self.water_depth_monthly_mean_sept_dec,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_spawning_season": [
+                self.water_depth_spawning_season,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
         }
+        # hsi_variables = {
+        #     # alligator
+        #     "alligator_hsi": (self.alligator.hsi, np.float32),
+        #     "alligator_si_1": (self.alligator.si_1, np.float32),
+        #     "alligator_si_2": (self.alligator.si_2, np.float32),
+        #     "alligator_si_3": (self.alligator.si_3, np.float32),
+        #     "alligator_si_4": (self.alligator.si_4, np.float32),
+        #     "alligator_si_5": (self.alligator.si_5, np.float32),
+        #     # bald eagle
+        #     "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
+        #     "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
+        #     "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
+        #     "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
+        #     "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
+        #     "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
+        #     "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
+        #     # crawfish
+        #     "crawfish_hsi": (self.crawfish.hsi, np.float32),
+        #     "crawfish_si_1": (self.crawfish.si_1, np.float32),
+        #     "crawfish_si_2": (self.crawfish.si_2, np.float32),
+        #     "crawfish_si_3": (self.crawfish.si_3, np.float32),
+        #     "crawfish_si_4": (self.crawfish.si_4, np.float32),
+        #     # gizzard shad
+        #     "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
+        #     "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
+        #     "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
+        #     "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
+        #     "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
+        #     "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
+        #     "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
+        #     "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
+        #     # bass
+        #     "bass_hsi": (self.bass.hsi, np.float32),
+        #     "bass_si_1": (self.bass.si_1, np.float32),
+        #     "bass_si_2": (self.bass.si_2, np.float32),
+        #     # black bear
+        #     "blackbear_hsi": (self.blackbear.hsi, np.float32),
+        #     "blackbear_si_1": (self.blackbear.si_1, np.float32),
+        #     "blackbear_si_2": (self.blackbear.si_2, np.float32),
+        #     "blackbear_si_3": (self.blackbear.si_3, np.float32),
+        #     "blackbear_si_4": (self.blackbear.si_4, np.float32),
+        #     "blackbear_si_5": (self.blackbear.si_5, np.float32),
+        #     "blackbear_si_6": (self.blackbear.si_6, np.float32),
+        #     "blackbear_si_7": (self.blackbear.si_7, np.float32),
+        #     "blackbear_si_8": (self.blackbear.si_8, np.float32),
+        #     # species input vars
+        #     "water_depth_annual_mean": (
+        #         self.water_depth_annual_mean,
+        #         np.float32,
+        #     ),
+        #     "water_depth_monthly_mean_jan_aug": (
+        #         self.water_depth_monthly_mean_jan_aug,
+        #         np.float32,
+        #     ),
+        #     "water_depth_monthly_mean_sept_dec": (
+        #         self.water_depth_monthly_mean_sept_dec,
+        #         np.float32,
+        #     ),
+        #     "water_depth_spawning_season": (
+        #         self.water_depth_spawning_season,
+        #         np.float32,
+        #     ),
+        #     "pct_open_water": (self.pct_open_water, np.float32),
+        #     "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
+        #     "mean_annual_temperature": (
+        #         self.mean_annual_temperature,
+        #         np.float32,
+        #     ),
+        #     "pct_swamp_bottom_hardwood": (
+        #         self.pct_swamp_bottom_hardwood,
+        #         np.float32,
+        #     ),
+        #     "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
+        #     "pct_intermediate_marsh": (
+        #         self.pct_intermediate_marsh,
+        #         np.float32,
+        #     ),
+        #     "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
+        #     "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
+        #     "pct_zone_v": (self.pct_zone_v, np.float32),
+        #     "pct_zone_iv": (self.pct_zone_iv, np.float32),
+        #     "pct_zone_iii": (self.pct_zone_iii, np.float32),
+        #     "pct_zone_ii": (self.pct_zone_ii, np.float32),
+        #     "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
+        #     "pct_bare_ground": (self.pct_bare_ground, np.float32),
+        #     "pct_dev_upland": (self.pct_dev_upland, np.float32),
+        #     "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
+        #     "pct_vegetated": (self.pct_vegetated, np.float32),
+        #     "pct_soft_mast": (self.pct_soft_mast, np.float32),
+        #     "pct_hard_mast": (self.pct_hard_mast, np.float32),
+        #     "pct_no_mast": (self.pct_no_mast, np.float32),
+        #     "pct_near_forest": (self.pct_near_forest, np.float32),
+        # }
 
         # Open existing NetCDF file
         with xr.open_dataset(self.netcdf_filepath) as ds:
 
-            for var_name, (data, dtype) in hsi_variables.items():
-                if data is None:
-                    self._logger.warning(
-                        "Array '%s' is None, skipping save.", var_name
-                    )
-
-                else:
+            for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
+                if data is not None:
                     # Check if the variable exists in the dataset, if not, initialize it
                     if var_name not in ds:
-                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        shape = (
+                            len(ds.time),
+                            len(ds.y),
+                            len(ds.x),
+                        )
                         default_value = False if dtype == bool else np.nan
                         ds[var_name] = (
                             ["time", "y", "x"],
                             np.full(shape, default_value, dtype=dtype),
-                            {"grid_mapping": "crs"},
+                            nc_attrs,
                         )
 
                     # Handle 'condition' variables (booleans)

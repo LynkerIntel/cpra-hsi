@@ -975,8 +975,10 @@ class HSI(vt.VegTransition):
     def post_process(self):
         """HSI post process
 
-        Opens file and then crops to hydro domain
+        (1) Opens file and then crops to hydro domain
+        (2) Create sidecar file with varibles in the NetCDF
         """
+        # -------- crop data --------
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
 
@@ -987,6 +989,23 @@ class HSI(vt.VegTransition):
 
             ds_out.close()
             ds_out.to_netcdf(self.netcdf_filepath, mode="w")
+
+        # -------- create sidecar file ---------
+        logging.info("Creating variable name text file")
+        outpath = os.path.join(
+            self.run_metadata_dir, "hsi_netcdf_variables.csv"
+        )
+        attrs_df = utils.dataset_attrs_to_df(
+            ds,
+            selected_attrs=[
+                "long_name",
+                "description",
+                "units",
+            ],
+        )
+        attrs_df.to_csv(outpath, index=False)
+
+        logging.info("Post-processing complete.")
 
 
 class _TimestepFilter(logging.Filter):

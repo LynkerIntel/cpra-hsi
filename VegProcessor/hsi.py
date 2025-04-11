@@ -844,6 +844,10 @@ class HSI(vt.VegTransition):
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append timestep data to the NetCDF file.
 
+        TODO: add warning if arrays are skipped because they are None
+        TODO: move dict of arrays attrs to YAML or similar. It is too long
+        to be inline now.
+
         Parameters
         ----------
         timestep : pd.DatetimeTZDtype

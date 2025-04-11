@@ -632,9 +632,13 @@ class VegTransition:
         analog_year = years_mapping[quintile]
         # get Scenario
         scenario = self.file_params["scenario"]
-        time_values = pd.date_range(
+        time_range = pd.date_range(
             f"{water_year-1}-10-01", f"{water_year}-09-30"
         )
+        # drop feb 29 if it exists (No leap years in hydro data files)
+        time_range = time_range[
+            ~((time_range.month == 2) & (time_range.day == 29))
+        ]
 
         if scenario == "G999":  # future without action
             # open daily SLR
@@ -645,7 +649,7 @@ class VegTransition:
                 parallel=True,
             )
             # rename to match model dates, i.e. water year
-            ds = ds.assign_coords(time=("time", time_values))
+            ds = ds.assign_coords(time=("time", time_range))
 
         return ds
 

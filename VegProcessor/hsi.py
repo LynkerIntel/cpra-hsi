@@ -71,9 +71,6 @@ class HSI(vt.VegTransition):
         )
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
-        # TODO Add this path to config - Issue #40 on GitHub
-        # self.bluecrab_lookup_table_path = self.config["???"].get("bluecrab_lookup_table")
-
         # simulation
         self.water_year_start = self.config["simulation"].get(
             "water_year_start"
@@ -199,9 +196,9 @@ class HSI(vt.VegTransition):
         )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = (
-            None  # ideal HEC-RAS SI6 = 20 degrees
-        )
+        # ideal HEC-RAS SI6 = 20 degrees
+        self.mean_weekly_temp_reservoir_spawning_season = None
+
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None

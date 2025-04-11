@@ -1585,7 +1585,7 @@ class HSI(vt.VegTransition):
         with xr.open_dataset(self.netcdf_filepath) as ds:
 
             for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
-                if data is not None:
+                if data is not None:  # only write arrays that have data
                     # Check if the variable exists in the dataset, if not, initialize it
                     if var_name not in ds:
                         shape = (

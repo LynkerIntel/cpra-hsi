@@ -691,21 +691,20 @@ class HSI(vt.VegTransition):
             + self.pct_zone_iii * soft_mast["III"]
             + self.pct_zone_iv * soft_mast["IV"]
             + self.pct_zone_v * soft_mast["V"]
-        ) * 100
-
+        )
         self.pct_hard_mast = (
             self.pct_zone_ii * hard_mast["II"]
             + self.pct_zone_iii * hard_mast["III"]
             + self.pct_zone_iv * hard_mast["IV"]
             + self.pct_zone_v * hard_mast["V"]
-        ) * 100
+        )
 
         self.pct_no_mast = (
             self.pct_zone_ii * no_mast["II"]
             + self.pct_zone_iii * no_mast["III"]
             + self.pct_zone_iv * no_mast["IV"]
             + self.pct_zone_v * no_mast["V"]
-        ) * 100
+        )
 
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.
@@ -744,6 +743,16 @@ class HSI(vt.VegTransition):
         Read blue crab lookup table
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
+
+    # def create_qc_arrays(self):
+    #     """
+    #     Create QC arrays with variables defined by JV, used to ensure
+    #     vegetation transition ruleset is working as intended.
+    #     """
+    #     self._logger.info("Creating HSI QA/QC arrays.")
+    #     self.qc_influence_towns = utils.qc_influence_towns(
+    #         self.salinity,
+    #     )
 
     def _create_output_file(self, params: dict):
         """HSI: Create NetCDF file for data output.
@@ -978,29 +987,6 @@ class HSI(vt.VegTransition):
 
             ds_out.close()
             ds_out.to_netcdf(self.netcdf_filepath, mode="w")
-
-    # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
-    #     """Create output directory for the current timestamp, where
-    #     figures and output rasters will be saved.
-
-    #     Parameters
-    #     ----------
-    #     timestep : pd.DatetimeTZDtype
-    #         Pandas datetime object of current timestep.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     self.timestep_output_dir = os.path.join(
-    #         self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-    #     )
-    #     self.timestep_output_dir_figs = os.path.join(
-    #         self.timestep_output_dir,
-    #         "figs",
-    #     )
-    #     os.makedirs(self.timestep_output_dir, exist_ok=True)
-    #     os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
 
 class _TimestepFilter(logging.Filter):

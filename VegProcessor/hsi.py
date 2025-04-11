@@ -890,6 +890,16 @@ class HSI(vt.VegTransition):
             "bass_hsi": (self.bass.hsi, np.float32),
             "bass_si_1": (self.bass.si_1, np.float32),
             "bass_si_2": (self.bass.si_2, np.float32),
+            # black bear
+            "blackbear_hsi": (self.blackbear.hsi, np.float32),
+            "blackbear_si_1": (self.blackbear.si_1, np.float32),
+            "blackbear_si_2": (self.blackbear.si_2, np.float32),
+            "blackbear_si_3": (self.blackbear.si_3, np.float32),
+            "blackbear_si_4": (self.blackbear.si_4, np.float32),
+            "blackbear_si_5": (self.blackbear.si_5, np.float32),
+            "blackbear_si_6": (self.blackbear.si_6, np.float32),
+            "blackbear_si_7": (self.blackbear.si_7, np.float32),
+            "blackbear_si_8": (self.blackbear.si_8, np.float32),
             # species input vars
             "water_depth_annual_mean": (
                 self.water_depth_annual_mean,
@@ -933,6 +943,10 @@ class HSI(vt.VegTransition):
             "pct_dev_upland": (self.pct_dev_upland, np.float32),
             "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
             "pct_vegetated": (self.pct_vegetated, np.float32),
+            "pct_soft_mast": (self.pct_soft_mast, np.float32),
+            "pct_hard_mast": (self.pct_hard_mast, np.float32),
+            "pct_no_mast": (self.pct_no_mast, np.float32),
+            "pct_near_forest": (self.pct_near_forest, np.float32),
         }
 
         # Open existing NetCDF file

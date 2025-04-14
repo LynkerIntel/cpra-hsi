@@ -681,9 +681,7 @@ def qc_tree_establishment_bool(
     filtered = water_depth.sel(
         time=water_depth["time"].dt.month.isin(mar_june)
     )
-    tree_establish_bool = (
-        (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
-    )
+    tree_establish_bool = (filtered["height"] <= 0).any(dim="time").to_numpy()
     return tree_establish_bool
 
 
@@ -696,22 +694,22 @@ def qc_tree_establishment_info(
     # .isel() required due to the month selection resulting in a single timestep 3D
     # dataarray, while the output format requires a 2D numpy array.
     march = (
-        water_depth["WSE_MEAN"]
+        water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 3)
         .isel(time=0)
     )
     april = (
-        water_depth["WSE_MEAN"]
+        water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 4)
         .isel(time=0)
     )
     may = (
-        water_depth["WSE_MEAN"]
+        water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 5)
         .isel(time=0)
     )
     june = (
-        water_depth["WSE_MEAN"]
+        water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 6)
         .isel(time=0)
     )
@@ -731,7 +729,7 @@ def qc_growing_season_inundation(
     """
     gs = [4, 5, 6, 7, 8, 9]
     filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
-    pct_gs_inundation = (filtered["WSE_MEAN"] > 0).mean(dim="time")
+    pct_gs_inundation = (filtered["height"] > 0).mean(dim="time")
     return pct_gs_inundation.to_numpy()
 
 
@@ -743,7 +741,7 @@ def qc_growing_season_depth(
     """
     gs = [4, 5, 6, 7, 8, 9]
     filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
-    gs_depth = filtered["WSE_MEAN"].mean(dim="time")
+    gs_depth = filtered["height"].mean(dim="time")
     return gs_depth.to_numpy()
 
 
@@ -753,7 +751,7 @@ def qc_annual_inundation_duration(
     """
     JV: Percentage of time flooded over the year
     """
-    pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    pct = (water_depth["height"] > 0).mean(dim="time")
     return pct.to_numpy()
 
 
@@ -763,7 +761,7 @@ def qc_annual_inundation_depth(
     """
     JV: Average water depth over the year.
     """
-    mean_depth = water_depth["WSE_MEAN"].mean(dim="time")
+    mean_depth = water_depth["height"].mean(dim="time")
     return mean_depth.to_numpy()
 
 

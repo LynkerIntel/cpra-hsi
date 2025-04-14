@@ -385,24 +385,24 @@ class VegTransition:
                 np.isnan(self.veg_type), layer, self.veg_type
             )
 
-        plotting.np_arr(
-            self.veg_type,
-            title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-            veg_palette=True,
-        )
-        plotting.sum_changes(
-            veg_type_in,
-            self.veg_type,
-            plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-        )
-        # save water depth plots
-        plotting.water_depth(
-            self.water_depth,
-            out_path=self.timestep_output_dir_figs,
-            wpu_polygons_path=self.wpu_polygons,
-        )
+        # plotting.np_arr(
+        #     self.veg_type,
+        #     title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        #     veg_palette=True,
+        # )
+        # plotting.sum_changes(
+        #     veg_type_in,
+        #     self.veg_type,
+        #     plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        # )
+        # # save water depth plots
+        # plotting.water_depth(
+        #     self.water_depth,
+        #     out_path=self.timestep_output_dir_figs,
+        #     wpu_polygons_path=self.wpu_polygons,
+        # )
 
         self._calculate_maturity(veg_type_in)
 
@@ -647,6 +647,7 @@ class VegTransition:
 
         # rename to match model dates, i.e. water year
         ds = ds.assign_coords(time=("time", time_range))
+        ds = ds.rename({"Band1": "height"})
 
         return ds
 

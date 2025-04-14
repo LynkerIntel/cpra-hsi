@@ -266,7 +266,7 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
 
         # hydro
-        if self.daily_hydro:
+        if self.netcdf_hydro:
             # for daily NetCDF, this methods loads analog year directly,
             # using lookup and mapping
             self.wse = self._load_stage_daily(self.wy)

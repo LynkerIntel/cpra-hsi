@@ -17,7 +17,7 @@ polygon_data:
 simulation:
   water_year_start: 1955 # int
   water_year_end: 1956 # int
-  daily_hydro: True # use daily hydro loading method
+  netcdf_hydro: True # use daily hydro loading method for NetCDF
 
 metadata: # partial list (static vars)
   model: VEG

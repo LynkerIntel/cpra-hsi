@@ -12,6 +12,8 @@ import gc
 import copy
 from typing import Optional
 import rioxarray  # used for tif output
+import rasterio.crs
+
 from datetime import datetime
 import matplotlib.pyplot as plt
 
@@ -265,17 +267,17 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
 
-        # hydro
-        if self.netcdf_hydro:
+        # hydro input data
+        if self.scenario_type == "S08":
             # for daily NetCDF, this methods loads analog year directly,
             # using lookup and mapping
-            self.wse = self._load_stage_daily(self.wy)
+            self.water_depth = self._load_stage_daily(self.wy)
+            self.water_depth = self._reproject_match_to_dem(self.water_depth)
         else:
             # for pre-generated monthly hydro .tifs
             self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-
-        self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
-        self.water_depth = self._get_depth()
+            self.wse = self._reproject_match_to_dem(self.wse)
+            self.water_depth = self._get_depth()
 
         # get salinity
         self.salinity = self._get_salinity()
@@ -403,17 +405,6 @@ class VegTransition:
         )
 
         self._calculate_maturity(veg_type_in)
-
-        # params = {
-        #     "model": self.metadata.get("model"),
-        #     "scenario": self.metadata.get("scenario"),
-        #     "group": self.metadata.get("group"),  # not sure if this is correct,
-        #     "wpu": "AB",
-        #     "io_type": "O",
-        #     "time_freq": "ANN",  # for annual output
-        #     "year_range": f"{counter.zfill(2)}_{simulation_period.zfill(2)}",
-        #     "parameter": "NA",  # ?
-        # }
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
@@ -633,7 +624,7 @@ class VegTransition:
         quintile = self.sequence_mapping[water_year]
         analog_year = years_mapping[quintile]
         # get Scenario
-        scenario = self.file_params["scenario"]
+        # scenario = self.file_params["scenario"]
         time_range = pd.date_range(
             f"{water_year-1}-10-01", f"{water_year}-09-30"
         )
@@ -642,16 +633,20 @@ class VegTransition:
             ~((time_range.month == 2) & (time_range.day == 29))
         ]
 
-        if scenario == "G999":  # future without action
-            # open daily SLR scenario for G999
-            ds = xr.open_mfdataset(
-                f"/Users/dillonragar/data/tmp/cpra/G999/WY{analog_year}_1-08ft_SLR_daily/**.nc",
-                concat_dim="time",
-                combine="nested",
-                parallel=True,
-            )
-            # rename to match model dates, i.e. water year
-            ds = ds.assign_coords(time=("time", time_range))
+        # if scenario == "G999":  # future without action
+        # open daily SLR scenario for G999
+        ds = xr.open_mfdataset(
+            f"/Users/dillonragar/data/tmp/cpra/G999/WY{analog_year}_1-08ft_SLR_daily/**.nc",
+            concat_dim="time",
+            combine="nested",
+            parallel=True,
+        )
+        # make crs visible to xarray/rio
+        crs_obj = ds["transverse_mercator"].spatial_ref
+        ds = ds.rio.write_crs(crs_obj)
+
+        # rename to match model dates, i.e. water year
+        ds = ds.assign_coords(time=("time", time_range))
 
         return ds
 

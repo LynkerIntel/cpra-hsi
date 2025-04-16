@@ -80,8 +80,8 @@ class HSI(vt.VegTransition):
         self.analog_sequence = self.config["simulation"].get(
             "wse_sequence_input"
         )
-        self.hydro_domain_flag = self.config["simulation"].get(
-            "hydro_domain_flag"
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -89,6 +89,9 @@ class HSI(vt.VegTransition):
 
         # metadata
         self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -125,6 +128,7 @@ class HSI(vt.VegTransition):
             default_flow_style=False,
             sort_keys=False,
         )
+        self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
@@ -276,24 +280,52 @@ class HSI(vt.VegTransition):
             current datetime as pandas dt type
         """
         self.current_timestep = date
-        wy = date.year
+        self.wy = date.year
 
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
         # water depth vars --------------------------------------
-        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
-        self.wse = self._reproject_match_to_dem(self.wse)
-        self.water_depth_annual_mean = self._get_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
-            months=[1, 2, 3, 4, 5, 6, 7, 8]
-        )
-        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-            months=[9, 10, 11, 12]
-        )
-        self.water_depth_spawning_season = self._get_depth_filtered(
-            months=[4, 5, 6]
-        )
+        if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
+            # for daily NetCDF, this methods loads analog year directly,
+            # using lookup and mapping
+            self.water_depth = self._load_stage_daily(self.wy)
+            self.water_depth = self._reproject_match_to_dem(self.water_depth)
+            self.water_depth_annual_mean = self._get_depth_filtered()
+            self.water_depth_monthly_mean_jan_aug_cm = (
+                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            )
+            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+                months=[9, 10, 11, 12]
+            )
+            self.water_depth_spawning_season = self._get_depth_filtered(
+                months=[4, 5, 6]
+            )
+        else:
+            # for pre-generated monthly hydro .tifs
+            # TODO: refactor this subset logic out of the step method,
+            # but really we should move away from have two branching methods
+            # for loading hydro data
+            self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+            self.wse = self._reproject_match_to_dem(self.wse)
+            self.water_depth = self._get_depth()
+
+            self.water_depth_annual_mean = self.water_depth.mean(dim="time")
+
+            months = [1, 2, 3, 4, 5, 6, 7, 8]
+            self.water_depth_monthly_mean_jan_aug = self.water_depth.sel(
+                time=self.water_depth["time"].dt.month.isin(months)
+            ).mean(dim="time", skipna=True)["height"]
+
+            months = [9, 10, 11, 12]
+            self.water_depth_monthly_mean_sept_dec = self.water_depth.sel(
+                time=self.water_depth["time"].dt.month.isin(months)
+            ).mean(dim="time", skipna=True)["height"]
+
+            months = [4, 5, 6]
+            self.water_depth_spawning_season = self.water_depth.sel(
+                time=self.water_depth["time"].dt.month.isin(months)
+            ).mean(dim="time", skipna=True)["height"]
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -1479,6 +1511,16 @@ class HSI(vt.VegTransition):
             ],
             "water_depth_spawning_season": [
                 self.water_depth_spawning_season,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_human_influence": [
+                self.pct_human_influence,
                 np.float32,
                 {
                     "grid_mapping": "crs",

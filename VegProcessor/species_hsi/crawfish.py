@@ -111,9 +111,7 @@ class CrawfishHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.where(
-            np.isnan(self.v2_mean_water_depth_jan_aug), np.nan, 999.0
-        )
+        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
 
     def _setup_logger(self):

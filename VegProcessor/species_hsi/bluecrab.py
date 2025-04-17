@@ -16,7 +16,6 @@ class BlueCrabHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -146,9 +145,6 @@ class BlueCrabHSI:
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
-        if self.hydro_domain_flag:
-            si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
-
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -186,9 +182,6 @@ class BlueCrabHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
-            if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 

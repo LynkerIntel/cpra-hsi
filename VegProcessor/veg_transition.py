@@ -275,7 +275,6 @@ class VegTransition:
             # for daily NetCDF, this methods loads analog year directly,
             # using lookup and mapping
             self.water_depth = self._load_stage_daily(self.wy)
-            self.water_depth = self._reproject_match_to_dem(self.water_depth)
         else:
             # for pre-generated monthly hydro .tifs
             self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
@@ -618,7 +617,8 @@ class VegTransition:
         `utils.generate_combined_sequence()`, as it will load the correct analog year
         based on the sequence mappings. This method also includes the logic from
         `get_depth()` to correctly identify 0 depth and NaN, which are not distinguished
-        in the raw model output.
+        in the raw model output. Finally, this data uses the `rio` `reproject_match()` method
+        to ensure perfect overlap of the DEM and the hydro data.
 
         UNIT: Input in feets is converted to meters
 
@@ -665,6 +665,8 @@ class VegTransition:
         # make crs visible to xarray/rio
         crs_obj = ds["transverse_mercator"].spatial_ref
         ds = ds.rio.write_crs(crs_obj)
+        # reproject match to DEM
+        ds = self._reproject_match_to_dem(ds)
 
         # rename to match model dates, i.e. water year
         ds = ds.assign_coords(time=("time", time_range))
@@ -688,6 +690,7 @@ class VegTransition:
     ) -> xr.Dataset | xr.DataArray:
         """
         Temporary fix to match WSE model output to 60m DEM grid.
+        TODO: use existing DEM to save time (no need to read every time)
         """
         ds_dem = xr.open_dataset(self.dem_path)
         da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")

@@ -290,16 +290,19 @@ class HSI(vt.VegTransition):
             # for daily NetCDF, this methods loads analog year directly,
             # using lookup and mapping
             self.water_depth = self._load_stage_daily(self.wy)
-            self.water_depth = self._reproject_match_to_dem(self.water_depth)
-            self.water_depth_annual_mean = self._get_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug_cm = (
-                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            self.water_depth_annual_mean = self._get_daily_depth_filtered()
+            self.water_depth_monthly_mean_jan_aug = (
+                self._get_daily_depth_filtered(
+                    months=[1, 2, 3, 4, 5, 6, 7, 8],
+                )
             )
-            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-                months=[9, 10, 11, 12]
+            self.water_depth_monthly_mean_sept_dec = (
+                self._get_daily_depth_filtered(
+                    months=[9, 10, 11, 12],
+                )
             )
-            self.water_depth_spawning_season = self._get_depth_filtered(
-                months=[4, 5, 6]
+            self.water_depth_spawning_season = self._get_daily_depth_filtered(
+                months=[4, 5, 6],
             )
         else:
             # for pre-generated monthly hydro .tifs
@@ -310,22 +313,16 @@ class HSI(vt.VegTransition):
             self.wse = self._reproject_match_to_dem(self.wse)
             self.water_depth = self._get_depth()
 
-            self.water_depth_annual_mean = self.water_depth.mean(dim="time")
-
-            months = [1, 2, 3, 4, 5, 6, 7, 8]
-            self.water_depth_monthly_mean_jan_aug = self.water_depth.sel(
-                time=self.water_depth["time"].dt.month.isin(months)
-            ).mean(dim="time", skipna=True)["height"]
-
-            months = [9, 10, 11, 12]
-            self.water_depth_monthly_mean_sept_dec = self.water_depth.sel(
-                time=self.water_depth["time"].dt.month.isin(months)
-            ).mean(dim="time", skipna=True)["height"]
-
-            months = [4, 5, 6]
-            self.water_depth_spawning_season = self.water_depth.sel(
-                time=self.water_depth["time"].dt.month.isin(months)
-            ).mean(dim="time", skipna=True)["height"]
+            self.water_depth_annual_mean = self._get_depth_filtered()
+            self.water_depth_monthly_mean_jan_aug_cm = (
+                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            )
+            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+                months=[9, 10, 11, 12]
+            )
+            self.water_depth_spawning_season = self._get_depth_filtered(
+                months=[4, 5, 6]
+            )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -691,6 +688,36 @@ class HSI(vt.VegTransition):
         ds = filtered_ds.mean(dim="time", skipna=True)["WSE_MEAN"]
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _get_daily_depth_filtered(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
+        """
+        Reduce daily depth dataset to temporal mean, then resample to
+        480m cell size.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to average water depth over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : xr.DataArray
+            A water depth data, averaged over a list of months (if provided)
+            and then downscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        filtered_ds = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin(months)
+        )
+        da = filtered_ds.mean(dim="time", skipna=True)["height"]
+
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
 
     def _calculate_mast_percentage(self):

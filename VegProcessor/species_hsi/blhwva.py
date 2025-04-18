@@ -154,7 +154,7 @@ class BottomlandHardwoodHSI:
             # Note: equations use % values not decimals
 
             # assign SI = 0 when there is no overstory canopy
-            no_overstory_mask = self.v1a_pct_overstory <= 0
+            no_overstory_mask = self.v1a_pct_overstory == 0
             si_1[no_overstory_mask] = 0
 
             # apply HSI class only where overstory canopy exists

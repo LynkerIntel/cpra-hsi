@@ -694,9 +694,9 @@ class VegTransition:
         Temporary fix to match WSE model output to 60m DEM grid.
         TODO: use existing DEM to save time (no need to read every time)
         """
-        ds_dem = xr.open_dataset(self.dem_path)
-        da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
-        ds_reprojected = ds.rio.reproject_match(da_dem)
+        # ds_dem = xr.open_dataset(self.dem_path)
+        # da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+        ds_reprojected = ds.rio.reproject_match(self.dem)
         ds_dem.close()
         return ds_reprojected
 

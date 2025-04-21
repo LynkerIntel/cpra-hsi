@@ -662,6 +662,7 @@ class VegTransition:
             combine="nested",
             parallel=True,
         )
+
         # make crs visible to xarray/rio
         crs_obj = ds["transverse_mercator"].spatial_ref
         ds = ds.rio.write_crs(crs_obj)
@@ -683,7 +684,10 @@ class VegTransition:
         self._logger.warning("Converting daily hydro: feet to meters")
         ds["height"] *= 0.3048  # UNIT: feet to meters
 
-        return ds
+        ds_loaded = ds.load()
+        ds.close()
+
+        return ds_loaded
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

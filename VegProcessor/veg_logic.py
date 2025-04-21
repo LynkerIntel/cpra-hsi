@@ -35,6 +35,7 @@ def zone_v(
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -131,6 +132,7 @@ def zone_iv(
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -250,6 +252,7 @@ def zone_iii(
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -369,6 +372,7 @@ def zone_ii(
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -500,6 +504,7 @@ def fresh_shrub(
         - water_depth (xr.Dataset): Dataset of 1 year of inundation depth from hydrologic model,
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -624,6 +629,7 @@ def fresh_marsh(
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
         - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -772,6 +778,7 @@ def intermediate_marsh(
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
         - salinity (np.ndarray): array of salinity for WY (either from model output of defaults)
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -913,6 +920,7 @@ def brackish_marsh(
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1052,6 +1060,7 @@ def saline_marsh(
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions
@@ -1177,6 +1186,7 @@ def water(
             created from water surface elevation and the domain DEM.
         - timestep_output_dir (str): location for output raster data or plots.
         - salinity (np.ndarray): array of salinity for WY (either from model output or defaults)
+        - logger: logger instance from `VegTransition` or `HSI`
 
     Returns:
         - np.ndarray: Modified vegetation type array with updated transitions

@@ -181,53 +181,41 @@ class VegTransition:
         self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
-        """Set up the logger for the VegTransition class."""
-        self._logger = logging.getLogger("VegTransition")
+        # always create a unique logger for each instance
+        self._logger = logging.getLogger(f"VegTransition_{id(self)}")
         self._logger.setLevel(log_level)
 
-        # clear existing handlers to prevent duplicates
-        # (this happens when re-runnning in notebook)
+        # always remove old handlers (critical in Jupyter notebooks)
         if self._logger.hasHandlers():
             for handler in self._logger.handlers:
                 self._logger.removeHandler(handler)
-                handler.close()  # Close old handlers properly
+                handler.close()
 
-        try:
-            # console handler for stdout
-            # i.e. print messages
-            ch = logging.StreamHandler()
-            ch.setLevel(log_level)
+        # now create fresh handlers
+        ch = logging.StreamHandler()
+        ch.setLevel(log_level)
 
-            # file handler for logs in `run-input` folder
-            run_metadata_dir = os.path.join(
-                self.output_dir_path, "run-metadata"
-            )
-            os.makedirs(
-                run_metadata_dir, exist_ok=True
-            )  # Ensure directory exists
-            log_file_path = os.path.join(run_metadata_dir, "simulation.log")
-            fh = logging.FileHandler(log_file_path)
-            fh.setLevel(log_level)
+        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
+        os.makedirs(run_metadata_dir, exist_ok=True)
+        log_file_path = os.path.join(run_metadata_dir, "simulation.log")
+        fh = logging.FileHandler(log_file_path)
+        fh.setLevel(log_level)
 
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
-            )
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
+        )
 
-            # Add formatter to handlers
-            ch.setFormatter(formatter)
-            fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        fh.setFormatter(formatter)
 
-            # Add handlers to the logger
-            self._logger.addHandler(ch)
-            self._logger.addHandler(fh)
+        self._logger.addHandler(ch)
+        self._logger.addHandler(fh)
 
-            # Add a custom filter to inject the timestep
-            filter_instance = _TimestepFilter(self)
-            self._logger.addFilter(filter_instance)
+        # add the timestep filter
+        filter_instance = _TimestepFilter(self)
+        self._logger.addFilter(filter_instance)
 
-            self._logger.info("Logger setup complete.")
-        except Exception as e:
-            print(f"Error during logger setup: {e}")
+        self._logger.info("Logger setup complete.")
 
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""
@@ -302,56 +290,66 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
+            logger=self._logger,
         )
         self.zone_iv = veg_logic.zone_iv(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
+            logger=self._logger,
         )
         self.zone_iii = veg_logic.zone_iii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
+            logger=self._logger,
         )
         self.zone_ii = veg_logic.zone_ii(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
+            logger=self._logger,
         )
         self.fresh_shrub = veg_logic.fresh_shrub(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
+            logger=self._logger,
         )
         self.fresh_marsh = veg_logic.fresh_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
+            logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
+            logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
+            logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
+            logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
             self.salinity,
+            logger=self._logger,
         )
 
         # stack partial update arrays for each zone

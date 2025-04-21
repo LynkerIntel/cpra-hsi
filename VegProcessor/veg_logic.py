@@ -11,14 +11,12 @@ import logging
 
 import utils
 
-# Configure the logger in VegTransition
-logger = logging.getLogger("VegTransition")
-
 
 def zone_v(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone V
 
@@ -118,6 +116,7 @@ def zone_iv(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transitions for pixels starting in Zone IV
 
@@ -234,6 +233,7 @@ def zone_iii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone III
 
@@ -352,6 +352,7 @@ def zone_ii(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Zone II
 
@@ -480,6 +481,7 @@ def fresh_shrub(
     veg_type: np.ndarray,
     water_depth: xr.Dataset,
     timestep_output_dir: str,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as fresh shrub
 
@@ -602,6 +604,7 @@ def fresh_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting as Fresh Marsh
 
@@ -749,6 +752,7 @@ def intermediate_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Intermediate Marsh
 
@@ -888,6 +892,7 @@ def brackish_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Brackish Marsh
 
@@ -1030,6 +1035,7 @@ def saline_marsh(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Saline Marsh
 
@@ -1148,6 +1154,7 @@ def water(
     water_depth: xr.Dataset,
     timestep_output_dir: str,
     salinity: np.ndarray,
+    logger: logging.Logger,
 ) -> np.ndarray:
     """Calculate transition for pixels starting in Water
 

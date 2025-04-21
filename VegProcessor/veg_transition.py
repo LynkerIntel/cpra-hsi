@@ -659,7 +659,6 @@ class VegTransition:
             concat_dim="time",
             combine="nested",
             parallel=True,
-            engine="h5netcdf",
         )
 
         # make crs visible to xarray/rio
@@ -683,10 +682,10 @@ class VegTransition:
         self._logger.warning("Converting daily hydro: feet to meters")
         ds["height"] *= 0.3048  # UNIT: feet to meters
 
-        # ds_loaded = ds.load()
-        # ds.close()
+        ds_loaded = ds.load()
+        ds.close()
 
-        return ds
+        return ds_loaded
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

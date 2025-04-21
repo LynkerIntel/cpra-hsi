@@ -659,6 +659,7 @@ class VegTransition:
             concat_dim="time",
             combine="nested",
             parallel=True,
+            # engine="h5netcdf",
         )
 
         # make crs visible to xarray/rio
@@ -682,10 +683,10 @@ class VegTransition:
         self._logger.warning("Converting daily hydro: feet to meters")
         ds["height"] *= 0.3048  # UNIT: feet to meters
 
-        ds_loaded = ds.load()
-        ds.close()
+        # ds_loaded = ds.load()
+        # ds.close()
 
-        return ds_loaded
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
@@ -694,10 +695,11 @@ class VegTransition:
         Temporary fix to match WSE model output to 60m DEM grid.
         TODO: use existing DEM to save time (no need to read every time)
         """
-        # ds_dem = xr.open_dataset(self.dem_path)
-        # da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
-        ds_reprojected = ds.rio.reproject_match(self.dem)
+        ds_dem = xr.open_dataset(self.dem_path)
+        da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+        ds_reprojected = ds.rio.reproject_match(da_dem)
         ds_dem.close()
+        da_dem.close()
         return ds_reprojected
 
     def _get_depth(self) -> xr.Dataset:

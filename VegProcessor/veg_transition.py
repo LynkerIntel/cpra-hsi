@@ -936,7 +936,7 @@ class VegTransition:
             parameter="DATA",
         )
 
-        output_dir_name = f"{folder_name}_{self.sim_start_time}"
+        output_dir_name = folder_name
 
         # Combine base directory and new directory name
         self.output_dir_path = os.path.join(

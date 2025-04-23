@@ -311,7 +311,7 @@ class HSI(vt.VegTransition):
             # for loading hydro data
             self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
             self.wse = self._reproject_match_to_dem(self.wse)
-            self.water_depth = self._get_depth()
+            # self.water_depth = self._get_depth()
 
             self.water_depth_annual_mean = self._get_depth_filtered()
             self.water_depth_monthly_mean_jan_aug_cm = (

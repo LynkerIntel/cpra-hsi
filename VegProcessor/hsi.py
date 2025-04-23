@@ -1296,6 +1296,36 @@ class HSI(vt.VegTransition):
                     "description": "",
                 },
             ],
+            "bluecrab_si_1": [
+                self.bluecrab.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bluecrab_si_2": [
+                self.bluecrab.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bluecrab_hsi": [
+                self.bluecrab.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
             "pct_open_water": [
                 self.pct_open_water,
                 np.float32,

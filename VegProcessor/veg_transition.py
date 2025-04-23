@@ -181,8 +181,10 @@ class VegTransition:
         self._create_output_file(self.file_params)
 
     def _setup_logger(self, log_level=logging.INFO):
-        # always create a unique logger for each instance
-        self._logger = logging.getLogger(f"VegTransition_{id(self)}")
+        # always create a unique logger for each instance, using class name
+        self._logger = logging.getLogger(
+            f"{self.__class__.__name__}_{id(self)}"
+        )
         self._logger.setLevel(log_level)
 
         # always remove old handlers (critical in Jupyter notebooks)

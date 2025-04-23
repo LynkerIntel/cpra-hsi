@@ -685,7 +685,7 @@ class HSI(vt.VegTransition):
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
         filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
-        ds = filtered_ds.mean(dim="time", skipna=True)["WSE_MEAN"]
+        ds = filtered_ds.mean(dim="time", skipna=True)["height"]
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()

@@ -14,7 +14,6 @@ class BassHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -42,7 +41,6 @@ class BassHSI:
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
@@ -73,7 +71,9 @@ class BassHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -100,7 +100,9 @@ class BassHSI:
         si_1 = self.template.copy()
 
         if self.v1a_mean_annual_salinity is None:
-            self._logger.info("Mean annual salinity data not provided. Setting index to 1.")
+            self._logger.info(
+                "Mean annual salinity data not provided. Setting index to 1."
+            )
             si_1[~np.isnan(si_1)] = 1
 
         else:
@@ -112,16 +114,23 @@ class BassHSI:
                     "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."
                 )
                 self.v1b_mean_annual_temperature = self.template.copy()
-                self.v1b_mean_annual_temperature[~np.isnan(self.v1b_mean_annual_temperature)] = 18
+                self.v1b_mean_annual_temperature[
+                    ~np.isnan(self.v1b_mean_annual_temperature)
+                ] = 18
 
             # SI Logic
             S_si = (self.v1a_mean_annual_salinity - 0.84) / 1.84
             T_si = (self.v1b_mean_annual_temperature - 22.68) / 4.64
             S_si_2 = (
-                (self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity) - 4.08
+                (self.v1a_mean_annual_salinity * self.v1a_mean_annual_salinity)
+                - 4.08
             ) / 24.91
             T_si_2 = (
-                (self.v1b_mean_annual_temperature * self.v1b_mean_annual_temperature) - 535.99
+                (
+                    self.v1b_mean_annual_temperature
+                    * self.v1b_mean_annual_temperature
+                )
+                - 535.99
             ) / 206.16
 
             si_1 = (
@@ -150,7 +159,9 @@ class BassHSI:
         si_2 = self.template.copy()
 
         if self.v2_pct_emergent_vegetation is None:
-            self._logger.info("Pct emergent vegetation data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct emergent vegetation data not provided. Setting index to 1."
+            )
             si_2[~np.isnan(si_2)] = 1
 
         else:
@@ -162,7 +173,9 @@ class BassHSI:
             mask_2 = (self.v2_pct_emergent_vegetation >= 20) & (
                 self.v2_pct_emergent_vegetation < 30
             )
-            si_2[mask_2] = (0.099 * self.v2_pct_emergent_vegetation[mask_2]) - 1.997
+            si_2[mask_2] = (
+                0.099 * self.v2_pct_emergent_vegetation[mask_2]
+            ) - 1.997
 
             # condition 3
             mask_3 = (self.v2_pct_emergent_vegetation >= 30) & (
@@ -174,7 +187,9 @@ class BassHSI:
             mask_4 = (self.v2_pct_emergent_vegetation >= 50) & (
                 self.v2_pct_emergent_vegetation < 85
             )
-            si_2[mask_4] = (-0.0283 * self.v2_pct_emergent_vegetation[mask_4]) + 2.414
+            si_2[mask_4] = (
+                -0.0283 * self.v2_pct_emergent_vegetation[mask_4]
+            ) + 2.414
 
             # condition 5
             mask_5 = (self.v2_pct_emergent_vegetation >= 85) & (

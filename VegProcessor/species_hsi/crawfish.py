@@ -13,7 +13,7 @@ class CrawfishHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -45,17 +45,20 @@ class CrawfishHSI:
     @classmethod
     def from_hsi(cls, hsi_instance):
         """Create CrawfishHSI instance from an HSI instance.
-        
+
         All HSI depth vars in provided in m. Necessary conversions take here,
         with care to maintain None vars.
         """
+
         def safe_divide(array: np.ndarray, divisor: int = 100) -> np.ndarray:
             """Helper function to divide arrays when decimal values are required
             by the SI logic. In the case of None (no array) it is preserved and
             passed to SI methods."""
             return array / divisor if array is not None else None
-        
-        def safe_multiply(array: np.ndarray, multiplier: int = 100) -> np.ndarray:
+
+        def safe_multiply(
+            array: np.ndarray, multiplier: int = 100
+        ) -> np.ndarray:
             """Helper function to multiply arrays when cm values are required
             by the SI logic. In the case of None (no array) it is preserved and
             passed to SI methods."""
@@ -63,7 +66,9 @@ class CrawfishHSI:
 
         return cls(
             v1_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v2_mean_water_depth_jan_aug=safe_multiply(hsi_instance.water_depth_monthly_mean_jan_aug_cm),
+            v2_mean_water_depth_jan_aug=safe_multiply(
+                hsi_instance.water_depth_monthly_mean_jan_aug_cm
+            ),
             v3a_pct_cell_swamp_bottomland_hardwood=safe_divide(
                 hsi_instance.pct_swamp_bottom_hardwood
             ),
@@ -72,15 +77,19 @@ class CrawfishHSI:
             v3d_pct_cell_intermediate_marsh=safe_divide(
                 hsi_instance.pct_intermediate_marsh
             ),
-            v3e_pct_cell_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
-            v3f_pct_cell_saline_marsh=safe_divide(hsi_instance.pct_saline_marsh),
+            v3e_pct_cell_brackish_marsh=safe_divide(
+                hsi_instance.pct_brackish_marsh
+            ),
+            v3f_pct_cell_saline_marsh=safe_divide(
+                hsi_instance.pct_saline_marsh
+            ),
             v3g_pct_cell_bare_ground=safe_divide(hsi_instance.pct_bare_ground),
-            v4_mean_water_depth_sept_dec=safe_multiply(hsi_instance.water_depth_monthly_mean_sept_dec),
+            v4_mean_water_depth_sept_dec=safe_multiply(
+                hsi_instance.water_depth_monthly_mean_sept_dec
+            ),
             dem_480=hsi_instance.dem_480,
-            hydro_domain_480 = hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag
+            hydro_domain_480=hsi_instance.hydro_domain_480,
         )
-        
 
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
@@ -102,7 +111,7 @@ class CrawfishHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.where(np.isnan(self.v2_mean_water_depth_jan_aug), np.nan, 999.0)
+        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
 
     def _setup_logger(self):
@@ -159,7 +168,7 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
             # if self.hydro_domain_flag:
             #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
@@ -167,7 +176,7 @@ class CrawfishHSI:
 
     def calculate_si_2(self) -> np.ndarray:
         """Mean water depth from January to August in cm.
-        
+
         Logic is defined in cm, and data should be provided in cm.
         """
         self._logger.info("Running SI 2")
@@ -202,11 +211,13 @@ class CrawfishHSI:
             mask_4 = (self.v2_mean_water_depth_jan_aug > 91) & (
                 self.v2_mean_water_depth_jan_aug <= 274
             )
-            si_2[mask_4] = 1.5 - (0.00457 * self.v2_mean_water_depth_jan_aug[mask_4])
+            si_2[mask_4] = 1.5 - (
+                0.00457 * self.v2_mean_water_depth_jan_aug[mask_4]
+            )
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
             # if self.hydro_domain_flag:
             #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
@@ -229,7 +240,7 @@ class CrawfishHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         # if self.hydro_domain_flag:
         #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
@@ -237,7 +248,7 @@ class CrawfishHSI:
 
     def calculate_si_4(self) -> np.ndarray:
         """Mean water depth from September to December in cm.
-        
+
         Logic is defined in cm, and data should be provided in cm.
         """
         self._logger.info("Running SI 4")
@@ -251,14 +262,18 @@ class CrawfishHSI:
 
         else:
             # condition 1
-            mask_1 = self.v4_mean_water_depth_sept_dec <= 0.0  # RHS is in meters
+            mask_1 = (
+                self.v4_mean_water_depth_sept_dec <= 0.0
+            )  # RHS is in meters
             si_4[mask_1] = 1.0
 
             # condition 2 (AND)
             mask_2 = (self.v4_mean_water_depth_sept_dec > 0.0) & (
                 self.v4_mean_water_depth_sept_dec <= 15
             )
-            si_4[mask_2] = 1.0 - (0.06667 * self.v4_mean_water_depth_sept_dec[mask_2])
+            si_4[mask_2] = 1.0 - (
+                0.06667 * self.v4_mean_water_depth_sept_dec[mask_2]
+            )
 
             # condition 3
             mask_3 = self.v4_mean_water_depth_sept_dec > 15
@@ -266,7 +281,7 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
+
             # if self.hydro_domain_flag:
             #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 

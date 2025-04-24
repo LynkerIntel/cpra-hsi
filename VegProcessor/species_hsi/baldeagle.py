@@ -14,7 +14,6 @@ class BaldEagleHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -58,7 +57,6 @@ class BaldEagleHSI:
             v6_pct_cell_open_water=hsi_instance.pct_open_water,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
@@ -113,7 +111,9 @@ class BaldEagleHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -127,7 +127,9 @@ class BaldEagleHSI:
 
         # if self.v1a_pct_cell_developed_land is None | self.v1b_pct_cell_upland is None:
         if self.v1_pct_cell_developed_or_upland is None:
-            self._logger.info("Pct developed land or upland data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct developed land or upland data not provided. Setting index to 1."
+            )
             si_1[~np.isnan(si_1)] = 1
 
         else:
@@ -139,7 +141,9 @@ class BaldEagleHSI:
 
             # condition 2 (otherwise)
             mask_2 = self.v1_pct_cell_developed_or_upland > 0.0
-            si_1[mask_2] = 0.408 + 0.142 * np.log(self.v1_pct_cell_developed_or_upland[mask_2])
+            si_1[mask_2] = 0.408 + 0.142 * np.log(
+                self.v1_pct_cell_developed_or_upland[mask_2]
+            )
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
@@ -156,7 +160,9 @@ class BaldEagleHSI:
         # Calculate for inital conditions and use for all time periods
 
         if self.v2_pct_cell_flotant_marsh is None:
-            self._logger.info("Pct flotant marsh data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct flotant marsh data not provided. Setting index to 1."
+            )
             si_2[~np.isnan(si_2)] = 1
 
         else:
@@ -183,7 +189,9 @@ class BaldEagleHSI:
         si_3 = self.template.copy()
 
         if self.v3_pct_cell_forested_wetland is None:
-            self._logger.info("Pct forested wetland data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct forested wetland data not provided. Setting index to 1."
+            )
             si_3[~np.isnan(si_3)] = 1
 
         else:
@@ -210,7 +218,9 @@ class BaldEagleHSI:
         si_4 = self.template.copy()
 
         if self.v4_pct_cell_fresh_marsh is None:
-            self._logger.info("Pct fresh marsh data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct fresh marsh data not provided. Setting index to 1."
+            )
             si_4[~np.isnan(si_4)] = 1
 
         else:
@@ -237,7 +247,9 @@ class BaldEagleHSI:
         si_5 = self.template.copy()
 
         if self.v5_pct_cell_intermediate_marsh is None:
-            self._logger.info("Pct intermediate marsh data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct intermediate marsh data not provided. Setting index to 1."
+            )
             si_5[~np.isnan(si_5)] = 1
 
         else:
@@ -263,7 +275,9 @@ class BaldEagleHSI:
         si_6 = self.template.copy()
 
         if self.v6_pct_cell_open_water is None:
-            self._logger.info("Pct open water data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct open water data not provided. Setting index to 1."
+            )
             si_6[~np.isnan(si_6)] = 1
 
         else:
@@ -272,8 +286,12 @@ class BaldEagleHSI:
             si_6[mask_1] = 0.01
 
             # condition 2 (AND)
-            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (self.v6_pct_cell_open_water <= 95.0)
-            si_6[mask_2] = 0.985 - (0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1))
+            mask_2 = (self.v6_pct_cell_open_water > 0.0) & (
+                self.v6_pct_cell_open_water <= 95.0
+            )
+            si_6[mask_2] = 0.985 - (
+                0.105 * (self.v6_pct_cell_open_water[mask_2] ** -1)
+            )
 
             # condition 3
             mask_3 = self.v6_pct_cell_open_water > 95.0

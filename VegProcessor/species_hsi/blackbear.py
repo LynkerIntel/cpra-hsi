@@ -36,7 +36,8 @@ class BlackBearHSI:
     si_7: np.ndarray = field(init=False)
     si_8: np.ndarray = field(init=False)
 
-    # Set up components and equations
+
+    # components and equations
     spring_food: np.ndarray = field(init=False)
     summer_food: np.ndarray = field(init=False)
     fall_food: np.ndarray = field(init=False)
@@ -55,16 +56,15 @@ class BlackBearHSI:
             passed to SI methods."""
             return array / divisor if array is not None else None
 
-        # TO DO: provide correct names for hsi_instances
         return cls(
             v1_pct_area_wetland_cover=hsi_instance.pct_vegetated,
-            v2_pct_canopy_cover_s_mast_species=hsi_instance.pct_cover_soft_mast,
+            v2_pct_canopy_cover_s_mast_species=hsi_instance.pct_soft_mast,
             v3_soft_mast_prod_species_above1pct_canopy=hsi_instance.num_soft_mast_species,  # set to ideal
             v4_basal_area_mast_prod_species_above_30yr=hsi_instance.basal_area_hard_mast,  # set to ideal
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
-            v6_pct_area_nonforested_cover_250m=hsi_instance.pct_area_nonforested,
-            v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_cover_hard_mast,
-            v8_pct_eval_area_inside_zones=hsi_instance.pct_area_zone_influence,
+            v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
+            v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_hard_mast,
+            v8_pct_eval_area_inside_zones=hsi_instance.pct_human_influence,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -123,7 +123,9 @@ class BlackBearHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -146,7 +148,10 @@ class BlackBearHSI:
             # self.v1_pct_area_wetland_cover /= 100
             # condition 1
             mask_1 = self.v1_pct_area_wetland_cover < 7.0
-            si_1[mask_1] = (0.0714 * self.v1_pct_area_wetland_cover[mask_1]) + 0.5
+
+            si_1[mask_1] = (
+                0.0714 * self.v1_pct_area_wetland_cover[mask_1]
+            ) + 0.5
 
             # condition 2
             mask_2 = (self.v1_pct_area_wetland_cover >= 7.0) & (
@@ -156,7 +161,11 @@ class BlackBearHSI:
 
             # condition 3
             mask_3 = self.v1_pct_area_wetland_cover > 50
-            si_1[mask_3] = (-0.01 * self.v1_pct_area_wetland_cover[mask_3]) + 1.5
+
+            si_1[mask_3] = (
+                -0.01 * self.v1_pct_area_wetland_cover[mask_3]
+            ) + 1.5
+
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -177,7 +186,11 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v2_pct_canopy_cover_s_mast_species < 25.0
-            si_2[mask_1] = (0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]) + 0.1
+
+            si_2[mask_1] = (
+                0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]
+            ) + 0.1
+
 
             # condition 2
             mask_2 = self.v2_pct_canopy_cover_s_mast_species >= 25.0
@@ -307,17 +320,30 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v6_pct_area_nonforested_cover_250m < 25
-            si_6[mask_1] = (0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]) + 0.2
+
+            si_6[mask_1] = (
+                0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]
+            ) + 0.2
+
 
             # condition 2
             mask_2 = (self.v6_pct_area_nonforested_cover_250m >= 25) & (
                 self.v6_pct_area_nonforested_cover_250m <= 50
             )
-            si_6[mask_2] = (-0.04 * self.v6_pct_area_nonforested_cover_250m[mask_2]) + 3
+            si_6[mask_2] = 1.0
 
             # condition 3
-            mask_3 = self.v6_pct_area_nonforested_cover_250m > 75
-            si_6[mask_3] = 0
+            mask_3 = (self.v6_pct_area_nonforested_cover_250m > 50) & (
+                self.v6_pct_area_nonforested_cover_250m <= 75
+            )
+            si_6[mask_3] = (
+                -0.04 * self.v6_pct_area_nonforested_cover_250m[mask_3]
+            ) + 3
+
+            # condition 4
+            mask_4 = self.v6_pct_area_nonforested_cover_250m > 75
+            si_6[mask_4] = 0
+
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -338,12 +364,17 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v7_pct_cover_over1pct_cover_h_mast_species < 35
-            si_7[mask_1] = (0.0257 * self.v7_pct_cover_over1pct_cover_h_mast_species[mask_1]) + 0.1
+
+            si_7[mask_1] = (
+                0.0257
+                * self.v7_pct_cover_over1pct_cover_h_mast_species[mask_1]
+            ) + 0.1
 
             # condition 2
-            mask_2 = (self.v7_pct_cover_over1pct_cover_h_mast_species >= 35) & (
-                self.v7_pct_cover_over1pct_cover_h_mast_species <= 100
-            )
+            mask_2 = (
+                self.v7_pct_cover_over1pct_cover_h_mast_species >= 35
+            ) & (self.v7_pct_cover_over1pct_cover_h_mast_species <= 100)
+
             si_7[mask_2] = 1.0
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
@@ -402,7 +433,8 @@ class BlackBearHSI:
 
         # Combine individual suitability indices
         hsi = (
-            (spring_food + (summer_food * self.si_6) + (fall_food * self.si_7)) / 3
+            (spring_food + (summer_food * self.si_6) + (fall_food * self.si_7))
+            / 3
         ) * human_intolerance
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1

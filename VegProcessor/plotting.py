@@ -10,7 +10,6 @@ import geopandas as gpd
 import gc
 from typing import Optional
 
-
 logger = logging.getLogger("VegTransition")
 
 
@@ -63,9 +62,13 @@ def np_arr(
 
     if veg_palette:
         # Extract the keys and colors from the vegetation colors
-        veg_keys = sorted(unique_values)  # Get all unique values from the array
+        veg_keys = sorted(
+            unique_values
+        )  # Get all unique values from the array
         veg_colors = [
-            tuple(np.array(vegetation_colors.get(key, (128, 128, 128))) / 255.0)
+            tuple(
+                np.array(vegetation_colors.get(key, (128, 128, 128))) / 255.0
+            )
             for key in veg_keys
         ]  # Normalize to 0-1 and use gray (128, 128, 128) for missing keys
     else:
@@ -98,15 +101,22 @@ def np_arr(
 
     if veg_palette:
         bar_colors = [
-            tuple(np.array(vegetation_colors.get(veg_type, (128, 128, 128))) / 255.0)
+            tuple(
+                np.array(vegetation_colors.get(veg_type, (128, 128, 128)))
+                / 255.0
+            )
             for veg_type in unique_types
         ]
     else:
         bar_colors = ["blue"] * len(unique_types)
 
     # Plot the histogram of vegetation types
-    axes[1].bar(unique_types, counts, color=bar_colors, align="center", alpha=0.7)
-    axes[1].set_title(f"Histogram of Array Values\n{veg_type_desc}", fontsize=10)
+    axes[1].bar(
+        unique_types, counts, color=bar_colors, align="center", alpha=0.7
+    )
+    axes[1].set_title(
+        f"Histogram of Array Values\n{veg_type_desc}", fontsize=10
+    )
     axes[1].set_xlabel("Vegetation Type")
     axes[1].set_ylabel("Frequency")
     axes[1].set_xticks(unique_types)
@@ -233,7 +243,7 @@ def water_depth(
 
         # ax.clear()  # remove old data
         # Select data slice and process
-        data_slice = ds["WSE_MEAN"].sel({"time": f"{date_str}"}).load()
+        data_slice = ds["height"].sel({"time": f"{date_str}"}).load()
 
         data_slice.plot(
             ax=ax,

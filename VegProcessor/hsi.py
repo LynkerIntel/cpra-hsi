@@ -12,6 +12,8 @@ from typing import Optional
 import rioxarray  # used for tif output
 from datetime import datetime
 from rasterio.enums import Resampling
+from scipy.ndimage import binary_dilation
+from skimage.morphology import disk
 
 # import veg_logic
 import hydro_logic
@@ -19,7 +21,15 @@ import plotting
 import utils
 
 import veg_transition as vt
-from species_hsi import alligator, crawfish, baldeagle, gizzardshad, bass, bluecrab
+from species_hsi import (
+    alligator,
+    crawfish,
+    baldeagle,
+    gizzardshad,
+    bass,
+    bluecrab,
+    blackbear,
+)
 
 
 class HSI(vt.VegTransition):
@@ -45,29 +55,43 @@ class HSI(vt.VegTransition):
 
         # fetch raster data paths
         self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get("wse_directory_path")
-        self.wse_domain_path = self.config["raster_data"].get("wse_domain_raster")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.wse_domain_path = self.config["raster_data"].get(
+            "wse_domain_raster"
+        )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
         self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
-        self.flotant_marsh_path = self.config["raster_data"].get("flotant_marsh_raster")
+        self.flotant_marsh_path = self.config["raster_data"].get(
+            "flotant_marsh_raster"
+        )
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
-        # TODO Add this path to config - Issue #40 on GitHub
-        # self.bluecrab_lookup_table_path = self.config["???"].get("bluecrab_lookup_table")
-
         # simulation
-        self.water_year_start = self.config["simulation"].get("water_year_start")
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.run_hsi = self.config["simulation"].get("run_hsi")
-        self.analog_sequence = self.config["simulation"].get("wse_sequence_input")
-        self.hydro_domain_flag = self.config["simulation"].get("hydro_domain_flag")
-        self.blue_crab_lookup_path = self.config["simulation"].get("blue_crab_lookup_table")
+        self.analog_sequence = self.config["simulation"].get(
+            "wse_sequence_input"
+        )
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
+        )
+        self.blue_crab_lookup_path = self.config["simulation"].get(
+            "blue_crab_lookup_table"
+        )
 
         # metadata
         self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
@@ -104,6 +128,7 @@ class HSI(vt.VegTransition):
             default_flow_style=False,
             sort_keys=False,
         )
+        self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
 
         # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
@@ -118,6 +143,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
+        self.pct_human_influence = None
         self.hydro_domain = self._load_hecras_domain_raster()
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
@@ -131,6 +157,7 @@ class HSI(vt.VegTransition):
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
+        self.water_depth_monthly_mean_jan_aug_cm = None
 
         # HSI models
         self.alligator = None
@@ -138,7 +165,7 @@ class HSI(vt.VegTransition):
         self.baldeagle = None
         self.gizzardshad = None
         self.bass = None
-        # self.blackbear = None
+        self.blackbear = None
         self.bluecrab = None
 
         # datasets
@@ -147,9 +174,8 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        # self.avg_water_depth_rlt_marsh_surface = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None  # TODO: is never assigned a value
+        self.mean_annual_temperature = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -169,77 +195,78 @@ class HSI(vt.VegTransition):
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
         self.avg_num_frost_free_days_growing_season = None  # ideal always
-        self.mean_weekly_summer_temp = None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        self.mean_weekly_summer_temp = (
+            None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+        )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
-        self.mean_weekly_temp_reservoir_spawning_season = None  # ideal HEC-RAS SI6 = 20 degrees
+        # ideal HEC-RAS SI6 = 20 degrees
+        self.mean_weekly_temp_reservoir_spawning_season = None
+
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
-        # TODO load pandas dataframe into this from bluecrab_lookup_table_path
-        # self.bluecrab_lookup_table = pd.read_excel(self.bluecrab_lookup_table_path)
+        # black bear
+        self.pct_soft_mast = None
+        self.pct_hard_mast = None
+        self.pct_no_mast = None
 
-        # # NetCDF data output
-        # sim_length = self.water_year_end - self.water_year_start
-
-        # file_params = {
-        #     "model": self.metadata.get("model"),
-        #     "scenario": self.metadata.get("scenario"),
-        #     "group": self.metadata.get("group"),
-        #     "wpu": "AB",
-        #     "io_type": "O",
-        #     "time_freq": "ANN",  # for annual output
-        #     "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-        #     # "parameter": "NA",
-        # }
+        self.num_soft_mast_species = None  # always ideal
+        self.basal_area_hard_mast = None  # always ideal
+        self.num_hard_mast_species = None  # always ideal
+        self.pct_near_forest = None
 
         self._create_output_file(self.file_params)
 
-    def _setup_logger(self, log_level=logging.INFO):
-        """Set up the logger for the VegTransition class."""
-        self._logger = logging.getLogger("HSI")
-        self._logger.setLevel(log_level)
+    # def _setup_logger(self, log_level=logging.INFO):
+    #     """Set up the logger for the VegTransition class."""
+    #     self._logger = logging.getLogger("HSI")
+    #     self._logger.setLevel(log_level)
 
-        # clear existing handlers to prevent duplicates
-        # (this happens when re-runnning in notebook)
-        if self._logger.hasHandlers():
-            for handler in self._logger.handlers:
-                self._logger.removeHandler(handler)
-                handler.close()  # Close old handlers properly
+    #     # clear existing handlers to prevent duplicates
+    #     # (this happens when re-runnning in notebook)
+    #     if self._logger.hasHandlers():
+    #         for handler in self._logger.handlers:
+    #             self._logger.removeHandler(handler)
+    #             handler.close()  # Close old handlers properly
 
-        try:
-            # console handler for stdout
-            # i.e. print messages
-            ch = logging.StreamHandler()
-            ch.setLevel(log_level)
+    #     try:
+    #         # console handler for stdout
+    #         # i.e. print messages
+    #         ch = logging.StreamHandler()
+    #         ch.setLevel(log_level)
 
-            # file handler for logs in `run-input` folder
-            run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-            os.makedirs(run_metadata_dir, exist_ok=True)  # Ensure directory exists
-            log_file_path = os.path.join(run_metadata_dir, "simulation.log")
-            fh = logging.FileHandler(log_file_path)
-            fh.setLevel(log_level)
+    #         # file handler for logs in `run-input` folder
+    #         run_metadata_dir = os.path.join(
+    #             self.output_dir_path, "run-metadata"
+    #         )
+    #         os.makedirs(
+    #             run_metadata_dir, exist_ok=True
+    #         )  # Ensure directory exists
+    #         log_file_path = os.path.join(run_metadata_dir, "simulation.log")
+    #         fh = logging.FileHandler(log_file_path)
+    #         fh.setLevel(log_level)
 
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
-            )
+    #         formatter = logging.Formatter(
+    #             "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
+    #         )
 
-            # Add formatter to handlers
-            ch.setFormatter(formatter)
-            fh.setFormatter(formatter)
+    #         # Add formatter to handlers
+    #         ch.setFormatter(formatter)
+    #         fh.setFormatter(formatter)
 
-            # Add handlers to the logger
-            self._logger.addHandler(ch)
-            self._logger.addHandler(fh)
+    #         # Add handlers to the logger
+    #         self._logger.addHandler(ch)
+    #         self._logger.addHandler(fh)
 
-            # Add a custom filter to inject the timestep
-            filter_instance = _TimestepFilter(self)
-            self._logger.addFilter(filter_instance)
+    #         # Add a custom filter to inject the timestep
+    #         filter_instance = _TimestepFilter(self)
+    #         self._logger.addFilter(filter_instance)
 
-            self._logger.info("Logger setup complete.")
-        except Exception as e:
-            print(f"Error during logger setup: {e}")
+    #         self._logger.info("Logger setup complete.")
+    #     except Exception as e:
+    #         print(f"Error during logger setup: {e}")
 
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
@@ -253,43 +280,72 @@ class HSI(vt.VegTransition):
             current datetime as pandas dt type
         """
         self.current_timestep = date
-        wy = date.year
+        self.wy = date.year
 
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # calculate depth
-        # avg_water_depth_rlt_marsh_surface
-        self.wse = self.load_wse_wy(wy, variable_name="WSE_MEAN")
-        self.wse = self._reproject_match_to_dem(self.wse)  # TEMPFIX
-        self.water_depth_annual_mean = self._get_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug_cm = self._get_depth_filtered(
-            months=[1, 2, 3, 4, 5, 6, 7, 8]
-        )
-        self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(months=[9, 10, 11, 12])
-        self.water_depth_spawning_season = self._get_depth_filtered(
-            months=[4, 5, 6],
-        )
+        # water depth vars --------------------------------------
+        if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
+            # for daily NetCDF, this methods loads analog year directly,
+            # using lookup and mapping
+            self.water_depth = self._load_stage_daily(self.wy)
+            self.water_depth_annual_mean = self._get_daily_depth_filtered()
+            self.water_depth_monthly_mean_jan_aug = (
+                self._get_daily_depth_filtered(
+                    months=[1, 2, 3, 4, 5, 6, 7, 8],
+                )
+            )
+            self.water_depth_monthly_mean_sept_dec = (
+                self._get_daily_depth_filtered(
+                    months=[9, 10, 11, 12],
+                )
+            )
+            self.water_depth_spawning_season = self._get_daily_depth_filtered(
+                months=[4, 5, 6],
+            )
+        else:
+            # for pre-generated monthly hydro .tifs
+            # TODO: refactor this subset logic out of the step method,
+            # but really we should move away from have two branching methods
+            # for loading hydro data
+            self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+            self.wse = self._reproject_match_to_dem(self.wse)
+            # self.water_depth = self._get_depth()
 
-        # load veg type
+            self.water_depth_annual_mean = self._get_depth_filtered()
+            self.water_depth_monthly_mean_jan_aug_cm = (
+                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            )
+            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+                months=[9, 10, 11, 12]
+            )
+            self.water_depth_spawning_season = self._get_depth_filtered(
+                months=[4, 5, 6]
+            )
+
+        # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
 
-        # calculate pct cover for all veg types
+        # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
-            self.veg_type, domain=self.hydro_domain, cell=True
+            self.veg_type,
+            domain=self.hydro_domain,
+            cell=True,
         )
-
-        # run HSI models for timestep
+        self._calculate_mast_percentage()
+        self._calculate_near_forest(radius=4)
+        # run ---------------------------------------------------------
         if self.run_hsi:
 
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
             self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
+            self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -302,7 +358,6 @@ class HSI(vt.VegTransition):
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
         # run model forwards
-        # steps = int(self.simulation_duration / self.simulation_time_step)
         self._logger.info(
             "Starting simulation at %s. Period: %s - %s",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -311,8 +366,16 @@ class HSI(vt.VegTransition):
         )
 
         # plus 1 to make inclusive
-        simulation_period = range(self.water_year_start, self.water_year_end + 1)
-        self._logger.info("Running model for: %s timesteps", len(simulation_period))
+        simulation_period = range(
+            self.water_year_start, self.water_year_end + 1
+        )
+        self._logger.info(
+            "Running model for: %s timesteps", len(simulation_period)
+        )
+
+        # run expensive static var creation (other static vars
+        # are created in _init_)
+        self.pct_human_influence = self._calculate_pct_area_influence()
 
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
@@ -387,7 +450,9 @@ class HSI(vt.VegTransition):
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
-            veg_types=[v for v in range(15, 25)],  # these are everything but open water
+            veg_types=[
+                v for v in range(15, 25)
+            ],  # these are everything but open water
             x=8,
             y=8,
             boundary="pad",
@@ -417,22 +482,21 @@ class HSI(vt.VegTransition):
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
 
     def _calculate_pct_cover_static(self):
-        """Get percent coverage for each 480m cell, based on 60m veg type pixels.
-        This method is called during initialization, for static variables.
+        """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
+        This method is called during initialization, for static variables that
+        vary spatially but not temporally.
         """
-        ds_dev_upland = utils.generate_pct_cover_custom(
+        self._logger.info("Calculating static var: % developed and upland")
+        self.pct_dev_upland = utils.generate_pct_cover_custom(
             data_array=self.initial_veg_type,
             # these are the dev'd (4) and upland (4)
             veg_types=[2, 3, 4, 5, 9, 10, 11, 12],
             x=8,
             y=8,
             boundary="pad",
-        )
+        ).to_numpy()
 
-        # Developed Land (4 diff types) and Upland (also 4)
-        self.pct_dev_upland = ds_dev_upland.to_numpy()
-
-        # Flotant marsh for baldeagle
+        self._logger.info("Calculating static var: % flotant marsh")
         self.pct_flotant_marsh = utils.coarsen_and_reduce(
             da=self.flotant_marsh,
             veg_type=True,
@@ -440,6 +504,101 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         ).to_numpy()
+
+    @staticmethod
+    def _calculate_near_landtype(
+        landcover_arr: np.ndarray,
+        landtype_true: list,
+        radius: int,
+        include_source: bool,
+    ) -> np.ndarray:
+        """Generalized method to get percentage of 480m cell with within
+        radius of a land cover type or list of land cover types. Uses
+        "initial vegtype" array, i.e. the initial conditions, with non-veg
+        land cover classes included.
+
+        Parameters
+        -----------
+        landtype : list
+            list of land type int values considered "True", i.e. non-vegetated land.
+            these are the "source" pixels.
+
+        radius : int
+            radius to use for the circular kernel, to determine nearby land cover
+
+        include_source : bool
+            if true, returns all pixels in the zone of influence (including source
+            pixels). If false, source pixels (i.e. non forested) are not considered
+            as within the zone.
+
+        Returns
+        --------
+        istype_array : np.ndarray
+            A boolean array where criteria is met
+        """
+        # make sure np array is used, w/ no Dask overhead from xarray
+        landcover_arr = np.asarray(landcover_arr)
+        istype_bool = np.isin(landcover_arr, landtype_true)
+        nottype_bool = ~istype_bool
+
+        disk_kernel = disk(radius)  # circular grid w/ radius (kernel)
+        istype_expanded = binary_dilation(istype_bool, structure=disk_kernel)
+
+        if include_source:
+            return istype_expanded
+        else:
+            return istype_expanded & nottype_bool
+
+    def _calculate_pct_area_influence(self):
+        """Percent of evaluation area inside of zones of influence defined by
+        radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
+        residences.
+
+        Radiuses are defined by circular (disk) kernel, which expands True
+        pixels outward by r.
+
+        5,700 / 60 = 95 pixels
+        3,500 / 60 = 58.33 pixels
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        --------
+        near_landtypes_da : np.ndarray
+            Percent coverage array (480m grid cell)
+        """
+        towns = [2, 3, 4, 5]
+        croplands = [6, 7, 8]
+
+        self._logger.info("Calculating static var: human influence - towns.")
+        near_towns = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,  # initial
+            landtype_true=towns,
+            radius=95,
+            include_source=True,
+        )
+        self._logger.info(
+            "Calculating static var: human influence - croplands."
+        )
+        near_croplands = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,  # initial
+            landtype_true=croplands,
+            radius=58,
+            include_source=True,
+        )
+
+        stacked = np.stack([near_towns, near_croplands])
+        influence_bool = np.any(stacked, axis=0)
+
+        near_landtypes_da = xr.DataArray(influence_bool.astype(float))
+        near_landtypes_da = (
+            near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
+            * 100
+        )  # UNIT: index to pct
+
+        return near_landtypes_da.to_numpy()
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -463,7 +622,8 @@ class HSI(vt.VegTransition):
 
         # Combine all neighbor comparisons
         edge_pixels = xr.concat(
-            [(neighbor == open_water) for neighbor in neighbors], dim="direction"
+            [(neighbor == open_water) for neighbor in neighbors],
+            dim="direction",
         ).any(dim="direction")
 
         logging.info("Calculating percent of water edge pixels in cell.")
@@ -486,6 +646,9 @@ class HSI(vt.VegTransition):
         Return:
             array of flotant marsh meeting both criteria, at 60m resolution.
         """
+        self._logger.info(
+            "Creating flotant marsh from initial veg and flotant marsh arrays."
+        )
         da = xr.open_dataarray(self.flotant_marsh_path)
         da = da["band" == 0]
         # reproject to match hsi grid
@@ -498,7 +661,9 @@ class HSI(vt.VegTransition):
 
         return combined_flotant
 
-    def _get_depth_filtered(self, months: None | list[int] = None) -> np.ndarray:
+    def _get_depth_filtered(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
         """Calls the VegTransition _get_depth(), then adds a time
         filter (if supplied) and then resample to 480m cell size.
 
@@ -520,10 +685,114 @@ class HSI(vt.VegTransition):
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
         filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
-        ds = filtered_ds.mean(dim="time", skipna=True)["WSE_MEAN"]
+        ds = filtered_ds.mean(dim="time", skipna=True)["height"]
 
         da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+
+    def _get_daily_depth_filtered(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
+        """
+        Reduce daily depth dataset to temporal mean, then resample to
+        480m cell size.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to average water depth over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : xr.DataArray
+            A water depth data, averaged over a list of months (if provided)
+            and then downscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        filtered_ds = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin(months)
+        )
+        da = filtered_ds.mean(dim="time", skipna=True)["height"]
+
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _calculate_mast_percentage(self):
+        """Calculate percetange of canopy cover for mast classifications, as a
+        summation of `%_cover * %_mast` for zones II through V. The pct_cover
+        arrays are 480m, so the output is also 480m.
+
+
+        | Zone | Growth (cm/yr) | Hard Mast (%) | Soft Mast (%) | No Mast (%) |
+        |------|----------------|---------------|---------------|-------------|
+        | II   | 0.52           | 0.00          | 0.53          | 0.47        |
+        | III  | 0.63           | 0.39          | 0.61          | 0.00        |
+        | IV   | 0.66           | 0.28          | 0.42          | 0.30        |
+        | V    | 0.68           | 1.00          | 0.00          | 0.00        |
+
+        """
+        self._logger.info(
+            "Calculating percent of canopy cover for mast types."
+        )
+        soft_mast = {"II": 0.53, "III": 0.61, "IV": 0.42, "V": 0.00}
+        hard_mast = {"II": 0.0, "III": 0.39, "IV": 0.28, "V": 1.00}
+        no_mast = {"II": 0.47, "III": 0.0, "IV": 0.3, "V": 0.0}
+
+        # calculate as a weighted sum of zones
+        self.pct_soft_mast = (
+            self.pct_zone_ii * soft_mast["II"]
+            + self.pct_zone_iii * soft_mast["III"]
+            + self.pct_zone_iv * soft_mast["IV"]
+            + self.pct_zone_v * soft_mast["V"]
+        )
+        self.pct_hard_mast = (
+            self.pct_zone_ii * hard_mast["II"]
+            + self.pct_zone_iii * hard_mast["III"]
+            + self.pct_zone_iv * hard_mast["IV"]
+            + self.pct_zone_v * hard_mast["V"]
+        )
+
+        self.pct_no_mast = (
+            self.pct_zone_ii * no_mast["II"]
+            + self.pct_zone_iii * no_mast["III"]
+            + self.pct_zone_iv * no_mast["IV"]
+            + self.pct_zone_v * no_mast["V"]
+        )
+
+    def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
+        """Percent of area in nonforested cover types ≤ 250m from forested cover types.
+        Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
+        with radius=4 (i.e. 240m).
+
+        TODO: confirm forest pixels
+
+        parameters
+        ----------
+        radius : int
+            radius of the neighborhood in pixels
+        """
+        self._logger.info("Calculating percent non-forested near forest.")
+        forest_types = [15, 16, 17, 18]
+        near_forest_mask = self._calculate_near_landtype(
+            landcover_arr=self.initial_veg_type,
+            landtype_true=forest_types,
+            radius=radius,
+            include_source=False,  # only non-forested pixels NEAR forested
+        )
+
+        near_forest_mask_da = xr.DataArray(near_forest_mask.astype(float))
+        near_forest_mask_da = (
+            near_forest_mask_da.coarsen(
+                dim_0=8,
+                dim_1=8,
+                boundary="pad",
+            ).mean()  # uses default coord names (dim_0, 1)
+        ) * 100  # UNIT: index to percent
+
+        self.pct_near_forest = near_forest_mask_da.to_numpy()
 
     def _load_blue_crab_lookup(self):
         """
@@ -531,27 +800,15 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    # def _create_output_dirs(self):
-    #     """Create an output location for state variables, model config,
-    #     input data, and QC plots.
-
-    #     (No logging because logger needs output location for log file first.)
+    # def create_qc_arrays(self):
     #     """
-    #     output_dir_name = f"HSI_{self.sim_start_time}"
-
-    #     # Combine base directory and new directory name
-    #     self.output_dir_path = os.path.join(self.output_base_dir, output_dir_name)
-    #     # Create the directory if it does not exist
-    #     os.makedirs(self.output_dir_path, exist_ok=True)
-
-    #     # Create the 'run-input' subdirectory
-    #     run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-    #     os.makedirs(run_metadata_dir, exist_ok=True)
-
-    #     if os.path.exists(self.config_path):
-    #         shutil.copy(self.config_path, run_metadata_dir)
-    #     else:
-    #         print("Config file not found at %s", self.config_path)
+    #     Create QC arrays with variables defined by JV, used to ensure
+    #     vegetation transition ruleset is working as intended.
+    #     """
+    #     self._logger.info("Creating HSI QA/QC arrays.")
+    #     self.qc_influence_towns = utils.qc_influence_towns(
+    #         self.salinity,
+    #     )
 
     def _create_output_file(self, params: dict):
         """HSI: Create NetCDF file for data output.
@@ -572,7 +829,9 @@ class HSI(vt.VegTransition):
             parameter="DATA",
         )
 
-        self.netcdf_filepath = os.path.join(self.output_dir_path, f"{file_name}.nc")
+        self.netcdf_filepath = os.path.join(
+            self.output_dir_path, f"{file_name}.nc"
+        )
 
         # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
@@ -582,7 +841,9 @@ class HSI(vt.VegTransition):
         # Resample to 480m resolution, using rioxarray, with preserved correct coords and
         # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
         # projected coords.
-        da = da.rio.reproject(da.rio.crs, resolution=480, resampling=Resampling.average)
+        da = da.rio.reproject(
+            da.rio.crs, resolution=480, resampling=Resampling.average
+        )
 
         # use new 480m coords
         x = da.coords["x"].values
@@ -594,18 +855,6 @@ class HSI(vt.VegTransition):
             end=f"{self.water_year_end}-10-01",
             freq="YS-OCT",  # Annual start
         )
-
-        # OLD METHOD
-        # # Create an empty Dataset with only coordinates
-        # ds = xr.Dataset(coords={"time": time_range, "y": y, "x": x})
-
-        # # Assign CRS using rioxarray
-        # ds = ds.rio.write_crs("EPSG:6344")
-
-        # # Save the initial NetCDF file
-        # ds.to_netcdf(self.netcdf_filepath, mode="w", format="NETCDF4")
-        # ds.close()
-        # da.close()
 
         ds = xr.Dataset(
             # initialize w/ no data vars
@@ -644,10 +893,16 @@ class HSI(vt.VegTransition):
 
         # Save dataset to NetCDF
         ds.to_netcdf(self.netcdf_filepath)
-        self._logger.info("Initialized NetCDF file with CRS: %s", self.netcdf_filepath)
+        self._logger.info(
+            "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
+        )
 
     def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append timestep data to the NetCDF file.
+
+        TODO: add warning if arrays are skipped because they are None
+        TODO: move dict of arrays attrs to YAML or similar. It is too long
+        to be inline now.
 
         Parameters
         ----------
@@ -661,83 +916,788 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
 
         hsi_variables = {
-            # alligator
-            "alligator_hsi": (self.alligator.hsi, np.float32),
-            "alligator_si_1": (self.alligator.si_1, np.float32),
-            "alligator_si_2": (self.alligator.si_2, np.float32),
-            "alligator_si_3": (self.alligator.si_3, np.float32),
-            "alligator_si_4": (self.alligator.si_4, np.float32),
-            "alligator_si_5": (self.alligator.si_5, np.float32),
-            # bald eagle
-            "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
-            "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
-            "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
-            "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
-            "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
-            "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
-            "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
-            # crawfish
-            "crawfish_hsi": (self.crawfish.hsi, np.float32),
-            "crawfish_si_1": (self.crawfish.si_1, np.float32),
-            "crawfish_si_2": (self.crawfish.si_2, np.float32),
-            "crawfish_si_3": (self.crawfish.si_3, np.float32),
-            "crawfish_si_4": (self.crawfish.si_4, np.float32),
-            # gizzard shad
-            "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
-            "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
-            "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
-            "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
-            "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
-            "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
-            "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
-            "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
-            # bass
-            "bass_hsi": (self.bass.hsi, np.float32),
-            "bass_si_1": (self.bass.si_1, np.float32),
-            "bass_si_2": (self.bass.si_2, np.float32),
-            # species input vars
-            "water_depth_annual_mean": (self.water_depth_annual_mean, np.float32),
-            "water_depth_monthly_mean_jan_aug": (self.water_depth_monthly_mean_jan_aug, np.float32),
-            "water_depth_monthly_mean_sept_dec": (
+            "alligator_hsi": [
+                self.alligator.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_1": [
+                self.alligator.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_2": [
+                self.alligator.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_3": [
+                self.alligator.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_4": [
+                self.alligator.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "alligator_si_5": [
+                self.alligator.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_hsi": [
+                self.baldeagle.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_1": [
+                self.baldeagle.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_2": [
+                self.baldeagle.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_3": [
+                self.baldeagle.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_4": [
+                self.baldeagle.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_5": [
+                self.baldeagle.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bald_eagle_si_6": [
+                self.baldeagle.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_hsi": [
+                self.crawfish.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_1": [
+                self.crawfish.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_2": [
+                self.crawfish.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_3": [
+                self.crawfish.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "crawfish_si_4": [
+                self.crawfish.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_hsi": [
+                self.gizzardshad.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_1": [
+                self.gizzardshad.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_2": [
+                self.gizzardshad.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_3": [
+                self.gizzardshad.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_4": [
+                self.gizzardshad.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_5": [
+                self.gizzardshad.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_6": [
+                self.gizzardshad.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "gizzard_shad_si_7": [
+                self.gizzardshad.si_7,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_hsi": [
+                self.bass.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_si_1": [
+                self.bass.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bass_si_2": [
+                self.bass.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_hsi": [
+                self.blackbear.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_1": [
+                self.blackbear.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_2": [
+                self.blackbear.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_3": [
+                self.blackbear.si_3,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_4": [
+                self.blackbear.si_4,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_5": [
+                self.blackbear.si_5,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_6": [
+                self.blackbear.si_6,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_7": [
+                self.blackbear.si_7,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "blackbear_si_8": [
+                self.blackbear.si_8,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bluecrab_si_1": [
+                self.bluecrab.si_1,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bluecrab_si_2": [
+                self.bluecrab.si_2,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "bluecrab_hsi": [
+                self.bluecrab.hsi,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_open_water": [
+                self.pct_open_water,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "mean_annual_salinity": [
+                self.mean_annual_salinity,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "mean_annual_temperature": [
+                self.mean_annual_temperature,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_swamp_bottom_hardwood": [
+                self.pct_swamp_bottom_hardwood,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_fresh_marsh": [
+                self.pct_fresh_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_intermediate_marsh": [
+                self.pct_intermediate_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_brackish_marsh": [
+                self.pct_brackish_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_saline_marsh": [
+                self.pct_saline_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_v": [
+                self.pct_zone_v,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_iv": [
+                self.pct_zone_iv,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_iii": [
+                self.pct_zone_iii,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_zone_ii": [
+                self.pct_zone_ii,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_fresh_shrubs": [
+                self.pct_fresh_shrubs,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_bare_ground": [
+                self.pct_bare_ground,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_dev_upland": [
+                self.pct_dev_upland,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_flotant_marsh": [
+                self.pct_flotant_marsh,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_vegetated": [
+                self.pct_vegetated,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_soft_mast": [
+                self.pct_soft_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_hard_mast": [
+                self.pct_hard_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_no_mast": [
+                self.pct_no_mast,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_near_forest": [
+                self.pct_near_forest,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_annual_mean": [
+                self.water_depth_annual_mean,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_monthly_mean_jan_aug": [
+                self.water_depth_monthly_mean_jan_aug,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_monthly_mean_sept_dec": [
                 self.water_depth_monthly_mean_sept_dec,
                 np.float32,
-            ),
-            "water_depth_spawning_season": (self.water_depth_spawning_season, np.float32),
-            "pct_open_water": (self.pct_open_water, np.float32),
-            "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
-            "mean_annual_temperature": (self.mean_annual_temperature, np.float32),
-            "pct_swamp_bottom_hardwood": (self.pct_swamp_bottom_hardwood, np.float32),
-            "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
-            "pct_intermediate_marsh": (self.pct_intermediate_marsh, np.float32),
-            "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
-            "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
-            "pct_zone_v": (self.pct_zone_v, np.float32),
-            "pct_zone_iv": (self.pct_zone_iv, np.float32),
-            "pct_zone_iii": (self.pct_zone_iii, np.float32),
-            "pct_zone_ii": (self.pct_zone_ii, np.float32),
-            "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
-            "pct_bare_ground": (self.pct_bare_ground, np.float32),
-            "pct_dev_upland": (self.pct_dev_upland, np.float32),
-            "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
-            "pct_vegetated": (self.pct_vegetated, np.float32),
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "water_depth_spawning_season": [
+                self.water_depth_spawning_season,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_human_influence": [
+                self.pct_human_influence,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
         }
+        # hsi_variables = {
+        #     # alligator
+        #     "alligator_hsi": (self.alligator.hsi, np.float32),
+        #     "alligator_si_1": (self.alligator.si_1, np.float32),
+        #     "alligator_si_2": (self.alligator.si_2, np.float32),
+        #     "alligator_si_3": (self.alligator.si_3, np.float32),
+        #     "alligator_si_4": (self.alligator.si_4, np.float32),
+        #     "alligator_si_5": (self.alligator.si_5, np.float32),
+        #     # bald eagle
+        #     "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
+        #     "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
+        #     "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
+        #     "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
+        #     "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
+        #     "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
+        #     "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
+        #     # crawfish
+        #     "crawfish_hsi": (self.crawfish.hsi, np.float32),
+        #     "crawfish_si_1": (self.crawfish.si_1, np.float32),
+        #     "crawfish_si_2": (self.crawfish.si_2, np.float32),
+        #     "crawfish_si_3": (self.crawfish.si_3, np.float32),
+        #     "crawfish_si_4": (self.crawfish.si_4, np.float32),
+        #     # gizzard shad
+        #     "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
+        #     "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
+        #     "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
+        #     "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
+        #     "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
+        #     "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
+        #     "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
+        #     "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
+        #     # bass
+        #     "bass_hsi": (self.bass.hsi, np.float32),
+        #     "bass_si_1": (self.bass.si_1, np.float32),
+        #     "bass_si_2": (self.bass.si_2, np.float32),
+        #     # black bear
+        #     "blackbear_hsi": (self.blackbear.hsi, np.float32),
+        #     "blackbear_si_1": (self.blackbear.si_1, np.float32),
+        #     "blackbear_si_2": (self.blackbear.si_2, np.float32),
+        #     "blackbear_si_3": (self.blackbear.si_3, np.float32),
+        #     "blackbear_si_4": (self.blackbear.si_4, np.float32),
+        #     "blackbear_si_5": (self.blackbear.si_5, np.float32),
+        #     "blackbear_si_6": (self.blackbear.si_6, np.float32),
+        #     "blackbear_si_7": (self.blackbear.si_7, np.float32),
+        #     "blackbear_si_8": (self.blackbear.si_8, np.float32),
+        #     # species input vars
+        #     "water_depth_annual_mean": (
+        #         self.water_depth_annual_mean,
+        #         np.float32,
+        #     ),
+        #     "water_depth_monthly_mean_jan_aug": (
+        #         self.water_depth_monthly_mean_jan_aug,
+        #         np.float32,
+        #     ),
+        #     "water_depth_monthly_mean_sept_dec": (
+        #         self.water_depth_monthly_mean_sept_dec,
+        #         np.float32,
+        #     ),
+        #     "water_depth_spawning_season": (
+        #         self.water_depth_spawning_season,
+        #         np.float32,
+        #     ),
+        #     "pct_open_water": (self.pct_open_water, np.float32),
+        #     "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
+        #     "mean_annual_temperature": (
+        #         self.mean_annual_temperature,
+        #         np.float32,
+        #     ),
+        #     "pct_swamp_bottom_hardwood": (
+        #         self.pct_swamp_bottom_hardwood,
+        #         np.float32,
+        #     ),
+        #     "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
+        #     "pct_intermediate_marsh": (
+        #         self.pct_intermediate_marsh,
+        #         np.float32,
+        #     ),
+        #     "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
+        #     "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
+        #     "pct_zone_v": (self.pct_zone_v, np.float32),
+        #     "pct_zone_iv": (self.pct_zone_iv, np.float32),
+        #     "pct_zone_iii": (self.pct_zone_iii, np.float32),
+        #     "pct_zone_ii": (self.pct_zone_ii, np.float32),
+        #     "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
+        #     "pct_bare_ground": (self.pct_bare_ground, np.float32),
+        #     "pct_dev_upland": (self.pct_dev_upland, np.float32),
+        #     "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
+        #     "pct_vegetated": (self.pct_vegetated, np.float32),
+        #     "pct_soft_mast": (self.pct_soft_mast, np.float32),
+        #     "pct_hard_mast": (self.pct_hard_mast, np.float32),
+        #     "pct_no_mast": (self.pct_no_mast, np.float32),
+        #     "pct_near_forest": (self.pct_near_forest, np.float32),
+        # }
 
         # Open existing NetCDF file
         with xr.open_dataset(self.netcdf_filepath) as ds:
 
-            for var_name, (data, dtype) in hsi_variables.items():
-                if data is None:
-                    self._logger.warning("Array '%s' is None, skipping save.", var_name)
-
-                else:
+            for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
+                if data is not None:  # only write arrays that have data
                     # Check if the variable exists in the dataset, if not, initialize it
                     if var_name not in ds:
-                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        shape = (
+                            len(ds.time),
+                            len(ds.y),
+                            len(ds.x),
+                        )
                         default_value = False if dtype == bool else np.nan
                         ds[var_name] = (
                             ["time", "y", "x"],
                             np.full(shape, default_value, dtype=dtype),
-                            {"grid_mapping": "crs"},
+                            nc_attrs,
                         )
 
                     # Handle 'condition' variables (booleans)
@@ -745,7 +1705,9 @@ class HSI(vt.VegTransition):
                         data = np.nan_to_num(data, nan=False).astype(bool)
 
                     # Assign the data to the dataset for the specific time step
-                    ds[var_name].loc[{"time": timestep_str}] = data.astype(ds[var_name].dtype)
+                    ds[var_name].loc[{"time": timestep_str}] = data.astype(
+                        ds[var_name].dtype
+                    )
 
         ds.close()
         ds.to_netcdf(
@@ -758,8 +1720,10 @@ class HSI(vt.VegTransition):
     def post_process(self):
         """HSI post process
 
-        Opens file and then crops to hydro domain
+        (1) Opens file and then crops to hydro domain
+        (2) Create sidecar file with varibles in the NetCDF
         """
+        # -------- crop data --------
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
 
@@ -771,28 +1735,22 @@ class HSI(vt.VegTransition):
             ds_out.close()
             ds_out.to_netcdf(self.netcdf_filepath, mode="w")
 
-    # def _create_timestep_dir(self, date: pd.DatetimeTZDtype):
-    #     """Create output directory for the current timestamp, where
-    #     figures and output rasters will be saved.
+        # -------- create sidecar file ---------
+        logging.info("Creating variable name text file")
+        outpath = os.path.join(
+            self.run_metadata_dir, "hsi_netcdf_variables.csv"
+        )
+        attrs_df = utils.dataset_attrs_to_df(
+            ds,
+            selected_attrs=[
+                "long_name",
+                "description",
+                "units",
+            ],
+        )
+        attrs_df.to_csv(outpath, index=False)
 
-    #     Parameters
-    #     ----------
-    #     timestep : pd.DatetimeTZDtype
-    #         Pandas datetime object of current timestep.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     self.timestep_output_dir = os.path.join(
-    #         self.output_dir_path, f"{date.strftime('%Y%m%d')}"
-    #     )
-    #     self.timestep_output_dir_figs = os.path.join(
-    #         self.timestep_output_dir,
-    #         "figs",
-    #     )
-    #     os.makedirs(self.timestep_output_dir, exist_ok=True)
-    #     os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
+        logging.info("Post-processing complete.")
 
 
 class _TimestepFilter(logging.Filter):

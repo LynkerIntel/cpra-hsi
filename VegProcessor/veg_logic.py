@@ -90,17 +90,17 @@ def zone_v(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    plotting.np_arr(
-        type_mask,
-        "Veg Type Mask (Zone V)",
-        out_path=timestep_output_dir,
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone V Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.np_arr(
+    #     type_mask,
+    #     "Veg Type Mask (Zone V)",
+    #     out_path=timestep_output_dir,
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone V Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     # create output dict
     data_out = {
@@ -208,17 +208,17 @@ def zone_iv(
     logger.info("Output NaN count: %d", nan_count)
     logger.info("Output veg types: %s", np.unique(veg_type))
 
-    # plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
-    plotting.np_arr(
-        type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir
-    )
+    # # plotting.np_arr(veg_type_input, "Input - Zone IV", out_path=timestep_output_dir)
+    # plotting.np_arr(
+    #     type_mask, "Veg Type Mask (Zone IV)", out_path=timestep_output_dir
+    # )
 
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone IV Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone IV Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -328,17 +328,17 @@ def zone_iii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
-    plotting.np_arr(
-        type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir
-    )
+    # # plotting.np_arr(veg_type_input, "Input - Zone III", out_path=timestep_output_dir)
+    # plotting.np_arr(
+    #     type_mask, "Veg Type Mask (Zone III)", out_path=timestep_output_dir
+    # )
 
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone III Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone III Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -457,17 +457,17 @@ def zone_ii(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
-    plotting.np_arr(
-        type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir
-    )
+    # # plotting.np_arr(veg_type_input, "Input - Zone II", out_path=timestep_output_dir)
+    # plotting.np_arr(
+    #     type_mask, "Veg Type Mask (Zone II)", out_path=timestep_output_dir
+    # )
 
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone II Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone II Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -581,17 +581,17 @@ def fresh_shrub(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
-    plotting.np_arr(
-        type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
-    )
+    # # plotting.np_arr(veg_type_input, "Input - Fresh Shrub", out_path=timestep_output_dir)
+    # plotting.np_arr(
+    #     type_mask, "Veg Type Mask (Fresh Shrub)", out_path=timestep_output_dir
+    # )
 
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Fresh Shrub Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Fresh Shrub Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -730,16 +730,16 @@ def fresh_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    # plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
-    plotting.np_arr(
-        type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Fresh Marsh Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # # plotting.np_arr(veg_type_input, "Input - Fresh Marsh", out_path=timestep_output_dir)
+    # plotting.np_arr(
+    #     type_mask, "Veg Type Mask (Fresh Marsh)", out_path=timestep_output_dir
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Fresh Marsh Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -871,17 +871,17 @@ def intermediate_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    plotting.np_arr(
-        type_mask,
-        f"Veg Type Mask ({veg_name})",
-        # description,
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Intermediate Marsh Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.np_arr(
+    #     type_mask,
+    #     f"Veg Type Mask ({veg_name})",
+    #     # description,
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Intermediate Marsh Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -1015,17 +1015,17 @@ def brackish_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    plotting.np_arr(
-        type_mask,
-        f"Veg Type Mask ({veg_name})",
-        # description,
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Brackish Marsh Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.np_arr(
+    #     type_mask,
+    #     f"Veg Type Mask ({veg_name})",
+    #     # description,
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Brackish Marsh Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -1136,17 +1136,17 @@ def saline_marsh(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    plotting.np_arr(
-        type_mask,
-        f"Veg Type Mask ({veg_name})",
-        # description,
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Saline Marsh Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.np_arr(
+    #     type_mask,
+    #     f"Veg Type Mask ({veg_name})",
+    #     # description,
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Saline Marsh Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,
@@ -1302,17 +1302,17 @@ def water(
     nan_count = np.sum(np.isnan(veg_type))
     logger.info("Output NaN count: %d", nan_count)
 
-    plotting.np_arr(
-        type_mask,
-        f"Veg Type Mask ({veg_name})",
-        # description,
-    )
-    plotting.sum_changes(
-        veg_type_input,
-        veg_type,
-        plot_title="Zone Water Sum Changes",
-        out_path=timestep_output_dir,
-    )
+    # plotting.np_arr(
+    #     type_mask,
+    #     f"Veg Type Mask ({veg_name})",
+    #     # description,
+    # )
+    # plotting.sum_changes(
+    #     veg_type_input,
+    #     veg_type,
+    #     plot_title="Zone Water Sum Changes",
+    #     out_path=timestep_output_dir,
+    # )
 
     data_out = {
         "veg_type": veg_type,

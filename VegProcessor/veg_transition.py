@@ -274,12 +274,12 @@ class VegTransition:
         # get salinity
         self.salinity = self._get_salinity()
 
-        plotting.np_arr(
-            self.veg_type,
-            f"All Types Input {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-            veg_palette=True,
-        )
+        # plotting.np_arr(
+        #     self.veg_type,
+        #     f"All Types Input {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        #     veg_palette=True,
+        # )
 
         self.create_qc_arrays()
 
@@ -387,18 +387,18 @@ class VegTransition:
                 np.isnan(self.veg_type), layer, self.veg_type
             )
 
-        plotting.np_arr(
-            self.veg_type,
-            title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-            veg_palette=True,
-        )
-        plotting.sum_changes(
-            veg_type_in,
-            self.veg_type,
-            plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-        )
+        # plotting.np_arr(
+        #     self.veg_type,
+        #     title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        #     veg_palette=True,
+        # )
+        # plotting.sum_changes(
+        #     veg_type_in,
+        #     self.veg_type,
+        #     plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        # )
         # # save water depth plots
         # plotting.water_depth(
         #     self.water_depth,
@@ -410,7 +410,6 @@ class VegTransition:
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
-        # self._save_state_vars(params)
         self._append_veg_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", timestep)
@@ -461,6 +460,7 @@ class VegTransition:
                 )
 
             self._logger.info("Simulation complete")
+            del self.water_depth
             logging.shutdown()
 
         finally:
@@ -797,11 +797,11 @@ class VegTransition:
         # all other types (non-forested, non-handled) to np.nan
         self.maturity[~type_mask] = np.nan
 
-        plotting.np_arr(
-            self.maturity,
-            title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-            out_path=self.timestep_output_dir_figs,
-        )
+        # plotting.np_arr(
+        #     self.maturity,
+        #     title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
+        #     out_path=self.timestep_output_dir_figs,
+        # )
 
     def _load_veg_initial_raster(
         self,
@@ -1072,7 +1072,9 @@ class VegTransition:
         da.close()
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
 
-    def _append_veg_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+    def _append_veg_vars_to_netcdf(
+        self, timestep: pd.DatetimeTZDtype, variables_to_append=None
+    ):
         """
         Append timestep data to the NetCDF file for all vegetation variables.
 
@@ -1101,6 +1103,10 @@ class VegTransition:
         timestep : pd.DatetimeTZDtype
             Pandas datetime object representing the current timestep.
 
+        variables_to_append : list
+            list of arrays to save. Necessary to save intermediate output
+            during a timestep.
+
         Returns
         -------
         None
@@ -1113,6 +1119,10 @@ class VegTransition:
         - The dataset is saved in append mode before closing it.
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
+
+        # Set default variables to append if not supplied, excluding all QC variables
+        if variables_to_append is None:
+            variables_to_append = ["veg_type", "maturity"]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1204,7 +1214,7 @@ class VegTransition:
             ],
             # Seasonal water depth QC variables
             "qc_march_water_depth": [
-                self.qc_tree_establishment_info[0],
+                self.qc_march_water_depth,
                 np.float32,
                 {
                     "grid_mapping": "crs",
@@ -1214,7 +1224,7 @@ class VegTransition:
                 },
             ],
             "qc_april_water_depth": [
-                self.qc_tree_establishment_info[1],
+                self.qc_april_water_depth,
                 np.float32,
                 {
                     "grid_mapping": "crs",
@@ -1224,7 +1234,7 @@ class VegTransition:
                 },
             ],
             "qc_may_water_depth": [
-                self.qc_tree_establishment_info[2],
+                self.qc_may_water_depth,
                 np.float32,
                 {
                     "grid_mapping": "crs",
@@ -1234,7 +1244,7 @@ class VegTransition:
                 },
             ],
             "qc_june_water_depth": [
-                self.qc_tree_establishment_info[3],
+                self.qc_june_water_depth,
                 np.float32,
                 {
                     "grid_mapping": "crs",
@@ -1246,6 +1256,8 @@ class VegTransition:
         }
 
         for var_name, (data, dtype, nc_attrs) in veg_variables.items():
+            if var_name not in variables_to_append:
+                continue
             # Check if the variable exists in the dataset, if not, initialize it
             if var_name not in ds_loaded:
                 shape = (
@@ -1375,7 +1387,8 @@ class VegTransition:
     def create_qc_arrays(self):
         """
         Create QC arrays with variables defined by JV, used to ensure
-        vegetation transition ruleset is working as intended.
+        vegetation transition ruleset is working as intended. Arrays are serialized
+        to NetCDF then deleted and no longer accessible to the class instance.
         """
         self._logger.info("Creating QA/QC arrays.")
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
@@ -1396,9 +1409,40 @@ class VegTransition:
         self.qc_tree_establishment_bool = utils.qc_tree_establishment_bool(
             self.water_depth
         )
-        self.qc_tree_establishment_info = utils.qc_tree_establishment_info(
-            self.water_depth
+        (
+            self.qc_march_water_depth,
+            self.qc_april_water_depth,
+            self.qc_may_water_depth,
+            self.qc_june_water_depth,
+        ) = utils.qc_tree_establishment_info(self.water_depth)
+
+        self._logger.info("Saving QC arrays to NetCDF.")
+        self._append_veg_vars_to_netcdf(
+            timestep=self.current_timestep,
+            variables_to_append=[
+                "qc_annual_mean_salinity",
+                "qc_annual_inundation_depth",
+                "qc_annual_inundation_duration",
+                "qc_growing_season_depth",
+                "qc_growing_season_inundation",
+                "qc_tree_establishment_bool",
+                "qc_march_water_depth",
+                "qc_april_water_depth",
+                "qc_may_water_depth",
+                "qc_june_water_depth",
+            ],
         )
+        # Delete QC arrays after saving to reduce memory usage
+        self.qc_annual_mean_salinity = None
+        self.qc_annual_inundation_depth = None
+        self.qc_annual_inundation_duration = None
+        self.qc_growing_season_depth = None
+        self.qc_growing_season_inundation = None
+        self.qc_march_water_depth = None
+        self.qc_april_water_depth = None
+        self.qc_may_water_depth = None
+        self.qc_june_water_depth = None
+        gc.collect()
 
 
 class _TimestepFilter(logging.Filter):

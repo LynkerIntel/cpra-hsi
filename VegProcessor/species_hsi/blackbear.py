@@ -36,6 +36,7 @@ class BlackBearHSI:
     si_7: np.ndarray = field(init=False)
     si_8: np.ndarray = field(init=False)
 
+
     # components and equations
     spring_food: np.ndarray = field(init=False)
     summer_food: np.ndarray = field(init=False)
@@ -147,6 +148,7 @@ class BlackBearHSI:
             # self.v1_pct_area_wetland_cover /= 100
             # condition 1
             mask_1 = self.v1_pct_area_wetland_cover < 7.0
+
             si_1[mask_1] = (
                 0.0714 * self.v1_pct_area_wetland_cover[mask_1]
             ) + 0.5
@@ -159,9 +161,11 @@ class BlackBearHSI:
 
             # condition 3
             mask_3 = self.v1_pct_area_wetland_cover > 50
+
             si_1[mask_3] = (
                 -0.01 * self.v1_pct_area_wetland_cover[mask_3]
             ) + 1.5
+
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -182,9 +186,11 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v2_pct_canopy_cover_s_mast_species < 25.0
+
             si_2[mask_1] = (
                 0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]
             ) + 0.1
+
 
             # condition 2
             mask_2 = self.v2_pct_canopy_cover_s_mast_species >= 25.0
@@ -314,9 +320,11 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v6_pct_area_nonforested_cover_250m < 25
+
             si_6[mask_1] = (
                 0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]
             ) + 0.2
+
 
             # condition 2
             mask_2 = (self.v6_pct_area_nonforested_cover_250m >= 25) & (
@@ -335,6 +343,7 @@ class BlackBearHSI:
             # condition 4
             mask_4 = self.v6_pct_area_nonforested_cover_250m > 75
             si_6[mask_4] = 0
+
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -355,6 +364,7 @@ class BlackBearHSI:
         else:
             # condition 1
             mask_1 = self.v7_pct_cover_over1pct_cover_h_mast_species < 35
+
             si_7[mask_1] = (
                 0.0257
                 * self.v7_pct_cover_over1pct_cover_h_mast_species[mask_1]
@@ -364,6 +374,7 @@ class BlackBearHSI:
             mask_2 = (
                 self.v7_pct_cover_over1pct_cover_h_mast_species >= 35
             ) & (self.v7_pct_cover_over1pct_cover_h_mast_species <= 100)
+
             si_7[mask_2] = 1.0
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):

@@ -414,6 +414,7 @@ class VegTransition:
 
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
+        self.water_depth = None
 
         # clean up mpl objects
         plt.cla()
@@ -684,10 +685,10 @@ class VegTransition:
         self._logger.warning("Converting daily hydro: feet to meters")
         ds["height"] *= 0.3048  # UNIT: feet to meters
 
-        ds_loaded = ds.load()
-        ds.close()
+        # ds_loaded = ds.load()
+        # ds.close()
 
-        return ds_loaded
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

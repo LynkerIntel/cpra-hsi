@@ -662,6 +662,7 @@ class VegTransition:
             concat_dim="time",
             combine="nested",
             parallel=True,
+            # engine="h5netcdf",
         )
 
         # make crs visible to xarray/rio

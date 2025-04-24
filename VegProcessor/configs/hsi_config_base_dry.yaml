@@ -6,7 +6,7 @@ raster_data:
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S01_AB_O_ANN_01_25_DATA_20250321_152104/AMP_VEG_S01_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
+  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S01_G510_AB_O_ANN_01_25_DATA/AMP_VEG_S01_G510_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
   flotant_marsh_raster: "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
   #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
@@ -21,7 +21,7 @@ simulation:
 metadata:
   model: HSI
   scenario: "S01" # scenario info for plots and metadata
-  group: # GXXX
+  group: #G510
   wpu: ARS
 
 output:

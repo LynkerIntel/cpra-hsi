@@ -133,9 +133,9 @@ class BottomlandHardwoodHSI:
         self._logger.info("Running SI 1")
         si_1 = self.template.copy()
 
-        if self.v1a_pct_overstory is None:
+        if self.v1a_pct_overstory_w_mast is None:
             self._logger.info(
-                "Overstory cover data is not provided. Setting index to 1."
+                "Overstory cover with mast is not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 

@@ -207,10 +207,11 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
-        # black bear
+        # tree mast
         self.pct_soft_mast = None
         self.pct_hard_mast = None
         self.pct_no_mast = None
+        self.story_class = None
 
         self.num_soft_mast_species = None  # always ideal
         self.basal_area_hard_mast = None  # always ideal
@@ -761,6 +762,33 @@ class HSI(vt.VegTransition):
             + self.pct_zone_iv * no_mast["IV"]
             + self.pct_zone_v * no_mast["V"]
         )
+
+    def _calculate_story_assignment(self):
+        """Calculate categorical story assignment.
+
+        Overstory = 3
+        Midstory = 2
+        Understory = 1
+        """
+        forested_types = [15, 16, 17, 18]
+        understory_types = [20, 21, 22, 23]
+
+        # overstory types
+        type_mask = np.isin(self.veg_type, forested_types)
+        mask_3 = type_mask & (self.maturity > 10)
+        self.story_class[mask_3] = 3
+
+        # midstory types
+        mask_2 = type_mask & (self.maturity < 10)
+        self.story_class[mask_2] = 2
+
+        # fresh_shrub
+        mask_fresh_shrub = self.veg_type == 19
+        self.story_class[mask_fresh_shrub] = 2
+
+        # other
+        type_mask = np.isin(self.veg_type, understory_types)
+        self.story_class[type_mask] = 1
 
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.

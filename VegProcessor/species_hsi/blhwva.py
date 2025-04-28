@@ -30,11 +30,7 @@ class BottomlandHardwoodHSI:
     v4a_flood_duration: np.ndarray = None
     v4b_flow_exchange:np.ndarray = None
     v5_size_forested_area: np.ndarray = None
-    v6a_pct_blh_forested_marsh_half_mi: np.ndarray = None
-    v6b_pct_aban_agri_dense_cover_half_mi: np.ndarray = None
-    v6c_pct_pasture_hay_half_mi: np.ndarray = None
-    v6d_pct_agri_water_half_mi: np.ndarray = None
-    v6e_pct_nonhabitat_half_mi: np.ndarray = None
+    v6_suit_trav_surr_lu: np.ndarray = None
     v7_disturbance: np.ndarray = None
 
     # Suitability indices (calculated)
@@ -69,12 +65,8 @@ class BottomlandHardwoodHSI:
             v3b_pct_midstory=safe_divide(hsi_instance.pct_midstory),
             v4a_flood_duration=hsi_instance.flood_duration, 
             v4b_flow_exchange=hsi_instance.flow_exchange,
-            v5_size_forested_area=hsi_instance.size_forested_area,  
-            v6a_pct_blh_forested_marsh_half_mi=safe_divide(hsi_instance.pct_blh_forested_marsh_half_mi), 
-            v6b_pct_aban_agri_dense_cover_half_mi=safe_divide(hsi_instance.pct_aban_agri_dense_cover_half_mi),
-            v6c_pct_pasture_hay_half_mi=safe_divide(hsi_instance.pct_pasture_hay_half_mi), 
-            v6d_pct_agri_water_half_mi=safe_divide(hsi_instance.pct_agri_water_half_mi),
-            v6e_pct_nonhabitat_half_mi=safe_divide(hsi_instance.pct_nonhabitat_half_mi),
+            v5_size_forested_area=hsi_instance.size_forested_area, 
+            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu, #set to ideal 
             v7_disturbance=hsi_instance.disturbance, #set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -444,13 +436,17 @@ class BottomlandHardwoodHSI:
         self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
-        si_6 = (
-            (1 * self.v6a_pct_blh_forested_marsh_half_mi) 
-            + (0.6 * self.v6b_pct_aban_agri_dense_cover_half_mi) 
-            + (0.4 * self.v6c_pct_pasture_hay_half_mi) 
-            + (0.2 * self.v6d_pct_agri_water_half_mi)
-            + (0.01 * self.v6e_pct_nonhabitat_half_mi)
-        ) / 100
+        # Set to ideal.
+        if self.v6_suit_trav_surr_lu is None:
+            self._logger.info(
+                "Disturbance assumes ideal conditions. Setting index to 1."
+            )
+            si_6[~np.isnan(si_6)] = 1
+
+        else:
+            raise NotImplementedError(
+                "No logic for bottomland hardwood v6 exists. Either use ideal (set array None) or add logic."
+            )
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

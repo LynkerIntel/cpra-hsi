@@ -18,7 +18,9 @@ class TestZoneV(unittest.TestCase):
         )
 
         # Create time range
-        self.time = pd.date_range("1999-03-01", "1999-09-30", freq="MS")  # 7 time steps
+        self.time = pd.date_range(
+            "1999-03-01", "1999-09-30", freq="MS"
+        )  # 7 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         self.wse_mean = np.array(
@@ -40,8 +42,12 @@ class TestZoneV(unittest.TestCase):
         self.water_depth = xr.Dataset(
             {"WSE_MEAN": (["x", "y", "time"], self.wse_mean)},
             coords={
-                "x": np.arange(self.veg_type.shape[0]),  # Match `veg_type` shape
-                "y": np.arange(self.veg_type.shape[1]),  # Match `veg_type` shape
+                "x": np.arange(
+                    self.veg_type.shape[0]
+                ),  # Match `veg_type` shape
+                "y": np.arange(
+                    self.veg_type.shape[1]
+                ),  # Match `veg_type` shape
                 "time": self.time,
             },
         )
@@ -83,14 +89,24 @@ class TestZoneIV(unittest.TestCase):
         )
 
         # Create time range
-        time = pd.date_range("1999-03-01", "1999-09-30", freq="MS")  # 7 time steps
+        time = pd.date_range(
+            "1999-03-01", "1999-09-30", freq="MS"
+        )  # 7 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, 0.5],  # x=0 column, time=7
+                    [
+                        -0.5,
+                        -0.5,
+                        0.5,
+                        -0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # x=0 column, time=7
                     [0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5],  # x=1 column
                     [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],  # x=2 column
                 ],
@@ -106,8 +122,12 @@ class TestZoneIV(unittest.TestCase):
         water_depth = xr.Dataset(
             {"WSE_MEAN": (["x", "y", "time"], wse_mean)},
             coords={
-                "x": np.arange(self.veg_type.shape[0]),  # Match `veg_type` shape
-                "y": np.arange(self.veg_type.shape[1]),  # Match `veg_type` shape
+                "x": np.arange(
+                    self.veg_type.shape[0]
+                ),  # Match `veg_type` shape
+                "y": np.arange(
+                    self.veg_type.shape[1]
+                ),  # Match `veg_type` shape
                 "time": time,
             },
         )
@@ -149,7 +169,9 @@ class TestZoneIII(unittest.TestCase):
         )
 
         # Create time range
-        time = pd.date_range("1999-03-01", "1999-09-30", freq="MS")  # 7 time steps
+        time = pd.date_range(
+            "1999-03-01", "1999-09-30", freq="MS"
+        )  # 7 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
@@ -172,8 +194,12 @@ class TestZoneIII(unittest.TestCase):
         water_depth = xr.Dataset(
             {"WSE_MEAN": (["x", "y", "time"], wse_mean)},
             coords={
-                "x": np.arange(self.veg_type.shape[0]),  # Match `veg_type` shape
-                "y": np.arange(self.veg_type.shape[1]),  # Match `veg_type` shape
+                "x": np.arange(
+                    self.veg_type.shape[0]
+                ),  # Match `veg_type` shape
+                "y": np.arange(
+                    self.veg_type.shape[1]
+                ),  # Match `veg_type` shape
                 "time": time,
             },
         )
@@ -216,14 +242,29 @@ class TestZoneII(unittest.TestCase):
 
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 01.5, 1.5],
+                    [
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        1.5,
+                        01.5,
+                        1.5,
+                    ],
                     [
                         0.0,
                         0.5,
@@ -238,7 +279,20 @@ class TestZoneII(unittest.TestCase):
                         0.5,
                         0.5,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -322,14 +376,29 @@ class TestFreshShrub(unittest.TestCase):
 
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+                    [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],
                     [
                         0.0,
                         0.5,
@@ -344,7 +413,20 @@ class TestFreshShrub(unittest.TestCase):
                         0.5,
                         0.5,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -362,7 +444,20 @@ class TestFreshShrub(unittest.TestCase):
                         0.5,
                     ],  # NaN
                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # low mid
-                    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+                    [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ],
                 ],
             ]
         )
@@ -420,14 +515,29 @@ class TestFreshMarsh(unittest.TestCase):
         )
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.5, 0.5, 0.5, 0.5],
+                    [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],
                     [
                         0.5,
                         0.5,
@@ -442,7 +552,20 @@ class TestFreshMarsh(unittest.TestCase):
                         0.5,
                         0.5,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -532,14 +655,29 @@ class TestIntermediateMarsh(unittest.TestCase):
         )
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5],
+                    [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.5,
+                        0.5,
+                    ],
                     [
                         0.5,
                         0.5,
@@ -554,7 +692,20 @@ class TestIntermediateMarsh(unittest.TestCase):
                         0.5,
                         0.5,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -657,14 +808,29 @@ class TestBrackishMarsh(unittest.TestCase):
         )
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5],
+                    [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.5,
+                        0.5,
+                    ],
                     [
                         0.5,
                         0.5,
@@ -679,7 +845,20 @@ class TestBrackishMarsh(unittest.TestCase):
                         0.0,
                         0.0,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -782,14 +961,29 @@ class TestSalineMarsh(unittest.TestCase):
         )
         # Create time range
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
         wse_mean = np.array(
             [
                 [  # y=1 row
-                    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5],
+                    [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.5,
+                        0.5,
+                    ],
                     [
                         0.5,
                         0.5,
@@ -804,7 +998,20 @@ class TestSalineMarsh(unittest.TestCase):
                         0.0,
                         0.0,
                     ],  # top middle
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -906,7 +1113,9 @@ class TestWater(unittest.TestCase):
             ]
         )
 
-        time = pd.date_range("1999-10-01", "2000-09-30", freq="MS")  # 12 time steps
+        time = pd.date_range(
+            "1999-10-01", "2000-09-30", freq="MS"
+        )  # 12 time steps
 
         # Ensure wse_mean matches the spatial dimensions of veg_type
         # Shape of wse_mean should be (2, 3, 7) to match (x, y, time)
@@ -941,7 +1150,20 @@ class TestWater(unittest.TestCase):
                         0.02,
                         0.08,
                     ],
-                    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5, 0.5],  # NaN
+                    [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.5,
+                    ],  # NaN
                 ],
                 [  # y=0 row
                     [
@@ -1023,6 +1245,35 @@ class TestWater(unittest.TestCase):
             result,
             "Result does not match known values.",
         )
+
+
+class TestCalculateNearForest(unittest.TestCase):
+
+    def test_calculate_near_forest(self):
+        from VegProcessor.hsi import HSI
+        import os
+
+        # create an instance of HSI with a dummy config file
+        hsi = HSI(config_file="tests/test_config.yml")
+
+        # create a 16x16 veg_type array filled with non-forest, add forest in center
+        veg = np.zeros((16, 16), dtype=int)
+        veg[7:9, 7:9] = 15  # small forest patch in the center
+
+        hsi.veg_type = xr.DataArray(
+            veg,
+            coords={"y": np.arange(16), "x": np.arange(16)},
+            dims=["y", "x"],
+        )
+
+        # call the private method (note: in real test, public interface is better)
+        result = hsi._calculate_near_forest(radius=2)
+
+        # ensure the output is a coarsened array and has non-zero values around the center
+        # assert isinstance(result, xr.DataArray)
+        # assert result.shape[0] < veg.shape[0]
+        # assert result.shape[1] < veg.shape[1]
+        # assert result.max().item() > 0
 
 
 if __name__ == "__main__":

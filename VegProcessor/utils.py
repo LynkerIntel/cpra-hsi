@@ -3,6 +3,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 from xrspatial.zonal import crosstab
+import yaml
 
 import os
 import shutil
@@ -11,7 +12,6 @@ from typing import Callable, List, Tuple
 import logging
 import re
 from pathlib import Path
-
 
 # Configure the logger in VegTransition
 logger = logging.getLogger("VegTransition")
@@ -48,7 +48,9 @@ def generate_combined_sequence(
     source_files = list(path.rglob("*.tif"))
 
     if not source_files:
-        raise FileNotFoundError(f"No .tif files found for year in {source_folder}")
+        raise FileNotFoundError(
+            f"No .tif files found for year in {source_folder}"
+        )
 
     # Loop through the 25-year quintile sequence
     for _, i in quintile_sequence.iterrows():
@@ -65,7 +67,9 @@ def generate_combined_sequence(
         print(f"Mapping {source_year} to {analog_year}")
 
         if len(source_year_paths) < 12:
-            raise ValueError(f"Missing data in source files for {source_year}.")
+            raise ValueError(
+                f"Missing data in source files for {source_year}."
+            )
 
         for p in source_year_paths:
             print(f"input path: {p}")
@@ -87,7 +91,9 @@ def generate_combined_sequence(
         print("All months completed.")
 
     print(f"Generated 25-year sequence in {output_folder}")
-    print("WARN: only files NAMES were modified, original timestamps still in place.")
+    print(
+        "WARN: only files NAMES were modified, original timestamps still in place."
+    )
 
 
 def extract_date(path: pathlib.Path) -> datetime:
@@ -255,7 +261,9 @@ def coarsen_and_reduce(
         total_cells = block.shape[axis[0]] * block.shape[axis[1]]
         return (count / total_cells) * 100
 
-    result = da.coarsen(**kwargs).reduce(_count_vegtype_and_calculate_percentage)
+    result = da.coarsen(**kwargs).reduce(
+        _count_vegtype_and_calculate_percentage
+    )
 
     return result
 
@@ -279,7 +287,9 @@ def generate_pct_cover(
     veg_arrays = []
 
     for n, i in enumerate(veg_types):
-        logging.info("processing veg type: %s, (number %s out of %s)", i, n, veg_types)
+        logging.info(
+            "processing veg type: %s, (number %s out of %s)", i, n, veg_types
+        )
         new_da = coarsen_and_reduce(data_array, veg_type=i, **kwargs)
         new_da = new_da.rename(f"pct_cover_{i}")
         veg_arrays.append(new_da)
@@ -289,7 +299,9 @@ def generate_pct_cover(
     return ds_out
 
 
-def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwargs):
+def generate_pct_cover_custom(
+    data_array: xr.DataArray, veg_types: list, **kwargs
+):
     """Generate pct cover for combinations of veg types
 
     Uses `coarsen_and_reduce` with an intermediate array with bools
@@ -304,7 +316,9 @@ def generate_pct_cover_custom(data_array: xr.DataArray, veg_types: list, **kwarg
     # create new binary var with tuple of dims, data
     data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))
     # run coarsen w/ True as valid veg type
-    da_out = coarsen_and_reduce(da=data_array["boolean"], veg_type=True, **kwargs)
+    da_out = coarsen_and_reduce(
+        da=data_array["boolean"], veg_type=True, **kwargs
+    )
     # da_out.to_netcdf("./pct_cover.nc")
     return da_out
 
@@ -523,7 +537,9 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
     return df_out
 
 
-def generate_filename(params: dict, parameter: str = None, base_path: str = None) -> Path:
+def generate_filename(
+    params: dict, parameter: str = None, base_path: str = None
+) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
     Missing parameters are skipped.
@@ -567,7 +583,11 @@ def generate_filename(params: dict, parameter: str = None, base_path: str = None
 
     # Collect available values from params in order
     values = [
-        params[key].upper() if isinstance(params.get(key), str) else params.get(key)
+        (
+            params[key].upper()
+            if isinstance(params.get(key), str)
+            else params.get(key)
+        )
         for key in key_order
         if key in params and params[key] is not None
     ]
@@ -658,8 +678,10 @@ def qc_tree_establishment_bool(
     mar_june = [3, 4, 5, 6]
 
     # Condition 1: MAR, APR, MAY, OR JUNE inundation depth <= 0
-    filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(mar_june))
-    tree_establish_bool = (filtered["WSE_MEAN"] <= 0).any(dim="time").to_numpy()
+    filtered = water_depth.sel(
+        time=water_depth["time"].dt.month.isin(mar_june)
+    )
+    tree_establish_bool = (filtered["height"] <= 0).any(dim="time").to_numpy()
     return tree_establish_bool
 
 
@@ -672,18 +694,31 @@ def qc_tree_establishment_info(
     # .isel() required due to the month selection resulting in a single timestep 3D
     # dataarray, while the output format requires a 2D numpy array.
     march = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 3).isel(time=0)
+        water_depth["height"]
+        .sel(time=water_depth["time"].dt.month == 3)
+        .isel(time=0)
     )
     april = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 4).isel(time=0)
+        water_depth["height"]
+        .sel(time=water_depth["time"].dt.month == 4)
+        .isel(time=0)
     )
     may = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 5).isel(time=0)
+        water_depth["height"]
+        .sel(time=water_depth["time"].dt.month == 5)
+        .isel(time=0)
     )
     june = (
-        water_depth["WSE_MEAN"].sel(time=water_depth["time"].dt.month == 6).isel(time=0)
+        water_depth["height"]
+        .sel(time=water_depth["time"].dt.month == 6)
+        .isel(time=0)
     )
-    return [march.to_numpy(), april.to_numpy(), may.to_numpy(), june.to_numpy()]
+    return [
+        march.to_numpy(),
+        april.to_numpy(),
+        may.to_numpy(),
+        june.to_numpy(),
+    ]
 
 
 def qc_growing_season_inundation(
@@ -694,7 +729,7 @@ def qc_growing_season_inundation(
     """
     gs = [4, 5, 6, 7, 8, 9]
     filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
-    pct_gs_inundation = (filtered["WSE_MEAN"] > 0).mean(dim="time")
+    pct_gs_inundation = (filtered["height"] > 0).mean(dim="time")
     return pct_gs_inundation.to_numpy()
 
 
@@ -706,7 +741,7 @@ def qc_growing_season_depth(
     """
     gs = [4, 5, 6, 7, 8, 9]
     filtered = water_depth.sel(time=water_depth["time"].dt.month.isin(gs))
-    gs_depth = filtered["WSE_MEAN"].mean(dim="time")
+    gs_depth = filtered["height"].mean(dim="time")
     return gs_depth.to_numpy()
 
 
@@ -716,7 +751,7 @@ def qc_annual_inundation_duration(
     """
     JV: Percentage of time flooded over the year
     """
-    pct = (water_depth["WSE_MEAN"] > 0).mean(dim="time")
+    pct = (water_depth["height"] > 0).mean(dim="time")
     return pct.to_numpy()
 
 
@@ -726,7 +761,7 @@ def qc_annual_inundation_depth(
     """
     JV: Average water depth over the year.
     """
-    mean_depth = water_depth["WSE_MEAN"].mean(dim="time")
+    mean_depth = water_depth["height"].mean(dim="time")
     return mean_depth.to_numpy()
 
 
@@ -737,3 +772,75 @@ def qc_annual_mean_salinity(salinity: np.ndarray) -> np.ndarray:
     func as a placeholder for when salinity is a model variable.
     """
     return salinity
+
+
+def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
+    """
+    Convert an xarray Dataset's variables and their attributes into a pandas DataFrame.
+    Only attributes whose keys are present in the supplied list (selected_attrs) are included.
+
+    Parameters:
+    -----------
+        ds (xr.Dataset): The input xarray Dataset.
+        selected_attrs (list of str): A list of attribute keys to include (e.g., ['units', 'description']).
+
+    Returns:
+    ---------
+        pd.DataFrame: A DataFrame with a 'variable' column for the variable name and additional
+                      columns for each attribute in selected_attrs. If a variable does not have a given
+                      attribute, the value will be None.
+    """
+    rows = []
+    for var_name, var in ds.variables.items():
+        row = {"variable": var_name}
+        for key in selected_attrs:
+            row[key] = var.attrs.get(key, None)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def load_sequence_csvs(directory: str) -> dict[int, int]:
+    """load all csvs in a directory that include 'sequence' in the name
+
+    keys in the output dict are the first part of each filename (before the first underscore)
+
+    :param (str) directory: path to the directory containing sequence csvs
+    :return (dict[int, int]): dictionary of "Year" and "Quintile" as ints
+    """
+    csv_dict = {}
+    for file in os.listdir(directory):
+        if file.endswith(".csv") and "sequence" in file:
+            prefix = file.split("_")[0]
+            file_path = os.path.join(directory, file)
+            csv_dict[prefix] = pd.read_csv(file_path, header=1)
+            csv_dict[prefix] = csv_dict[prefix][["Quintile", "Water Year"]]
+
+    # concat dfs
+    df = pd.concat(
+        [csv_dict["dry"], csv_dict["moderate"], csv_dict["wet"]], axis=0
+    )
+    # convert to dict
+    df.index = df["Water Year"]
+    df.drop(columns="Water Year", inplace=True)
+    dict_out = df["Quintile"].to_dict()
+    return dict_out
+
+
+# def load_netcdf_variable_definitions(instance, filename: str) -> dict:
+#     with open(filename, "r") as f:
+#         raw_definitions = yaml.safe_load(f)
+
+#     def resolve_path(obj, path_str):
+#         # recursively get nested attributes
+#         for attr in path_str.split("."):
+#             obj = getattr(obj, attr)
+#         return obj
+
+#     variable_defs = {}
+#     for varname, props in raw_definitions.items():
+#         array_ref = resolve_path(instance, props["path"])
+#         dtype = getattr(np, props["dtype"])
+#         attrs = props["attrs"]
+#         variable_defs[varname] = [array_ref, dtype, attrs]
+
+#     return variable_defs

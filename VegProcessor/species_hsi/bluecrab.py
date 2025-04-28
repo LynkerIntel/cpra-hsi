@@ -15,7 +15,7 @@ class BlueCrabHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -45,8 +45,7 @@ class BlueCrabHSI:
             # TODO implement these variables/inputs in hsi.py
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
-            hydro_domain_480 = hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag
+            hydro_domain_480=hsi_instance.hydro_domain_480,
         )
 
     def __post_init__(self):
@@ -109,22 +108,28 @@ class BlueCrabHSI:
             self._logger.info(
                 "Mean annual temperature data not provided. Using ideal conditions of 17 degrees C."
             )
-            self.v1b_mean_annual_temperature = np.where(~np.isnan(self.template), 17, np.nan)
-
+            self.v1b_mean_annual_temperature = np.where(
+                ~np.isnan(self.template), 17, np.nan
+            )
 
         def get_CPUE_value(sal_m: float, wtemp_m: float) -> float:
-            """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m' 
+            """return column value for 'cpue_scaled' where 'sal_m' and 'wtemp_m'
             are equal to the inputs in the lookup table, returning 999.0 if not found
             """
-            # TODO check if we need to clamp the sal_m and wtemp_m values like the 
+            # TODO check if we need to clamp the sal_m and wtemp_m values like the
             # CPRA HSI code does (lines 294-295 in their HSI.py)
             sal_m = round(sal_m, 1)
             wtemp_m = round(wtemp_m, 1)
             sal_m_column: pd.Series = self.v1c_bluecrab_lookup_table["sal_m"]
-            wtemp_m_column: pd.Series = self.v1c_bluecrab_lookup_table["wtemp_m"]
+            wtemp_m_column: pd.Series = self.v1c_bluecrab_lookup_table[
+                "wtemp_m"
+            ]
 
             # rudimentary lookup code - could definitely be improved
-            if sal_m in sal_m_column.values and wtemp_m in wtemp_m_column.values:
+            if (
+                sal_m in sal_m_column.values
+                and wtemp_m in wtemp_m_column.values
+            ):
                 return self.v1c_bluecrab_lookup_table.loc[
                     (sal_m_column == sal_m) & (wtemp_m_column == wtemp_m),
                     "cpue_scaled",
@@ -139,9 +144,6 @@ class BlueCrabHSI:
         # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
-        if self.hydro_domain_flag:
-                si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
 
         return si_1
 
@@ -152,7 +154,6 @@ class BlueCrabHSI:
         # Create an array to store the results
         si_2 = self.template.copy()
 
-
         if self.v2_pct_emergent_vegetation is None:
             self._logger.info(
                 "Pct emergent vegetation data not provided. Setting index to 1."
@@ -162,22 +163,25 @@ class BlueCrabHSI:
         else:
             # condition 1
             mask_1 = self.v2_pct_emergent_vegetation < 25
-            si_2[mask_1] = (0.03 * self.v2_pct_emergent_vegetation[mask_1]) + 0.25
+            si_2[mask_1] = (
+                0.03 * self.v2_pct_emergent_vegetation[mask_1]
+            ) + 0.25
 
             # condition 2
-            mask_2 = (self.v2_pct_emergent_vegetation >= 25) & (self.v2_pct_emergent_vegetation <= 80)
+            mask_2 = (self.v2_pct_emergent_vegetation >= 25) & (
+                self.v2_pct_emergent_vegetation <= 80
+            )
             si_2[mask_2] = 1.0
 
             # condition 3
             mask_3 = self.v2_pct_emergent_vegetation > 80
-            si_2[mask_3] = 5.0 - (0.05 * self.v2_pct_emergent_vegetation[mask_3])
+            si_2[mask_3] = 5.0 - (
+                0.05 * self.v2_pct_emergent_vegetation[mask_3]
+            )
 
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-            
-            if self.hydro_domain_flag:
-                si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 

@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.12.6
   - gdal
+  - h5netcdf
   - appdirs
   - boto3
   - dash
@@ -35,3 +36,4 @@ dependencies:
   - h5netcdf
   - scipy
   - netcdf4
+  - scikit-image

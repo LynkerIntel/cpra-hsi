@@ -13,7 +13,7 @@ class GizzardShadHSI:
     Note: All input vars are two dimensional np.ndarray with x, y, dims. All suitability index math
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
+
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -56,8 +56,7 @@ class GizzardShadHSI:
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
             dem_480=hsi_instance.dem_480,
-            hydro_domain_480 = hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag
+            hydro_domain_480=hsi_instance.hydro_domain_480,
         )
 
     def __post_init__(self):
@@ -104,7 +103,9 @@ class GizzardShadHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.where(np.isnan(self.v7b_water_depth_spawning_season), np.nan, 999.0)
+        arr = np.where(
+            np.isnan(self.v7b_water_depth_spawning_season), np.nan, 999.0
+        )
         return arr
 
     def calculate_si_1(self) -> np.ndarray:
@@ -305,7 +306,7 @@ class GizzardShadHSI:
         # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         # if self.hydro_domain_flag:
         #         si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
 

@@ -14,7 +14,6 @@ class AlligatorHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_flag: bool  # If True, all HSI SI arrays are masked to
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
@@ -57,15 +56,20 @@ class AlligatorHSI:
         return cls(
             v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),
             v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
-            v3a_pct_swamp_bottom_hardwood=safe_divide(hsi_instance.pct_swamp_bottom_hardwood),
+            v3a_pct_swamp_bottom_hardwood=safe_divide(
+                hsi_instance.pct_swamp_bottom_hardwood
+            ),
             v3b_pct_fresh_marsh=safe_divide(hsi_instance.pct_fresh_marsh),
-            v3c_pct_intermediate_marsh=safe_divide(hsi_instance.pct_intermediate_marsh),
-            v3d_pct_brackish_marsh=safe_divide(hsi_instance.pct_brackish_marsh),
+            v3c_pct_intermediate_marsh=safe_divide(
+                hsi_instance.pct_intermediate_marsh
+            ),
+            v3d_pct_brackish_marsh=safe_divide(
+                hsi_instance.pct_brackish_marsh
+            ),
             v4_edge=hsi_instance.edge,
             v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            hydro_domain_flag=hsi_instance.hydro_domain_flag,
         )
 
     def __post_init__(self):
@@ -103,7 +107,9 @@ class AlligatorHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -115,7 +121,9 @@ class AlligatorHSI:
         si_1 = self.template.copy()
 
         if self.v1_pct_open_water is None:
-            self._logger.info("Pct open water data not provided. Setting index to 1.")
+            self._logger.info(
+                "Pct open water data not provided. Setting index to 1."
+            )
             si_1[~np.isnan(si_1)] = 1
 
         else:
@@ -124,7 +132,9 @@ class AlligatorHSI:
             si_1[mask_1] = (4.5 * self.v1_pct_open_water[mask_1]) + 0.1
 
             # condition 2
-            mask_2 = (self.v1_pct_open_water >= 0.2) & (self.v1_pct_open_water <= 0.4)
+            mask_2 = (self.v1_pct_open_water >= 0.2) & (
+                self.v1_pct_open_water <= 0.4
+            )
             si_1[mask_2] = 1
 
             # condition 3
@@ -163,13 +173,17 @@ class AlligatorHSI:
             mask_2 = (self.v2_water_depth_annual_mean >= -0.55) & (
                 self.v2_water_depth_annual_mean <= 0.15
             )
-            si_2[mask_2] = (2.25 * self.v2_water_depth_annual_mean[mask_2]) + 1.3375
+            si_2[mask_2] = (
+                2.25 * self.v2_water_depth_annual_mean[mask_2]
+            ) + 1.3375
 
             # condition 3 (AND)
             mask_3 = (self.v2_water_depth_annual_mean > -0.15) & (
                 self.v2_water_depth_annual_mean < 0.25
             )
-            si_2[mask_3] = (-2.25 * self.v2_water_depth_annual_mean[mask_3]) + 0.6625
+            si_2[mask_3] = (
+                -2.25 * self.v2_water_depth_annual_mean[mask_3]
+            ) + 0.6625
 
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
@@ -233,12 +247,16 @@ class AlligatorHSI:
         si_5 = self.template.copy()
 
         if self.v5_mean_annual_salinity is None:
-            self._logger.info("mean annual salinity data not provided. Setting index to 1.")
+            self._logger.info(
+                "mean annual salinity data not provided. Setting index to 1."
+            )
             # Replace all non-NaN values with 1
             si_5[~np.isnan(si_5)] = 1
 
         else:
-            mask_1 = (self.v5_mean_annual_salinity >= 0) & (self.v5_mean_annual_salinity <= 10)
+            mask_1 = (self.v5_mean_annual_salinity >= 0) & (
+                self.v5_mean_annual_salinity <= 10
+            )
 
             si_5[mask_1] = (-0.1 * self.v5_mean_annual_salinity[mask_1]) + 1
 
@@ -274,7 +292,9 @@ class AlligatorHSI:
                 )
 
         # Combine individual suitability indices
-        hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** (1 / 5)
+        hsi = (self.si_1 * self.si_2 * self.si_3 * self.si_4 * self.si_5) ** (
+            1 / 5
+        )
 
         # Check the final HSI array for invalid values
         invalid_values_hsi = (hsi < 0) | (hsi > 1)

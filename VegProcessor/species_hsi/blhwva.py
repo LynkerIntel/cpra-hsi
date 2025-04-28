@@ -153,45 +153,38 @@ class BottomlandHardwoodHSI:
 
             # Note: equations use % values not decimals
 
-            # assign SI = 0 when there is no overstory canopy
-            no_overstory_mask = self.v1a_pct_overstory == 0
-            si_1[no_overstory_mask] = 0
-
-            # apply HSI class only where overstory canopy exists
-            has_overstory_mask = self.v1a_pct_overstory > 0
-
             # class 1
             mask_1 = (
                 (self.v1b_pct_overstory_w_mast < 25)
                 | ((self.v1c_pct_overstory_w_soft_mast > 50) & (self.v1d_pct_overstory_w_hard_mast == 0))
             )
-            si_1[mask_1 & has_overstory_mask] = 0.2
+            si_1[mask_1] = 0.2
 
             # class 2
             mask_2 = (self.v1b_pct_overstory_w_mast >= 25) & (
                 self.v1b_pct_overstory_w_mast <= 50) & (
                     self.v1d_pct_overstory_w_hard_mast < 10
                 )
-            si_1[mask_2 & has_overstory_mask] = 0.4
+            si_1[mask_2] = 0.4
 
             # class 3
             mask_3 = (self.v1b_pct_overstory_w_mast >= 25) & (
                 self.v1b_pct_overstory_w_mast <= 50) & (
                     self.v1d_pct_overstory_w_hard_mast >= 10
                 )
-            si_1[mask_3 & has_overstory_mask] = 0.6
+            si_1[mask_3] = 0.6
 
             # class 4
             mask_4 = (self.v1b_pct_overstory_w_mast > 50) & (
                 self.v1d_pct_overstory_w_hard_mast < 20
                 )
-            si_1[mask_4 & has_overstory_mask] = 0.8
+            si_1[mask_4] = 0.8
 
             # class 5
             mask_5 = (self.v1b_pct_overstory_w_mast > 50) & (
                 self.v1d_pct_overstory_w_hard_mast >= 20
                 )
-            si_1[mask_5 & has_overstory_mask] = 1
+            si_1[mask_5] = 1
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

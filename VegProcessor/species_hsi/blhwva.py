@@ -20,10 +20,9 @@ class BottomlandHardwoodHSI:
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
 
-    v1a_pct_overstory: np.ndarray = None
-    v1b_pct_overstory_w_mast: np.ndarray = None
-    v1c_pct_overstory_w_soft_mast: np.ndarray = None
-    v1d_pct_overstory_w_hard_mast: np.ndarray = None
+    v1a_pct_overstory_w_mast: np.ndarray = None
+    v1b_pct_overstory_w_soft_mast: np.ndarray = None
+    v1c_pct_overstory_w_hard_mast: np.ndarray = None
     v2_stand_maturity: np.ndarray = None
     v3a_pct_understory: np.ndarray = None
     v3b_pct_midstory: np.ndarray = None
@@ -56,10 +55,9 @@ class BottomlandHardwoodHSI:
             return array / divisor if array is not None else None
 
         return cls(
-            v1a_pct_overstory=safe_divide(hsi_instance.pct_overstory),
-            v1b_pct_overstory_w_mast=safe_divide(hsi_instance.pct_overstory_w_mast),
-            v1c_pct_overstory_w_soft_mast=safe_divide(hsi_instance.pct_overstory_w_soft_mast),
-            v1d_pct_overstory_w_hard_mast=safe_divide(hsi_instance.pct_overstory_w_hard_mast),
+            v1a_pct_overstory_w_mast=safe_divide(hsi_instance.pct_overstory_w_mast),
+            v1b_pct_overstory_w_soft_mast=safe_divide(hsi_instance.pct_overstory_w_soft_mast),
+            v1c_pct_overstory_w_hard_mast=safe_divide(hsi_instance.pct_overstory_w_hard_mast),
             v2_stand_maturity=hsi_instance.stand_maturity,
             v3a_pct_understory=safe_divide(hsi_instance.pct_understory),
             v3b_pct_midstory=safe_divide(hsi_instance.pct_midstory),
@@ -147,34 +145,34 @@ class BottomlandHardwoodHSI:
 
             # class 1
             mask_1 = (
-                (self.v1b_pct_overstory_w_mast < 25)
-                | ((self.v1c_pct_overstory_w_soft_mast > 50) & (self.v1d_pct_overstory_w_hard_mast == 0))
+                (self.v1a_pct_overstory_w_mast < 25)
+                | ((self.v1b_pct_overstory_w_soft_mast > 50) & (self.v1c_pct_overstory_w_hard_mast == 0))
             )
             si_1[mask_1] = 0.2
 
             # class 2
-            mask_2 = (self.v1b_pct_overstory_w_mast >= 25) & (
-                self.v1b_pct_overstory_w_mast <= 50) & (
-                    self.v1d_pct_overstory_w_hard_mast < 10
+            mask_2 = (self.v1a_pct_overstory_w_mast >= 25) & (
+                self.v1a_pct_overstory_w_mast <= 50) & (
+                    self.v1c_pct_overstory_w_hard_mast < 10
                 )
             si_1[mask_2] = 0.4
 
             # class 3
-            mask_3 = (self.v1b_pct_overstory_w_mast >= 25) & (
-                self.v1b_pct_overstory_w_mast <= 50) & (
-                    self.v1d_pct_overstory_w_hard_mast >= 10
+            mask_3 = (self.v1a_pct_overstory_w_mast >= 25) & (
+                self.v1a_pct_overstory_w_mast <= 50) & (
+                    self.v1c_pct_overstory_w_hard_mast >= 10
                 )
             si_1[mask_3] = 0.6
 
             # class 4
-            mask_4 = (self.v1b_pct_overstory_w_mast > 50) & (
-                self.v1d_pct_overstory_w_hard_mast < 20
+            mask_4 = (self.v1a_pct_overstory_w_mast > 50) & (
+                self.v1c_pct_overstory_w_hard_mast < 20
                 )
             si_1[mask_4] = 0.8
 
             # class 5
-            mask_5 = (self.v1b_pct_overstory_w_mast > 50) & (
-                self.v1d_pct_overstory_w_hard_mast >= 20
+            mask_5 = (self.v1a_pct_overstory_w_mast > 50) & (
+                self.v1c_pct_overstory_w_hard_mast >= 20
                 )
             si_1[mask_5] = 1
 

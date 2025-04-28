@@ -19,6 +19,7 @@ class BottomlandHardwoodHSI:
     # veg type domain, which is a greater area than hydro domain.
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
+    blh_cover: np.ndarray = None
 
     v1a_pct_overstory_w_mast: np.ndarray = None
     v1b_pct_overstory_w_soft_mast: np.ndarray = None
@@ -68,6 +69,7 @@ class BottomlandHardwoodHSI:
             v7_disturbance=hsi_instance.disturbance, #set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
+            blh_cover=safe_divide(hsi_instance.blh_cover)
         )
 
     def __post_init__(self):
@@ -133,9 +135,11 @@ class BottomlandHardwoodHSI:
         self._logger.info("Running SI 1")
         si_1 = self.template.copy()
 
-        if self.v1a_pct_overstory_w_mast is None:
+        if (self.v1a_pct_overstory_w_mast is None or
+            self.v1b_pct_overstory_w_soft_mast is None or
+            self.v1c_pct_overstory_w_hard_mast is None):
             self._logger.info(
-                "Overstory cover with mast is not provided. Setting index to 1."
+                "Overstory with mast values not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
@@ -175,6 +179,12 @@ class BottomlandHardwoodHSI:
                 self.v1c_pct_overstory_w_hard_mast >= 20
                 )
             si_1[mask_5] = 1
+
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_1[blh_mask] = 0
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -236,6 +246,12 @@ class BottomlandHardwoodHSI:
             #condition 8
             mask_8 = self.v2_stand_maturity > 50
             si_2[mask_8] = 1
+
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_2[blh_mask] = 0
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -312,6 +328,12 @@ class BottomlandHardwoodHSI:
         si_3 = self.template.copy()
         si_3 = ((u_si + m_si) / 2 )
 
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_3[blh_mask] = 0
+
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
         
@@ -378,6 +400,12 @@ class BottomlandHardwoodHSI:
             )
             si_4[mask_8] = 0.1
 
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_4[blh_mask] = 0
+
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -424,6 +452,12 @@ class BottomlandHardwoodHSI:
             mask_5 = (self.v5_size_forested_area > 500)
             si_5[mask_5] = 1
 
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_5[blh_mask] = 0
+
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
         
@@ -446,6 +480,12 @@ class BottomlandHardwoodHSI:
                 "No logic for bottomland hardwood v6 exists. Either use ideal (set array None) or add logic."
             )
 
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_6[blh_mask] = 0
+
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -467,6 +507,12 @@ class BottomlandHardwoodHSI:
             raise NotImplementedError(
                 "No logic for bottomland hardwood v7 exists. Either use ideal (set array None) or add logic."
             )
+
+        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
+        # Areas with less than 40% BLH cover are given an SI = 0. 
+        if self.blh_cover is not None:
+            blh_mask = (self.blh_cover < 40) & (~np.isnan(self.blh_cover))
+            si_7[blh_mask] = 0
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

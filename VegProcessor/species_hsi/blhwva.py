@@ -14,9 +14,6 @@ class BottomlandHardwoodHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_flag: bool # If True, all HSI SI arrays are masked to
-    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
-    # veg type domain, which is a greater area than hydro domain.
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
     pct_blh_cover: np.ndarray = None
@@ -124,7 +121,8 @@ class BottomlandHardwoodHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             ch.setFormatter(formatter)
 
             # Add the handler to the logger
@@ -182,7 +180,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_1[blh_mask] = 0
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
@@ -216,25 +217,33 @@ class BottomlandHardwoodHSI:
             mask_3 = (self.v2_stand_maturity > 3) & (
                 self.v2_stand_maturity <= 7
             )
-            si_2[mask_3] = (0.01 * self.v2_stand_maturity[mask_3]) - 0.02
+            si_2[mask_3] = (
+                0.01 * self.v2_stand_maturity[mask_3]
+            ) - 0.02
 
             #condition 4
             mask_4 = (self.v2_stand_maturity > 7) & (
                 self.v2_stand_maturity <= 10
             )
-            si_2[mask_4] = (0.017 * self.v2_stand_maturity[mask_4]) - 0.07
+            si_2[mask_4] = (
+                0.017 * self.v2_stand_maturity[mask_4]
+            ) - 0.07
 
             #condition 5
             mask_5 = (self.v2_stand_maturity > 10) & (
                 self.v2_stand_maturity <= 20
             )
-            si_2[mask_5] = (0.02 * self.v2_stand_maturity[mask_5]) - 0.1
+            si_2[mask_5] = (
+                0.02 * self.v2_stand_maturity[mask_5]
+            ) - 0.1
 
             #condition 6
             mask_6 = (self.v2_stand_maturity > 20) & (
                 self.v2_stand_maturity <= 30
             )
-            si_2[mask_6] = (0.03 * self.v2_stand_maturity[mask_6]) - 0.3
+            si_2[mask_6] = (
+                0.03 * self.v2_stand_maturity[mask_6]
+            ) - 0.3
 
             #condition 7
             mask_7 = (self.v2_stand_maturity > 30) & (
@@ -248,7 +257,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_2[blh_mask] = 0
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
@@ -278,7 +290,9 @@ class BottomlandHardwoodHSI:
             mask_u2 = (self.v3a_pct_understory > 0) & (
                 self.v3a_pct_understory <= 30
             )
-            u_si[mask_u2] = (0.03 * self.v3a_pct_understory[mask_u2]) + 0.1
+            u_si[mask_u2] = (
+                0.03 * self.v3a_pct_understory[mask_u2]
+            ) + 0.1
 
             #understory condition 3
             mask_u3 = (self.v3a_pct_understory > 30) & (
@@ -288,7 +302,9 @@ class BottomlandHardwoodHSI:
 
             #understory condition 4
             mask_u4 = self.v3a_pct_understory > 60
-            u_si[mask_u4] = (-0.01 * self.v3a_pct_understory[mask_u4]) + 1.6
+            u_si[mask_u4] = (
+                -0.01 * self.v3a_pct_understory[mask_u4]
+            ) + 1.6
 
         #Midstory SI
         self._logger.info("Running Midstory SI")
@@ -309,7 +325,9 @@ class BottomlandHardwoodHSI:
             mask_m2 = (self.v3b_pct_midstory > 0) & (
                 self.v3b_pct_midstory <= 20
             )
-            m_si[mask_m2] = (0.045 * self.v3b_pct_midstory[mask_m2]) + 0.1
+            m_si[mask_m2] = (
+                0.045 * self.v3b_pct_midstory[mask_m2]
+            ) + 0.1
 
             #midstory condition 3
             mask_m3 = (self.v3b_pct_midstory > 20) & (
@@ -319,7 +337,9 @@ class BottomlandHardwoodHSI:
 
             #midstory condition 4
             mask_m4 = self.v3b_pct_midstory > 50
-            m_si[mask_m4] = (-0.01 * self.v3b_pct_midstory[mask_m4]) + 1.5
+            m_si[mask_m4] = (
+                -0.01 * self.v3b_pct_midstory[mask_m4]
+            ) + 1.5
 
         #combined SI 3
         self._logger.info("Running SI 3")
@@ -328,7 +348,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_3[blh_mask] = 0
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
@@ -399,7 +422,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_4[blh_mask] = 0
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
@@ -450,7 +476,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_5[blh_mask] = 0
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
@@ -477,7 +506,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_6[blh_mask] = 0
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
@@ -504,7 +536,10 @@ class BottomlandHardwoodHSI:
 
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
+            blh_mask = (
+                (self.pct_blh_cover < 40) &
+                (~np.isnan(self.pct_blh_cover))
+            )
             si_7[blh_mask] = 0
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):

@@ -180,7 +180,6 @@ class BottomlandHardwoodHSI:
                 )
             si_1[mask_5] = 1
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -247,7 +246,6 @@ class BottomlandHardwoodHSI:
             mask_8 = self.v2_stand_maturity > 50
             si_2[mask_8] = 1
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -328,7 +326,6 @@ class BottomlandHardwoodHSI:
         si_3 = self.template.copy()
         si_3 = ((u_si + m_si) / 2 )
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -400,7 +397,6 @@ class BottomlandHardwoodHSI:
             )
             si_4[mask_8] = 0.1
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -452,7 +448,6 @@ class BottomlandHardwoodHSI:
             mask_5 = (self.v5_size_forested_area > 500)
             si_5[mask_5] = 1
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -480,7 +475,6 @@ class BottomlandHardwoodHSI:
                 "No logic for bottomland hardwood v6 exists. Either use ideal (set array None) or add logic."
             )
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))
@@ -508,7 +502,6 @@ class BottomlandHardwoodHSI:
                 "No logic for bottomland hardwood v7 exists. Either use ideal (set array None) or add logic."
             )
 
-        # To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) has to be present.
         # Areas with less than 40% BLH cover are given an SI = 0. 
         if self.pct_blh_cover is not None:
             blh_mask = (self.pct_blh_cover < 40) & (~np.isnan(self.pct_blh_cover))

@@ -149,7 +149,7 @@ class HSI(vt.VegTransition):
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
-        self._calculate_pct_cover_static()
+        # self._calculate_pct_cover_static()
 
         # Dynamic Variables
         self.wse = None
@@ -290,6 +290,7 @@ class HSI(vt.VegTransition):
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
+        self.connectivity_test = self._calculate_connectivity()
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -327,9 +328,9 @@ class HSI(vt.VegTransition):
             "Running model for: %s timesteps", len(simulation_period)
         )
 
-        # run expensive static var creation (other static vars
-        # are created in _init_)
-        self.pct_human_influence = self._calculate_pct_area_influence()
+        # static variable calculations are outside of
+        # simulation loop
+        self._calculate_static_vars()
 
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
@@ -435,7 +436,7 @@ class HSI(vt.VegTransition):
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
 
-    def _calculate_pct_cover_static(self):
+    def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
         This method is called during initialization, for static variables that
         vary spatially but not temporally.
@@ -458,6 +459,9 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         ).to_numpy()
+
+        self._logger.info("Calculating static var: pct area influence")
+        self.pct_human_influence = self._calculate_pct_area_influence()
 
     @staticmethod
     def _calculate_near_landtype(
@@ -758,9 +762,19 @@ class HSI(vt.VegTransition):
         forested_types = [15, 16, 17, 18]
         forest_binary = np.isin(self.veg_type, forested_types)
 
-        contiguous = utils.get_contiguous_regions()
-
-        return NotImplementedError
+        contiguous_5 = utils.get_contiguous_regions(
+            binary_arr=forest_binary, size_threshold=5
+        )
+        contiguous_10 = utils.get_contiguous_regions(
+            binary_arr=forest_binary, size_threshold=10
+        )
+        contiguous_15 = utils.get_contiguous_regions(
+            binary_arr=forest_binary, size_threshold=20
+        )
+        contiguous_20 = utils.get_contiguous_regions(
+            binary_arr=forest_binary, size_threshold=30
+        )
+        return [contiguous_5, contiguous_10, contiguous_15, contiguous_20]
 
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.
@@ -1586,16 +1600,17 @@ class HSI(vt.VegTransition):
                     "description": "",
                 },
             ],
-            "forested_story_class": [
-                self.story_class,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
+            # TODO: only 480m output, this is 60m, and will fail
+            # "forested_story_class": [
+            #     self.story_class,
+            #     np.float32,
+            #     {
+            #         "grid_mapping": "crs",
+            #         "units": "",
+            #         "long_name": "",
+            #         "description": "",
+            #     },
+            # ],
         }
         # hsi_variables = {
         #     # alligator

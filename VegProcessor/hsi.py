@@ -461,7 +461,9 @@ class HSI(vt.VegTransition):
         ).to_numpy()
 
         self._logger.info("Calculating static var: pct area influence")
-        self.pct_human_influence = self._calculate_pct_area_influence()
+        self.pct_human_influence = self._calculate_pct_area_influence(
+            radius=self.testing_radius
+        )
 
     @staticmethod
     def _calculate_near_landtype(
@@ -759,20 +761,21 @@ class HSI(vt.VegTransition):
         """Calculate the size of contiguous forested areas in the domain, then
         bin into classed based on thresholds.
         """
+        self._logger.info("Calculating connectivity for forested types.")
         forested_types = [15, 16, 17, 18]
-        forest_binary = np.isin(self.veg_type, forested_types)
+        forest_bool = np.isin(self.veg_type, forested_types)
 
         contiguous_5 = utils.get_contiguous_regions(
-            binary_arr=forest_binary, size_threshold=5
+            boolean_arr=forest_bool, size_threshold=5
         )
         contiguous_10 = utils.get_contiguous_regions(
-            binary_arr=forest_binary, size_threshold=10
+            boolean_arr=forest_bool, size_threshold=10
         )
         contiguous_15 = utils.get_contiguous_regions(
-            binary_arr=forest_binary, size_threshold=20
+            boolean_arr=forest_bool, size_threshold=20
         )
         contiguous_20 = utils.get_contiguous_regions(
-            binary_arr=forest_binary, size_threshold=30
+            boolean_arr=forest_bool, size_threshold=30
         )
         return [contiguous_5, contiguous_10, contiguous_15, contiguous_20]
 

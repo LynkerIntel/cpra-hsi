@@ -86,6 +86,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.testing_radius = self.config["simulation"].get("testing_radius")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -502,7 +503,7 @@ class HSI(vt.VegTransition):
         else:
             return istype_expanded & nottype_bool
 
-    def _calculate_pct_area_influence(self):
+    def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
         radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
         residences.
@@ -524,12 +525,19 @@ class HSI(vt.VegTransition):
         """
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
+        radius_towns = radius or 95
+        radius_croplands = radius or 59
+
+        if radius:
+            self._logger.warning(
+                "Running area of influence with radius: %s.", radius
+            )
 
         self._logger.info("Calculating static var: human influence - towns.")
         near_towns = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
             landtype_true=towns,
-            radius=95,
+            radius=radius_towns,
             include_source=True,
         )
         self._logger.info(
@@ -538,7 +546,7 @@ class HSI(vt.VegTransition):
         near_croplands = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
             landtype_true=croplands,
-            radius=58,
+            radius=radius_croplands,
             include_source=True,
         )
 
@@ -742,6 +750,17 @@ class HSI(vt.VegTransition):
         # other
         type_mask = np.isin(self.veg_type, understory_types)
         self.story_class[type_mask] = 1
+
+    def _calculate_connectivity(self):
+        """Calculate the size of contiguous forested areas in the domain, then
+        bin into classed based on thresholds.
+        """
+        forested_types = [15, 16, 17, 18]
+        forest_binary = np.isin(self.veg_type, forested_types)
+
+        contiguous = utils.get_contiguous_regions()
+
+        return NotImplementedError
 
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.
@@ -1559,6 +1578,16 @@ class HSI(vt.VegTransition):
             ],
             "pct_human_influence": [
                 self.pct_human_influence,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "forested_story_class": [
+                self.story_class,
                 np.float32,
                 {
                     "grid_mapping": "crs",

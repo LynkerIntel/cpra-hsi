@@ -1,5 +1,7 @@
 import xarray as xr
 import pathlib
+from scipy import ndimage
+
 import numpy as np
 import pandas as pd
 from xrspatial.zonal import crosstab
@@ -600,6 +602,29 @@ def generate_filename(
 
     # Combine with base path if provided
     return Path(base_path) / filename if base_path else Path(filename)
+
+
+def get_contiguous_regions(binary_arr: np.ndarray) -> np.ndarray:
+    """Convenience function for calculating if a pixel is a
+    member of a contiguous region of vegetation types.
+    """
+    # step 1: label connected components
+    structure = np.ones((3, 3), dtype=int)  # use 8-connectivity
+    labeled_array, num_features = ndimage.label(
+        binary_arr, structure=structure
+    )
+
+    # step 2: count pixels per label
+    label_sizes = np.bincount(labeled_array.ravel())
+
+    # step 3: find large enough labels (excluding background label 0)
+    size_threshold = 5
+    large_labels = np.where(label_sizes[1:] >= size_threshold)[0] + 1
+
+    # step 4: mask pixels belonging to large enough regions
+    final_mask = np.isin(labeled_array, large_labels)
+
+    return final_mask
 
 
 # def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:

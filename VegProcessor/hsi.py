@@ -220,6 +220,8 @@ class HSI(vt.VegTransition):
         self.num_hard_mast_species = None  # always ideal
         self.pct_near_forest = None
 
+        self.forested_connectivity_cat = None
+
         self._create_output_file(self.file_params)
 
     def step(self, date: pd.DatetimeTZDtype):

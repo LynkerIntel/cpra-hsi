@@ -46,19 +46,13 @@ class BottomlandHardwoodHSI:
     def from_hsi(cls, hsi_instance):
         """Create Bottomland Hardwood (BLH) HSI instance from an HSI instance."""
 
-        def safe_divide(array: np.ndarray, divisor: int = 100) -> np.ndarray:
-            """Helper function to divide arrays when decimal values are required
-            by the SI logic. In the case of None (no array) it is preserved and
-            passed to SI methods."""
-            return array / divisor if array is not None else None
-
         return cls(
-            v1a_pct_overstory_w_mast=safe_divide(hsi_instance.pct_overstory_w_mast),
-            v1b_pct_overstory_w_soft_mast=safe_divide(hsi_instance.pct_overstory_w_soft_mast),
-            v1c_pct_overstory_w_hard_mast=safe_divide(hsi_instance.pct_overstory_w_hard_mast),
+            v1a_pct_overstory_w_mast=(hsi_instance.pct_overstory_w_mast),
+            v1b_pct_overstory_w_soft_mast=(hsi_instance.pct_overstory_w_soft_mast),
+            v1c_pct_overstory_w_hard_mast=(hsi_instance.pct_overstory_w_hard_mast),
             v2_stand_maturity=hsi_instance.stand_maturity,
-            v3a_pct_understory=safe_divide(hsi_instance.pct_understory),
-            v3b_pct_midstory=safe_divide(hsi_instance.pct_midstory),
+            v3a_pct_understory=(hsi_instance.pct_understory),
+            v3b_pct_midstory=(hsi_instance.pct_midstory),
             v4a_flood_duration=hsi_instance.flood_duration, 
             v4b_flow_exchange=hsi_instance.flow_exchange,
             v5_size_forested_area=hsi_instance.size_forested_area, 
@@ -66,7 +60,7 @@ class BottomlandHardwoodHSI:
             v7_disturbance=hsi_instance.disturbance, #set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_blh_cover=safe_divide(hsi_instance.pct_blh_cover)
+            pct_blh_cover=(hsi_instance.pct_blh_cover)
         )
 
     def __post_init__(self):
@@ -142,9 +136,6 @@ class BottomlandHardwoodHSI:
             si_1[~np.isnan(si_1)] = 1
 
         else: 
-
-            # Note: equations use % values not decimals
-
             # class 1
             mask_1 = (
                 (self.v1a_pct_overstory_w_mast < 25)
@@ -281,7 +272,6 @@ class BottomlandHardwoodHSI:
             u_si[~np.isnan(u_si)] = 1
 
         else:
-            # Note: equations use % values not decimals
             #understory condition 1
             mask_u1 = self.v3a_pct_understory == 0
             u_si[mask_u1] = 0.1
@@ -316,7 +306,6 @@ class BottomlandHardwoodHSI:
             m_si[~np.isnan(m_si)] = 1
 
         else:
-            # Note: equations use % values not decimals
             # midstory condition 1
             mask_m1 = self.v3b_pct_midstory == 0
             m_si[mask_m1] = 0.1
@@ -445,7 +434,7 @@ class BottomlandHardwoodHSI:
             si_5[~np.isnan(si_5)] = 1
 
         else: 
-            # Note: equations use % values not decimals
+
             # condition 1 for class 1
             mask_1 = (self.v5_size_forested_area >= 0) & (
                 self.v5_size_forested_area <= 5

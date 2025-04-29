@@ -604,9 +604,23 @@ def generate_filename(
     return Path(base_path) / filename if base_path else Path(filename)
 
 
-def get_contiguous_regions(binary_arr: np.ndarray) -> np.ndarray:
+def get_contiguous_regions(
+    binary_arr: np.ndarray, size_threshold: int
+) -> np.ndarray:
     """Convenience function for calculating if a pixel is a
     member of a contiguous region of vegetation types.
+
+    Parameters
+    ------------
+    binary_arr : np.ndarray
+        Binary arr where 1 is the veg type to check for connectivity.
+
+    size_threshold : int
+        Number of connected pixels to consider a passing group size.
+
+    Returns
+    --------
+    pixels belonging to large enough regions: np.ndarray
     """
     # step 1: label connected components
     structure = np.ones((3, 3), dtype=int)  # use 8-connectivity
@@ -618,7 +632,6 @@ def get_contiguous_regions(binary_arr: np.ndarray) -> np.ndarray:
     label_sizes = np.bincount(labeled_array.ravel())
 
     # step 3: find large enough labels (excluding background label 0)
-    size_threshold = 5
     large_labels = np.where(label_sizes[1:] >= size_threshold)[0] + 1
 
     # step 4: mask pixels belonging to large enough regions

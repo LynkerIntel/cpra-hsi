@@ -14,6 +14,7 @@ from datetime import datetime
 from rasterio.enums import Resampling
 from scipy.ndimage import binary_dilation
 from skimage.morphology import disk
+from scipy.ndimage import label
 
 # import veg_logic
 import hydro_logic
@@ -759,25 +760,48 @@ class HSI(vt.VegTransition):
 
     def _calculate_connectivity(self):
         """Calculate the size of contiguous forested areas in the domain, then
-        bin into classed based on thresholds.
+        bin into classed based on thresholds. This method uses 4-connectivity by default, but
+        can be adapted to 8-connectivity.
+
+        Size is determined by 60m pixel area of 3,600m^2. Where:
+
+        Category 1: < 5 acres = < 6 pixels
+        Category 2: < 20 acres = < 23 pixels
+        Category 3: < 100 acres = < 113 pixels
+        Category 4: < 500 acres = < 562 pixels
+        Category 5: > 500 acres = > 562 pixels
         """
         self._logger.info("Calculating connectivity for forested types.")
         forested_types = [15, 16, 17, 18]
         forest_bool = np.isin(self.veg_type, forested_types)
 
-        contiguous_5 = utils.get_contiguous_regions(
-            boolean_arr=forest_bool, size_threshold=5
+        # label all contiguous forest patches once
+        labeled_array, num_features = label(forest_bool)
+
+        # count pixels in each labeled region
+        region_sizes = np.bincount(labeled_array.ravel())
+
+        # create a new array assigning a "connectivity category" to each pixel
+        connectivity_category = np.zeros_like(labeled_array)
+
+        # define the bins
+        for region_id, size in enumerate(region_sizes):
+            if region_id == 0:
+                continue  # skip background
+            if size <= 6:
+                connectivity_category[labeled_array == region_id] = 1
+            elif size <= 23:
+                connectivity_category[labeled_array == region_id] = 2
+            elif size <= 113:
+                connectivity_category[labeled_array == region_id] = 3
+            elif size <= 562:
+                connectivity_category[labeled_array == region_id] = 4
+            else:  # very large patches
+                connectivity_category[labeled_array == region_id] = 5
+
+        self.forested_connectivity_cat = utils.reduce_arr_by_mode(
+            connectivity_category
         )
-        contiguous_10 = utils.get_contiguous_regions(
-            boolean_arr=forest_bool, size_threshold=10
-        )
-        contiguous_15 = utils.get_contiguous_regions(
-            boolean_arr=forest_bool, size_threshold=20
-        )
-        contiguous_20 = utils.get_contiguous_regions(
-            boolean_arr=forest_bool, size_threshold=30
-        )
-        return [contiguous_5, contiguous_10, contiguous_15, contiguous_20]
 
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.

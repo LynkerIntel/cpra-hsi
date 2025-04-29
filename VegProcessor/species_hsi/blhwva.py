@@ -543,10 +543,8 @@ class BottomlandHardwoodHSI:
         # condition 1 (tree age < 7)
         mask_1 = self.v2_stand_maturity < 7
         hsi[mask_1] = ((self.si_2[mask_1] ** 4) * 
-                       (self.si_4[mask_1] ** 2) *
-                       (self.si_6[mask_1]) * 
-                       (self.si_7[mask_1])
-        ) ** (1 / 8)
+                       (self.si_4[mask_1] ** 2)
+        ) ** (1 / 6)
     
         # condition 2 (tree age >= 7 and v3_understory/midstory data is available)
         mask_2 = self.v2_stand_maturity >= 7
@@ -554,10 +552,8 @@ class BottomlandHardwoodHSI:
                        (self.si_2[mask_2] ** 4) *
                        (self.si_3[mask_2] ** 2) *
                        (self.si_4[mask_2] ** 2) *
-                       (self.si_5[mask_2]) * 
-                       (self.si_6[mask_2]) * 
-                       (self.si_7[mask_2])
-        ) ** (1 / 15)
+                       (self.si_5[mask_2])
+        ) ** (1 / 13)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

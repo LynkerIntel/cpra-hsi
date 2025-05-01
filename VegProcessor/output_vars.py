@@ -749,3 +749,145 @@ def get_hsi_variables(hsi):
             },
         ],
     }
+
+
+def get_veg_variables(veg):
+    """
+    returns a dictionary where each key is a string representing a variable name (str),
+    and each value is a list with the following structure:
+
+    - data (numpy.ndarray or a similar object, typically retrieved as an attribute
+        from the veg model instance)
+    - dtype (numpy data type, e.g., np.float32) used when writing the variable to a
+        NetCDF file
+    - metadata (dict[str, str]) containing NetCDF attribute metadata, including keys such as:
+        - "grid_mapping": typically set to "crs"
+        - "units": string representing the measurement units (e.g., "meters", "%", or an
+            empty string if unitless)
+        - "long_name": human-readable name of the variable
+        - "description": optional extended description of the variable
+    """
+    return {
+        "veg_type": [
+            veg.veg_type,
+            np.float32,
+            {
+                "grid_mapping": "crs",  # Link CRS variable
+                "units": "unitless",
+                "long_name": "veg type",
+            },
+        ],
+        "maturity": [
+            veg.maturity,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "years",
+                "long_name": "forested vegetation age",
+            },
+        ],
+        # QC variables below
+        "qc_annual_mean_salinity": [
+            veg.qc_annual_mean_salinity,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "ppt",
+                "long_name": "mean annual salinity",
+            },
+        ],
+        "qc_annual_inundation_depth": [
+            veg.qc_annual_inundation_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "annual inundation depth",
+            },
+        ],
+        "qc_annual_inundation_duration": [
+            veg.qc_annual_inundation_duration,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "%",
+                "long_name": "annual inundation duration",
+                "description": "Percentage of time flooded over the year",
+            },
+        ],
+        "qc_growing_season_depth": [
+            veg.qc_growing_season_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "growing season depth",
+                "description": (
+                    "Average water-depth during the period from April 1 through September 30"
+                ),
+            },
+        ],
+        "qc_growing_season_inundation": [
+            veg.qc_growing_season_inundation,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "%",
+                "long_name": "growing season inundation",
+                "description": (
+                    "Percentage of time flooded during the period from April 1 through September 30"
+                ),
+            },
+        ],
+        "qc_tree_establishment_bool": [
+            veg.qc_tree_establishment_bool,
+            bool,
+            {
+                "grid_mapping": "crs",
+                "units": "unitless",
+                "long_name": "tree establishment (true or false)",
+                "description": "Areas where establishment condition is met",
+            },
+        ],
+        # Seasonal water depth QC variables
+        "qc_march_water_depth": [
+            veg.qc_march_water_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "march water depth",
+                "description": "Depth in m for the month of march.",
+            },
+        ],
+        "qc_april_water_depth": [
+            veg.qc_april_water_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "april water depth",
+                "description": "Depth in m for the month of april.",
+            },
+        ],
+        "qc_may_water_depth": [
+            veg.qc_may_water_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "may water depth",
+                "description": "Depth in m for the month of may.",
+            },
+        ],
+        "qc_june_water_depth": [
+            veg.qc_june_water_depth,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "meters",
+                "long_name": "june water depth",
+                "description": "Depth in m for the month of june.",
+            },
+        ],
+    }

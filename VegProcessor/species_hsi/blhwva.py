@@ -25,7 +25,7 @@ class BottomlandHardwoodHSI:
     v3a_pct_understory: np.ndarray = None
     v3b_pct_midstory: np.ndarray = None
     v4a_flood_duration: np.ndarray = None
-    v4b_flow_exchange:np.ndarray = None
+    v4b_flow_exchange: np.ndarray = None
     v5_size_forested_area: np.ndarray = None
     v6_suit_trav_surr_lu: np.ndarray = None
     v7_disturbance: np.ndarray = None
@@ -47,20 +47,20 @@ class BottomlandHardwoodHSI:
         """Create Bottomland Hardwood (BLH) HSI instance from an HSI instance."""
 
         return cls(
-            v1a_pct_overstory_w_mast=(hsi_instance.pct_overstory_w_mast),
-            v1b_pct_overstory_w_soft_mast=(hsi_instance.pct_overstory_w_soft_mast),
-            v1c_pct_overstory_w_hard_mast=(hsi_instance.pct_overstory_w_hard_mast),
+            v1a_pct_overstory_w_mast=hsi_instance.pct_overstory_w_mast,
+            v1b_pct_overstory_w_soft_mast=hsi_instance.pct_overstory_w_soft_mast,
+            v1c_pct_overstory_w_hard_mast=hsi_instance.pct_overstory_w_hard_mast,
             v2_stand_maturity=hsi_instance.stand_maturity,
-            v3a_pct_understory=(hsi_instance.pct_understory),
-            v3b_pct_midstory=(hsi_instance.pct_midstory),
-            v4a_flood_duration=hsi_instance.flood_duration, 
+            v3a_pct_understory=hsi_instance.pct_understory,
+            v3b_pct_midstory=hsi_instance.pct_midstory,
+            v4a_flood_duration=hsi_instance.flood_duration,
             v4b_flow_exchange=hsi_instance.flow_exchange,
-            v5_size_forested_area=hsi_instance.size_forested_area, 
-            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu, #set to ideal 
-            v7_disturbance=hsi_instance.disturbance, #set to ideal
+            v5_size_forested_area=hsi_instance.size_forested_area,
+            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
+            v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_blh_cover=(hsi_instance.pct_blh_cover)
+            pct_blh_cover=hsi_instance.pct_blh_cover,
         )
 
     def __post_init__(self):
@@ -115,7 +115,8 @@ class BottomlandHardwoodHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
             ch.setFormatter(formatter)
 
@@ -123,14 +124,13 @@ class BottomlandHardwoodHSI:
             self._logger.addHandler(ch)
 
     def blh_cover_mask(self, si_array: np.ndarray) -> np.ndarray:
-        """ To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5) 
-        has to be present. This applies a mask to each SI array where 
+        """To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5)
+        has to be present. This applies a mask to each SI array where
         the %BLH cover is < 40%. These areas are given an SI = 0.
         """
         if self.pct_blh_cover is not None:
-            blh_mask = (
-                (self.pct_blh_cover < 40) &
-                (~np.isnan(self.pct_blh_cover))
+            blh_mask = (self.pct_blh_cover < 40) & (
+                ~np.isnan(self.pct_blh_cover)
             )
             si_array[blh_mask] = 0
         return si_array
@@ -141,53 +141,48 @@ class BottomlandHardwoodHSI:
         si_1 = self.template.copy()
 
         if (
-            self.v1a_pct_overstory_w_mast is None or
-            self.v1b_pct_overstory_w_soft_mast is None or
-            self.v1c_pct_overstory_w_hard_mast is None
-            ):
+            self.v1a_pct_overstory_w_mast is None
+            or self.v1b_pct_overstory_w_soft_mast is None
+            or self.v1c_pct_overstory_w_hard_mast is None
+        ):
             self._logger.info(
                 "Overstory with mast values not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
-        else: 
+        else:
             # class 1
-            mask_1 = (
-                (self.v1a_pct_overstory_w_mast < 25) | 
-                (
-                    (self.v1b_pct_overstory_w_soft_mast > 50) & 
-                    (self.v1c_pct_overstory_w_hard_mast == 0)
-                )
+            mask_1 = (self.v1a_pct_overstory_w_mast < 25) | (
+                (self.v1b_pct_overstory_w_soft_mast > 50)
+                & (self.v1c_pct_overstory_w_hard_mast == 0)
             )
             si_1[mask_1] = 0.2
 
             # class 2
             mask_2 = (
-                (self.v1a_pct_overstory_w_mast >= 25) & 
-                (self.v1a_pct_overstory_w_mast <= 50) & 
-                (self.v1c_pct_overstory_w_hard_mast < 10)
+                (self.v1a_pct_overstory_w_mast >= 25)
+                & (self.v1a_pct_overstory_w_mast <= 50)
+                & (self.v1c_pct_overstory_w_hard_mast < 10)
             )
             si_1[mask_2] = 0.4
 
             # class 3
             mask_3 = (
-                (self.v1a_pct_overstory_w_mast >= 25) & 
-                (self.v1a_pct_overstory_w_mast <= 50) & 
-                (self.v1c_pct_overstory_w_hard_mast >= 10)
+                (self.v1a_pct_overstory_w_mast >= 25)
+                & (self.v1a_pct_overstory_w_mast <= 50)
+                & (self.v1c_pct_overstory_w_hard_mast >= 10)
             )
             si_1[mask_3] = 0.6
 
             # class 4
-            mask_4 = (
-                (self.v1a_pct_overstory_w_mast > 50) & 
-                (self.v1c_pct_overstory_w_hard_mast < 20)
+            mask_4 = (self.v1a_pct_overstory_w_mast > 50) & (
+                self.v1c_pct_overstory_w_hard_mast < 20
             )
             si_1[mask_4] = 0.8
 
             # class 5
-            mask_5 = (
-                (self.v1a_pct_overstory_w_mast > 50) & 
-                (self.v1c_pct_overstory_w_hard_mast >= 20)
+            mask_5 = (self.v1a_pct_overstory_w_mast > 50) & (
+                self.v1c_pct_overstory_w_hard_mast >= 20
             )
             si_1[mask_5] = 1
 
@@ -218,45 +213,37 @@ class BottomlandHardwoodHSI:
             mask_2 = (self.v2_stand_maturity > 0) & (
                 self.v2_stand_maturity <= 3
             )
-            si_2[mask_2] = (0.0033 * self.v2_stand_maturity[mask_2])
+            si_2[mask_2] = 0.0033 * self.v2_stand_maturity[mask_2]
 
             # condition 3
             mask_3 = (self.v2_stand_maturity > 3) & (
                 self.v2_stand_maturity <= 7
             )
-            si_2[mask_3] = (
-                0.01 * self.v2_stand_maturity[mask_3]
-            ) - 0.02
+            si_2[mask_3] = (0.01 * self.v2_stand_maturity[mask_3]) - 0.02
 
             # condition 4
             mask_4 = (self.v2_stand_maturity > 7) & (
                 self.v2_stand_maturity <= 10
             )
-            si_2[mask_4] = (
-                0.017 * self.v2_stand_maturity[mask_4]
-            ) - 0.07
+            si_2[mask_4] = (0.017 * self.v2_stand_maturity[mask_4]) - 0.07
 
             # condition 5
             mask_5 = (self.v2_stand_maturity > 10) & (
                 self.v2_stand_maturity <= 20
             )
-            si_2[mask_5] = (
-                0.02 * self.v2_stand_maturity[mask_5]
-            ) - 0.1
+            si_2[mask_5] = (0.02 * self.v2_stand_maturity[mask_5]) - 0.1
 
             # condition 6
             mask_6 = (self.v2_stand_maturity > 20) & (
                 self.v2_stand_maturity <= 30
             )
-            si_2[mask_6] = (
-                0.03 * self.v2_stand_maturity[mask_6]
-            ) - 0.3
+            si_2[mask_6] = (0.03 * self.v2_stand_maturity[mask_6]) - 0.3
 
             # condition 7
             mask_7 = (self.v2_stand_maturity > 30) & (
                 self.v2_stand_maturity <= 50
             )
-            si_2[mask_7] = (0.02 * self.v2_stand_maturity[mask_7])
+            si_2[mask_7] = 0.02 * self.v2_stand_maturity[mask_7]
 
             # condition 8
             mask_8 = self.v2_stand_maturity > 50
@@ -266,7 +253,7 @@ class BottomlandHardwoodHSI:
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
@@ -277,7 +264,8 @@ class BottomlandHardwoodHSI:
         u_si = self.template.copy()
 
         if self.v3a_pct_understory is None:
-            self._logger.info("Understory data not provided. Setting index to 1."
+            self._logger.info(
+                "Understory data not provided. Setting index to 1."
             )
             u_si[~np.isnan(u_si)] = 1
 
@@ -290,9 +278,7 @@ class BottomlandHardwoodHSI:
             mask_u2 = (self.v3a_pct_understory > 0) & (
                 self.v3a_pct_understory <= 30
             )
-            u_si[mask_u2] = (
-                0.03 * self.v3a_pct_understory[mask_u2]
-            ) + 0.1
+            u_si[mask_u2] = (0.03 * self.v3a_pct_understory[mask_u2]) + 0.1
 
             # understory condition 3
             mask_u3 = (self.v3a_pct_understory > 30) & (
@@ -302,16 +288,15 @@ class BottomlandHardwoodHSI:
 
             # understory condition 4
             mask_u4 = self.v3a_pct_understory > 60
-            u_si[mask_u4] = (
-                -0.01 * self.v3a_pct_understory[mask_u4]
-            ) + 1.6
+            u_si[mask_u4] = (-0.01 * self.v3a_pct_understory[mask_u4]) + 1.6
 
         # Midstory SI
         self._logger.info("Running Midstory SI")
         m_si = self.template.copy()
 
         if self.v3b_pct_midstory is None:
-            self._logger.info("Midstory data not provided. Setting index to 1."
+            self._logger.info(
+                "Midstory data not provided. Setting index to 1."
             )
             m_si[~np.isnan(m_si)] = 1
 
@@ -324,9 +309,7 @@ class BottomlandHardwoodHSI:
             mask_m2 = (self.v3b_pct_midstory > 0) & (
                 self.v3b_pct_midstory <= 20
             )
-            m_si[mask_m2] = (
-                0.045 * self.v3b_pct_midstory[mask_m2]
-            ) + 0.1
+            m_si[mask_m2] = (0.045 * self.v3b_pct_midstory[mask_m2]) + 0.1
 
             # midstory condition 3
             mask_m3 = (self.v3b_pct_midstory > 20) & (
@@ -336,20 +319,18 @@ class BottomlandHardwoodHSI:
 
             # midstory condition 4
             mask_m4 = self.v3b_pct_midstory > 50
-            m_si[mask_m4] = (
-                -0.01 * self.v3b_pct_midstory[mask_m4]
-            ) + 1.5
+            m_si[mask_m4] = (-0.01 * self.v3b_pct_midstory[mask_m4]) + 1.5
 
         # Combined SI 3
         self._logger.info("Running SI 3")
         si_3 = self.template.copy()
-        si_3 = ((u_si + m_si) / 2 )
+        si_3 = (u_si + m_si) / 2
 
         si_3 = self.blh_cover_mask(si_3)
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
@@ -431,7 +412,7 @@ class BottomlandHardwoodHSI:
             )
             si_5[~np.isnan(si_5)] = 1
 
-        else: 
+        else:
 
             # condition 1 for class 1
             mask_1 = (self.v5_size_forested_area >= 0) & (
@@ -458,14 +439,14 @@ class BottomlandHardwoodHSI:
             si_5[mask_4] = 0.8
 
             # condition 5 for class 5
-            mask_5 = (self.v5_size_forested_area > 500)
+            mask_5 = self.v5_size_forested_area > 500
             si_5[mask_5] = 1
 
         si_5 = self.blh_cover_mask(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return self.clip_array(si_5)
 
     def calculate_si_6(self) -> np.ndarray:
@@ -516,7 +497,6 @@ class BottomlandHardwoodHSI:
 
         return self.clip_array(si_7)
 
-
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Bottomland Hardwood final HSI.")
@@ -542,17 +522,18 @@ class BottomlandHardwoodHSI:
         # Combine individual suitability indices
         # condition 1 (tree age < 7)
         mask_1 = self.v2_stand_maturity < 7
-        hsi[mask_1] = ((self.si_2[mask_1] ** 4) * 
-                       (self.si_4[mask_1] ** 2)
+        hsi[mask_1] = (
+            (self.si_2[mask_1] ** 4) * (self.si_4[mask_1] ** 2)
         ) ** (1 / 6)
-    
+
         # condition 2 (tree age >= 7 and v3_understory/midstory data is available)
         mask_2 = self.v2_stand_maturity >= 7
-        hsi[mask_2] = ((self.si_1[mask_2] ** 4) * 
-                       (self.si_2[mask_2] ** 4) *
-                       (self.si_3[mask_2] ** 2) *
-                       (self.si_4[mask_2] ** 2) *
-                       (self.si_5[mask_2])
+        hsi[mask_2] = (
+            (self.si_1[mask_2] ** 4)
+            * (self.si_2[mask_2] ** 4)
+            * (self.si_3[mask_2] ** 2)
+            * (self.si_4[mask_2] ** 2)
+            * (self.si_5[mask_2])
         ) ** (1 / 13)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1

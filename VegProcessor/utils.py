@@ -1,7 +1,7 @@
 import xarray as xr
 import pathlib
 from scipy import ndimage
-from scipy.stats import mode
+import scipy.stats as stats
 
 import numpy as np
 import pandas as pd
@@ -641,15 +641,14 @@ def get_contiguous_regions(
     return final_mask
 
 
-def reduce_arr_by_mode(connectivity_category: np.ndarray):
+def reduce_arr_by_mode(categorical_array: np.ndarray):
     """Reduce 60m array by mode to get 480m aggregation. Used for
     cases where mean is not appropriate (categorical vars).
 
     Params
     ------
-    connectivity_cateogry : np.ndarray
-        An array with connecting regions categorized by size. (Not the
-        size array itself).
+    categorical_array : np.ndarray
+        An array with integer categories.
 
     Return
     ------
@@ -657,19 +656,14 @@ def reduce_arr_by_mode(connectivity_category: np.ndarray):
         Array of input coarsed to 480m size, using mode to reduce pixels.
     """
 
-    def mode_reduce(block):
-        # flatten the block and calculate mode
-        block = block.values.flatten()
-        block = block[block > 0]  # ignore 0 if you treat it as background
-        if block.size == 0:
-            return 0  # return background if all values are 0
-        return mode(block, keepdims=False).mode
+    def mode_reduce(arr, axis):
+        m = stats.mode(arr, axis=axis)
+        return m[0]
 
-    da = xr.DataArray(connectivity_category)
+    # define dims explicitly
+    da = xr.DataArray(categorical_array, dims=["y", "x"])
     # coarsen to 8x8 blocks, applying mode function
-    coarse_da = da.coarsen(dim_0=8, dim_1=8, boundary="pad").reduce(
-        mode_reduce
-    )
+    coarse_da = da.coarsen(y=8, x=8, boundary="pad").reduce(mode_reduce)
     return coarse_da
 
 

@@ -314,7 +314,7 @@ def generate_pct_cover_custom(
     :param (list) veg_types: List of veg types to consider as "True"
         for percent cover
 
-    :return: None, output is .nc file
+    :return: Aggregated xr.DataArray
     """
     # create new binary var with tuple of dims, data
     data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))

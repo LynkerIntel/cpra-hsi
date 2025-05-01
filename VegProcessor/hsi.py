@@ -222,6 +222,9 @@ class HSI(vt.VegTransition):
         self.pct_near_forest = None
 
         self.forested_connectivity_cat = None
+        self.pct_overstory = None
+        self.pct_midstory = None
+        self.pct_understory = None
 
         self._create_output_file(self.file_params)
 
@@ -406,7 +409,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # ds_swamp_blh = ds_swamp_blh.where(~np.isnan(self.hydro_domain_480))
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -417,7 +419,6 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # ds_vegetated = ds_vegetated.where(~np.isnan(self.hydro_domain_480))
 
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
@@ -762,7 +763,30 @@ class HSI(vt.VegTransition):
         type_mask = np.isin(self.veg_type, understory_types)
         self.story_class[type_mask] = 1
 
-        # resample to 480m
+        # get pct cover at 480m for swamp WVA
+        self.pct_overstory = utils.generate_pct_cover_custom(
+            data_array=self.story_class,
+            veg_types=[3],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_midstory = utils.generate_pct_cover_custom(
+            data_array=self.story_class,
+            veg_types=[2],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_understory = utils.generate_pct_cover_custom(
+            data_array=self.story_class,
+            veg_types=[1],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+
+        # resample to 480m for BLH WVA
         self.story_class = utils.reduce_arr_by_mode(self.story_class)
 
     def _calculate_connectivity(self):
@@ -1647,21 +1671,40 @@ class HSI(vt.VegTransition):
                 {
                     "grid_mapping": "crs",
                     "units": "",
-                    "long_name": "forested story classification",
+                    "long_name": "forested story classification (mode of 60m)",
                     "description": "",
                 },
             ],
-            # TODO: only 480m output, this is 60m, and will fail
-            # "forested_story_class": [
-            #     self.story_class,
-            #     np.float32,
-            #     {
-            #         "grid_mapping": "crs",
-            #         "units": "",
-            #         "long_name": "",
-            #         "description": "",
-            #     },
-            # ],
+            "pct_overstory": [
+                self.pct_overstory,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_midstory": [
+                self.pct_midstory,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_understory": [
+                self.pct_understory,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "",
+                    "description": "",
+                },
+            ],
         }
         # hsi_variables = {
         #     # alligator

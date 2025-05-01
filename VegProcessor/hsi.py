@@ -185,6 +185,8 @@ class HSI(vt.VegTransition):
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
+        self.pct_shrub_scrub = None
+        self.pct_shrub_scrub_midstory = None
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
@@ -298,6 +300,7 @@ class HSI(vt.VegTransition):
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
         self._calculate_connectivity()
+        self._calculate_shrub_scrub_midstory()
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -420,6 +423,7 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
 
+        self.pct_shrub_scrub = ds["pct_cover_12"].to_numpy()
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
@@ -788,6 +792,12 @@ class HSI(vt.VegTransition):
 
         # resample to 480m for BLH WVA
         self.story_class = utils.reduce_arr_by_mode(self.story_class)
+
+    def _calculate_shrub_scrub_midstory(self):
+        """Get combined percentange of shrub/scrub & midstory cover at 480m cell size."""
+        self.pct_shrub_scrub_midstory = (
+            self.pct_midstory + self.pct_shrub_scrub
+        )
 
     def _calculate_connectivity(self):
         """Calculate the size of contiguous forested areas in the domain, then
@@ -1702,6 +1712,16 @@ class HSI(vt.VegTransition):
                     "grid_mapping": "crs",
                     "units": "",
                     "long_name": "",
+                    "description": "",
+                },
+            ],
+            "pct_shrub_scrub_midstory": [
+                self.pct_shrub_scrub_midstory,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "summed pct cover of shrub/scrup & midstory",
                     "description": "",
                 },
             ],

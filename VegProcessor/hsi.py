@@ -30,6 +30,7 @@ from species_hsi import (
     bass,
     bluecrab,
     blackbear,
+    blhwva,
 )
 
 
@@ -293,7 +294,7 @@ class HSI(vt.VegTransition):
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
-        self.connectivity_test = self._calculate_connectivity()
+        self._calculate_connectivity()
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -304,6 +305,7 @@ class HSI(vt.VegTransition):
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
+            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -760,6 +762,8 @@ class HSI(vt.VegTransition):
         type_mask = np.isin(self.veg_type, understory_types)
         self.story_class[type_mask] = 1
 
+        # resample to 480m
+
     def _calculate_connectivity(self):
         """Calculate the size of contiguous forested areas in the domain, then
         bin into classed based on thresholds. This method uses 4-connectivity by default, but
@@ -782,14 +786,11 @@ class HSI(vt.VegTransition):
 
         # count pixels in each labeled region
         region_sizes = np.bincount(labeled_array.ravel())
-
-        # create a new array assigning a "connectivity category" to each pixel
         connectivity_category = np.zeros_like(labeled_array)
 
-        # define the bins
         for region_id, size in enumerate(region_sizes):
             if region_id == 0:
-                continue  # skip background
+                continue  # skip 0
             if size <= 6:
                 connectivity_category[labeled_array == region_id] = 1
             elif size <= 23:
@@ -798,7 +799,7 @@ class HSI(vt.VegTransition):
                 connectivity_category[labeled_array == region_id] = 3
             elif size <= 562:
                 connectivity_category[labeled_array == region_id] = 4
-            else:  # very large patches
+            else:
                 connectivity_category[labeled_array == region_id] = 5
 
         self.forested_connectivity_cat = utils.reduce_arr_by_mode(

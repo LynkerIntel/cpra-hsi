@@ -305,7 +305,7 @@ class HSI(vt.VegTransition):
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
-            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
+            # self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -763,6 +763,7 @@ class HSI(vt.VegTransition):
         self.story_class[type_mask] = 1
 
         # resample to 480m
+        self.story_class = utils.reduce_arr_by_mode(self.story_class)
 
     def _calculate_connectivity(self):
         """Calculate the size of contiguous forested areas in the domain, then
@@ -1627,6 +1628,26 @@ class HSI(vt.VegTransition):
                     "grid_mapping": "crs",
                     "units": "",
                     "long_name": "",
+                    "description": "",
+                },
+            ],
+            "forested_connectivity": [
+                self.forested_connectivity_cat,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "forested_connectivity category",
+                    "description": "",
+                },
+            ],
+            "story_class": [
+                self.story_class,
+                np.float32,
+                {
+                    "grid_mapping": "crs",
+                    "units": "",
+                    "long_name": "forested story classification",
                     "description": "",
                 },
             ],

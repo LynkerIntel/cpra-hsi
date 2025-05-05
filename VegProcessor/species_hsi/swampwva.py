@@ -358,14 +358,14 @@ class SWAMPHSI:
     def calculate_si_3(self) -> np.ndarray:
         """Water Regime"""
         self._logger.info("Running SI 3")
-        si_6 = self.template.copy()
+        si_3 = self.template.copy()
 
         # Set to ideal
         if self.v3_water_regime is None:
             self._logger.info(
                 "Water Regime assumes ideal conditions. Setting index to 1."
             )
-            si_6[~np.isnan(si_6)] = 1
+            si_3[~np.isnan(si_3)] = 1
 
         else:
             raise NotImplementedError(

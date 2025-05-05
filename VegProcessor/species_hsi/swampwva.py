@@ -16,12 +16,13 @@ class SWAMPHSI:
 
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
-    pct_swamp_cover: np.ndarray = None
+    pct_swamp_bottom_hardwood: np.ndarray = None
+    pct_zone_ii: np.ndarray = None
 
     v1a_pct_overstory: np.ndarray = None
     v1b_pct_midstory: np.ndarray = None
     v1c_pct_understory: np.ndarray = None
-    v2_stand_maturity: np.ndarray = None #TODO: edit this with dbh?
+    v2_stand_maturity: np.ndarray = None
     v3_water_regime: np.ndarray = None
     v4_mean_high_salinity_gs: np.ndarray = None
     v5_size_forested_area: np.ndarray = None
@@ -56,7 +57,8 @@ class SWAMPHSI:
             v7_disturbance=hsi_instance.disturbance, #set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_swamp_cover=hsi_instance.pct_swamp_cover
+            pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood, 
+            pct_zone_ii=hsi_instance.pct_zone_ii
         )
 
     def __post_init__(self):
@@ -118,17 +120,19 @@ class SWAMPHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def swamp_cover_mask(self, si_array: np.ndarray) -> np.ndarray:
-        """ To apply the Swamp WVA, at least 33% swamp cover (Zone II)
-        has to be present. This applies a mask to each SI array where 
-        the %swamp cover is < 33%. These areas are given an SI = 0.
+    def swamp_blh_mask(self, si_array: np.ndarray) -> np.ndarray:
+        """ To apply the Swamp WVA, at least 33% forest cover (Zone II to V)
+        has to be present of which greater than 60% is in Zone II. 
+        This applies a mask to each SI array where these conditions are not met. 
+        These areas are given an SI = 0.
         """
-        if self.pct_swamp_cover is not None:
-            swamp_mask = (
-                (self.pct_swamp_cover < 33) &
-                (~np.isnan(self.pct_swamp_cover))
+        if self.pct_swamp_bottom_hardwood is not None:
+            swamp_blh_mask = (
+                (self.pct_swamp_bottom_hardwood < 33) &
+                (self.pct_zone_ii < 60) &
+                (~np.isnan(self.pct_swamp_bottom_hardwood))
             )
-            si_array[swamp_mask] = 0
+            si_array[swamp_blh_mask] = 0
         return si_array
 
     def calculate_si_1(self) -> np.ndarray:
@@ -208,7 +212,7 @@ class SWAMPHSI:
             )
             si_1[mask_6] = 1.0
 
-        si_1 = self.swamp_cover_mask(si_1)
+        si_1 = self.swamp_blh_mask(si_1)
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -344,7 +348,7 @@ class SWAMPHSI:
             si_2[mask_8] = 1
 
 
-        si_2 = self.swamp_cover_mask(si_2)
+        si_2 = self.swamp_blh_mask(si_2)
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -368,7 +372,7 @@ class SWAMPHSI:
                 "No logic for swamp v3 exists. Either use ideal (set array None) or add logic."
             )
 
-        si_3 = self.swamp_cover_mask(si_3)
+        si_3 = self.swamp_blh_mask(si_3)
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -405,7 +409,7 @@ class SWAMPHSI:
             mask_3 = (self.v4_mean_high_salinity_gs >= 3) 
             si_4[mask_3] = 0.1
 
-        si_4 = self.swamp_cover_mask(si_4)
+        si_4 = self.swamp_blh_mask(si_4)
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -473,7 +477,7 @@ class SWAMPHSI:
 
         #TODO: provide logic for when DBH is not provided?
         
-        si_5 = self.swamp_cover_mask(si_5)
+        si_5 = self.swamp_blh_mask(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -497,7 +501,7 @@ class SWAMPHSI:
                 "No logic for swamp v6 exists. Either use ideal (set array None) or add logic."
             )
 
-        si_6 = self.swamp_cover_mask(si_6)
+        si_6 = self.swamp_blh_mask(si_6)
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -521,7 +525,7 @@ class SWAMPHSI:
                 "No logic for swamp v7 exists. Either use ideal (set array None) or add logic."
             )
 
-        si_7 = self.swamp_cover_mask(si_7)
+        si_7 = self.swamp_blh_mask(si_7)
 
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

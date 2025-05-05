@@ -218,6 +218,7 @@ class HSI(vt.VegTransition):
         self.pct_soft_mast = None
         self.pct_hard_mast = None
         self.pct_no_mast = None
+        self.pct_has_mast = None
         self.story_class = np.zeros_like(self.dem)
 
         self.num_soft_mast_species = None  # always ideal
@@ -740,6 +741,9 @@ class HSI(vt.VegTransition):
             + self.pct_zone_iv * no_mast["IV"]
             + self.pct_zone_v * no_mast["V"]
         )
+
+        # pct coverage of either mast type
+        self.pct_has_mast = self.pct_soft_mast + self.pct_hard_mast
 
     def _calculate_story_assignment(self):
         """Calculate categorical story assignment.

@@ -43,7 +43,7 @@ class SwampHSI:
 
     @classmethod
     def from_hsi(cls, hsi_instance):
-        """Create SWAMP HSI instance from an HSI instance."""
+        """Create Swamp HSI instance from an HSI instance."""
 
         return cls(
             v1a_pct_overstory=hsi_instance.pct_overstory,
@@ -323,46 +323,50 @@ class SwampHSI:
                 self._logger.info("DBH is < 5. Setting index to 1.")
                 si_5[dbh_mask] = 1
 
-            # condition 1 for class 1
-                mask_1 = (
-                    (self.v5_size_forested_area >= 0) & 
-                    (self.v5_size_forested_area <= 5) & 
-                    (valid_mask)
+            else: 
+                self._logger.warning(
+                    "Stand maturity (dbh) not provided. All areas are included in logic."
                 )
-                si_5[mask_1] = 0.2
+                valid_mask = ~np.isnan(self.v5_size_forested_area)
+
+            # condition 1 for class 1
+            mask_1 = (
+                (self.v5_size_forested_area >= 0) & 
+                (self.v5_size_forested_area <= 5) & 
+                (valid_mask)
+            )
+            si_5[mask_1] = 0.2
 
             # condition 2 for class 2
-                mask_2 = (
-                    (self.v5_size_forested_area > 5) & 
-                    (self.v5_size_forested_area <= 20) & 
-                    (valid_mask)
-                )
-                si_5[mask_2] = 0.4
+            mask_2 = (
+                (self.v5_size_forested_area > 5) & 
+                (self.v5_size_forested_area <= 20) & 
+                (valid_mask)
+            )
+            si_5[mask_2] = 0.4
 
             # condition 3 for class 3
-                mask_3 = (
-                    (self.v5_size_forested_area > 20) & 
-                    (self.v5_size_forested_area <= 100) &
-                    (valid_mask)
-                )
-                si_5[mask_3] = 0.6
+            mask_3 = (
+                (self.v5_size_forested_area > 20) & 
+                (self.v5_size_forested_area <= 100) &
+                (valid_mask)
+            )
+            si_5[mask_3] = 0.6
 
             # condition 4 for class 4
-                mask_4 = (
-                    (self.v5_size_forested_area > 100) & 
-                    (self.v5_size_forested_area <= 500) & 
-                    (valid_mask)
-                )
-                si_5[mask_4] = 0.8
+            mask_4 = (
+                (self.v5_size_forested_area > 100) & 
+                (self.v5_size_forested_area <= 500) & 
+                (valid_mask)
+            )
+            si_5[mask_4] = 0.8
 
             # condition 5 for class 5
-                mask_5 = (
-                    (self.v5_size_forested_area > 500) & 
-                    (valid_mask)
-                )
-                si_5[mask_5] = 1
-
-        #TODO: provide logic for when DBH is not provided?
+            mask_5 = (
+                (self.v5_size_forested_area > 500) & 
+                (valid_mask)
+            )
+            si_5[mask_5] = 1
         
         si_5 = self.swamp_blh_mask(si_5)
 

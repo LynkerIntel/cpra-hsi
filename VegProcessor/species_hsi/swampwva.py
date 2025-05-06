@@ -157,8 +157,8 @@ class SwampHSI:
 
             # class 2
             mask_2 = (
-                (self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50) & 
+                ((self.v1a_pct_overstory >= 33) & 
+                (self.v1a_pct_overstory < 50)) & 
                 (self.v1b_pct_midstory < 33) &
                 (self.v1c_pct_understory < 33)
             )
@@ -166,49 +166,49 @@ class SwampHSI:
 
             # class 3
             mask_3 = (
-                (self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50) &
+                (((self.v1a_pct_overstory >= 33) & 
+                (self.v1a_pct_overstory < 50)) &
                 (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33)
+                (self.v1c_pct_understory >= 33))
             ) | (
-                (self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75) & 
+                (((self.v1a_pct_overstory >= 50) & 
+                (self.v1a_pct_overstory < 75)) & 
                 (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33)
+                (self.v1c_pct_understory < 33))
             )
             si_1[mask_3] = 0.4
 
             # class 4
             mask_4 = (
-                (self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75) & 
+                (((self.v1a_pct_overstory >= 50) & 
+                (self.v1a_pct_overstory < 75)) & 
                 (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33)
+                (self.v1c_pct_understory >= 33))
             ) | (
-                (self.v1a_pct_overstory >= 75) & 
+                ((self.v1a_pct_overstory >= 75) & 
                 (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33)
+                (self.v1c_pct_understory < 33))
             )
             si_1[mask_4] = 0.6
 
             # class 5
             mask_5 = (
-                (self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50) & 
+                (((self.v1a_pct_overstory >= 33) & 
+                (self.v1a_pct_overstory < 50)) & 
                 (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33)
+                (self.v1c_pct_understory >= 33))
             )
             si_1[mask_5] = 0.8
 
             # class 6
             mask_6 = (
-                (self.v1a_pct_overstory >= 50) & 
+                ((self.v1a_pct_overstory >= 50) & 
                 (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33)
+                (self.v1c_pct_understory >= 33))
             ) | (
-                (self.v1a_pct_overstory >= 75) & 
+                ((self.v1a_pct_overstory >= 75) & 
                 (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33)
+                (self.v1c_pct_understory >= 33))
             )
             si_1[mask_6] = 1.0
 

@@ -4,7 +4,7 @@ import logging
 
 
 @dataclass
-class SWAMPHSI:
+class SwampHSI:
     """
     This dataclass handles ingestion of processed inputs to the HSI Model. Class methods are
     used for each individual suitability index, and initialized as None for cases where
@@ -49,7 +49,7 @@ class SWAMPHSI:
             v1a_pct_overstory=hsi_instance.pct_overstory,
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
-            v2_stand_maturity=hsi_instance.stand_maturity,
+            v2_stand_maturity=hsi_instance.stand_maturity, #set to ideal
             v3_water_regime=hsi_instance.water_regime, #set to ideal
             v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs, 
             v5_size_forested_area=hsi_instance.size_forested_area, 
@@ -103,7 +103,7 @@ class SWAMPHSI:
 
     def _setup_logger(self):
         """Set up the logger for the class."""
-        self._logger = logging.getLogger("SWAMPHSI")
+        self._logger = logging.getLogger("SwampHSI")
         self._logger.setLevel(logging.INFO)
 
         # Prevent adding multiple handlers if already added
@@ -226,133 +226,20 @@ class SWAMPHSI:
 
         if self.v2_stand_maturity is None:
             self._logger.info(
-                "Stand maturity data is not provided. Setting index to 1."                                                         
+                "Stand maturity assumes ideal conditions. Setting index to 1."                                                         
             )
             si_2[~np.isnan(si_2)] = 1
 
-        else: #TODO: edit this with correct logic for baldcypress and tupelogum
-            # baldcypress
-            # condition 1
-            mask_1 = self.v2_stand_maturity == 0
-            si_2[mask_1] = 0
-
-            # condition 2
-            mask_2 = (self.v2_stand_maturity > 0) & (
-                self.v2_stand_maturity <= 1
+        else:
+            raise NotImplementedError(
+                "No logic for swamp v2 exists. Either use ideal (set array None) or add logic."
             )
-            si_2[mask_2] = (0.01 * self.v2_stand_maturity[mask_2])
-
-            # condition 3
-            mask_3 = (self.v2_stand_maturity > 1) & (
-                self.v2_stand_maturity <= 4
-            )
-            si_2[mask_3] = (
-                0.013 * self.v2_stand_maturity[mask_3]
-            ) - 0.002
-
-            # condition 4
-            mask_4 = (self.v2_stand_maturity > 4) & (
-                self.v2_stand_maturity <= 7
-            )
-            si_2[mask_4] = (
-                0.017 * self.v2_stand_maturity[mask_4]
-            ) - 0.019
-
-            # condition 5
-            mask_5 = (self.v2_stand_maturity > 7) & (
-                self.v2_stand_maturity <= 9
-            )
-            si_2[mask_5] = (
-                0.1 * self.v2_stand_maturity[mask_5]
-            ) - 0.6
-
-            # condition 6
-            mask_6 = (self.v2_stand_maturity > 9) & (
-                self.v2_stand_maturity <= 11
-            )
-            si_2[mask_6] = (
-                0.15 * self.v2_stand_maturity[mask_6]
-            ) - 1.05
-
-            # condition 7
-            mask_7 = (self.v2_stand_maturity > 11) & (
-                self.v2_stand_maturity <= 13
-            )
-            si_2[mask_7] = (
-                0.1 * self.v2_stand_maturity[mask_7]
-            ) - 0.5
-
-            # condition 8
-            mask_8 = (self.v2_stand_maturity > 13) & (
-                self.v2_stand_maturity <= 16
-            )
-            si_2[mask_8] = (
-                0.067 * self.v2_stand_maturity[mask_8]
-            ) - 0.072
-
-            # condition 9
-            mask_9 = self.v2_stand_maturity > 16
-            si_2[mask_9] = 1
-
-            # tupelogum et al.
-            # condition 1
-            mask_1 = self.v2_stand_maturity == 0
-            si_2[mask_1] = 0
-
-            # condition 2
-            mask_2 = (self.v2_stand_maturity > 0) & (
-                self.v2_stand_maturity <= 1
-            )
-            si_2[mask_2] = (0.01 * self.v2_stand_maturity[mask_2])
-
-            # condition 3
-            mask_3 = (self.v2_stand_maturity > 1) & (
-                self.v2_stand_maturity <= 2
-            )
-            si_2[mask_3] = (
-                0.04 * self.v2_stand_maturity[mask_3]
-            ) - 0.03
-
-            # condition 4
-            mask_4 = (self.v2_stand_maturity > 2) & (
-                self.v2_stand_maturity <= 4
-            )
-            si_2[mask_4] = (0.025 * self.v2_stand_maturity[mask_4]) 
-
-            # condition 5
-            mask_5 = (self.v2_stand_maturity > 4) & (
-                self.v2_stand_maturity <= 6
-            )
-            si_2[mask_5] = (
-                0.1 * self.v2_stand_maturity[mask_5]
-            ) - 0.3
-
-            # condition 6
-            mask_6 = (self.v2_stand_maturity > 6) & (
-                self.v2_stand_maturity <= 8
-            )
-            si_2[mask_6] = (
-                0.15 * self.v2_stand_maturity[mask_6]
-            ) - 0.6
-
-            # condition 7
-            mask_7 = (self.v2_stand_maturity > 8) & (
-                self.v2_stand_maturity <= 12
-            )
-            si_2[mask_7] = (
-                0.1 * self.v2_stand_maturity[mask_7]
-            ) - 0.2
-
-            # condition 8
-            mask_8 = self.v2_stand_maturity > 12
-            si_2[mask_8] = 1
-
 
         si_2 = self.swamp_blh_mask(si_2)
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:

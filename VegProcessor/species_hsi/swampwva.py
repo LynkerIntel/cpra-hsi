@@ -49,16 +49,16 @@ class SwampHSI:
             v1a_pct_overstory=hsi_instance.pct_overstory,
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
-            v2_stand_maturity=hsi_instance.stand_maturity, #set to ideal
-            v3_water_regime=hsi_instance.water_regime, #set to ideal
-            v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs, 
-            v5_size_forested_area=hsi_instance.size_forested_area, 
-            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu, #set to ideal 
-            v7_disturbance=hsi_instance.disturbance, #set to ideal
+            v2_stand_maturity=hsi_instance.stand_maturity,  # set to ideal
+            v3_water_regime=hsi_instance.water_regime,  # set to ideal
+            v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs,
+            v5_size_forested_area=hsi_instance.size_forested_area,
+            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
+            v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood, 
-            pct_zone_ii=hsi_instance.pct_zone_ii
+            pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood,
+            pct_zone_ii=hsi_instance.pct_zone_ii,
         )
 
     def __post_init__(self):
@@ -113,7 +113,8 @@ class SwampHSI:
             ch.setLevel(logging.INFO)
 
             # Create formatter and add it to the handler
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
             ch.setFormatter(formatter)
 
@@ -121,16 +122,16 @@ class SwampHSI:
             self._logger.addHandler(ch)
 
     def swamp_blh_mask(self, si_array: np.ndarray) -> np.ndarray:
-        """ To apply the Swamp WVA, at least 33% forest cover (Zone II to V)
-        has to be present of which greater than 60% is in Zone II. 
-        This applies a mask to each SI array where these conditions are not met. 
+        """To apply the Swamp WVA, at least 33% forest cover (Zone II to V)
+        has to be present of which greater than 60% is in Zone II.
+        This applies a mask to each SI array where these conditions are not met.
         These areas are given an SI = 0.
         """
         if self.pct_swamp_bottom_hardwood is not None:
             swamp_blh_mask = (
-                (self.pct_swamp_bottom_hardwood < 33) &
-                (self.pct_zone_ii < 60) &
-                (~np.isnan(self.pct_swamp_bottom_hardwood))
+                (self.pct_swamp_bottom_hardwood < 33)
+                & (self.pct_zone_ii < 60)
+                & (~np.isnan(self.pct_swamp_bottom_hardwood))
             )
             si_array[swamp_blh_mask] = 0
         return si_array
@@ -141,76 +142,77 @@ class SwampHSI:
         si_1 = self.template.copy()
 
         if (
-            self.v1a_pct_overstory is None or
-            self.v1b_pct_midstory is None or
-            self.v1c_pct_understory is None
-            ):
+            self.v1a_pct_overstory is None
+            or self.v1b_pct_midstory is None
+            or self.v1c_pct_understory is None
+        ):
             self._logger.info(
                 "Stand structure data not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
-        else: 
-            # class 1
-            mask_1 = (self.v1a_pct_overstory < 33)
-            si_1[mask_1] = 0.1
+        else:
 
-            # class 2
-            mask_2 = (
-                ((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33)
+            # assign intermediate masks with "or equal to"
+            # default condition is greater than, which
+            # can be inverted with "~"
+            mask_overs_33 = self.v1a_pct_overstory >= 33
+            mask_overs_50 = self.v1a_pct_overstory >= 50
+            mask_overs_75 = self.v1a_pct_overstory >= 75
+            mask_mids_33 = self.v1b_pct_midstory >= 33
+            mask_unders_33 = self.v1a_pct_overstory >= 33
+
+            # class 1
+            class_1 = self.v1a_pct_overstory < 33
+            si_1[class_1] = 0.1
+
+            # class 2: 33–50 & mid < 33 & under < 33
+            # not using intermediate maskfor cases where comparison
+            # is non-inclusive and can't be inverted correctly using "~"
+            class_2 = (
+                (mask_overs_33 & (self.v1a_pct_overstory < 50))
+                & ~mask_mids_33
+                & ~mask_unders_33
             )
-            si_1[mask_2] = 0.2
+            si_1[class_2] = 0.2
 
             # class 3
-            mask_3 = (
-                (((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) &
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                (((self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75)) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33))
+            class_3_block1 = (
+                mask_overs_33 & (self.v1a_pct_overstory < 50)
+            ) & (mask_mids_33 | mask_unders_33)
+
+            class_3_block2 = (
+                (mask_overs_50 & (self.v1a_pct_overstory < 75))
+                & ~mask_mids_33
+                & ~mask_unders_33
             )
-            si_1[mask_3] = 0.4
+            class_3 = class_3_block1 | class_3_block2
+            si_1[class_3] = 0.4
 
             # class 4
-            mask_4 = (
-                (((self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75)) & 
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                ((self.v1a_pct_overstory >= 75) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33))
-            )
-            si_1[mask_4] = 0.6
+            class_4_block1 = (
+                mask_overs_50 & (self.v1a_pct_overstory < 75)
+            ) & (mask_mids_33 | mask_unders_33)
 
-            # class 5
-            mask_5 = (
-                (((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) & 
-                (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33))
+            class_4_block2 = mask_overs_75 & ~mask_mids_33 & ~mask_unders_33
+
+            class_4 = class_4_block1 | class_4_block2
+            si_1[class_4] = 0.6
+
+            # class 5: 33–50 & mid ≥ 33 & under ≥ 33
+            class_5 = (
+                (mask_overs_33 & (self.v1a_pct_overstory < 50))
+                & mask_mids_33
+                & mask_unders_33
             )
-            si_1[mask_5] = 0.8
+            si_1[class_5] = 0.8
 
             # class 6
-            mask_6 = (
-                ((self.v1a_pct_overstory >= 50) & 
-                (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                ((self.v1a_pct_overstory >= 75) & 
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            )
-            si_1[mask_6] = 1.0
+            class_6_block1 = mask_overs_50 & mask_mids_33 & mask_unders_33
+            class_6_block2 = mask_overs_75 & (mask_mids_33 | mask_unders_33)
+
+            class_6 = class_6_block1 | class_6_block2
+            si_1[class_6] = 1.0
 
         si_1 = self.swamp_blh_mask(si_1)
 
@@ -226,7 +228,7 @@ class SwampHSI:
 
         if self.v2_stand_maturity is None:
             self._logger.info(
-                "Stand maturity assumes ideal conditions. Setting index to 1."                                                         
+                "Stand maturity assumes ideal conditions. Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
@@ -265,7 +267,7 @@ class SwampHSI:
             raise ValueError("Unhandled condition in SI logic!")
 
         return self.clip_array(si_3)
-    
+
     def calculate_si_4(self) -> np.ndarray:
         """Mean High Salinity During the Growing Season (March to Nov)"""
         self._logger.info("Running SI 4")
@@ -277,7 +279,7 @@ class SwampHSI:
             )
             si_4[~np.isnan(si_4)] = 1
 
-        else: 
+        else:
             # condition 1
             mask_1 = (self.v4_mean_high_salinity_gs > 0) & (
                 self.v4_mean_high_salinity_gs <= 1
@@ -289,20 +291,19 @@ class SwampHSI:
                 self.v4_mean_high_salinity_gs < 3
             )
             si_4[mask_2] = (
-                - 0.45 * self.v4_mean_high_salinity_gs[mask_2]
+                -0.45 * self.v4_mean_high_salinity_gs[mask_2]
             ) + 1.45
 
-            # condition 3 
-            mask_3 = (self.v4_mean_high_salinity_gs >= 3) 
+            # condition 3
+            mask_3 = self.v4_mean_high_salinity_gs >= 3
             si_4[mask_3] = 0.1
 
         si_4 = self.swamp_blh_mask(si_4)
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
-        return self.clip_array(si_4)
 
+        return self.clip_array(si_4)
 
     def calculate_si_5(self) -> np.ndarray:
         """Size of Contiguous Forested Area in Acres"""
@@ -315,15 +316,15 @@ class SwampHSI:
             )
             si_5[~np.isnan(si_5)] = 1
 
-        else: 
+        else:
             # Areas with a DBH less than 5 are excluded from further logic
-            if self.v2_stand_maturity is not None: 
+            if self.v2_stand_maturity is not None:
                 dbh_mask = self.v2_stand_maturity < 5
                 valid_mask = self.v2_stand_maturity >= 5
                 self._logger.info("DBH is < 5. Setting index to 1.")
                 si_5[dbh_mask] = 1
 
-            else: 
+            else:
                 self._logger.warning(
                     "Stand maturity (dbh) not provided. All areas are included in logic."
                 )
@@ -331,48 +332,45 @@ class SwampHSI:
 
             # condition 1 for class 1
             mask_1 = (
-                (self.v5_size_forested_area >= 0) & 
-                (self.v5_size_forested_area <= 5) & 
-                (valid_mask)
+                (self.v5_size_forested_area >= 0)
+                & (self.v5_size_forested_area <= 5)
+                & (valid_mask)
             )
             si_5[mask_1] = 0.2
 
             # condition 2 for class 2
             mask_2 = (
-                (self.v5_size_forested_area > 5) & 
-                (self.v5_size_forested_area <= 20) & 
-                (valid_mask)
+                (self.v5_size_forested_area > 5)
+                & (self.v5_size_forested_area <= 20)
+                & (valid_mask)
             )
             si_5[mask_2] = 0.4
 
             # condition 3 for class 3
             mask_3 = (
-                (self.v5_size_forested_area > 20) & 
-                (self.v5_size_forested_area <= 100) &
-                (valid_mask)
+                (self.v5_size_forested_area > 20)
+                & (self.v5_size_forested_area <= 100)
+                & (valid_mask)
             )
             si_5[mask_3] = 0.6
 
             # condition 4 for class 4
             mask_4 = (
-                (self.v5_size_forested_area > 100) & 
-                (self.v5_size_forested_area <= 500) & 
-                (valid_mask)
+                (self.v5_size_forested_area > 100)
+                & (self.v5_size_forested_area <= 500)
+                & (valid_mask)
             )
             si_5[mask_4] = 0.8
 
             # condition 5 for class 5
-            mask_5 = (
-                (self.v5_size_forested_area > 500) & 
-                (valid_mask)
-            )
+            mask_5 = (self.v5_size_forested_area > 500) & (valid_mask)
             si_5[mask_5] = 1
-        
+
         si_5 = self.swamp_blh_mask(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return self.clip_array(si_5)
 
     def calculate_si_6(self) -> np.ndarray:
@@ -423,7 +421,6 @@ class SwampHSI:
 
         return self.clip_array(si_7)
 
-
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Swamp WVA final HSI.")
@@ -448,13 +445,13 @@ class SwampHSI:
 
         # Combine individual suitability indices
         hsi = (
-            (self.si_1 ** 3.0) * 
-            (self.si_2 ** 2.5) *
-            (self.si_3 ** 3.0) *
-            (self.si_4 ** 1.5) *
-            (self.si_5) * 
-            (self.si_6) * 
-            (self.si_7)
+            (self.si_1**3.0)
+            * (self.si_2**2.5)
+            * (self.si_3**3.0)
+            * (self.si_4**1.5)
+            * (self.si_5)
+            * (self.si_6)
+            * (self.si_7)
         ) ** (1 / 13)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1

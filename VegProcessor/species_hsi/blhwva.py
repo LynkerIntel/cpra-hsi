@@ -47,12 +47,12 @@ class BottomlandHardwoodHSI:
         """Create Bottomland Hardwood (BLH) HSI instance from an HSI instance."""
 
         return cls(
-            v1a_pct_overstory_w_mast=(hsi_instance.pct_overstory_w_mast),
-            v1b_pct_overstory_w_soft_mast=(hsi_instance.pct_overstory_w_soft_mast),
-            v1c_pct_overstory_w_hard_mast=(hsi_instance.pct_overstory_w_hard_mast),
+            v1a_pct_overstory_w_mast=hsi_instance.pct_overstory_w_mast,
+            v1b_pct_overstory_w_soft_mast=hsi_instance.pct_overstory_w_soft_mast,
+            v1c_pct_overstory_w_hard_mast=hsi_instance.pct_overstory_w_hard_mast,
             v2_stand_maturity=hsi_instance.stand_maturity,
-            v3a_pct_understory=(hsi_instance.pct_understory),
-            v3b_pct_midstory=(hsi_instance.pct_midstory),
+            v3a_pct_understory=hsi_instance.pct_understory,
+            v3b_pct_midstory=hsi_instance.pct_midstory,
             v4a_flood_duration=hsi_instance.flood_duration, 
             v4b_flow_exchange=hsi_instance.flow_exchange,
             v5_size_forested_area=hsi_instance.size_forested_area, 
@@ -60,7 +60,7 @@ class BottomlandHardwoodHSI:
             v7_disturbance=hsi_instance.disturbance, #set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_blh_cover=(hsi_instance.pct_blh_cover)
+            pct_blh_cover=hsi_instance.pct_blh_cover,
         )
 
     def __post_init__(self):
@@ -353,7 +353,7 @@ class BottomlandHardwoodHSI:
         return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
-        """Water Regime"""
+        """Hydrology"""
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
@@ -363,55 +363,45 @@ class BottomlandHardwoodHSI:
             )
             si_4[~np.isnan(si_4)] = 1
 
-        else:
-            # self.v4a_flood_duration and self.v4b_flow_exchange are NumPy arrays of strings
-            # condition 1
-            mask_1 = (self.v4a_flood_duration == "Temporary") & (
-                self.v4b_flow_exchange == "High"
-            )
-            si_4[mask_1] = 1
+        else: 
+            # scoring for 20 flood duration and 
+            # flow exchange combinations of 
+            # conditions
+            si4_score = {
+                ("None", "High"): 0.65,
+                ("Temporary", "High"): 1.00,
+                ("Seasonal", "High"): 0.85,
+                ("Semi-Permanent", "High"): 0.75,
+                ("Permanent", "High"): 0.65,
+                ("None", "Moderate"): 0.45,
+                ("Temporary", "Moderate"): 0.85,
+                ("Seasonal", "Moderate"): 0.75,
+                ("Semi-Permanent", "Moderate"): 0.65,
+                ("Permanent", "Moderate"): 0.45,
+                ("None", "Low"): 0.3,
+                ("Temporary", "Low"): 0.7,
+                ("Seasonal", "Low"): 0.65,
+                ("Semi-Permanent", "Low"): 0.45,
+                ("Permanent", "Low"): 0.3,
+                ("None", "None"): 0.1,
+                ("Temporary", "None"): 0.5,
+                ("Seasonal", "None"): 0.4,
+                ("Semi-Permanent", "None"): 0.25,
+                ("Permanent", "None"): 0.1,
+            }
 
-            # condition 2
-            mask_2 = (self.v4a_flood_duration == "Seasonal") & (
-                self.v4b_flow_exchange == "High"
-            )
-            si_4[mask_2] = 0.85
+            # define conditions and scores
+            conds = []
+            scoring = []
 
-            # condition 3
-            mask_3 = (self.v4a_flood_duration == "Semi-Permanent") & (
-                self.v4b_flow_exchange == "High"
-            )
-            si_4[mask_3] = 0.75
-
-            # condition 4
-            mask_4 = (self.v4a_flood_duration == "No Flooding") & (
-                self.v4b_flow_exchange == "High"
-            )
-            si_4[mask_4] = 0.65
-
-            # condition 5
-            mask_5 = (self.v4a_flood_duration == "Temporary") & (
-                self.v4b_flow_exchange == "None"
-            )
-            si_4[mask_5] = 0.5
-
-            # condition 6
-            mask_6 = (self.v4a_flood_duration == "Seasonal") & (
-                self.v4b_flow_exchange == "None"
-            )
-            si_4[mask_6] = 0.4
-
-            # condition 7
-            mask_7 = (self.v4a_flood_duration == "Semi-Permanent") & (
-                self.v4b_flow_exchange == "None"
-            )
-            si_4[mask_7] = 0.25
-
-            # condition 8
-            mask_8 = (self.v4a_flood_duration == "No Flooding") & (
-                self.v4b_flow_exchange == "None"
-            )
-            si_4[mask_8] = 0.1
+            for (flood_dur, flow_exch), score in si4_score.items():
+                mask = (self.v4a_flood_duration == flood_dur) & (
+                    self.v4b_flow_exchange == flow_exch
+                )
+                conds.append(mask)
+                scoring.append(score)
+            
+            si_4 = np.select(conds, scoring, default = si_4)
 
         si_4 = self.blh_cover_mask(si_4)
 

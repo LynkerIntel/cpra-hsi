@@ -60,7 +60,7 @@ class SwampHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             pct_swamp_bottom_hardwood=hsi_instance.pct_swamp_bottom_hardwood, 
-            pct_zone_ii=hsi_instance.pct_zone_ii
+            pct_zone_ii=hsi_instance.pct_zone_ii,
         )
 
     def __post_init__(self):
@@ -143,76 +143,81 @@ class SwampHSI:
         si_1 = self.template.copy()
 
         if (
-            self.v1a_pct_overstory is None or
-            self.v1b_pct_midstory is None or
-            self.v1c_pct_understory is None
-            ):
+            self.v1a_pct_overstory is None
+            or self.v1b_pct_midstory is None
+            or self.v1c_pct_understory is None
+        ):
             self._logger.info(
                 "Stand structure data not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
-        else: 
-            # class 1
-            mask_1 = (self.v1a_pct_overstory < 33)
-            si_1[mask_1] = 0.1
+        else:
 
-            # class 2
-            mask_2 = (
-                ((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33)
-            )
-            si_1[mask_2] = 0.2
+            # assign intermediate masks with "or equal to"
+            # default condition is greater than, which
+            # can be inverted with "~"
+            mask_overs_33 = self.v1a_pct_overstory >= 33
+            mask_overs_50 = self.v1a_pct_overstory >= 50
+            mask_overs_75 = self.v1a_pct_overstory >= 75
+            mask_mids_33 = self.v1b_pct_midstory >= 33
+            mask_unders_33 = self.v1c_pct_understory >= 33
 
-            # class 3
-            mask_3 = (
-                (((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) &
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                (((self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75)) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33))
-            )
-            si_1[mask_3] = 0.4
+            # class 1: overstory < 33
+            class_1 = self.v1a_pct_overstory < 33
+            si_1[class_1] = 0.1
 
-            # class 4
-            mask_4 = (
-                (((self.v1a_pct_overstory >= 50) & 
-                (self.v1a_pct_overstory < 75)) & 
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                ((self.v1a_pct_overstory >= 75) & 
-                (self.v1b_pct_midstory < 33) &
-                (self.v1c_pct_understory < 33))
+            # class 2: 33–50 overstory & mid < 33 & under < 33
+            class_2 = (
+                (mask_overs_33 & (self.v1a_pct_overstory < 50))
+                & ~mask_mids_33
+                & ~mask_unders_33
             )
-            si_1[mask_4] = 0.6
+            si_1[class_2] = 0.2
 
-            # class 5
-            mask_5 = (
-                (((self.v1a_pct_overstory >= 33) & 
-                (self.v1a_pct_overstory < 50)) & 
-                (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33))
+            # class 3:
+            # block 1: 33-50 overstory & (mid >= 33 or under >= 33)
+            # block 2: 50-75 overstory & mid < 33 & under < 33
+            class_3_block1 = (
+                mask_overs_33 & (self.v1a_pct_overstory < 50)
+            ) & (mask_mids_33 | mask_unders_33)
+
+            class_3_block2 = (
+                (mask_overs_50 & (self.v1a_pct_overstory < 75))
+                & ~mask_mids_33
+                & ~mask_unders_33
             )
-            si_1[mask_5] = 0.8
+            class_3 = class_3_block1 | class_3_block2
+            si_1[class_3] = 0.4
+
+            # class 4:
+            # block 1: 33-50 overstory & (mid >= 33 or under >= 33)
+            # block 2: >= 75 overstory & mid < 33 or under < 33
+            class_4_block1 = (
+                mask_overs_50 & (self.v1a_pct_overstory < 75)
+            ) & (mask_mids_33 | mask_unders_33)
+
+            class_4_block2 = mask_overs_75 & ~mask_mids_33 & ~mask_unders_33
+
+            class_4 = class_4_block1 | class_4_block2
+            si_1[class_4] = 0.6
+
+            # class 5: 33–50 & mid ≥ 33 & under ≥ 33
+            class_5 = (
+                (mask_overs_33 & (self.v1a_pct_overstory < 50))
+                & mask_mids_33
+                & mask_unders_33
+            )
+            si_1[class_5] = 0.8
 
             # class 6
-            mask_6 = (
-                ((self.v1a_pct_overstory >= 50) & 
-                (self.v1b_pct_midstory >= 33) &
-                (self.v1c_pct_understory >= 33))
-            ) | (
-                ((self.v1a_pct_overstory >= 75) & 
-                (self.v1b_pct_midstory >= 33) |
-                (self.v1c_pct_understory >= 33))
-            )
-            si_1[mask_6] = 1.0
+            # block 1: >= 50 overstory & (mid >= 33 or under >= 33)
+            # block 2: >= 75 overstory & (mid >= 33 or under >= 33)
+            class_6_block1 = mask_overs_50 & mask_mids_33 & mask_unders_33
+            class_6_block2 = mask_overs_75 & (mask_mids_33 | mask_unders_33)
+
+            class_6 = class_6_block1 | class_6_block2
+            si_1[class_6] = 1.0
 
         si_1 = self.swamp_blh_mask(si_1)
 

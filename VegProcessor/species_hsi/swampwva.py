@@ -308,7 +308,7 @@ class SwampHSI:
 
         else: 
             # condition 1
-            mask_1 = (self.v4_mean_high_salinity_gs > 0) & (
+            mask_1 = (self.v4_mean_high_salinity_gs >= 0) & (
                 self.v4_mean_high_salinity_gs <= 1
             )
             si_4[mask_1] = 1

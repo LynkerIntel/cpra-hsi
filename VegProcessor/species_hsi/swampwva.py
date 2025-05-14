@@ -296,7 +296,7 @@ class SwampHSI:
         return self.clip_array(si_3)
     
     def calculate_si_4(self) -> np.ndarray:
-        """Mean High Salinity During the Growing Season (March to Nov)"""
+        """Mean High Salinity During the Growing Season (March to Oct)"""
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 

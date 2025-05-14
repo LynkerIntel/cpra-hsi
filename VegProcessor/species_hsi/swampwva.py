@@ -22,7 +22,7 @@ class SwampHSI:
     v1a_pct_overstory: np.ndarray = None
     v1b_pct_midstory: np.ndarray = None
     v1c_pct_understory: np.ndarray = None
-    v2_stand_maturity: np.ndarray = None
+    v2_maturity_dbh: np.ndarray = None
     v3a_flood_duration: np.ndarray = None
     v3b_flow_exchange: np.ndarray = None
     v4_mean_high_salinity_gs: np.ndarray = None
@@ -50,7 +50,7 @@ class SwampHSI:
             v1a_pct_overstory=hsi_instance.pct_overstory,
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
-            v2_stand_maturity=hsi_instance.stand_maturity, #set to ideal
+            v2_maturity_dbh=hsi_instance.maturity_dbh, #set to ideal
             v3a_flood_duration=hsi_instance.flood_duration,
             v3b_flow_exchange=hsi_instance.flow_exchange,
             v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs, 
@@ -231,7 +231,7 @@ class SwampHSI:
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
-        if self.v2_stand_maturity is None:
+        if self.v2_maturity_dbh is None:
             self._logger.info(
                 "Stand maturity assumes ideal conditions. Setting index to 1."                                                         
             )
@@ -346,9 +346,9 @@ class SwampHSI:
 
         else: 
             # Areas with a DBH less than 5 are excluded from further logic
-            if self.v2_stand_maturity is not None: 
-                dbh_mask = self.v2_stand_maturity < 5
-                valid_mask = self.v2_stand_maturity >= 5
+            if self.v2_maturity_dbh is not None: 
+                dbh_mask = self.v2_maturity_dbh < 5
+                valid_mask = self.v2_maturity_dbh >= 5
                 self._logger.info("DBH is < 5. Setting index to 1.")
                 si_5[dbh_mask] = 1
 

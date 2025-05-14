@@ -261,33 +261,45 @@ class SwampHSI:
             si_3[~np.isnan(si_3)] = 1
 
         else: 
-            # scoring for 16 flood duration and 
-            # flow exchange combinations
+            # scoring for 20 flood duration and 
+            # flow exchange combinations of
+            # conditions
             si3_score = {
-                ("None/Temporary", "High"): 0.9,
+                ("None", "High"): 0.9,
+                ("Temporary", "High"): 0.9,
                 ("Seasonal", "High"): 1.00,
                 ("Semi-Permanent", "High"): 0.75,
                 ("Permanent", "High"): 0.65,
-                ("None/Temporary", "Moderate"): 0.75,
+                ("None", "Moderate"): 0.75,
+                ("Temporary", "Moderate"): 0.75,
                 ("Seasonal", "Moderate"): 0.85,
                 ("Semi-Permanent", "Moderate"): 0.65,
                 ("Permanent", "Moderate"): 0.45,
-                ("None/Temporary", "Low"): 0.65,
+                ("None", "Low"): 0.65,
+                ("Temporary", "Low"): 0.65,
                 ("Seasonal", "Low"): 0.7,
                 ("Semi-Permanent", "Low"): 0.45,
                 ("Permanent", "Low"): 0.3,
-                ("None/Temporary", "None"): 0.4,
+                ("None", "None"): 0.4,
+                ("Temporary", "None"): 0.4,
                 ("Seasonal", "None"): 0.5,
                 ("Semi-Permanent", "None"): 0.25,
                 ("Permanent", "None"): 0.1,
             }
 
+            # define conditions and scores
+            conds = []
+            scoring = []
+
             for (flood_dur, flow_exch), score in si3_score.items():
                 mask = (self.v3a_flood_duration == flood_dur) & (
                     self.v3b_flow_exchange == flow_exch
                 )
-                si_3[mask] = score
-    
+                conds.append(mask)
+                scoring.append(score)
+
+            si_3 = np.select(conds, scoring, default = si_3)
+
         si_3 = self.swamp_blh_mask(si_3)
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):

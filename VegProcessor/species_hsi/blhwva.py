@@ -365,7 +365,8 @@ class BottomlandHardwoodHSI:
 
         else: 
             # scoring for 20 flood duration and 
-            # flow exchange combinations
+            # flow exchange combinations of 
+            # conditions
             si4_score = {
                 ("None", "High"): 0.65,
                 ("Temporary", "High"): 1.00,
@@ -389,12 +390,19 @@ class BottomlandHardwoodHSI:
                 ("Permanent", "None"): 0.1,
             }
 
+            # define conditions and scores
+            conds = []
+            scoring = []
+
             for (flood_dur, flow_exch), score in si4_score.items():
                 mask = (self.v4a_flood_duration == flood_dur) & (
                     self.v4b_flow_exchange == flow_exch
                 )
-                si_4[mask] = score
-    
+                conds.append(mask)
+                scoring.append(score)
+            
+            si_4 = np.select(conds, scoring, default = si_4)
+
         si_4 = self.blh_cover_mask(si_4)
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):

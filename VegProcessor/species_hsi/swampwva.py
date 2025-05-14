@@ -23,7 +23,8 @@ class SwampHSI:
     v1b_pct_midstory: np.ndarray = None
     v1c_pct_understory: np.ndarray = None
     v2_stand_maturity: np.ndarray = None
-    v3_water_regime: np.ndarray = None
+    v3a_flood_duration: np.ndarray = None
+    v3b_flow_exchange: np.ndarray = None
     v4_mean_high_salinity_gs: np.ndarray = None
     v5_size_forested_area: np.ndarray = None
     v6_suit_trav_surr_lu: np.ndarray = None
@@ -50,7 +51,8 @@ class SwampHSI:
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
             v2_stand_maturity=hsi_instance.stand_maturity, #set to ideal
-            v3_water_regime=hsi_instance.water_regime, #set to ideal
+            v3a_flood_duration=hsi_instance.flood_duration,
+            v3b_flow_exchange=hsi_instance.flow_exchange,
             v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs, 
             v5_size_forested_area=hsi_instance.size_forested_area, 
             v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu, #set to ideal 
@@ -243,22 +245,44 @@ class SwampHSI:
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
-        """Water Regime"""
+        """Hydrology"""
         self._logger.info("Running SI 3")
         si_3 = self.template.copy()
 
-        # Set to ideal
-        if self.v3_water_regime is None:
+        if self.v3a_flood_duration is None or self.v3b_flow_exchange is None:
             self._logger.info(
-                "Water Regime assumes ideal conditions. Setting index to 1."
+                "Flood duration or flow exchange data is not provided. Setting index to 1."
             )
             si_3[~np.isnan(si_3)] = 1
 
-        else:
-            raise NotImplementedError(
-                "No logic for swamp v3 exists. Either use ideal (set array None) or add logic."
-            )
+        else: 
+            # scoring for 16 flood duration and 
+            # flow exchange combinations
+            si3_score = {
+                ("None/Temporary", "High"): 0.9,
+                ("Seasonal", "High"): 1.00,
+                ("Semi-Permanent", "High"): 0.75,
+                ("Permanent", "High"): 0.65,
+                ("None/Temporary", "Moderate"): 0.75,
+                ("Seasonal", "Moderate"): 0.85,
+                ("Semi-Permanent", "Moderate"): 0.65,
+                ("Permanent", "Moderate"): 0.45,
+                ("None/Temporary", "Low"): 0.65,
+                ("Seasonal", "Low"): 0.7,
+                ("Semi-Permanent", "Low"): 0.45,
+                ("Permanent", "Low"): 0.3,
+                ("None/Temporary", "None"): 0.4,
+                ("Seasonal", "None"): 0.5,
+                ("Semi-Permanent", "None"): 0.25,
+                ("Permanent", "None"): 0.1,
+            }
 
+            for (flood_dur, flow_exch), score in si3_score.items():
+                mask = (self.v3a_flood_duration == flood_dur) & (
+                    self.v3b_flow_exchange == flow_exch
+                )
+                si_3[mask] = score
+    
         si_3 = self.swamp_blh_mask(si_3)
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):

@@ -33,6 +33,7 @@ from species_hsi import (
     bluecrab,
     blackbear,
     blhwva,
+    swampwva,
 )
 
 
@@ -172,6 +173,8 @@ class HSI(vt.VegTransition):
         self.bass = None
         self.blackbear = None
         self.bluecrab = None
+        self.blhwva = None
+        self.swampwva = None
 
         # datasets
         self.pct_cover_veg = None
@@ -230,6 +233,11 @@ class HSI(vt.VegTransition):
         self.pct_overstory = None
         self.pct_midstory = None
         self.pct_understory = None
+        self.maturity_dbh = None  # always ideal
+        self.flood_duation = None  # TODO
+        self.flow_exchange = None  # TODO
+        self.mean_high_salinity_gs = None  # TODO
+        self.size_forested_area = None
 
         self._create_output_file(self.file_params)
 
@@ -314,7 +322,8 @@ class HSI(vt.VegTransition):
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
-            # self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
+            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
+            self.swampwva = swampwva.SwampHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 

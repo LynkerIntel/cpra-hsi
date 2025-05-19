@@ -60,7 +60,7 @@ class BottomlandHardwoodHSI:
             v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_blh_cover=hsi_instance.pct_blh_cover,
+            pct_blh_cover=hsi_instance.pct_blh,
         )
 
     def __post_init__(self):

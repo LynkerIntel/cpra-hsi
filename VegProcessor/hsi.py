@@ -158,7 +158,8 @@ class HSI(vt.VegTransition):
 
         # Dynamic Variables
         self.wse = None
-        self.maturity = np.zeros_like(self.dem)
+        self.maturity = None  # 60m, used by HSI
+        self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
@@ -198,6 +199,7 @@ class HSI(vt.VegTransition):
         self.pct_zone_iii = None
         self.pct_zone_ii = None
         self.pct_fresh_shrubs = None
+        self.pct_blh = None
 
         self.pct_bare_ground = None
         # self.pct_marsh = None # not currently in use
@@ -233,7 +235,7 @@ class HSI(vt.VegTransition):
         self.pct_overstory = None
         self.pct_midstory = None
         self.pct_understory = None
-        self.maturity_dbh = None  # always ideal
+        # self.maturity_dbh = None  # check this
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
         self.mean_high_salinity_gs = None  # TODO
@@ -301,6 +303,8 @@ class HSI(vt.VegTransition):
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
+        self.maturity = self._load_maturity()
+        self.maturity_480 = self._load_maturity(resample_cell=True)
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -314,6 +318,7 @@ class HSI(vt.VegTransition):
         self._calculate_story_assignment()
         self._calculate_connectivity()
         self._calculate_shrub_scrub_midstory()
+
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -364,7 +369,7 @@ class HSI(vt.VegTransition):
         logging.shutdown()
 
     def _load_veg_type(self) -> xr.DataArray:
-        """Load VegTransition output raster data.
+        """Load VegTransition output.
 
         Returns : xr.DataArray
             a single WY, defined by `self.current_timestep`.
@@ -375,6 +380,29 @@ class HSI(vt.VegTransition):
         da = ds.sel({"time": time_str})["veg_type"]
         ds.close()  # Ensure file closure
         return da
+
+    def _load_maturity(self, resample_cell: bool = False) -> np.ndarray:
+        """Load forest maturity VegTransition output.
+
+        Params
+        -------
+        resample : bool
+            True if maturity should be resampled to 480m cell
+            size using mean.
+
+        Returns : xr.DataArray
+            a single WY, defined by `self.current_timestep`.
+        """
+        logging.info("Loading maturity.")
+        time_str = self.current_timestep.strftime("%Y%m%d")
+        ds = xr.open_dataset(self.veg_type_path)
+        da = ds.sel({"time": time_str})["maturity"]
+        ds.close()  # Ensure file closure
+
+        if resample:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+
+        return da.to_numpy()
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -412,6 +440,8 @@ class HSI(vt.VegTransition):
         # note: masking for pct cover vars cannot occur here, because there
         # are limited pixels where the hydro domain exceeds the dem domain.
         # (these are masked out later)
+        self._logger.info("Calculating dynamic cover variables.")
+
         ds = utils.generate_pct_cover(
             data_array=self.veg_type,
             veg_keys=self.veg_keys,

@@ -50,7 +50,7 @@ class BottomlandHardwoodHSI:
             v1a_pct_overstory_w_mast=hsi_instance.pct_has_mast,
             v1b_pct_overstory_w_soft_mast=hsi_instance.pct_soft_mast,
             v1c_pct_overstory_w_hard_mast=hsi_instance.pct_hard_mast,
-            v2_stand_maturity=hsi_instance.maturity,
+            v2_stand_maturity=hsi_instance.maturity_480,
             v3a_pct_understory=hsi_instance.pct_understory,
             v3b_pct_midstory=hsi_instance.pct_midstory,
             v4a_flood_duration=hsi_instance.flood_duration,

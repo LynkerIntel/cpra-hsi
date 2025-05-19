@@ -399,7 +399,7 @@ class HSI(vt.VegTransition):
         da = ds.sel({"time": time_str})["maturity"]
         ds.close()  # Ensure file closure
 
-        if resample:
+        if resample_cell:
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
         return da.to_numpy()

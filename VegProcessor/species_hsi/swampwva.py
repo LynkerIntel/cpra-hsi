@@ -26,7 +26,7 @@ class SwampHSI:
     v3a_flood_duration: np.ndarray = None
     v3b_flow_exchange: np.ndarray = None
     v4_mean_high_salinity_gs: np.ndarray = None
-    v5_size_forested_area: np.ndarray = None
+    v5_forested_connectivity_cat: np.ndarray = None
     v6_suit_trav_surr_lu: np.ndarray = None
     v7_disturbance: np.ndarray = None
 
@@ -54,7 +54,7 @@ class SwampHSI:
             v3a_flood_duration=hsi_instance.flood_duration,
             v3b_flow_exchange=hsi_instance.flow_exchange,
             v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs,
-            v5_forested_connectivity_car=hsi_instance.forested_connectivity_cat,
+            v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
             v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
@@ -368,21 +368,21 @@ class SwampHSI:
                 self._logger.warning(
                     "Stand maturity (dbh) not provided. All areas are included in logic."
                 )
-                valid_mask = ~np.isnan(self.v5_size_forested_area)
+                valid_mask = ~np.isnan(self.v5_forested_connectivity_cat)
 
-            mask_1 = self.forested_connectivity_cat == 1
+            mask_1 = self.v5_forested_connectivity_cat == 1
             si_5[mask_1] = 0.2
 
-            mask_2 = self.forested_connectivity_cat == 2
+            mask_2 = self.v5_forested_connectivity_cat == 2
             si_5[mask_2] = 0.4
 
-            mask_3 = self.forested_connectivity_cat == 3
+            mask_3 = self.v5_forested_connectivity_cat == 3
             si_5[mask_3] = 0.6
 
-            mask_4 = self.forested_connectivity_cat == 4
+            mask_4 = self.v5_forested_connectivity_cat == 4
             si_5[mask_4] = 0.8
 
-            mask_5 = self.forested_connectivity_cat == 5
+            mask_5 = self.v5_forested_connectivity_cat == 5
             si_5[mask_5] = 1
 
         si_5 = self.swamp_blh_mask(si_5)

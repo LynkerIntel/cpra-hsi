@@ -350,26 +350,13 @@ class SwampHSI:
         self._logger.info("Running SI 5")
         si_5 = self.template.copy()
 
-        if self.v5_size_forested_area is None:
+        if self.v5_forested_connectivity_cat is None:
             self._logger.info(
                 "Size of contiguous forested area in acres not provided. Setting index to 1."
             )
             si_5[~np.isnan(si_5)] = 1
 
         else:
-            # Areas with a DBH less than 5 are excluded from further logic
-            if self.v2_maturity_dbh is not None:
-                dbh_mask = self.v2_maturity_dbh < 5
-                valid_mask = self.v2_maturity_dbh >= 5
-                self._logger.info("DBH is < 5. Setting index to 1.")
-                si_5[dbh_mask] = 1
-
-            else:
-                self._logger.warning(
-                    "Stand maturity (dbh) not provided. All areas are included in logic."
-                )
-                valid_mask = ~np.isnan(self.v5_forested_connectivity_cat)
-
             mask_1 = self.v5_forested_connectivity_cat == 1
             si_5[mask_1] = 0.2
 
@@ -384,6 +371,17 @@ class SwampHSI:
 
             mask_5 = self.v5_forested_connectivity_cat == 5
             si_5[mask_5] = 1
+
+            # Areas with a DBH less than 5 are excluded from further logic
+            if self.v2_maturity_dbh is not None:
+                self._logger.info("DBH is < 5. Setting index to 1.")
+                dbh_mask = self.v2_maturity_dbh < 5
+                si_5[dbh_mask] = 1
+
+            else:
+                self._logger.warning(
+                    "Stand maturity (dbh) not provided. All areas are included in logic."
+                )
 
         si_5 = self.swamp_blh_mask(si_5)
 

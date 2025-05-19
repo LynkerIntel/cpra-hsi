@@ -234,10 +234,12 @@ class HSI(vt.VegTransition):
         self.pct_midstory = None
         self.pct_understory = None
         self.maturity_dbh = None  # always ideal
-        self.flood_duation = None  # TODO
+        self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
         self.mean_high_salinity_gs = None  # TODO
         self.size_forested_area = None
+        self.suit_trav_surr_lu = None  # alays ideal
+        self.disturbance = None  # always ideal
 
         self._create_output_file(self.file_params)
 
@@ -424,6 +426,13 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
+        ds_blh = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[15, 16, 17],  # these are the BLH zones + swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -457,6 +466,7 @@ class HSI(vt.VegTransition):
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
+        self.pct_blh = ds_blh.to_numpy()
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.

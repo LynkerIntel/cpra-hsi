@@ -61,7 +61,6 @@ class BottomlandHardwoodHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             pct_blh_cover=hsi_instance.pct_blh_cover,
-            pct_blh_cover=hsi_instance.pct_blh_cover,
         )
 
     def __post_init__(self):

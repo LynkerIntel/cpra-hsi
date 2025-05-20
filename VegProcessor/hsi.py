@@ -235,7 +235,7 @@ class HSI(vt.VegTransition):
         self.pct_overstory = None
         self.pct_midstory = None
         self.pct_understory = None
-        # self.maturity_dbh = None  # check this
+        self.maturity_dbh = None  # always ideal
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
         self.mean_high_salinity_gs = None  # TODO
@@ -858,7 +858,10 @@ class HSI(vt.VegTransition):
     def _calculate_connectivity(self):
         """Calculate the size of contiguous forested areas in the domain, then
         bin into classed based on thresholds. This method uses 4-connectivity by default, but
-        can be adapted to 8-connectivity.
+        can be adapted to 8-connectivity. The output arrays contains zeros, for
+        non-forested pixels (this may need to change).
+
+        Note that this method uses a mode reduction to 480m, rather than mean reduction.
 
         Size is determined by 60m pixel area of 3,600m^2. Where:
 

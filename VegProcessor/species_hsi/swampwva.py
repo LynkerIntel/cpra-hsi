@@ -98,9 +98,7 @@ class SwampHSI:
         """
         clipped = np.clip(result, 0.0, 1.0)
         if np.any(result > 1.1):
-            self._logger.warning(
-                "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
-            )
+            raise ValueError("SI logic resulting in values > 1.1")
         return clipped
 
     def _setup_logger(self):
@@ -134,6 +132,7 @@ class SwampHSI:
                 (self.pct_swamp_bottom_hardwood < 33)
                 & (self.pct_zone_ii < 60)
                 & (~np.isnan(self.pct_swamp_bottom_hardwood))
+                & (~np.isnan(self.dem_480))  # include domain
             )
             si_array[swamp_blh_mask] = 0
         return si_array
@@ -357,6 +356,11 @@ class SwampHSI:
             si_5[~np.isnan(si_5)] = 1
 
         else:
+            # extra mask for ouput of 0 (not forest) in forested
+            # connectivity, this becomes NaN
+            mask_0 = self.v5_forested_connectivity_cat == 0
+            si_5[mask_0] = np.nan
+
             mask_1 = self.v5_forested_connectivity_cat == 1
             si_5[mask_1] = 0.2
 
@@ -388,7 +392,7 @@ class SwampHSI:
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
-        return self.clip_array(si_5)
+        return si_5
 
     def calculate_si_6(self) -> np.ndarray:
         """Suitability and Traversability of Surrounding Land Uses"""

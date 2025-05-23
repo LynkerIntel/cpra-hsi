@@ -728,38 +728,45 @@ class RiverineCatfishHSI:
                     num_invalid,
                 )
         
-        # food component
-        fc = (self.si_2 + self.si_4) / 2
-        # cover
-        cc = (self.si_1 * self.si_2 * self.si_18) ** (1/3)
-        # water quality component
-        wq = (
-            (2 * (self.si_5 + self.si_12 + self.si_14) / (3)) 
-              + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
+        # food component (fc)
+        self.fc = (self.si_2 + self.si_4) / 2
+
+        # cover component (cc)
+        self.cc = (self.si_1 * self.si_2 * self.si_18) ** (1/3)
+
+        # water quality component (wq)
+        self.wq = (
+            (2 * (self.si_5 + self.si_12 + self.si_14) / (3)) + 
+            self.si_7 + 
+            2 * (self.si_8) + 
+            self.si_9 + 
+            self.si_13
         ) / 7
+
         # water quality component conditions
         wq_mask = (self.si_5 <= 0.4) | (self.si_12 <= 0.4) | (self.si_14 <= 0.4) | \
             (self.si_8 <= 0.4) | (self.si_9 <= 0.4) | (self.si_13 <= 0.4)
-        wq = np.where(wq_mask, np.minimum(np.stack(
-            [self.si_5, self.si_12, self.si_14, self.si_8, self.si_9, self.si_13, wq]
-            ), axis=0).min(axis=0), wq)
-        # reproduction component
-        rc = (
+        self.wq = np.where(wq_mask, np.minimum(np.stack(
+            [self.si_5, self.si_12, self.si_14, self.si_8, self.si_9, self.si_13, self.wq]
+            ), axis=0).min(axis=0), self.wq)
+        
+        # reproduction component (rc)
+        self.rc = (
             (((self.si_1) * (self.si_2 ** (2)) * (self.si_8 ** (2)) * 
                (self.si_10 ** (2)) * (self.si_11)) ** (1/8))
         )
         # reproduction component conditions
         rc_mask = (self.si_8 <= 0.4) | (self.si_10 <= 0.4) | (self.si_11 <= 0.4)
-        rc = np.where(rc_mask, 
+        self.rc = np.where(rc_mask, 
                       np.minimum(np.stack(
-                          [self.si_8, self.si_10, self.si_11, rc]), axis=0).min(axis=0), 
-                          rc)
+                          [self.si_8, self.si_10, self.si_11, self.rc]), axis=0).min(axis=0), 
+                          self.rc)
 
         # Combine individual suitability indices
-        initial_hsi = (fc * cc * (wq ** 2) * (rc ** 2)) ** (1/6)
+        initial_hsi = (self.fc * self.cc * (self.wq ** 2) * (rc ** 2)) ** (1/6)
 
         # If wq or rc <= 0.4, select min(wq, rc, initial_hsi)
-        mask_hsi = (wq <= 0.4) | (rc <= 0.4)
+        mask_hsi = (self.wq <= 0.4) | (self.rc <= 0.4)
         hsi = np.where(mask_hsi, np.minimum.reduce([wq, rc, initial_hsi]), initial_hsi)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1

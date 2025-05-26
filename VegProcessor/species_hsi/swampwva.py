@@ -176,8 +176,6 @@ class SwampHSI:
             si_1[class_2] = 0.2
 
             # class 3:
-            # block 1: 33-50 overstory & (mid >= 33 or under >= 33)
-            # block 2: 50-75 overstory & mid < 33 & under < 33
             class_3_block1 = (
                 mask_overs_33 & (self.v1a_pct_overstory < 50)
             ) & (mask_mids_33 | mask_unders_33)
@@ -191,8 +189,6 @@ class SwampHSI:
             si_1[class_3] = 0.4
 
             # class 4:
-            # block 1: 50-75 overstory & (mid >= 33 or under >= 33)
-            # block 2: >= 75 overstory & mid < 33 or under < 33
             class_4_block1 = (
                 mask_overs_50 & (self.v1a_pct_overstory < 75)
             ) & (mask_mids_33 | mask_unders_33)
@@ -211,8 +207,6 @@ class SwampHSI:
             si_1[class_5] = 0.8
 
             # class 6
-            # block 1: >= 50 overstory & mid >= 33 & under >= 33
-            # block 2: >= 75 overstory & (mid >= 33 or under >= 33)
             class_6_block1 = mask_overs_50 & mask_mids_33 & mask_unders_33
             class_6_block2 = mask_overs_75 & (mask_mids_33 | mask_unders_33)
 
@@ -378,7 +372,7 @@ class SwampHSI:
 
             # Areas with a DBH less than 5 are excluded from further logic
             if self.v2_maturity_dbh is not None:
-                self._logger.info("DBH is < 5. Setting index to 1.")
+                self._logger.info("Setting index to 1 if DBH is < 5.")
                 dbh_mask = self.v2_maturity_dbh < 5
                 si_5[dbh_mask] = 1
 

@@ -164,7 +164,7 @@ class HSI(vt.VegTransition):
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
-        self.water_depth_monthly_mean_jan_aug_cm = None
+        # self.water_depth_monthly_mean_jan_aug_cm = None
 
         # HSI models
         self.alligator = None
@@ -291,8 +291,8 @@ class HSI(vt.VegTransition):
             # self.water_depth = self._get_depth()
 
             self.water_depth_annual_mean = self._get_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug_cm = (
-                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+                months=[1, 2, 3, 4, 5, 6, 7, 8]
             )
             self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
                 months=[9, 10, 11, 12]

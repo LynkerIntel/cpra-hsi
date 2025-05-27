@@ -239,8 +239,7 @@ class HSI(vt.VegTransition):
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
         self.mean_high_salinity_gs = None  # TODO
-        self.size_forested_area = None
-        self.suit_trav_surr_lu = None  # alays ideal
+        self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
         self._create_output_file(self.file_params)

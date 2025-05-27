@@ -1,5 +1,8 @@
 import xarray as xr
 import pathlib
+from scipy import ndimage
+import scipy.stats as stats
+
 import numpy as np
 import pandas as pd
 from xrspatial.zonal import crosstab
@@ -311,7 +314,7 @@ def generate_pct_cover_custom(
     :param (list) veg_types: List of veg types to consider as "True"
         for percent cover
 
-    :return: None, output is .nc file
+    :return: Aggregated xr.DataArray
     """
     # create new binary var with tuple of dims, data
     data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))
@@ -600,6 +603,68 @@ def generate_filename(
 
     # Combine with base path if provided
     return Path(base_path) / filename if base_path else Path(filename)
+
+
+def get_contiguous_regions(
+    boolean_arr: np.ndarray, size_threshold: int
+) -> np.ndarray:
+    """Convenience function for calculating if a pixel is a
+    member of a contiguous region of vegetation types.
+
+    Parameters
+    ------------
+    boolean_arr : np.ndarray
+        Boolean arr where True is the veg type to check for connectivity.
+
+    size_threshold : int
+        Number of connected pixels to consider a passing group size.
+
+    Returns
+    --------
+    pixels belonging to large enough regions: np.ndarray
+    """
+    # step 1: label connected components
+    structure = np.ones((3, 3), dtype=int)  # use 8-connectivity
+    labeled_array, num_features = ndimage.label(
+        boolean_arr, structure=structure
+    )
+
+    # step 2: count pixels per label
+    label_sizes = np.bincount(labeled_array.ravel())
+
+    # step 3: find large enough labels (excluding background label 0)
+    large_labels = np.where(label_sizes[1:] >= size_threshold)[0] + 1
+
+    # step 4: mask pixels belonging to large enough regions
+    final_mask = np.isin(labeled_array, large_labels)
+
+    return final_mask
+
+
+def reduce_arr_by_mode(categorical_array: np.ndarray):
+    """Reduce 60m array by mode to get 480m aggregation. Used for
+    cases where mean is not appropriate (categorical vars).
+
+    Params
+    ------
+    categorical_array : np.ndarray
+        An array with integer categories.
+
+    Return
+    ------
+    coarse_da : np.ndarray
+        Array of input coarsed to 480m size, using mode to reduce pixels.
+    """
+
+    def mode_reduce(arr, axis):
+        m = stats.mode(arr, axis=axis)
+        return m[0]
+
+    # define dims explicitly
+    da = xr.DataArray(categorical_array, dims=["y", "x"])
+    # coarsen to 8x8 blocks, applying mode function
+    coarse_da = da.coarsen(y=8, x=8, boundary="pad").reduce(mode_reduce)
+    return coarse_da
 
 
 # def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:

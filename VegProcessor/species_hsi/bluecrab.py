@@ -16,7 +16,6 @@ class BlueCrabHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
@@ -80,16 +79,6 @@ class BlueCrabHSI:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
-
-    # def _determine_shape(self) -> tuple:
-    #     """Determine the shape of the environmental variable arrays."""
-    #     # Iterate over instance attributes and return the shape of the first non None numpy array
-    #     for name, value in vars(self).items():
-    #         if value is not None and isinstance(value, np.ndarray):
-    #             self._logger.info(
-    #                 "Using attribute %s as shape for output: %s", name, value.shape
-    #             )
-    #             return value.shape
 
     def _create_template_array(self) -> np.ndarray:
         """Create an array from a template all valid pixels are 999.0, and

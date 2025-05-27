@@ -26,7 +26,7 @@ class BottomlandHardwoodHSI:
     v3b_pct_midstory: np.ndarray = None
     v4a_flood_duration: np.ndarray = None
     v4b_flow_exchange: np.ndarray = None
-    v5_size_forested_area: np.ndarray = None
+    v5_forested_connectivity_cat: np.ndarray = None
     v6_suit_trav_surr_lu: np.ndarray = None
     v7_disturbance: np.ndarray = None
 
@@ -55,7 +55,7 @@ class BottomlandHardwoodHSI:
             v3b_pct_midstory=hsi_instance.pct_midstory,
             v4a_flood_duration=hsi_instance.flood_duration,
             v4b_flow_exchange=hsi_instance.flow_exchange,
-            v5_size_forested_area=hsi_instance.size_forested_area,
+            v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
             v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
@@ -133,6 +133,7 @@ class BottomlandHardwoodHSI:
                 ~np.isnan(self.pct_blh_cover)
             )
             si_array[blh_mask] = 0
+
         return si_array
 
     def calculate_si_1(self) -> np.ndarray:
@@ -406,43 +407,34 @@ class BottomlandHardwoodHSI:
         self._logger.info("Running SI 5")
         si_5 = self.template.copy()
 
-        if self.v5_size_forested_area is None:
+        if self.v5_forested_connectivity_cat is None:
             self._logger.info(
                 "Size of contiguous forested area in acres not provided. Setting index to 1."
             )
             si_5[~np.isnan(si_5)] = 1
 
         else:
+            # extra mask for ouput of 0 (not forest) in forested
+            # connectivity, this becomes NaN
+            mask_0 = self.v5_forested_connectivity_cat == 0
+            si_5[mask_0] = np.nan
 
-            # condition 1 for class 1
-            mask_1 = (self.v5_size_forested_area >= 0) & (
-                self.v5_size_forested_area <= 5
-            )
+            mask_1 = self.v5_forested_connectivity_cat == 1
             si_5[mask_1] = 0.2
 
-            # condition 2 for class 2
-            mask_2 = (self.v5_size_forested_area > 5) & (
-                self.v5_size_forested_area <= 20
-            )
+            mask_2 = self.v5_forested_connectivity_cat == 2
             si_5[mask_2] = 0.4
 
-            # condition 3 for class 3
-            mask_3 = (self.v5_size_forested_area > 20) & (
-                self.v5_size_forested_area <= 100
-            )
+            mask_3 = self.v5_forested_connectivity_cat == 3
             si_5[mask_3] = 0.6
 
-            # condition 4 for class 4
-            mask_4 = (self.v5_size_forested_area > 100) & (
-                self.v5_size_forested_area <= 500
-            )
+            mask_4 = self.v5_forested_connectivity_cat == 4
             si_5[mask_4] = 0.8
 
-            # condition 5 for class 5
-            mask_5 = self.v5_size_forested_area > 500
+            mask_5 = self.v5_forested_connectivity_cat == 5
             si_5[mask_5] = 1
 
-        si_5 = self.blh_cover_mask(si_5)
+            si_5 = self.blh_cover_mask(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

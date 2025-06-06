@@ -782,11 +782,11 @@ class RiverineCatfishHSI:
                           self.rc)
 
         # Combine individual suitability indices
-        initial_hsi = (self.fc * self.cc * (self.wq ** 2) * (rc ** 2)) ** (1/6)
+        initial_hsi = (self.fc * self.cc * (self.wq ** 2) * (self.rc ** 2)) ** (1/6)
 
         # If wq or rc <= 0.4, select min(wq, rc, initial_hsi)
         mask_hsi = (self.wq <= 0.4) | (self.rc <= 0.4)
-        hsi = np.where(mask_hsi, np.minimum.reduce([wq, rc, initial_hsi]), initial_hsi)
+        hsi = np.where(mask_hsi, np.minimum.reduce([self.wq, self.rc, initial_hsi]), initial_hsi)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

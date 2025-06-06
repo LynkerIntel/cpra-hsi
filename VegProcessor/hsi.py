@@ -14,6 +14,7 @@ from datetime import datetime
 from rasterio.enums import Resampling
 from scipy.ndimage import binary_dilation
 from skimage.morphology import disk
+from scipy.ndimage import label
 
 # import veg_logic
 import hydro_logic
@@ -21,6 +22,8 @@ import plotting
 import utils
 
 import veg_transition as vt
+from output_vars import get_hsi_variables
+
 from species_hsi import (
     alligator,
     crawfish,
@@ -29,6 +32,8 @@ from species_hsi import (
     bass,
     bluecrab,
     blackbear,
+    blhwva,
+    swampwva,
 )
 
 
@@ -86,6 +91,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.testing_radius = self.config["simulation"].get("testing_radius")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -148,16 +154,17 @@ class HSI(vt.VegTransition):
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
-        self._calculate_pct_cover_static()
+        # self._calculate_pct_cover_static()
 
         # Dynamic Variables
         self.wse = None
-        self.maturity = np.zeros_like(self.dem)
+        self.maturity = None  # 60m, used by HSI
+        self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
-        self.water_depth_monthly_mean_jan_aug_cm = None
+        # self.water_depth_monthly_mean_jan_aug_cm = None
 
         # HSI models
         self.alligator = None
@@ -167,6 +174,8 @@ class HSI(vt.VegTransition):
         self.bass = None
         self.blackbear = None
         self.bluecrab = None
+        self.blhwva = None
+        self.swampwva = None
 
         # datasets
         self.pct_cover_veg = None
@@ -182,12 +191,15 @@ class HSI(vt.VegTransition):
         self.pct_intermediate_marsh = None
         self.pct_brackish_marsh = None
         self.pct_saline_marsh = None
+        self.pct_shrub_scrub = None
+        self.pct_shrub_scrub_midstory = None
 
         self.pct_zone_v = None
         self.pct_zone_iv = None
         self.pct_zone_iii = None
         self.pct_zone_ii = None
         self.pct_fresh_shrubs = None
+        self.pct_blh = None
 
         self.pct_bare_ground = None
         # self.pct_marsh = None # not currently in use
@@ -207,66 +219,30 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = None
         self.water_depth_spawning_season = None
 
-        # black bear
+        # tree mast
         self.pct_soft_mast = None
         self.pct_hard_mast = None
         self.pct_no_mast = None
+        self.pct_has_mast = None
+        self.story_class = np.zeros_like(self.dem)
 
         self.num_soft_mast_species = None  # always ideal
         self.basal_area_hard_mast = None  # always ideal
         self.num_hard_mast_species = None  # always ideal
         self.pct_near_forest = None
 
+        self.forested_connectivity_cat = None
+        self.pct_overstory = None
+        self.pct_midstory = None
+        self.pct_understory = None
+        self.maturity_dbh = None  # always ideal
+        self.flood_duration = None  # TODO
+        self.flow_exchange = None  # TODO
+        self.mean_high_salinity_gs = None  # TODO
+        self.suit_trav_surr_lu = None  # always ideal
+        self.disturbance = None  # always ideal
+
         self._create_output_file(self.file_params)
-
-    # def _setup_logger(self, log_level=logging.INFO):
-    #     """Set up the logger for the VegTransition class."""
-    #     self._logger = logging.getLogger("HSI")
-    #     self._logger.setLevel(log_level)
-
-    #     # clear existing handlers to prevent duplicates
-    #     # (this happens when re-runnning in notebook)
-    #     if self._logger.hasHandlers():
-    #         for handler in self._logger.handlers:
-    #             self._logger.removeHandler(handler)
-    #             handler.close()  # Close old handlers properly
-
-    #     try:
-    #         # console handler for stdout
-    #         # i.e. print messages
-    #         ch = logging.StreamHandler()
-    #         ch.setLevel(log_level)
-
-    #         # file handler for logs in `run-input` folder
-    #         run_metadata_dir = os.path.join(
-    #             self.output_dir_path, "run-metadata"
-    #         )
-    #         os.makedirs(
-    #             run_metadata_dir, exist_ok=True
-    #         )  # Ensure directory exists
-    #         log_file_path = os.path.join(run_metadata_dir, "simulation.log")
-    #         fh = logging.FileHandler(log_file_path)
-    #         fh.setLevel(log_level)
-
-    #         formatter = logging.Formatter(
-    #             "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
-    #         )
-
-    #         # Add formatter to handlers
-    #         ch.setFormatter(formatter)
-    #         fh.setFormatter(formatter)
-
-    #         # Add handlers to the logger
-    #         self._logger.addHandler(ch)
-    #         self._logger.addHandler(fh)
-
-    #         # Add a custom filter to inject the timestep
-    #         filter_instance = _TimestepFilter(self)
-    #         self._logger.addFilter(filter_instance)
-
-    #         self._logger.info("Logger setup complete.")
-    #     except Exception as e:
-    #         print(f"Error during logger setup: {e}")
 
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
@@ -314,8 +290,8 @@ class HSI(vt.VegTransition):
             # self.water_depth = self._get_depth()
 
             self.water_depth_annual_mean = self._get_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug_cm = (
-                self._get_depth_filtered(months=[1, 2, 3, 4, 5, 6, 7, 8])
+            self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+                months=[1, 2, 3, 4, 5, 6, 7, 8]
             )
             self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
                 months=[9, 10, 11, 12]
@@ -326,6 +302,8 @@ class HSI(vt.VegTransition):
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
+        self.maturity = self._load_maturity()
+        self.maturity_480 = self._load_maturity(resample_cell=True)
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -336,6 +314,10 @@ class HSI(vt.VegTransition):
         )
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
+        self._calculate_story_assignment()
+        self._calculate_connectivity()
+        self._calculate_shrub_scrub_midstory()
+
         # run ---------------------------------------------------------
         if self.run_hsi:
 
@@ -346,6 +328,8 @@ class HSI(vt.VegTransition):
             self.bass = bass.BassHSI.from_hsi(self)
             self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
+            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
+            self.swampwva = swampwva.SwampHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -373,9 +357,9 @@ class HSI(vt.VegTransition):
             "Running model for: %s timesteps", len(simulation_period)
         )
 
-        # run expensive static var creation (other static vars
-        # are created in _init_)
-        self.pct_human_influence = self._calculate_pct_area_influence()
+        # static variable calculations are outside of
+        # simulation loop
+        self._calculate_static_vars()
 
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
@@ -384,7 +368,7 @@ class HSI(vt.VegTransition):
         logging.shutdown()
 
     def _load_veg_type(self) -> xr.DataArray:
-        """Load VegTransition output raster data.
+        """Load VegTransition output.
 
         Returns : xr.DataArray
             a single WY, defined by `self.current_timestep`.
@@ -395,6 +379,29 @@ class HSI(vt.VegTransition):
         da = ds.sel({"time": time_str})["veg_type"]
         ds.close()  # Ensure file closure
         return da
+
+    def _load_maturity(self, resample_cell: bool = False) -> np.ndarray:
+        """Load forest maturity VegTransition output.
+
+        Params
+        -------
+        resample : bool
+            True if maturity should be resampled to 480m cell
+            size using mean.
+
+        Returns : xr.DataArray
+            a single WY, defined by `self.current_timestep`.
+        """
+        logging.info("Loading maturity.")
+        time_str = self.current_timestep.strftime("%Y%m%d")
+        ds = xr.open_dataset(self.veg_type_path)
+        da = ds.sel({"time": time_str})["maturity"]
+        ds.close()  # Ensure file closure
+
+        if resample_cell:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+
+        return da.to_numpy()
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -432,6 +439,8 @@ class HSI(vt.VegTransition):
         # note: masking for pct cover vars cannot occur here, because there
         # are limited pixels where the hydro domain exceeds the dem domain.
         # (these are masked out later)
+        self._logger.info("Calculating dynamic cover variables.")
+
         ds = utils.generate_pct_cover(
             data_array=self.veg_type,
             veg_keys=self.veg_keys,
@@ -446,7 +455,13 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # ds_swamp_blh = ds_swamp_blh.where(~np.isnan(self.hydro_domain_480))
+        ds_blh = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[15, 16, 17],  # these are the BLH zones + swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
 
         ds_vegetated = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
@@ -457,8 +472,8 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        # ds_vegetated = ds_vegetated.where(~np.isnan(self.hydro_domain_480))
 
+        self.pct_shrub_scrub = ds["pct_cover_12"].to_numpy()
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
         self.pct_zone_iv = ds["pct_cover_16"].to_numpy()
@@ -480,8 +495,9 @@ class HSI(vt.VegTransition):
 
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
+        self.pct_blh = ds_blh.to_numpy()
 
-    def _calculate_pct_cover_static(self):
+    def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
         This method is called during initialization, for static variables that
         vary spatially but not temporally.
@@ -504,6 +520,11 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         ).to_numpy()
+
+        self._logger.info("Calculating static var: pct area influence")
+        self.pct_human_influence = self._calculate_pct_area_influence(
+            radius=self.testing_radius
+        )
 
     @staticmethod
     def _calculate_near_landtype(
@@ -549,7 +570,7 @@ class HSI(vt.VegTransition):
         else:
             return istype_expanded & nottype_bool
 
-    def _calculate_pct_area_influence(self):
+    def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
         radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
         residences.
@@ -571,12 +592,19 @@ class HSI(vt.VegTransition):
         """
         towns = [2, 3, 4, 5]
         croplands = [6, 7, 8]
+        radius_towns = radius or 95
+        radius_croplands = radius or 59
+
+        if radius:
+            self._logger.warning(
+                "Running area of influence with radius: %s.", radius
+            )
 
         self._logger.info("Calculating static var: human influence - towns.")
         near_towns = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
             landtype_true=towns,
-            radius=95,
+            radius=radius_towns,
             include_source=True,
         )
         self._logger.info(
@@ -585,7 +613,7 @@ class HSI(vt.VegTransition):
         near_croplands = self._calculate_near_landtype(
             landcover_arr=self.initial_veg_type,  # initial
             landtype_true=croplands,
-            radius=58,
+            radius=radius_croplands,
             include_source=True,
         )
 
@@ -762,6 +790,115 @@ class HSI(vt.VegTransition):
             + self.pct_zone_v * no_mast["V"]
         )
 
+        # pct coverage of either mast type
+        self.pct_has_mast = self.pct_soft_mast + self.pct_hard_mast
+
+    def _calculate_story_assignment(self):
+        """Calculate categorical story assignment.
+
+        Overstory = 3
+        Midstory = 2
+        Understory = 1
+        """
+        self._logger.info("Calculating story assignment for forest types.")
+        forested_types = [15, 16, 17, 18]
+        understory_types = [20, 21, 22, 23]
+
+        # overstory types
+        type_mask = np.isin(self.veg_type, forested_types)
+        mask_3 = type_mask & (self.maturity > 10)
+        self.story_class[mask_3] = 3
+
+        # midstory types
+        mask_2 = type_mask & (self.maturity < 10)
+        self.story_class[mask_2] = 2
+
+        # fresh_shrub
+        mask_fresh_shrub = self.veg_type == 19
+        self.story_class[mask_fresh_shrub] = 2
+
+        # other
+        type_mask = np.isin(self.veg_type, understory_types)
+        self.story_class[type_mask] = 1
+
+        story_class_da = xr.DataArray(self.story_class, dims=["y", "x"])
+        # get pct cover at 480m for swamp WVA
+        self.pct_overstory = utils.generate_pct_cover_custom(
+            data_array=story_class_da,
+            veg_types=[3],
+            x=8,
+            y=8,
+            boundary="pad",
+        ).to_numpy()
+        self.pct_midstory = utils.generate_pct_cover_custom(
+            data_array=story_class_da,
+            veg_types=[2],
+            x=8,
+            y=8,
+            boundary="pad",
+        ).to_numpy()
+        self.pct_understory = utils.generate_pct_cover_custom(
+            data_array=story_class_da,
+            veg_types=[1],
+            x=8,
+            y=8,
+            boundary="pad",
+        ).to_numpy()
+
+        # resample to 480m for BLH WVA
+        self.story_class = utils.reduce_arr_by_mode(self.story_class)
+
+    def _calculate_shrub_scrub_midstory(self):
+        """Get combined percentange of shrub/scrub & midstory cover at 480m cell size."""
+        self.pct_shrub_scrub_midstory = (
+            self.pct_midstory + self.pct_shrub_scrub
+        )
+
+    def _calculate_connectivity(self):
+        """Calculate the size of contiguous forested areas in the domain, then
+        bin into classed based on thresholds. This method uses 4-connectivity by default, but
+        can be adapted to 8-connectivity. The output arrays contains zeros, for
+        non-forested pixels (this may need to change).
+
+        Note that this method uses a mode reduction to 480m, rather than mean reduction.
+
+        Size is determined by 60m pixel area of 3,600m^2. Where:
+
+        Category 1: < 5 acres = < 6 pixels
+        Category 2: < 20 acres = < 23 pixels
+        Category 3: < 100 acres = < 113 pixels
+        Category 4: < 500 acres = < 562 pixels
+        Category 5: > 500 acres = > 562 pixels
+        """
+        self._logger.info("Calculating connectivity for forested types.")
+        forested_types = [15, 16, 17, 18]
+        forest_bool = np.isin(self.veg_type, forested_types)
+
+        # label all contiguous forest patches once
+        labeled_array, num_features = label(forest_bool)
+
+        # count pixels in each labeled region
+        region_sizes = np.bincount(labeled_array.ravel())
+        connectivity_category = np.zeros_like(labeled_array)
+
+        for region_id, size in enumerate(region_sizes):
+            if region_id == 0:
+                continue  # skip 0
+            if size <= 6:
+                connectivity_category[labeled_array == region_id] = 1
+            elif size <= 23:
+                connectivity_category[labeled_array == region_id] = 2
+            elif size <= 113:
+                connectivity_category[labeled_array == region_id] = 3
+            elif size <= 562:
+                connectivity_category[labeled_array == region_id] = 4
+            else:
+                connectivity_category[labeled_array == region_id] = 5
+
+        self.forested_connectivity_cat = utils.reduce_arr_by_mode(
+            connectivity_category
+        )
+
     def _calculate_near_forest(self, radius: int = 4) -> np.ndarray:
         """Percent of area in nonforested cover types ≤ 250m from forested cover types.
         Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
@@ -914,772 +1051,7 @@ class HSI(vt.VegTransition):
         None
         """
         timestep_str = timestep.strftime("%Y-%m-%d")
-
-        hsi_variables = {
-            "alligator_hsi": [
-                self.alligator.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "alligator_si_1": [
-                self.alligator.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "alligator_si_2": [
-                self.alligator.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "alligator_si_3": [
-                self.alligator.si_3,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "alligator_si_4": [
-                self.alligator.si_4,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "alligator_si_5": [
-                self.alligator.si_5,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_hsi": [
-                self.baldeagle.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_1": [
-                self.baldeagle.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_2": [
-                self.baldeagle.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_3": [
-                self.baldeagle.si_3,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_4": [
-                self.baldeagle.si_4,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_5": [
-                self.baldeagle.si_5,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bald_eagle_si_6": [
-                self.baldeagle.si_6,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "crawfish_hsi": [
-                self.crawfish.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "crawfish_si_1": [
-                self.crawfish.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "crawfish_si_2": [
-                self.crawfish.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "crawfish_si_3": [
-                self.crawfish.si_3,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "crawfish_si_4": [
-                self.crawfish.si_4,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_hsi": [
-                self.gizzardshad.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_1": [
-                self.gizzardshad.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_2": [
-                self.gizzardshad.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_3": [
-                self.gizzardshad.si_3,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_4": [
-                self.gizzardshad.si_4,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_5": [
-                self.gizzardshad.si_5,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_6": [
-                self.gizzardshad.si_6,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "gizzard_shad_si_7": [
-                self.gizzardshad.si_7,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bass_hsi": [
-                self.bass.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bass_si_1": [
-                self.bass.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bass_si_2": [
-                self.bass.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_hsi": [
-                self.blackbear.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_1": [
-                self.blackbear.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_2": [
-                self.blackbear.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_3": [
-                self.blackbear.si_3,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_4": [
-                self.blackbear.si_4,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_5": [
-                self.blackbear.si_5,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_6": [
-                self.blackbear.si_6,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_7": [
-                self.blackbear.si_7,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "blackbear_si_8": [
-                self.blackbear.si_8,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bluecrab_si_1": [
-                self.bluecrab.si_1,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bluecrab_si_2": [
-                self.bluecrab.si_2,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "bluecrab_hsi": [
-                self.bluecrab.hsi,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_open_water": [
-                self.pct_open_water,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "mean_annual_salinity": [
-                self.mean_annual_salinity,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "mean_annual_temperature": [
-                self.mean_annual_temperature,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_swamp_bottom_hardwood": [
-                self.pct_swamp_bottom_hardwood,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_fresh_marsh": [
-                self.pct_fresh_marsh,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_intermediate_marsh": [
-                self.pct_intermediate_marsh,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_brackish_marsh": [
-                self.pct_brackish_marsh,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_saline_marsh": [
-                self.pct_saline_marsh,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_zone_v": [
-                self.pct_zone_v,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_zone_iv": [
-                self.pct_zone_iv,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_zone_iii": [
-                self.pct_zone_iii,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_zone_ii": [
-                self.pct_zone_ii,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_fresh_shrubs": [
-                self.pct_fresh_shrubs,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_bare_ground": [
-                self.pct_bare_ground,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_dev_upland": [
-                self.pct_dev_upland,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_flotant_marsh": [
-                self.pct_flotant_marsh,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_vegetated": [
-                self.pct_vegetated,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_soft_mast": [
-                self.pct_soft_mast,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_hard_mast": [
-                self.pct_hard_mast,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_no_mast": [
-                self.pct_no_mast,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_near_forest": [
-                self.pct_near_forest,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "water_depth_annual_mean": [
-                self.water_depth_annual_mean,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "water_depth_monthly_mean_jan_aug": [
-                self.water_depth_monthly_mean_jan_aug,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "water_depth_monthly_mean_sept_dec": [
-                self.water_depth_monthly_mean_sept_dec,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "water_depth_spawning_season": [
-                self.water_depth_spawning_season,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-            "pct_human_influence": [
-                self.pct_human_influence,
-                np.float32,
-                {
-                    "grid_mapping": "crs",
-                    "units": "",
-                    "long_name": "",
-                    "description": "",
-                },
-            ],
-        }
-        # hsi_variables = {
-        #     # alligator
-        #     "alligator_hsi": (self.alligator.hsi, np.float32),
-        #     "alligator_si_1": (self.alligator.si_1, np.float32),
-        #     "alligator_si_2": (self.alligator.si_2, np.float32),
-        #     "alligator_si_3": (self.alligator.si_3, np.float32),
-        #     "alligator_si_4": (self.alligator.si_4, np.float32),
-        #     "alligator_si_5": (self.alligator.si_5, np.float32),
-        #     # bald eagle
-        #     "bald_eagle_hsi": (self.baldeagle.hsi, np.float32),
-        #     "bald_eagle_si_1": (self.baldeagle.si_1, np.float32),
-        #     "bald_eagle_si_2": (self.baldeagle.si_2, np.float32),
-        #     "bald_eagle_si_3": (self.baldeagle.si_3, np.float32),
-        #     "bald_eagle_si_4": (self.baldeagle.si_4, np.float32),
-        #     "bald_eagle_si_5": (self.baldeagle.si_5, np.float32),
-        #     "bald_eagle_si_6": (self.baldeagle.si_6, np.float32),
-        #     # crawfish
-        #     "crawfish_hsi": (self.crawfish.hsi, np.float32),
-        #     "crawfish_si_1": (self.crawfish.si_1, np.float32),
-        #     "crawfish_si_2": (self.crawfish.si_2, np.float32),
-        #     "crawfish_si_3": (self.crawfish.si_3, np.float32),
-        #     "crawfish_si_4": (self.crawfish.si_4, np.float32),
-        #     # gizzard shad
-        #     "gizzard_shad_hsi": (self.gizzardshad.hsi, np.float32),
-        #     "gizzard_shad_si_1": (self.gizzardshad.si_1, np.float32),
-        #     "gizzard_shad_si_2": (self.gizzardshad.si_2, np.float32),
-        #     "gizzard_shad_si_3": (self.gizzardshad.si_3, np.float32),
-        #     "gizzard_shad_si_4": (self.gizzardshad.si_4, np.float32),
-        #     "gizzard_shad_si_5": (self.gizzardshad.si_5, np.float32),
-        #     "gizzard_shad_si_6": (self.gizzardshad.si_6, np.float32),
-        #     "gizzard_shad_si_7": (self.gizzardshad.si_7, np.float32),
-        #     # bass
-        #     "bass_hsi": (self.bass.hsi, np.float32),
-        #     "bass_si_1": (self.bass.si_1, np.float32),
-        #     "bass_si_2": (self.bass.si_2, np.float32),
-        #     # black bear
-        #     "blackbear_hsi": (self.blackbear.hsi, np.float32),
-        #     "blackbear_si_1": (self.blackbear.si_1, np.float32),
-        #     "blackbear_si_2": (self.blackbear.si_2, np.float32),
-        #     "blackbear_si_3": (self.blackbear.si_3, np.float32),
-        #     "blackbear_si_4": (self.blackbear.si_4, np.float32),
-        #     "blackbear_si_5": (self.blackbear.si_5, np.float32),
-        #     "blackbear_si_6": (self.blackbear.si_6, np.float32),
-        #     "blackbear_si_7": (self.blackbear.si_7, np.float32),
-        #     "blackbear_si_8": (self.blackbear.si_8, np.float32),
-        #     # species input vars
-        #     "water_depth_annual_mean": (
-        #         self.water_depth_annual_mean,
-        #         np.float32,
-        #     ),
-        #     "water_depth_monthly_mean_jan_aug": (
-        #         self.water_depth_monthly_mean_jan_aug,
-        #         np.float32,
-        #     ),
-        #     "water_depth_monthly_mean_sept_dec": (
-        #         self.water_depth_monthly_mean_sept_dec,
-        #         np.float32,
-        #     ),
-        #     "water_depth_spawning_season": (
-        #         self.water_depth_spawning_season,
-        #         np.float32,
-        #     ),
-        #     "pct_open_water": (self.pct_open_water, np.float32),
-        #     "mean_annual_salinity": (self.mean_annual_salinity, np.float32),
-        #     "mean_annual_temperature": (
-        #         self.mean_annual_temperature,
-        #         np.float32,
-        #     ),
-        #     "pct_swamp_bottom_hardwood": (
-        #         self.pct_swamp_bottom_hardwood,
-        #         np.float32,
-        #     ),
-        #     "pct_fresh_marsh": (self.pct_fresh_marsh, np.float32),
-        #     "pct_intermediate_marsh": (
-        #         self.pct_intermediate_marsh,
-        #         np.float32,
-        #     ),
-        #     "pct_brackish_marsh": (self.pct_brackish_marsh, np.float32),
-        #     "pct_saline_marsh": (self.pct_saline_marsh, np.float32),
-        #     "pct_zone_v": (self.pct_zone_v, np.float32),
-        #     "pct_zone_iv": (self.pct_zone_iv, np.float32),
-        #     "pct_zone_iii": (self.pct_zone_iii, np.float32),
-        #     "pct_zone_ii": (self.pct_zone_ii, np.float32),
-        #     "pct_fresh_shrubs": (self.pct_fresh_shrubs, np.float32),
-        #     "pct_bare_ground": (self.pct_bare_ground, np.float32),
-        #     "pct_dev_upland": (self.pct_dev_upland, np.float32),
-        #     "pct_flotant_marsh": (self.pct_flotant_marsh, np.float32),
-        #     "pct_vegetated": (self.pct_vegetated, np.float32),
-        #     "pct_soft_mast": (self.pct_soft_mast, np.float32),
-        #     "pct_hard_mast": (self.pct_hard_mast, np.float32),
-        #     "pct_no_mast": (self.pct_no_mast, np.float32),
-        #     "pct_near_forest": (self.pct_near_forest, np.float32),
-        # }
+        hsi_variables = get_hsi_variables(self)
 
         # Open existing NetCDF file
         with xr.open_dataset(self.netcdf_filepath) as ds:

@@ -49,6 +49,9 @@ class RiverineCatfishHSI:
     si_12: np.ndarray = field(init=False)
     si_13: np.ndarray = field(init=False)
     si_14: np.ndarray = field(init=False)
+    si_15: np.ndarray = field(init=False)
+    si_16: np.ndarray = field(init=False)
+    si_17: np.ndarray = field(init=False)
     si_18: np.ndarray = field(init=False)
 
     # components and equations
@@ -221,6 +224,10 @@ class RiverineCatfishHSI:
             raise ValueError("Unhandled condition in SI logic!")
         
         return self.clip_array(si_2)
+    
+    def calculate_si_3(self) -> np.ndarray:
+        """No logic exists for si_3.""" 
+        return NotImplementedError  
 
     def calculate_si_4(self) -> np.ndarray:
         """Food production potential in river by substrate type present during average summer flow"""
@@ -662,6 +669,18 @@ class RiverineCatfishHSI:
             raise ValueError("Unhandled condition in SI logic!")
 
         return self.clip_array(si_14)
+    
+    def calculate_si_15(self) -> np.ndarray:
+        """No logic exists for si_15.""" 
+        return NotImplementedError  
+    
+    def calculate_si_16(self) -> np.ndarray:
+        """No logic exists for si_16.""" 
+        return NotImplementedError  
+    
+    def calculate_si_17(self) -> np.ndarray:
+        """No logic exists for si_17.""" 
+        return NotImplementedError  
     
     def calculate_si_18(self) -> np.ndarray:
         """Average midsummer water temperature within pools, backwaters (Juvenile)"""

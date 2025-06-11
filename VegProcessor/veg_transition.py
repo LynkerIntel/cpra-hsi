@@ -429,7 +429,6 @@ class VegTransition:
 
         Start and end parameters are year, and handled as ints. No other frequency currently possible.
         """
-        # Store the default plotting backend
         default_backend = plt.get_backend()
 
         try:
@@ -437,8 +436,6 @@ class VegTransition:
             # memory leak if running in notebook
             plt.switch_backend("Agg")
 
-            # run model forwards
-            # steps = int(self.simulation_duration / self.simulation_time_step)
             self._logger.info(
                 "Starting simulation at %s. Period: %s - %s",
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -457,8 +454,6 @@ class VegTransition:
             for i, wy in enumerate(simulation_period):
                 self.step(
                     timestep=pd.to_datetime(f"{wy}-10-01"),
-                    # counter=str(i + 1),
-                    # simulation_period=str(len(simulation_period)),
                 )
 
             self._logger.info("Simulation complete")

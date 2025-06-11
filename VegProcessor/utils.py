@@ -870,24 +870,23 @@ def load_sequence_csvs(directory: str) -> dict[int, int]:
     keys in the output dict are the first part of each filename (before the first underscore)
 
     :param (str) directory: path to the directory containing sequence csvs
-    :return (dict[int, int]): dictionary of "Year" and "Quintile" as ints
+    :return (dict[int, int]): dictionary of "Year" and "Adjusted" as ints
     """
     csv_dict = {}
+
     for file in os.listdir(directory):
         if file.endswith(".csv") and "sequence" in file:
             prefix = file.split("_")[0]
             file_path = os.path.join(directory, file)
-            csv_dict[prefix] = pd.read_csv(file_path, header=1)
-            csv_dict[prefix] = csv_dict[prefix][["Quintile", "Water Year"]]
+            csv_dict[prefix] = pd.read_csv(file_path)
+            csv_dict[prefix] = csv_dict[prefix][["Adjusted", "Water Year"]]
 
     # concat dfs
-    df = pd.concat(
-        [csv_dict["dry"], csv_dict["moderate"], csv_dict["wet"]], axis=0
-    )
+    df = pd.concat([csv_dict["dry"], csv_dict["wet"]], axis=0)
     # convert to dict
     df.index = df["Water Year"]
     df.drop(columns="Water Year", inplace=True)
-    dict_out = df["Quintile"].to_dict()
+    dict_out = df["Adjusted"].to_dict()
     return dict_out
 
 

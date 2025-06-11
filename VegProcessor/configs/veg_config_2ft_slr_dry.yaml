@@ -16,6 +16,10 @@ simulation:
   water_year_start: 1951 # int
   water_year_end: 1975 # int
   wse_sequence_input: True # bool if WSE input is synthetic
+  years_mapping:
+    1: 2006
+    3: 2022
+    5: 2020
 
 metadata: # partial list (static vars)
   model: VEG

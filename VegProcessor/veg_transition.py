@@ -102,6 +102,7 @@ class VegTransition:
         )
         self.water_year_end = self.config["simulation"].get("water_year_end")
         self.netcdf_hydro = self.config["simulation"].get("daily_hydro")
+        self.years_mapping = self.config["simulation"].get("years_mapping")
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -632,15 +633,8 @@ class VegTransition:
             Dataset set of (time, x, y), with "height" var (i.e. depth)
         """
         self._logger.info(f"Loading hydro data with daily stage method.")
-        years_mapping = {
-            1: 2006,
-            2: 2023,
-            3: 2022,
-            4: 2021,
-            5: 2019,
-        }
         quintile = self.sequence_mapping[water_year]
-        analog_year = years_mapping[quintile]
+        analog_year = self.years_mapping[quintile]
         time_range = pd.date_range(
             f"{water_year-1}-10-01", f"{water_year}-09-30"
         )

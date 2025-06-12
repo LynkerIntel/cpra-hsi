@@ -264,16 +264,16 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
 
-        # hydro input data
-        if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-            # for daily NetCDF, this methods loads analog year directly,
-            # using lookup and mapping
-            self.water_depth = self._load_stage_daily(self.wy)
-        else:
-            # for pre-generated monthly hydro .tifs
-            self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-            self.wse = self._reproject_match_to_dem(self.wse)
-            self.water_depth = self._get_depth()
+        # # hydro input data
+        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
+        # for daily NetCDF, this methods loads analog year directly,
+        # using lookup and mapping
+        self.water_depth = self._load_stage_daily(self.wy)
+        # else:
+        #     # for pre-generated monthly hydro .tifs
+        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+        #     self.wse = self._reproject_match_to_dem(self.wse)
+        #     self.water_depth = self._get_depth()
 
         # get salinity
         self.salinity = self._get_salinity()
@@ -645,13 +645,13 @@ class VegTransition:
             ~((time_range.month == 2) & (time_range.day == 29))
         ]
 
-        # if scenario == "G999":  # future without action
-        # open daily SLR scenario for G999
-        data_dir = os.path.join(
-            self.netcdf_hydro_path, f"WY{analog_year}_1-08ft_SLR_daily/**.nc"
+        nc_dir_path = os.path.join(
+            self.netcdf_hydro_path,
+            f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/**.nc",
         )
+
         ds = xr.open_mfdataset(
-            data_dir,
+            nc_dir_path,
             concat_dim="time",
             combine="nested",
             parallel=True,

@@ -14,8 +14,8 @@ polygon_data:
   wpu_polygons: /Users/dillonragar/data/tmp/cpra/Atchafalaya MP WPUs/Atchafalaya MP WPUs.shp
 
 simulation:
-  water_year_start: 1951 # int
-  water_year_end: 1975 # int
+  water_year_start: 1963 # int
+  water_year_end: 1972 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   years_mapping:
     1: 2006
@@ -26,7 +26,7 @@ metadata:
   model: VEGH
   sea_level_condition: "328" # 1.08ft or 0.328m SLR
   flow_scenario: "D" #"W"? # scenario info for plots and metadata
-  group: G510
+  group: G511
   wpu: ARS
 
 output:

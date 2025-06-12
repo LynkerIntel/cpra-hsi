@@ -130,7 +130,9 @@ class VegTransition:
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
         }
 
         self._create_output_dirs()

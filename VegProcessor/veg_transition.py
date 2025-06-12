@@ -657,6 +657,7 @@ class VegTransition:
             concat_dim="time",
             combine="nested",
             parallel=True,
+            chunks={"time": 10},  # speedup (does not improve memory use)
             # engine="h5netcdf",
         )
 

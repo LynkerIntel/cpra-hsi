@@ -930,7 +930,7 @@ class VegTransition:
         folder_name = utils.generate_filename(
             params=self.file_params,
             # base_path=self.timestep_output_dir,
-            parameter="DATA",
+            # parameter="DATA",
         )
 
         output_dir_name = folder_name
@@ -973,7 +973,7 @@ class VegTransition:
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
-            parameter="DATA",
+            # parameter="DATA",
         )
 
         self.netcdf_filepath = os.path.join(

@@ -15,7 +15,7 @@ polygon_data:
 
 simulation:
   water_year_start: 1963 # int
-  water_year_end: 1972 # int
+  water_year_end: 1964 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   years_mapping:
     1: 2006
@@ -24,7 +24,8 @@ simulation:
 
 metadata:
   model: VEGH # H indicates HEC-RAS input
-  scenario: "S12" # scenario info for plots and metadata
+  sea_level_condition: 000 # baseline
+  flow_scenario: "W" #"W"? # scenario info for plots and metadata
   group: TEST
   wpu: ARS
 

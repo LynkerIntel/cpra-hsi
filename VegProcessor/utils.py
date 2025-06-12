@@ -576,7 +576,9 @@ def generate_filename(
     # Define the order of keys
     key_order = [
         "model",
-        "scenario",
+        "water_year",
+        "sea_level_condition",
+        "flow_scenario",
         "group",
         "wpu",
         "io_type",

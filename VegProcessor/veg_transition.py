@@ -123,7 +123,9 @@ class VegTransition:
 
         self.file_params = {
             "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
             "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",

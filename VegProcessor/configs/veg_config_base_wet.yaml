@@ -22,7 +22,8 @@ simulation:
 
 metadata: # partial list (static vars)
   model: VEGH
-  scenario: "S05" # scenario info for plots and metadata
+  sea_level_condition: "000" # baseline
+  flow_scenario: "W" #"W"? # scenario info for plots and metadata
   group: G510
   wpu: ARS
 

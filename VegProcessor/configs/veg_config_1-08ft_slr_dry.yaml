@@ -24,7 +24,8 @@ simulation:
   
 metadata:
   model: VEGH
-  scenario: "S12" # scenario info for plots and metadata
+  sea_level_condition: "328" # 1.08ft or 0.328m SLR
+  flow_scenario: "D" #"W"? # scenario info for plots and metadata
   group: G510
   wpu: ARS
 

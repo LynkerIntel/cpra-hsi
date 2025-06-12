@@ -19,7 +19,7 @@ simulation:
   blue_crab_lookup_table: "/Users/dillonragar/data/cpra/seine_bluecrab_gamm_table_1dec.csv"
 
 metadata:
-  model: HSI
+  model: HSIH # H indicates HEC-RAS input
   scenario: "S10" # scenario info for plots and metadata
   group: G510
   wpu: ARS

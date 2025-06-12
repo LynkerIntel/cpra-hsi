@@ -22,7 +22,7 @@ simulation:
     5: 2020
 
 metadata: # partial list (static vars)
-  model: VEG
+  model: VEGH
   scenario: "S01" # scenario info for plots and metadata
   group: G510
   wpu: ARS

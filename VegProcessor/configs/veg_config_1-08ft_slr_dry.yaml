@@ -23,7 +23,7 @@ simulation:
     5: 2020
   
 metadata:
-  model: VEG
+  model: VEGH
   scenario: "S12" # scenario info for plots and metadata
   group: G510
   wpu: ARS

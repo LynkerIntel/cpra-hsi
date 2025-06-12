@@ -659,7 +659,7 @@ class VegTransition:
             combine="nested",
             parallel=True,
             chunks={"time": 10},  # speedup (does not improve memory use)
-            # engine="h5netcdf",
+            engine="h5netcdf",
         )
 
         # make crs visible to xarray/rio

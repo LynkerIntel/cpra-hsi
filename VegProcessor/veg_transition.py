@@ -651,6 +651,7 @@ class VegTransition:
             self.netcdf_hydro_path,
             f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/**.nc",
         )
+        self._logger.info("Loading files: %s", nc_dir_path)
 
         ds = xr.open_mfdataset(
             nc_dir_path,

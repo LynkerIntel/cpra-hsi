@@ -597,8 +597,9 @@ def generate_filename(
         if key in params and params[key] is not None
     ]
 
-    # Append parameter to the filename
-    values.append(parameter)
+    # Append parameter to the filename if provided
+    if parameter:
+        values.append(parameter)
 
     # Construct the filename
     filename = "AMP_" + "_".join(map(str, values))

@@ -92,7 +92,17 @@ In order to run scenarios (i.e. base or sea level rise), config files must be cr
 - `VegProcessor/veg_config_**`: Specifies vegetation transition model settings, raster data paths, and output locations.
 - `VegProcessor/hsi_config_**`: Defines parameters for running the Habitat Suitability Index model.
 
-##### These steps are demonstrated in `./VegProcessor/run.ipynb`
+
+> **Note on NetCDF Input Files:** 
+>
+> In order to use xarray parallel operations, HDF5-based NetCDF
+> files are required, i.e. NetCDF3 (classic) is not compatible. 
+> This terminal command will batch convert files, and prefix with
+> "netcdf4_" (compression optional):
+> ```bash
+> for f in *.nc; do nccopy -k 4 -d 4 "$f" "netcdf4_$f"; done
+> ```
+
 ---
 To execute the vegetation transition model:
 

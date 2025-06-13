@@ -6,6 +6,7 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 import shutil
+import re
 import glob
 import os
 import gc
@@ -665,10 +666,18 @@ class VegTransition:
 
         # if analog has 366 timesteps (is leap)
         if ds.sizes["time"] == 366:
+            # use filepath to get actual year
+            match = re.search(r"WY(\d{4})", nc_dir_path)
+            if match:
+                actual_wy = int(match.group(1))
+                # print(f"Extracted water year: {actual_wy}")
+            else:
+                raise ValueError("Water year not found in path.")
+
             # assign "actual" datetime to time dim, temporarily,
             # in order to drop feb 29
             full_range = pd.date_range(
-                f"{water_year-1}-10-01", f"{water_year}-09-30"
+                f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
             )
             ds = ds.assign_coords(time=("time", full_range))
             mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))

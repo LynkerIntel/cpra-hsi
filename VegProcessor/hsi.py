@@ -963,7 +963,7 @@ class HSI(vt.VegTransition):
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
-            parameter="DATA",
+            # parameter="DATA",
         )
 
         self.netcdf_filepath = os.path.join(

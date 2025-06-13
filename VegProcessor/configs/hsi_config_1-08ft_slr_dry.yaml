@@ -19,9 +19,10 @@ simulation:
   blue_crab_lookup_table: "/Users/dillonragar/data/cpra/seine_bluecrab_gamm_table_1dec.csv"
   
 metadata:
-  model: HSI
-  scenario: "S12" # scenario info for plots and metadata
-  group: G510
+  model: HSIH # H indicates HEC-RAS input
+  sea_level_condition: "328" # 1.08ft or 0.328m SLR
+  flow_scenario: "D" #"W"? # scenario info for plots and metadata
+  group: G511
   wpu: ARS
 
 output:

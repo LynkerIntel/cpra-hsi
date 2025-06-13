@@ -85,7 +85,9 @@ The environment is currently not defined with pinned versions, in order to maxim
 
 #### **3. Configure the Model**
 
-In order to run scenarios (i.e. base or sea level rise), 25-year sequences must be generated from the analog years, using  `utils.generate_combined_sequence()`. Be aware that these sequences take up substantial space (~ 20 gig). Next, edit the configuration files in `./configs/`, pointing each path to a local file.
+In order to run scenarios (i.e. base or sea level rise), config files must be created for each desired run, for both `VegTransition` and `HSI`.
+
+`post_process()` methods are included for both classes. These may evolve over time, but are generally for (1) reducing model output to only necessary vars, periods, or locations, and (2) summarizing the results.
 
 - `VegProcessor/veg_config_**`: Specifies vegetation transition model settings, raster data paths, and output locations.
 - `VegProcessor/hsi_config_**`: Defines parameters for running the Habitat Suitability Index model.
@@ -102,6 +104,7 @@ veg_model = VegTransition(config_file="./configs/veg_config.yaml")
 
 # Run the model
 veg_model.run()
+Veg.post_process() # optionally produce summaries
 ```
 ##### These steps are demonstrated in `./VegProcessor/run.ipynb`
 ---
@@ -115,6 +118,7 @@ hsi_model = HSI(config_file="./configs/hsi_config.yaml")
 
 # Run the model
 hsi_model.run()
+hsi.post_process() # optionally produce summaries
 ```
 ##### These steps are demonstrated in `./VegProcessor/run.ipynb`
 ---

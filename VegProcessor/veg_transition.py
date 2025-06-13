@@ -639,17 +639,18 @@ class VegTransition:
         self._logger.info(f"Loading hydro data with daily stage method.")
         quintile = self.sequence_mapping[water_year]
         analog_year = self.years_mapping[quintile]
-        time_range = pd.date_range(
+
+        # build a 365-day date range by dropping Feb 29
+        target_range = pd.date_range(
             f"{water_year-1}-10-01", f"{water_year}-09-30"
         )
-        # drop feb 29 if it exists (No leap years in hydro data files)
-        time_range = time_range[
-            ~((time_range.month == 2) & (time_range.day == 29))
+        target_range = target_range[
+            ~((target_range.month == 2) & (target_range.day == 29))
         ]
 
         nc_dir_path = os.path.join(
             self.netcdf_hydro_path,
-            f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/**.nc",
+            f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/netcdf4_**.nc",
         )
         self._logger.info("Loading files: %s", nc_dir_path)
 
@@ -662,15 +663,26 @@ class VegTransition:
             engine="h5netcdf",
         )
 
+        # if analog has 366 timesteps (is leap)
+        if ds.sizes["time"] == 366:
+            # assign "actual" datetime to time dim, temporarily,
+            # in order to drop feb 29
+            full_range = pd.date_range(
+                f"{water_year-1}-10-01", f"{water_year}-09-30"
+            )
+            ds = ds.assign_coords(time=("time", full_range))
+            mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+            ds = ds.isel(time=mask)
+
+        # lastly rename to match expected simulation dates, i.e. water year
+        ds = ds.assign_coords(time=("time", target_range))
+        ds = ds.rename({"Band1": "height"})
+
         # make crs visible to xarray/rio
         crs_obj = ds["transverse_mercator"].spatial_ref
         ds = ds.rio.write_crs(crs_obj)
         # reproject match to DEM
         ds = self._reproject_match_to_dem(ds)
-
-        # rename to match model dates, i.e. water year
-        ds = ds.assign_coords(time=("time", time_range))
-        ds = ds.rename({"Band1": "height"})
 
         # fill zeros. This step is necessary to get 0 water depth from DEM and missing
         # WSE pixels, where missing data indicates "no inundation"
@@ -685,7 +697,6 @@ class VegTransition:
 
         # ds_loaded = ds.load()
         # ds.close()
-
         return ds
 
     def _reproject_match_to_dem(

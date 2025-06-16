@@ -11,7 +11,7 @@ raster_data:
   #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
 simulation:
-  water_year_start: 1999 # int
+  water_year_start: 2014 # int
   water_year_end: 2023 # int
   wse_sequence_input: True # bool if WSE input is synthetic
   run_hsi: True

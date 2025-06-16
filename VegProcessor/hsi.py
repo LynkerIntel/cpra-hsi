@@ -91,6 +91,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
 
         # metadata
@@ -114,13 +115,16 @@ class HSI(vt.VegTransition):
 
         self.file_params = {
             "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
             "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
         }
 
         self._create_output_dirs()

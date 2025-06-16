@@ -1,12 +1,13 @@
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-dry"
+  #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-dry"
+  netcdf_hydro_path: "/Users/dillonragar/data/tmp/cpra/G999"
   wse_domain_raster: "/Users/dillonragar/data/cpra/HECRAS_domain_60m.tif"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S01_G510_AB_O_ANN_01_25_DATA/AMP_VEG_S01_G510_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
+  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEGH_WY99_000_D_G511_AB_O_ANN_00_10/AMP_VEGH_WY99_000_D_G511_AB_O_ANN_00_10.nc" # VegTransition output folder
   flotant_marsh_raster: "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
   #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
@@ -17,6 +18,11 @@ simulation:
   run_hsi: True
   hydro_domain_flag: True
   blue_crab_lookup_table: "/Users/dillonragar/data/cpra/seine_bluecrab_gamm_table_1dec.csv"
+  years_mapping:
+    1: 2006
+    3: 2022
+    5: 2020
+  
 
 metadata:
   model: HSIH # H indicates HEC-RAS input

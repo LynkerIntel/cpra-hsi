@@ -802,12 +802,15 @@ class HSI(vt.VegTransition):
         Midstory = 2
         Understory = 1
         """
+        # initialize new, empty array for each timestep
+        self.story_class = np.zeros_like(self.dem)
         self._logger.info("Calculating story assignment for forest types.")
         forested_types = [15, 16, 17, 18]
         understory_types = [20, 21, 22, 23]
 
         # overstory types
-        type_mask = np.isin(self.veg_type, forested_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), forested_types)
+
         mask_3 = type_mask & (self.maturity > 10)
         self.story_class[mask_3] = 3
 
@@ -820,7 +823,7 @@ class HSI(vt.VegTransition):
         self.story_class[mask_fresh_shrub] = 2
 
         # other
-        type_mask = np.isin(self.veg_type, understory_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), understory_types)
         self.story_class[type_mask] = 1
 
         story_class_da = xr.DataArray(self.story_class, dims=["y", "x"])
@@ -848,7 +851,9 @@ class HSI(vt.VegTransition):
         ).to_numpy()
 
         # resample to 480m for BLH WVA
-        self.story_class = utils.reduce_arr_by_mode(self.story_class)
+        self.story_class = utils.reduce_arr_by_mode(
+            self.story_class
+        ).to_numpy()
 
     def _calculate_shrub_scrub_midstory(self):
         """Get combined percentange of shrub/scrub & midstory cover at 480m cell size."""

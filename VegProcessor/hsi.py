@@ -91,6 +91,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
 
         # metadata
@@ -114,13 +115,16 @@ class HSI(vt.VegTransition):
 
         self.file_params = {
             "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
             "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
         }
 
         self._create_output_dirs()
@@ -261,44 +265,42 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # water depth vars --------------------------------------
-        if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-            # for daily NetCDF, this methods loads analog year directly,
-            # using lookup and mapping
-            self.water_depth = self._load_stage_daily(self.wy)
-            self.water_depth_annual_mean = self._get_daily_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug = (
-                self._get_daily_depth_filtered(
-                    months=[1, 2, 3, 4, 5, 6, 7, 8],
-                )
+        # # water depth vars --------------------------------------
+        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
+        #     # for daily NetCDF, this methods loads analog year directly,
+        #     # using lookup and mapping
+        self.water_depth = self._load_stage_daily(self.wy)
+        self.water_depth_annual_mean = self._get_daily_depth_filtered()
+        self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
+            months=[1, 2, 3, 4, 5, 6, 7, 8],
+        )
+        self.water_depth_monthly_mean_sept_dec = (
+            self._get_daily_depth_filtered(
+                months=[9, 10, 11, 12],
             )
-            self.water_depth_monthly_mean_sept_dec = (
-                self._get_daily_depth_filtered(
-                    months=[9, 10, 11, 12],
-                )
-            )
-            self.water_depth_spawning_season = self._get_daily_depth_filtered(
-                months=[4, 5, 6],
-            )
-        else:
-            # for pre-generated monthly hydro .tifs
-            # TODO: refactor this subset logic out of the step method,
-            # but really we should move away from have two branching methods
-            # for loading hydro data
-            self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-            self.wse = self._reproject_match_to_dem(self.wse)
-            # self.water_depth = self._get_depth()
+        )
+        self.water_depth_spawning_season = self._get_daily_depth_filtered(
+            months=[4, 5, 6],
+        )
+        # else:
+        #     # for pre-generated monthly hydro .tifs
+        #     # TODO: refactor this subset logic out of the step method,
+        #     # but really we should move away from have two branching methods
+        #     # for loading hydro data
+        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+        #     self.wse = self._reproject_match_to_dem(self.wse)
+        #     # self.water_depth = self._get_depth()
 
-            self.water_depth_annual_mean = self._get_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
-                months=[1, 2, 3, 4, 5, 6, 7, 8]
-            )
-            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-                months=[9, 10, 11, 12]
-            )
-            self.water_depth_spawning_season = self._get_depth_filtered(
-                months=[4, 5, 6]
-            )
+        #     self.water_depth_annual_mean = self._get_depth_filtered()
+        #     self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+        #         months=[1, 2, 3, 4, 5, 6, 7, 8]
+        #     )
+        #     self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+        #         months=[9, 10, 11, 12]
+        #     )
+        #     self.water_depth_spawning_season = self._get_depth_filtered(
+        #         months=[4, 5, 6]
+        #     )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -800,12 +802,15 @@ class HSI(vt.VegTransition):
         Midstory = 2
         Understory = 1
         """
+        # initialize new, empty array for each timestep
+        self.story_class = np.zeros_like(self.dem)
         self._logger.info("Calculating story assignment for forest types.")
         forested_types = [15, 16, 17, 18]
         understory_types = [20, 21, 22, 23]
 
         # overstory types
-        type_mask = np.isin(self.veg_type, forested_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), forested_types)
+
         mask_3 = type_mask & (self.maturity > 10)
         self.story_class[mask_3] = 3
 
@@ -818,7 +823,7 @@ class HSI(vt.VegTransition):
         self.story_class[mask_fresh_shrub] = 2
 
         # other
-        type_mask = np.isin(self.veg_type, understory_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), understory_types)
         self.story_class[type_mask] = 1
 
         story_class_da = xr.DataArray(self.story_class, dims=["y", "x"])
@@ -846,7 +851,9 @@ class HSI(vt.VegTransition):
         ).to_numpy()
 
         # resample to 480m for BLH WVA
-        self.story_class = utils.reduce_arr_by_mode(self.story_class)
+        self.story_class = utils.reduce_arr_by_mode(
+            self.story_class
+        ).to_numpy()
 
     def _calculate_shrub_scrub_midstory(self):
         """Get combined percentange of shrub/scrub & midstory cover at 480m cell size."""
@@ -963,7 +970,7 @@ class HSI(vt.VegTransition):
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
-            parameter="DATA",
+            # parameter="DATA",
         )
 
         self.netcdf_filepath = os.path.join(

@@ -858,9 +858,9 @@ class VegTransition:
             self._logger.info(
                 "Subsetting initial vegetation raster to allowed types"
             )
-            values_to_mask = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
+            values = [15, 16, 17, 18, 19, 20, 21, 22, 23, 26]
             # Create mask where True corresponds to values in the list
-            type_mask = np.isin(veg_type, values_to_mask)
+            type_mask = np.isin(veg_type, values)
             veg_type = np.where(type_mask, veg_type, np.nan)
 
         # Mask the vegetation raster to only include valid DEM pixels

@@ -153,7 +153,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
-        self.pct_human_influence = None
+        self.human_influence = None
         self.hydro_domain = self._load_hecras_domain_raster()
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
@@ -544,7 +544,7 @@ class HSI(vt.VegTransition):
         self.pct_developed = ds_developed.to_numpy()
 
         self._logger.info("Calculating static var: pct area influence")
-        self.pct_human_influence = self._calculate_pct_area_influence(
+        self.human_influence = self._calculate_pct_area_influence(
             radius=self.testing_radius
         )
 
@@ -656,10 +656,11 @@ class HSI(vt.VegTransition):
         residences.
 
         Radiuses are defined by circular (disk) kernel, which expands True
-        pixels outward by r.
+        pixels outward.
 
-        5,700 / 60 = 95 pixels
-        3,500 / 60 = 58.33 pixels
+        480m radii:
+        5,700 / 60 = 11.875 pixels
+        3,500 / 60 = 7.29 pixels
 
         Parameters
         ----------
@@ -672,16 +673,16 @@ class HSI(vt.VegTransition):
         near_landtypes_da : np.ndarray
             Binary near landtypes array (480m grid cell)
         """
-        crops_bool = self.pct_crops >= 50
-        developed_bool = self.pct_developed >= 50
+        crops_bool = self.pct_crops > 50
+        developed_bool = self.pct_developed > 50
 
-        disk_kernel = disk(radius or 58)  # circular grid w/ radius (kernel)
+        disk_kernel = disk(radius or 7, strict_radius=False)
         crops_expanded = binary_dilation(
             crops_bool,
             structure=disk_kernel,
         )
 
-        disk_kernel = disk(radius or 95)
+        disk_kernel = disk(radius or 12, strict_radius=False)
         developed_expanded = binary_dilation(
             developed_bool,
             structure=disk_kernel,

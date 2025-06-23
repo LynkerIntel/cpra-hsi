@@ -678,8 +678,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "pct_human_influence": [
-            hsi.pct_human_influence,
+        "human_influence_bool": [
+            hsi.human_influence,
             np.float32,
             {
                 "grid_mapping": "crs",

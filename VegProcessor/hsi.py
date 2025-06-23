@@ -501,7 +501,7 @@ class HSI(vt.VegTransition):
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
-        This method is called during initialization, for static variables that
+        This method is called only during initialization, for static variables that
         vary spatially but not temporally.
         """
         self._logger.info("Calculating static var: % developed and upland")
@@ -522,6 +522,26 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         ).to_numpy()
+
+        self._logger.info("Calculating static var: crops")
+        ds_crops = utils.generate_pct_cover_custom(
+            data_array=self.initial_veg_type,  # use initial veg
+            veg_types=[6, 7],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_crops = ds_crops.to_numpy()
+
+        self._logger.info("Calculating static var: developed")
+        ds_developed = utils.generate_pct_cover_custom(
+            data_array=self.initial_veg_type,  # use initial veg
+            veg_types=[2, 3, 4, 5],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_developed = ds_developed.to_numpy()
 
         self._logger.info("Calculating static var: pct area influence")
         self.pct_human_influence = self._calculate_pct_area_influence(
@@ -572,6 +592,64 @@ class HSI(vt.VegTransition):
         else:
             return istype_expanded & nottype_bool
 
+    # def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
+    #     """Percent of evaluation area inside of zones of influence defined by
+    #     radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
+    #     residences.
+
+    #     Radiuses are defined by circular (disk) kernel, which expands True
+    #     pixels outward by r.
+
+    #     5,700 / 60 = 95 pixels
+    #     3,500 / 60 = 58.33 pixels
+
+    #     Parameters
+    #     ----------
+    #     None
+
+    #     Returns
+    #     --------
+    #     near_landtypes_da : np.ndarray
+    #         Percent coverage array (480m grid cell)
+    #     """
+    #     towns = [2, 3, 4, 5]
+    #     croplands = [6, 7, 8]
+    #     radius_towns = radius or 95
+    #     radius_croplands = radius or 59
+
+    #     if radius:
+    #         self._logger.warning(
+    #             "Running area of influence with radius: %s.", radius
+    #         )
+
+    #     self._logger.info("Calculating static var: human influence - towns.")
+    #     near_towns = self._calculate_near_landtype(
+    #         landcover_arr=self.initial_veg_type,  # initial
+    #         landtype_true=towns,
+    #         radius=radius_towns,
+    #         include_source=True,
+    #     )
+    #     self._logger.info(
+    #         "Calculating static var: human influence - croplands."
+    #     )
+    #     near_croplands = self._calculate_near_landtype(
+    #         landcover_arr=self.initial_veg_type,  # initial
+    #         landtype_true=croplands,
+    #         radius=radius_croplands,
+    #         include_source=True,
+    #     )
+
+    #     stacked = np.stack([near_towns, near_croplands])
+    #     influence_bool = np.any(stacked, axis=0)
+
+    #     near_landtypes_da = xr.DataArray(influence_bool.astype(float))
+    #     near_landtypes_da = (
+    #         near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
+    #         * 100
+    #     )  # UNIT: index to pct
+
+    #     return near_landtypes_da.to_numpy()
+
     def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
         radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
@@ -585,50 +663,33 @@ class HSI(vt.VegTransition):
 
         Parameters
         ----------
-        None
+        Radius: int | None
+            None if using model defaults, int if testing. Int also used during
+            testing to speedup `HSI` execution time.
 
         Returns
         --------
         near_landtypes_da : np.ndarray
-            Percent coverage array (480m grid cell)
+            Binary near landtypes array (480m grid cell)
         """
-        towns = [2, 3, 4, 5]
-        croplands = [6, 7, 8]
-        radius_towns = radius or 95
-        radius_croplands = radius or 59
+        crops_bool = self.pct_crops >= 50
+        developed_bool = self.pct_developed >= 50
 
-        if radius:
-            self._logger.warning(
-                "Running area of influence with radius: %s.", radius
-            )
-
-        self._logger.info("Calculating static var: human influence - towns.")
-        near_towns = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,  # initial
-            landtype_true=towns,
-            radius=radius_towns,
-            include_source=True,
-        )
-        self._logger.info(
-            "Calculating static var: human influence - croplands."
-        )
-        near_croplands = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,  # initial
-            landtype_true=croplands,
-            radius=radius_croplands,
-            include_source=True,
+        disk_kernel = disk(radius or 58)  # circular grid w/ radius (kernel)
+        crops_expanded = binary_dilation(
+            crops_bool,
+            structure=disk_kernel,
         )
 
-        stacked = np.stack([near_towns, near_croplands])
+        disk_kernel = disk(radius or 95)
+        developed_expanded = binary_dilation(
+            developed_bool,
+            structure=disk_kernel,
+        )
+
+        stacked = np.stack([crops_expanded, developed_expanded])
         influence_bool = np.any(stacked, axis=0)
-
-        near_landtypes_da = xr.DataArray(influence_bool.astype(float))
-        near_landtypes_da = (
-            near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
-            * 100
-        )  # UNIT: index to pct
-
-        return near_landtypes_da.to_numpy()
+        return influence_bool
 
     def _calculate_edge(self) -> np.ndarray:
         """

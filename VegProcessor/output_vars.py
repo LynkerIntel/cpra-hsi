@@ -428,6 +428,79 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "blh_wva": [
+            hsi.blhwva.hsi,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "bottomland_hardwood_wetland_value_assessment",
+                "description": "",
+            },
+        ],
+        "blh_wva_si_1": [
+            hsi.blhwva.si_1,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_2": [
+            hsi.blhwva.si_2,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_3": [
+            hsi.blhwva.si_3,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_4": [
+            hsi.blhwva.si_4,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_5": [
+            hsi.blhwva.si_5,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_6": [
+            hsi.blhwva.si_6,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
+        "blh_wva_si_7": [
+            hsi.blhwva.si_7,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland_hardwood_wetland_value_assessment",
+            },
+        ],
         "pct_open_water": [
             hsi.pct_open_water,
             np.float32,

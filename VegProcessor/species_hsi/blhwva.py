@@ -537,6 +537,9 @@ class BottomlandHardwoodHSI:
                 num_invalid,
             )
 
+        # run overall mask for blh hsi conditionds
+        masked_hsi = self.blh_cover_mask(hsi)
+
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
         masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)

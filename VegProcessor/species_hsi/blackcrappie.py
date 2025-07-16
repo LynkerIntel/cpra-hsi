@@ -446,7 +446,7 @@ class BlackCrappieHSI:
     def calculate_si_9(self) -> np.ndarray:
         """Most suitable water temperature in pools and backwaters 
         during midsummer (Jul - Aug) (juvenile)"""
-        self._logger.info("Running SI 8")
+        self._logger.info("Running SI 9")
         si_9 = self.template.copy()
 
         if self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile is None:

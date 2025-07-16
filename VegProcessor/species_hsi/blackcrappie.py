@@ -170,7 +170,7 @@ class BlackCrappieHSI:
                 (self.v1_max_monthly_avg_summer_turbidity < 150)
             )
             si_1[mask_2] = (
-                -0.008 * (self.v1_max_monthly_avg_summer_turbidity [mask_2])
+                -0.008 * (self.v1_max_monthly_avg_summer_turbidity[mask_2])
             ) + 1.4
 
             # condition 3
@@ -179,7 +179,7 @@ class BlackCrappieHSI:
                 (self.v1_max_monthly_avg_summer_turbidity < 190)
             )
             si_1[mask_3] = (
-                -0.0005 * (self.v1_max_monthly_avg_summer_turbidity [mask_3])
+                -0.0005 * (self.v1_max_monthly_avg_summer_turbidity[mask_3])
             ) + 0.95
 
             # condition 4
@@ -217,13 +217,13 @@ class BlackCrappieHSI:
                 self.v2_pct_cover_in_midsummer_pools_overflow_bw < 25
             )
             si_2[mask_2] = (
-                0.032 * (self.v2_pct_cover_in_midsummer_pools_overflow_bw [mask_2])
+                0.032 * (self.v2_pct_cover_in_midsummer_pools_overflow_bw[mask_2])
             ) + 0.2
 
             # condition 3
             mask_3 = (self.v2_pct_cover_in_midsummer_pools_overflow_bw >= 85)
             si_2[mask_3] = (
-                -0.04 * (self.v2_pct_cover_in_midsummer_pools_overflow_bw [mask_3])
+                -0.04 * (self.v2_pct_cover_in_midsummer_pools_overflow_bw[mask_3])
             ) + 4.37
 
 
@@ -289,7 +289,7 @@ class BlackCrappieHSI:
                 self.v4_avg_vel_summer_flow_pools_bw < 15
             )
             si_4[mask_2] = (
-                -0.06 * (self.v4_avg_vel_summer_flow_pools_bw [mask_2])
+                -0.06 * (self.v4_avg_vel_summer_flow_pools_bw[mask_2])
             ) + 1.6
 
             # condition 3
@@ -297,7 +297,7 @@ class BlackCrappieHSI:
                 self.v4_avg_vel_summer_flow_pools_bw < 60
             )
             si_4[mask_3] = (
-                -0.0156 * (self.v4_avg_vel_summer_flow_pools_bw [mask_3])
+                -0.0156 * (self.v4_avg_vel_summer_flow_pools_bw[mask_3])
             ) + 0.9333
 
             # condition 4
@@ -325,7 +325,7 @@ class BlackCrappieHSI:
             # condition 1 
             mask_1 = (self.v5_pct_pools_bw_avg_spring_summer_flow <= 50)
             si_5[mask_1] = (
-                0.02 * (self.v5_pct_pools_bw_avg_spring_summer_flow [mask_1])
+                0.02 * (self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1])
                 )
 
             # condition 2
@@ -381,7 +381,7 @@ class BlackCrappieHSI:
                 self.v7_ph_year <= 9.5
             )
             si_7[mask_4] =  (
-                -1 * (self.v7_ph_year [mask_4])
+                -1 * (self.v7_ph_year[mask_4])
                 + 9.5
             )
 
@@ -425,7 +425,7 @@ class BlackCrappieHSI:
                 self.v8_most_suit_temp_in_midsummer_pools_bw_adult <= 23
             )
             si_8[mask_3] = (
-                0.1112 * (self.v8_most_suit_temp_in_midsummer_pools_bw_adult [mask_3])
+                0.1112 * (self.v8_most_suit_temp_in_midsummer_pools_bw_adult[mask_3])
                 -1.5659
             )
 
@@ -434,7 +434,7 @@ class BlackCrappieHSI:
                 self.v8_most_suit_temp_in_midsummer_pools_bw_adult <= 34
             )
             si_8[mask_4] = (
-                -0.143 * (self.v8_most_suit_temp_in_midsummer_pools_bw_adult [mask_4])
+                -0.143 * (self.v8_most_suit_temp_in_midsummer_pools_bw_adult[mask_4])
                 + 4.86
             )
         
@@ -474,7 +474,7 @@ class BlackCrappieHSI:
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile <= 22
             )
             si_9[mask_3] = (
-                0.0909 * (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile [mask_3])
+                0.0909 * (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile[mask_3])
                 - 1
             )
 
@@ -483,7 +483,7 @@ class BlackCrappieHSI:
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile < 30
             )
             si_9[mask_4] = (
-                -0.1667 * (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile [mask_4])
+                -0.1667 * (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile[mask_4])
                 + 5
             )
         
@@ -522,7 +522,7 @@ class BlackCrappieHSI:
                 self.v10_avg_midsummer_temp_in_pools_bw_fry <= 15
             )
             si_10[mask_3] = (
-                (0.066 * (self.v10_avg_midsummer_temp_in_pools_bw_fry [mask_3]))
+                (0.066 * (self.v10_avg_midsummer_temp_in_pools_bw_fry[mask_3]))
                 - 0.8
             )
 
@@ -531,7 +531,7 @@ class BlackCrappieHSI:
                 self.v10_avg_midsummer_temp_in_pools_bw_fry <= 20
             )
             si_10[mask_4] = (
-                (0.16 * (self.v10_avg_midsummer_temp_in_pools_bw_fry [mask_4]))
+                (0.16 * (self.v10_avg_midsummer_temp_in_pools_bw_fry[mask_4]))
                 - 2.2021
             )
 
@@ -540,7 +540,7 @@ class BlackCrappieHSI:
                 self.v10_avg_midsummer_temp_in_pools_bw_fry <= 30
             )
             si_10[mask_5] = (
-                (-0.167 * (self.v10_avg_midsummer_temp_in_pools_bw_fry [mask_5]))
+                (-0.167 * (self.v10_avg_midsummer_temp_in_pools_bw_fry[mask_5]))
                 + 5
             )
         
@@ -579,7 +579,7 @@ class BlackCrappieHSI:
                 self.v11_avg_spawning_temp_in_bw_embryo < 17
             )
             si_11[mask_3] = (
-                (0.2 * (self.v11_avg_spawning_temp_in_bw_embryo [mask_3]))
+                (0.2 * (self.v11_avg_spawning_temp_in_bw_embryo[mask_3]))
                 - 2.4
             )
 
@@ -588,7 +588,7 @@ class BlackCrappieHSI:
                 self.v11_avg_spawning_temp_in_bw_embryo < 23
             )
             si_11[mask_4] = (
-                (-0.33 * (self.v11_avg_spawning_temp_in_bw_embryo [mask_4]))
+                (-0.33 * (self.v11_avg_spawning_temp_in_bw_embryo[mask_4]))
                 + 7.7
             )
         
@@ -625,7 +625,7 @@ class BlackCrappieHSI:
                 self.v12_min_do_in_midsummer_temp_strata <= 4.5
             )
             si_12[mask_3] = (
-                0.066 * self.v12_min_do_in_midsummer_temp_strata [mask_3]
+                0.066 * self.v12_min_do_in_midsummer_temp_strata[mask_3]
                 - 0.1
             )
 
@@ -634,7 +634,7 @@ class BlackCrappieHSI:
                 self.v12_min_do_in_midsummer_temp_strata < 5
             )
             si_12[mask_4] = (
-                1.59 * self.v12_min_do_in_midsummer_temp_strata [mask_4]
+                1.59 * self.v12_min_do_in_midsummer_temp_strata[mask_4]
                 - 6.9
             )
         
@@ -669,7 +669,7 @@ class BlackCrappieHSI:
                 self.v13_min_do_in_spawning_bw < 3.5
             )
             si_13[mask_3] =  (
-                0.5 * self.v13_min_do_in_spawning_bw [mask_3]
+                0.5 * self.v13_min_do_in_spawning_bw[mask_3]
                 - 1.335
             )
 
@@ -678,7 +678,7 @@ class BlackCrappieHSI:
                 self.v13_min_do_in_spawning_bw < 5
             )
             si_13[mask_4] =  (
-                0.4 * self.v13_min_do_in_spawning_bw [mask_4]
+                0.4 * self.v13_min_do_in_spawning_bw[mask_4]
                 - 1
             )
         

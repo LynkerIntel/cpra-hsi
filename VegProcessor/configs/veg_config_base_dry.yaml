@@ -1,7 +1,8 @@
 raster_data:
   dem_path: "/Users/dillonragar/data/cpra/AMP_NGOM2_DEM_60m_Bilinear_Resample.tif" # str
   wse_domain_raster: "/Users/dillonragar/data/cpra/HECRAS_domain_60m.tif"
-  wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-dry"
+  #wse_directory_path: "/Users/dillonragar/data/tmp/cpra/base-sequence-dry"
+  netcdf_hydro_path: "/Users/dillonragar/data/tmp/cpra/G999"
   veg_base_raster: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif" #str
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_grid: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
@@ -13,14 +14,19 @@ polygon_data:
 
 
 simulation:
-  water_year_start: 1951 # int
-  water_year_end: 1975 # int
+  water_year_start: 1963 # int
+  water_year_end: 1972 # int
   wse_sequence_input: True # bool if WSE input is synthetic
+  years_mapping:
+    1: 2006
+    3: 2022
+    5: 2020
 
 metadata: # partial list (static vars)
-  model: VEG
-  scenario: "S01" # scenario info for plots and metadata
-  group: G510
+  model: VEGH
+  sea_level_condition: "000" # baseline
+  flow_scenario: "D" #"W"? # scenario info for plots and metadata
+  group: G511
   wpu: ARS
 
 output:

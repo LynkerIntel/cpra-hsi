@@ -91,6 +91,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
 
         # metadata
@@ -114,13 +115,16 @@ class HSI(vt.VegTransition):
 
         self.file_params = {
             "model": self.metadata.get("model"),
-            "scenario": self.metadata.get("scenario"),
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
             "group": self.metadata.get("group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
-            "year_range": f"01_{str(sim_length + 1).zfill(2)}",
-            # "parameter": "NA",
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
         }
 
         self._create_output_dirs()
@@ -149,7 +153,7 @@ class HSI(vt.VegTransition):
             all_types=True,
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
-        self.pct_human_influence = None
+        self.human_influence = None
         self.hydro_domain = self._load_hecras_domain_raster()
         self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
 
@@ -261,44 +265,42 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # water depth vars --------------------------------------
-        if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-            # for daily NetCDF, this methods loads analog year directly,
-            # using lookup and mapping
-            self.water_depth = self._load_stage_daily(self.wy)
-            self.water_depth_annual_mean = self._get_daily_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug = (
-                self._get_daily_depth_filtered(
-                    months=[1, 2, 3, 4, 5, 6, 7, 8],
-                )
+        # # water depth vars --------------------------------------
+        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
+        #     # for daily NetCDF, this methods loads analog year directly,
+        #     # using lookup and mapping
+        self.water_depth = self._load_stage_daily(self.wy)
+        self.water_depth_annual_mean = self._get_daily_depth_filtered()
+        self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
+            months=[1, 2, 3, 4, 5, 6, 7, 8],
+        )
+        self.water_depth_monthly_mean_sept_dec = (
+            self._get_daily_depth_filtered(
+                months=[9, 10, 11, 12],
             )
-            self.water_depth_monthly_mean_sept_dec = (
-                self._get_daily_depth_filtered(
-                    months=[9, 10, 11, 12],
-                )
-            )
-            self.water_depth_spawning_season = self._get_daily_depth_filtered(
-                months=[4, 5, 6],
-            )
-        else:
-            # for pre-generated monthly hydro .tifs
-            # TODO: refactor this subset logic out of the step method,
-            # but really we should move away from have two branching methods
-            # for loading hydro data
-            self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-            self.wse = self._reproject_match_to_dem(self.wse)
-            # self.water_depth = self._get_depth()
+        )
+        self.water_depth_spawning_season = self._get_daily_depth_filtered(
+            months=[4, 5, 6],
+        )
+        # else:
+        #     # for pre-generated monthly hydro .tifs
+        #     # TODO: refactor this subset logic out of the step method,
+        #     # but really we should move away from have two branching methods
+        #     # for loading hydro data
+        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
+        #     self.wse = self._reproject_match_to_dem(self.wse)
+        #     # self.water_depth = self._get_depth()
 
-            self.water_depth_annual_mean = self._get_depth_filtered()
-            self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
-                months=[1, 2, 3, 4, 5, 6, 7, 8]
-            )
-            self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-                months=[9, 10, 11, 12]
-            )
-            self.water_depth_spawning_season = self._get_depth_filtered(
-                months=[4, 5, 6]
-            )
+        #     self.water_depth_annual_mean = self._get_depth_filtered()
+        #     self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
+        #         months=[1, 2, 3, 4, 5, 6, 7, 8]
+        #     )
+        #     self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
+        #         months=[9, 10, 11, 12]
+        #     )
+        #     self.water_depth_spawning_season = self._get_depth_filtered(
+        #         months=[4, 5, 6]
+        #     )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -499,7 +501,7 @@ class HSI(vt.VegTransition):
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
-        This method is called during initialization, for static variables that
+        This method is called only during initialization, for static variables that
         vary spatially but not temporally.
         """
         self._logger.info("Calculating static var: % developed and upland")
@@ -521,8 +523,28 @@ class HSI(vt.VegTransition):
             boundary="pad",
         ).to_numpy()
 
+        self._logger.info("Calculating static var: crops")
+        ds_crops = utils.generate_pct_cover_custom(
+            data_array=self.initial_veg_type,  # use initial veg
+            veg_types=[6, 7],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_crops = ds_crops.to_numpy()
+
+        self._logger.info("Calculating static var: developed")
+        ds_developed = utils.generate_pct_cover_custom(
+            data_array=self.initial_veg_type,  # use initial veg
+            veg_types=[2, 3, 4, 5],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        self.pct_developed = ds_developed.to_numpy()
+
         self._logger.info("Calculating static var: pct area influence")
-        self.pct_human_influence = self._calculate_pct_area_influence(
+        self.human_influence = self._calculate_pct_area_influence(
             radius=self.testing_radius
         )
 
@@ -570,63 +592,105 @@ class HSI(vt.VegTransition):
         else:
             return istype_expanded & nottype_bool
 
+    # def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
+    #     """Percent of evaluation area inside of zones of influence defined by
+    #     radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
+    #     residences.
+
+    #     Radiuses are defined by circular (disk) kernel, which expands True
+    #     pixels outward by r.
+
+    #     5,700 / 60 = 95 pixels
+    #     3,500 / 60 = 58.33 pixels
+
+    #     Parameters
+    #     ----------
+    #     None
+
+    #     Returns
+    #     --------
+    #     near_landtypes_da : np.ndarray
+    #         Percent coverage array (480m grid cell)
+    #     """
+    #     towns = [2, 3, 4, 5]
+    #     croplands = [6, 7, 8]
+    #     radius_towns = radius or 95
+    #     radius_croplands = radius or 59
+
+    #     if radius:
+    #         self._logger.warning(
+    #             "Running area of influence with radius: %s.", radius
+    #         )
+
+    #     self._logger.info("Calculating static var: human influence - towns.")
+    #     near_towns = self._calculate_near_landtype(
+    #         landcover_arr=self.initial_veg_type,  # initial
+    #         landtype_true=towns,
+    #         radius=radius_towns,
+    #         include_source=True,
+    #     )
+    #     self._logger.info(
+    #         "Calculating static var: human influence - croplands."
+    #     )
+    #     near_croplands = self._calculate_near_landtype(
+    #         landcover_arr=self.initial_veg_type,  # initial
+    #         landtype_true=croplands,
+    #         radius=radius_croplands,
+    #         include_source=True,
+    #     )
+
+    #     stacked = np.stack([near_towns, near_croplands])
+    #     influence_bool = np.any(stacked, axis=0)
+
+    #     near_landtypes_da = xr.DataArray(influence_bool.astype(float))
+    #     near_landtypes_da = (
+    #         near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
+    #         * 100
+    #     )  # UNIT: index to pct
+
+    #     return near_landtypes_da.to_numpy()
+
     def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
         radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
         residences.
 
         Radiuses are defined by circular (disk) kernel, which expands True
-        pixels outward by r.
+        pixels outward.
 
-        5,700 / 60 = 95 pixels
-        3,500 / 60 = 58.33 pixels
+        480m radii:
+        5,700 / 60 = 11.875 pixels
+        3,500 / 60 = 7.29 pixels
 
         Parameters
         ----------
-        None
+        Radius: int | None
+            None if using model defaults, int if testing. Int also used during
+            testing to speedup `HSI` execution time.
 
         Returns
         --------
         near_landtypes_da : np.ndarray
-            Percent coverage array (480m grid cell)
+            Binary near landtypes array (480m grid cell)
         """
-        towns = [2, 3, 4, 5]
-        croplands = [6, 7, 8]
-        radius_towns = radius or 95
-        radius_croplands = radius or 59
+        crops_bool = self.pct_crops > 50
+        developed_bool = self.pct_developed > 50
 
-        if radius:
-            self._logger.warning(
-                "Running area of influence with radius: %s.", radius
-            )
-
-        self._logger.info("Calculating static var: human influence - towns.")
-        near_towns = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,  # initial
-            landtype_true=towns,
-            radius=radius_towns,
-            include_source=True,
-        )
-        self._logger.info(
-            "Calculating static var: human influence - croplands."
-        )
-        near_croplands = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,  # initial
-            landtype_true=croplands,
-            radius=radius_croplands,
-            include_source=True,
+        disk_kernel = disk(radius or 7, strict_radius=False)
+        crops_expanded = binary_dilation(
+            crops_bool,
+            structure=disk_kernel,
         )
 
-        stacked = np.stack([near_towns, near_croplands])
+        disk_kernel = disk(radius or 12, strict_radius=False)
+        developed_expanded = binary_dilation(
+            developed_bool,
+            structure=disk_kernel,
+        )
+
+        stacked = np.stack([crops_expanded, developed_expanded])
         influence_bool = np.any(stacked, axis=0)
-
-        near_landtypes_da = xr.DataArray(influence_bool.astype(float))
-        near_landtypes_da = (
-            near_landtypes_da.coarsen(dim_0=8, dim_1=8, boundary="pad").mean()
-            * 100
-        )  # UNIT: index to pct
-
-        return near_landtypes_da.to_numpy()
+        return influence_bool
 
     def _calculate_edge(self) -> np.ndarray:
         """
@@ -800,12 +864,15 @@ class HSI(vt.VegTransition):
         Midstory = 2
         Understory = 1
         """
+        # initialize new, empty array for each timestep
+        self.story_class = np.zeros_like(self.dem)
         self._logger.info("Calculating story assignment for forest types.")
         forested_types = [15, 16, 17, 18]
         understory_types = [20, 21, 22, 23]
 
         # overstory types
-        type_mask = np.isin(self.veg_type, forested_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), forested_types)
+
         mask_3 = type_mask & (self.maturity > 10)
         self.story_class[mask_3] = 3
 
@@ -818,7 +885,7 @@ class HSI(vt.VegTransition):
         self.story_class[mask_fresh_shrub] = 2
 
         # other
-        type_mask = np.isin(self.veg_type, understory_types)
+        type_mask = np.isin(self.veg_type.to_numpy(), understory_types)
         self.story_class[type_mask] = 1
 
         story_class_da = xr.DataArray(self.story_class, dims=["y", "x"])
@@ -846,7 +913,9 @@ class HSI(vt.VegTransition):
         ).to_numpy()
 
         # resample to 480m for BLH WVA
-        self.story_class = utils.reduce_arr_by_mode(self.story_class)
+        self.story_class = utils.reduce_arr_by_mode(
+            self.story_class
+        ).to_numpy()
 
     def _calculate_shrub_scrub_midstory(self):
         """Get combined percentange of shrub/scrub & midstory cover at 480m cell size."""
@@ -963,7 +1032,7 @@ class HSI(vt.VegTransition):
         file_name = utils.generate_filename(
             params=params,
             base_path=self.timestep_output_dir,
-            parameter="DATA",
+            # parameter="DATA",
         )
 
         self.netcdf_filepath = os.path.join(

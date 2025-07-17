@@ -168,7 +168,7 @@ class RiverineCatfishHSI:
             # condition 1
             mask_1 = (self.v1_pct_pools_avg_summer_flow < 40)
             si_1[mask_1] = (
-                0.02 * (self.v1_pct_pools_avg_summer_flow [mask_1])
+                0.02 * (self.v1_pct_pools_avg_summer_flow[mask_1])
             ) + 0.2 
             
             # condition 2
@@ -184,7 +184,7 @@ class RiverineCatfishHSI:
                 (self.v1_pct_pools_avg_summer_flow <= 100)
             )
             si_1[mask_3] = (
-                -0.0125 * (self.v1_pct_pools_avg_summer_flow [mask_3])
+                -0.0125 * (self.v1_pct_pools_avg_summer_flow[mask_3])
             ) + 1.75 
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
@@ -211,7 +211,7 @@ class RiverineCatfishHSI:
                 (self.v2_pct_cover_in_summer_pools_bw < 40)
             )
             si_2[mask_1] = (
-                0.022 * (self.v2_pct_cover_in_summer_pools_bw [mask_1])
+                0.022 * (self.v2_pct_cover_in_summer_pools_bw[mask_1])
             ) + 0.1397
             
             # condition 2
@@ -272,7 +272,7 @@ class RiverineCatfishHSI:
                 self.v5_avg_temp_in_midsummer_pools_bw <= 26
             )
             si_5[mask_2] = (
-                0.111 * (self.v5_avg_temp_in_midsummer_pools_bw [mask_2])
+                0.111 * (self.v5_avg_temp_in_midsummer_pools_bw[mask_2])
             ) - 1.8889 
 
             # condition 3
@@ -286,7 +286,7 @@ class RiverineCatfishHSI:
                 self.v5_avg_temp_in_midsummer_pools_bw <= 34
             )
             si_5[mask_4] = (
-                -0.2 * (self.v5_avg_temp_in_midsummer_pools_bw [mask_4])
+                -0.2 * (self.v5_avg_temp_in_midsummer_pools_bw[mask_4])
             ) + 6.8
 
             # condition 5
@@ -320,8 +320,8 @@ class RiverineCatfishHSI:
                 self.v6_grow_season_length_frost_free_days < 200
             )
             si_6[mask_2] = (
-                (2.485904e-05 * (self.v6_grow_season_length_frost_free_days [mask_2]) ** 2)
-                + (3.943156e-05 * (self.v6_grow_season_length_frost_free_days [mask_2]) ** 3)
+                (2.485904e-05 * (self.v6_grow_season_length_frost_free_days[mask_2]) ** 2)
+                + (3.943156e-05 * (self.v6_grow_season_length_frost_free_days[mask_2]) ** 3)
                 - 0.006587644
             )
 
@@ -356,7 +356,7 @@ class RiverineCatfishHSI:
                 self.v7_max_monthly_avg_summer_turbidity < 285
             )
             si_7[mask_2] = (
-                -0.0046 * (self.v7_max_monthly_avg_summer_turbidity [mask_2])
+                -0.0046 * (self.v7_max_monthly_avg_summer_turbidity[mask_2])
                 + 1.5029
             )
 
@@ -391,7 +391,7 @@ class RiverineCatfishHSI:
                 self.v8_avg_min_do_in_midsummer_pools_bw <= 7
             )
             si_8[mask_2] = (
-                0.1667 * (self.v8_avg_min_do_in_midsummer_pools_bw [mask_2])
+                0.1667 * (self.v8_avg_min_do_in_midsummer_pools_bw[mask_2])
                 - 0.1667
             )
 
@@ -427,9 +427,9 @@ class RiverineCatfishHSI:
                 self.v9_max_summer_salinity < 11.4
             )
             si_9[mask_2] = (
-                (0.001235 * (self.v9_max_summer_salinity [mask_2]) ** 3)
-                - (0.02587 * (self.v9_max_summer_salinity [mask_2]) ** 2)
-                + (0.05215 * (self.v9_max_summer_salinity [mask_2])) 
+                (0.001235 * (self.v9_max_summer_salinity[mask_2]) ** 3)
+                - (0.02587 * (self.v9_max_summer_salinity[mask_2]) ** 2)
+                + (0.05215 * (self.v9_max_summer_salinity[mask_2])) 
                 + 0.9714
             )
 
@@ -465,7 +465,7 @@ class RiverineCatfishHSI:
                 self.v10_avg_temp_in_spawning_embryo_pools_bw <= 26
             )
             si_10[mask_2] = (
-                (0.0928 * (self.v10_avg_temp_in_spawning_embryo_pools_bw [mask_2]))
+                (0.0928 * (self.v10_avg_temp_in_spawning_embryo_pools_bw[mask_2]))
                 - 1.4456
             )
 
@@ -480,7 +480,7 @@ class RiverineCatfishHSI:
                 self.v10_avg_temp_in_spawning_embryo_pools_bw <= 29.2
             )
             si_10[mask_4] = (
-                (-0.5882 * (self.v10_avg_temp_in_spawning_embryo_pools_bw [mask_4]))
+                (-0.5882 * (self.v10_avg_temp_in_spawning_embryo_pools_bw[mask_4]))
                 + 17.176
             )
 
@@ -517,9 +517,9 @@ class RiverineCatfishHSI:
                 self.v11_max_salinity_spawning_embryo <= 16
             )
             si_11[mask_2] = (
-                (0.0008024 * (self.v11_max_salinity_spawning_embryo [mask_2]) ** 3)
-                - (0.02161 * (self.v11_max_salinity_spawning_embryo [mask_2]) ** 2)
-                + (0.08395 * self.v11_max_salinity_spawning_embryo [mask_2])
+                (0.0008024 * (self.v11_max_salinity_spawning_embryo[mask_2]) ** 3)
+                - (0.02161 * (self.v11_max_salinity_spawning_embryo[mask_2]) ** 2)
+                + (0.08395 * self.v11_max_salinity_spawning_embryo[mask_2])
                 + 0.9093
             )
 
@@ -554,7 +554,7 @@ class RiverineCatfishHSI:
                 self.v12_avg_midsummer_temp_in_pools_bw_fry < 28
             )
             si_12[mask_2] = (
-                0.0765 * (self.v12_avg_midsummer_temp_in_pools_bw_fry [mask_2])
+                0.0765 * (self.v12_avg_midsummer_temp_in_pools_bw_fry[mask_2])
                 - 1.1892
             )
 
@@ -569,7 +569,7 @@ class RiverineCatfishHSI:
                 self.v12_avg_midsummer_temp_in_pools_bw_fry < 36
             )
             si_12[mask_4] = (
-                -0.1667 * self.v12_avg_midsummer_temp_in_pools_bw_fry [mask_4]
+                -0.1667 * self.v12_avg_midsummer_temp_in_pools_bw_fry[mask_4]
                 + 6
             )
 
@@ -605,7 +605,7 @@ class RiverineCatfishHSI:
                 self.v13_max_summer_salinity_fry_juvenile <= 10
             )
             si_13[mask_2] = (
-                -0.2 * (self.v13_max_summer_salinity_fry_juvenile [mask_2])
+                -0.2 * (self.v13_max_summer_salinity_fry_juvenile[mask_2])
                 + 2
             )
 
@@ -642,7 +642,7 @@ class RiverineCatfishHSI:
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 28
             )
             si_14[mask_2] = (
-                0.0765 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile [mask_2])
+                0.0765 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_2])
                 - 1.1892
             )
 
@@ -657,7 +657,7 @@ class RiverineCatfishHSI:
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 36
             )
             si_14[mask_4] = (
-                -0.1538 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile [mask_4])
+                -0.1538 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_4])
                 + 5.6154 
             )
 
@@ -704,8 +704,8 @@ class RiverineCatfishHSI:
                 self.v18_avg_vel_summer_flow < 38
             )
             si_18[mask_2] = (
-                0.001195 * (self.v18_avg_vel_summer_flow [mask_2]) ** 2
-                - 0.1025 * (self.v18_avg_vel_summer_flow [mask_2])
+                0.001195 * (self.v18_avg_vel_summer_flow[mask_2]) ** 2
+                - 0.1025 * (self.v18_avg_vel_summer_flow[mask_2])
                 + 2.278
             )
 

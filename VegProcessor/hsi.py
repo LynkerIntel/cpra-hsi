@@ -1220,7 +1220,7 @@ class HSI(vt.VegTransition):
 
         # log the full dictionary with pretty formatting
         formatted_dict = pprint.pformat(attr_types, width=100, indent=2)
-        self._logger.info("Attribute types dictionary:\n%s", formatted_dict)
+        self._logger.info("HSI data inputs for run:\n%s", formatted_dict)
 
 
 class _TimestepFilter(logging.Filter):

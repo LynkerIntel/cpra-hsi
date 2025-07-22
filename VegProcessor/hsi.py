@@ -246,6 +246,20 @@ class HSI(vt.VegTransition):
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
+        # black-crappie
+        self.max_monthly_avg_summer_turbidity = None
+        self.pct_cover_in_midsummer_pools_overflow_bw = None  # set to ideal
+        self.stream_gradient = None  # set to ideal
+        self.avg_vel_summer_flow_pools_bw = None
+        self.pct_pools_bw_avg_spring_summer_flow = None
+        self.ph_year = None  # set to ideal
+        self.most_suit_temp_in_midsummer_pools_bw_adult = None
+        self.most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        self.avg_midsummer_temp_in_pools_bw_fry = None
+        self.avg_spawning_temp_in_bw_embryo = None
+        self.min_do_in_midsummer_temp_strata = None
+        self.min_do_in_spawning_bw = None
+
         self._create_output_file(self.file_params)
 
     def step(self, date: pd.DatetimeTZDtype):

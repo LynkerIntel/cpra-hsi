@@ -683,14 +683,14 @@ class RiverineCatfishHSI:
         return NotImplementedError  
     
     def calculate_si_18(self) -> np.ndarray:
-        """Average midsummer water temperature within pools, backwaters (Juvenile)"""
+        """Average current velocity in cover areas during average summer flow"""
         self._logger.info("Running SI 18")
         si_18 = self.template.copy()
 
         if self.v18_avg_vel_summer_flow is None:
             self._logger.info(
-                "Average midsummer water temperature within " \
-                "pools, backwaters (Juvenile) assumes ideal conditions. Setting index to 1."
+                "Average current velocity in cover areas during average summer flow"
+                "is not provided. Setting index to 1."
             )
             si_18[~np.isnan(si_18)] = 1
 

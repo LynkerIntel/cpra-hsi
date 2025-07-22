@@ -36,7 +36,6 @@ class BlackBearHSI:
     si_7: np.ndarray = field(init=False)
     si_8: np.ndarray = field(init=False)
 
-
     # components and equations
     spring_food: np.ndarray = field(init=False)
     summer_food: np.ndarray = field(init=False)
@@ -64,7 +63,7 @@ class BlackBearHSI:
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
             v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
             v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_hard_mast,
-            v8_pct_eval_area_inside_zones=hsi_instance.pct_human_influence,
+            v8_pct_eval_area_inside_zones=hsi_instance.human_influence,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -166,7 +165,6 @@ class BlackBearHSI:
                 -0.01 * self.v1_pct_area_wetland_cover[mask_3]
             ) + 1.5
 
-
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -190,7 +188,6 @@ class BlackBearHSI:
             si_2[mask_1] = (
                 0.036 * self.v2_pct_canopy_cover_s_mast_species[mask_1]
             ) + 0.1
-
 
             # condition 2
             mask_2 = self.v2_pct_canopy_cover_s_mast_species >= 25.0
@@ -325,7 +322,6 @@ class BlackBearHSI:
                 0.032 * self.v6_pct_area_nonforested_cover_250m[mask_1]
             ) + 0.2
 
-
             # condition 2
             mask_2 = (self.v6_pct_area_nonforested_cover_250m >= 25) & (
                 self.v6_pct_area_nonforested_cover_250m <= 50
@@ -343,7 +339,6 @@ class BlackBearHSI:
             # condition 4
             mask_4 = self.v6_pct_area_nonforested_cover_250m > 75
             si_6[mask_4] = 0
-
 
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

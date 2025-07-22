@@ -428,6 +428,151 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "blh_wva_hsi": [
+            hsi.blhwva.hsi,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "bottomland_hardwood_wetland_value_assessment",
+                "description": "",
+            },
+        ],
+        "blh_wva_si_1": [
+            hsi.blhwva.si_1,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_2": [
+            hsi.blhwva.si_2,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_3": [
+            hsi.blhwva.si_3,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_4": [
+            hsi.blhwva.si_4,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_5": [
+            hsi.blhwva.si_5,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_6": [
+            hsi.blhwva.si_6,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_7": [
+            hsi.blhwva.si_7,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "bottomland hardwood wetland value_assessment",
+            },
+        ],
+        "swamp_wva_hsi": [
+            hsi.swampwva.hsi,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_1": [
+            hsi.swampwva.si_1,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_2": [
+            hsi.swampwva.si_2,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_3": [
+            hsi.swampwva.si_3,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_4": [
+            hsi.swampwva.si_4,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_5": [
+            hsi.swampwva.si_5,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_6": [
+            hsi.swampwva.si_6,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
+        "swamp_wva_si_7": [
+            hsi.swampwva.si_7,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "description": "swamp wetland value assessment",
+            },
+        ],
         "pct_open_water": [
             hsi.pct_open_water,
             np.float32,
@@ -678,8 +823,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "pct_human_influence": [
-            hsi.pct_human_influence,
+        "human_influence_bool": [
+            hsi.human_influence,
             np.float32,
             {
                 "grid_mapping": "crs",

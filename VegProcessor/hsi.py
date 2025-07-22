@@ -279,10 +279,7 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # # water depth vars --------------------------------------
-        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-        #     # for daily NetCDF, this methods loads analog year directly,
-        #     # using lookup and mapping
+        # water depth vars --------------------------------------
         self.water_depth = self._load_stage_daily(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
@@ -296,25 +293,6 @@ class HSI(vt.VegTransition):
         self.water_depth_spawning_season = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
-        # else:
-        #     # for pre-generated monthly hydro .tifs
-        #     # TODO: refactor this subset logic out of the step method,
-        #     # but really we should move away from have two branching methods
-        #     # for loading hydro data
-        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-        #     self.wse = self._reproject_match_to_dem(self.wse)
-        #     # self.water_depth = self._get_depth()
-
-        #     self.water_depth_annual_mean = self._get_depth_filtered()
-        #     self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
-        #         months=[1, 2, 3, 4, 5, 6, 7, 8]
-        #     )
-        #     self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-        #         months=[9, 10, 11, 12]
-        #     )
-        #     self.water_depth_spawning_season = self._get_depth_filtered(
-        #         months=[4, 5, 6]
-        #     )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()

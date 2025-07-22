@@ -670,7 +670,7 @@ class BlackCrappieHSI:
             )
             si_13[mask_3] =  (
                 0.5 * self.v13_min_do_in_spawning_bw[mask_3]
-                - 1.335
+                - 1.35
             )
 
             # condition 4

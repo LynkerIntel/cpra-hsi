@@ -347,7 +347,6 @@ class HSI(vt.VegTransition):
             self.water_year_start,
             self.water_year_end,
         )
-
         # plus 1 to make inclusive
         simulation_period = range(
             self.water_year_start, self.water_year_end + 1
@@ -355,15 +354,14 @@ class HSI(vt.VegTransition):
         self._logger.info(
             "Running model for: %s timesteps", len(simulation_period)
         )
-
         # static vars calcs outside of simulation loop
         self._calculate_static_vars()
-        # log data vars being supplied to the model
-        self.log_data_attribute_types()
-
+        # run the model
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
-
+        # log data vars being supplied to the model
+        # (after main loop to include all vars)
+        self.log_data_attribute_types()
         self._logger.info("Simulation complete")
         logging.shutdown()
 

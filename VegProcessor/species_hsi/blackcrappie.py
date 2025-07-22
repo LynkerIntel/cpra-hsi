@@ -698,8 +698,6 @@ class BlackCrappieHSI:
             ("SI 11", self.si_11),
             ("SI 12", self.si_12),
             ("SI 13", self.si_13),
-            ("SI 14", self.si_14),
-            ("SI 15", self.si_15),
         ]:
             invalid_values = (si_array < 0) | (si_array > 1)
             if np.any(invalid_values):

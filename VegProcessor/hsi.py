@@ -6,6 +6,8 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 import shutil
+import pprint
+
 import glob
 import os
 from typing import Optional
@@ -317,8 +319,6 @@ class HSI(vt.VegTransition):
         # run ---------------------------------------------------------
         if self.run_hsi:
 
-            self.log_data_attribute_types()
-
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
@@ -356,9 +356,10 @@ class HSI(vt.VegTransition):
             "Running model for: %s timesteps", len(simulation_period)
         )
 
-        # static variable calculations are outside of
-        # simulation loop
+        # static vars calcs outside of simulation loop
         self._calculate_static_vars()
+        # log data vars being supplied to the model
+        self.log_data_attribute_types()
 
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
@@ -1195,10 +1196,16 @@ class HSI(vt.VegTransition):
         and understanding the current state of HSI variables.
         """
         self._logger.info("=== HSI Data Attribute Types ===")
+        # non-private attributes, exclude those containing "path",
+        # we just want to track data vars being supplied to the model
+        attributes = [
+            attr
+            for attr in dir(self)
+            if not attr.startswith("_") and "path" not in attr
+        ]
 
-        # Get all non-private attributes
-        attributes = [attr for attr in dir(self) if not attr.startswith("_")]
-
+        # dict of attribute types
+        attr_types = {}
         for attr_name in sorted(attributes):
             try:
                 attr_value = getattr(self, attr_name)
@@ -1208,12 +1215,14 @@ class HSI(vt.VegTransition):
                 if hasattr(attr_value, "shape"):
                     attr_type += f"{attr_value.shape}"
 
-                self._logger.info(f"{attr_name:<40}: {attr_type}")
+                attr_types[attr_name] = attr_type
 
             except Exception as e:
-                self._logger.warning(
-                    f"Error accessing attribute {attr_name}: {e}"
-                )
+                attr_types[attr_name] = f"Error: {e}"
+
+        # log the full dictionary with pretty formatting
+        formatted_dict = pprint.pformat(attr_types, width=100, indent=2)
+        self._logger.info("Attribute types dictionary:\n%s", formatted_dict)
 
 
 class _TimestepFilter(logging.Filter):

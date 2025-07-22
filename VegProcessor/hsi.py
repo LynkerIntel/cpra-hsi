@@ -34,6 +34,7 @@ from species_hsi import (
     blackbear,
     blhwva,
     swampwva,
+    blackcrappie,
 )
 
 
@@ -180,6 +181,7 @@ class HSI(vt.VegTransition):
         self.bluecrab = None
         self.blhwva = None
         self.swampwva = None
+        self.blackcrappie = None
 
         # datasets
         self.pct_cover_veg = None
@@ -315,6 +317,8 @@ class HSI(vt.VegTransition):
         # run ---------------------------------------------------------
         if self.run_hsi:
 
+            self.log_data_attribute_types()
+
             self.alligator = alligator.AlligatorHSI.from_hsi(self)
             self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
             self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
@@ -324,6 +328,7 @@ class HSI(vt.VegTransition):
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
             self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
             self.swampwva = swampwva.SwampHSI.from_hsi(self)
+            self.blackcrappie = blackcrappie.BlackCrappieHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -1184,6 +1189,31 @@ class HSI(vt.VegTransition):
         attrs_df.to_csv(outpath, index=False)
 
         logging.info("Post-processing complete.")
+
+    def log_data_attribute_types(self):
+        """Log the data type of all non-private attributes to help with debugging
+        and understanding the current state of HSI variables.
+        """
+        self._logger.info("=== HSI Data Attribute Types ===")
+
+        # Get all non-private attributes
+        attributes = [attr for attr in dir(self) if not attr.startswith("_")]
+
+        for attr_name in sorted(attributes):
+            try:
+                attr_value = getattr(self, attr_name)
+                attr_type = type(attr_value).__name__
+
+                # Add shape info for arrays
+                if hasattr(attr_value, "shape"):
+                    attr_type += f"{attr_value.shape}"
+
+                self._logger.info(f"{attr_name:<40}: {attr_type}")
+
+            except Exception as e:
+                self._logger.warning(
+                    f"Error accessing attribute {attr_name}: {e}"
+                )
 
 
 class _TimestepFilter(logging.Filter):

@@ -893,6 +893,208 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "blackcrappie_hsi": [
+            hsi.blackcrappie.hsi,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "black crappie HSI",
+                "description": "HSI",
+            },
+        ],
+        "blackcrappie_si_1": [
+            hsi.blackcrappie.si_1,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_2": [
+            hsi.blackcrappie.si_2,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_3": [
+            hsi.blackcrappie.si_3,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_4": [
+            hsi.blackcrappie.si_4,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_5": [
+            hsi.blackcrappie.si_5,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_7": [
+            hsi.blackcrappie.si_7,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_8": [
+            hsi.blackcrappie.si_8,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_9": [
+            hsi.blackcrappie.si_9,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_10": [
+            hsi.blackcrappie.si_10,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_11": [
+            hsi.blackcrappie.si_11,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_12": [
+            hsi.blackcrappie.si_12,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_si_13": [
+            hsi.blackcrappie.si_13,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "blackcrappie_fc": [
+            hsi.blackcrappie.fc,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie food components",
+            },
+        ],
+        "blackcrappie_wq_tcr": [
+            hsi.blackcrappie.wq_tcr,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie water quality component",
+            },
+        ],
+        "blackcrappie_wq_tcr_adj": [
+            hsi.blackcrappie.wq_tcr_adj,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": (
+                    "black crappie water quality component adjusted"
+                ),
+            },
+        ],
+        "blackcrappie_wq_init": [
+            hsi.blackcrappie.wq_init,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie water quality initial",
+            },
+        ],
+        "blackcrappie_wq": [
+            hsi.blackcrappie.wq,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie water quality",
+            },
+        ],
+        "blackcrappie_rc": [
+            hsi.blackcrappie.rc,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie reproduction component",
+            },
+        ],
+        "blackcrappie_ot": [
+            hsi.blackcrappie.ot,
+            np.float32,
+            {
+                "grid_mapping": "crs",
+                "units": "",
+                "long_name": "",
+                "description": "black crappie other component",
+            },
+        ],
     }
 
 

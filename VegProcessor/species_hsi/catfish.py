@@ -244,9 +244,21 @@ class RiverineCatfishHSI:
             si_4[~np.isnan(si_4)] = 1
 
         else:
-            raise NotImplementedError(
-                "No logic for catfish v4 exists. Either use ideal (set array None) or add logic."
-            )
+            # condition 1 (class A == 1)
+            mask_1 = self.v4_fpp_substrate_avg_summer_flow == 1
+            si_4[mask_1] = 1
+
+            # condition 2 (class B == 2)
+            mask_2 = self.v4_fpp_substrate_avg_summer_flow == 2
+            si_4[mask_2] = 0.7
+
+            # condition 3 (class C == 3)
+            mask_3 = self.v4_fpp_substrate_avg_summer_flow == 3
+            si_4[mask_3] = 0.5
+
+            # condition 4 (class D == 4)
+            mask_4 = self.v4_fpp_substrate_avg_summer_flow == 4
+            si_4[mask_4] = 0.2
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

@@ -1057,6 +1057,14 @@ class HSI(vt.VegTransition):
             end=f"{self.water_year_end}-10-01",
             freq="YS-OCT",  # Annual start
         )
+        # encoding defined here and at append
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
 
         ds = xr.Dataset(
             # initialize w/ no data vars
@@ -1086,15 +1094,22 @@ class HSI(vt.VegTransition):
                         "standard_name": "projection_y_coordinate",
                     },
                 ),
-                "time": ("time", time_range, {"long_name": "Time"}),
+                "time": (
+                    "time",
+                    time_range,
+                    {
+                        "long_name": "time",
+                        "standard_name": "time",
+                    },
+                ),
             },
             attrs={"title": "HSI"},
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Save dataset to NetCDF
-        ds.to_netcdf(self.netcdf_filepath)
+        # Save dataset to NetCDF with explicit encoding
+        ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
         self._logger.info(
             "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
         )
@@ -1115,6 +1130,14 @@ class HSI(vt.VegTransition):
         -------
         None
         """
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
+
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
@@ -1142,15 +1165,12 @@ class HSI(vt.VegTransition):
                         data = np.nan_to_num(data, nan=False).astype(bool)
 
                     # Assign the data to the dataset for the specific time step
-                    ds[var_name].loc[{"time": timestep_str}] = data.astype(
+                    ds[var_name].loc[{"time": timestep}] = data.astype(
                         ds[var_name].dtype
                     )
 
         ds.close()
-        ds.to_netcdf(
-            self.netcdf_filepath,
-            mode="a",
-        )
+        ds.to_netcdf(self.netcdf_filepath, mode="a", encoding=encoding)
         # ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 

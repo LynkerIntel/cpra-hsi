@@ -198,9 +198,11 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
+        # Set to ideal
         if self.v2_pct_cover_in_summer_pools_bw is None:
             self._logger.info(
-                "Pct cover during summer within pools, backwaters is not provided. ""Setting index to 1."
+                "Pct cover during summer within pools, backwaters assumes ideal conditions. " \
+                "Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
@@ -234,9 +236,10 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
+        # Set to ideal
         if self.v4_fpp_substrate_avg_summer_flow is None:
             self._logger.info(
-                "Food production potential data is not provided. Setting index to 1."
+                "Food production potential data assumes ideal conditions. Setting index to 1."
             )
             si_4[~np.isnan(si_4)] = 1
 

@@ -391,7 +391,7 @@ class RiverineCatfishHSI:
 
         if self.v8_avg_min_do_in_midsummer_pools_bw is None:
             self._logger.info(
-                "Avg min DO levels within pools, backwaters, during midsummer " \
+                "Avg min DO levels within pools, backwaters, during midsummer"
                 "assumes ideal conditions. Setting index to 1."
             )
             si_8[~np.isnan(si_8)] = 1
@@ -465,7 +465,7 @@ class RiverineCatfishHSI:
 
         if self.v10_avg_temp_in_spawning_embryo_pools_bw is None:
             self._logger.info(
-                "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)" \
+                "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)"
                 "assumes ideal conditions. Setting index to 1."
             )
             si_10[~np.isnan(si_10)] = 1
@@ -515,7 +515,7 @@ class RiverineCatfishHSI:
 
         if self.v11_max_salinity_spawning_embryo is None:
             self._logger.info(
-                "Maximum salinity during spawning and embryo development (Embryo) assumes ideal conditions. " \
+                "Maximum salinity during spawning and embryo development (Embryo) assumes ideal conditions."
                 "Setting index to 1."
             )
             si_11[~np.isnan(si_11)] = 1
@@ -561,7 +561,7 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1 
-            mask_1 = (self.v12_avg_midsummer_temp_in_pools_bw_fry <= 15)
+            mask_1 = self.v12_avg_midsummer_temp_in_pools_bw_fry <= 15
             si_12[mask_1] = 0
 
             # condition 2
@@ -589,7 +589,7 @@ class RiverineCatfishHSI:
             )
 
             #condition 5
-            mask_5 = (self.v12_avg_midsummer_temp_in_pools_bw_fry >= 36)
+            mask_5 = self.v12_avg_midsummer_temp_in_pools_bw_fry >= 36
             si_12[mask_5] = 0
         
         if np.any(np.isclose(si_12, 999.0, atol=1e-5)):
@@ -625,7 +625,7 @@ class RiverineCatfishHSI:
             )
 
             # condition 3
-            mask_3 = (self.v13_max_summer_salinity_fry_juvenile > 10)
+            mask_3 = self.v13_max_summer_salinity_fry_juvenile > 10
             si_13[mask_3] = 0
         
         if np.any(np.isclose(si_13, 999.0, atol=1e-5)):
@@ -677,7 +677,7 @@ class RiverineCatfishHSI:
             )
 
             #condition 5
-            mask_5 = (self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 36.5)
+            mask_5 = self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 36.5
             si_14[mask_5] = 0
         
         if np.any(np.isclose(si_14, 999.0, atol=1e-5)):
@@ -711,7 +711,7 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1 
-            mask_1 = (self.v18_avg_vel_summer_flow <= 15)
+            mask_1 = self.v18_avg_vel_summer_flow <= 15
             si_18[mask_1] = 1
 
             # condition 2
@@ -725,7 +725,7 @@ class RiverineCatfishHSI:
             )
 
             # condition 3
-            mask_3 = (self.v18_avg_vel_summer_flow >= 38)
+            mask_3 = self.v18_avg_vel_summer_flow >= 38
             si_18[mask_3] = 0.1
 
         if np.any(np.isclose(si_18, 999.0, atol=1e-5)):

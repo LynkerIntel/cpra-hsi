@@ -1095,10 +1095,10 @@ class HSI(vt.VegTransition):
             attrs={"title": "HSI"},
         )
 
-        ds = ds.rio.write_crs("EPSG:6344")
+        ds = ds.rio.write_crs("EPSG:6344", inplace=True)
 
         # Save dataset to NetCDF
-        ds.to_netcdf(self.netcdf_filepath, inplace=True)
+        ds.to_netcdf(self.netcdf_filepath)
         self._logger.info(
             "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
         )

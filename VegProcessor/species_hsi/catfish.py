@@ -198,9 +198,11 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
+        # Set to ideal
         if self.v2_pct_cover_in_summer_pools_bw is None:
             self._logger.info(
-                "Pct cover during summer within pools, backwaters is not provided. ""Setting index to 1."
+                "Pct cover during summer within pools, backwaters assumes ideal conditions. " \
+                "Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
@@ -234,16 +236,29 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
+        # Set to ideal
         if self.v4_fpp_substrate_avg_summer_flow is None:
             self._logger.info(
-                "Food production potential data is not provided. Setting index to 1."
+                "Food production potential data assumes ideal conditions. Setting index to 1."
             )
             si_4[~np.isnan(si_4)] = 1
 
         else:
-            raise NotImplementedError(
-                "No logic for catfish v4 exists. Either use ideal (set array None) or add logic."
-            )
+            # condition 1 (class A == 1)
+            mask_1 = self.v4_fpp_substrate_avg_summer_flow == 1
+            si_4[mask_1] = 1
+
+            # condition 2 (class B == 2)
+            mask_2 = self.v4_fpp_substrate_avg_summer_flow == 2
+            si_4[mask_2] = 0.7
+
+            # condition 3 (class C == 3)
+            mask_3 = self.v4_fpp_substrate_avg_summer_flow == 3
+            si_4[mask_3] = 0.5
+
+            # condition 4 (class D == 4)
+            mask_4 = self.v4_fpp_substrate_avg_summer_flow == 4
+            si_4[mask_4] = 0.2
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -376,7 +391,7 @@ class RiverineCatfishHSI:
 
         if self.v8_avg_min_do_in_midsummer_pools_bw is None:
             self._logger.info(
-                "Avg min DO levels within pools, backwaters, during midsummer " \
+                "Avg min DO levels within pools, backwaters, during midsummer"
                 "assumes ideal conditions. Setting index to 1."
             )
             si_8[~np.isnan(si_8)] = 1
@@ -450,7 +465,7 @@ class RiverineCatfishHSI:
 
         if self.v10_avg_temp_in_spawning_embryo_pools_bw is None:
             self._logger.info(
-                "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)" \
+                "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)"
                 "assumes ideal conditions. Setting index to 1."
             )
             si_10[~np.isnan(si_10)] = 1
@@ -500,7 +515,7 @@ class RiverineCatfishHSI:
 
         if self.v11_max_salinity_spawning_embryo is None:
             self._logger.info(
-                "Maximum salinity during spawning and embryo development (Embryo) assumes ideal conditions. " \
+                "Maximum salinity during spawning and embryo development (Embryo) assumes ideal conditions."
                 "Setting index to 1."
             )
             si_11[~np.isnan(si_11)] = 1
@@ -546,7 +561,7 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1 
-            mask_1 = (self.v12_avg_midsummer_temp_in_pools_bw_fry <= 15)
+            mask_1 = self.v12_avg_midsummer_temp_in_pools_bw_fry <= 15
             si_12[mask_1] = 0
 
             # condition 2
@@ -574,7 +589,7 @@ class RiverineCatfishHSI:
             )
 
             #condition 5
-            mask_5 = (self.v12_avg_midsummer_temp_in_pools_bw_fry >= 36)
+            mask_5 = self.v12_avg_midsummer_temp_in_pools_bw_fry >= 36
             si_12[mask_5] = 0
         
         if np.any(np.isclose(si_12, 999.0, atol=1e-5)):
@@ -610,7 +625,7 @@ class RiverineCatfishHSI:
             )
 
             # condition 3
-            mask_3 = (self.v13_max_summer_salinity_fry_juvenile > 10)
+            mask_3 = self.v13_max_summer_salinity_fry_juvenile > 10
             si_13[mask_3] = 0
         
         if np.any(np.isclose(si_13, 999.0, atol=1e-5)):
@@ -662,7 +677,7 @@ class RiverineCatfishHSI:
             )
 
             #condition 5
-            mask_5 = (self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 36.5)
+            mask_5 = self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 36.5
             si_14[mask_5] = 0
         
         if np.any(np.isclose(si_14, 999.0, atol=1e-5)):
@@ -683,20 +698,20 @@ class RiverineCatfishHSI:
         return NotImplementedError  
     
     def calculate_si_18(self) -> np.ndarray:
-        """Average midsummer water temperature within pools, backwaters (Juvenile)"""
+        """Average current velocity in cover areas during average summer flow"""
         self._logger.info("Running SI 18")
         si_18 = self.template.copy()
 
         if self.v18_avg_vel_summer_flow is None:
             self._logger.info(
-                "Average midsummer water temperature within " \
-                "pools, backwaters (Juvenile) assumes ideal conditions. Setting index to 1."
+                "Average current velocity in cover areas during average summer flow"
+                "is not provided. Setting index to 1."
             )
             si_18[~np.isnan(si_18)] = 1
 
         else:
             # condition 1 
-            mask_1 = (self.v18_avg_vel_summer_flow <= 15)
+            mask_1 = self.v18_avg_vel_summer_flow <= 15
             si_18[mask_1] = 1
 
             # condition 2
@@ -710,7 +725,7 @@ class RiverineCatfishHSI:
             )
 
             # condition 3
-            mask_3 = (self.v18_avg_vel_summer_flow >= 38)
+            mask_3 = self.v18_avg_vel_summer_flow >= 38
             si_18[mask_3] = 0.1
 
         if np.any(np.isclose(si_18, 999.0, atol=1e-5)):

@@ -1169,18 +1169,18 @@ class HSI(vt.VegTransition):
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
             # create sidecar info
             attrs_df = utils.dataset_attrs_to_df(
-            ds,
-            selected_attrs=[
-                "long_name",
-                "description",
-                "units",
-            ],
-        )
-            if "spatial_ref" in ds_out.coords:
-                # rename it to crs which is more common in CF conventions
-                ds_out = ds_out.rename({"spatial_ref": "crs"})
-                self._logger.info("Renamed 'spatial_ref' coordinate to 'crs'.")
-           
+                ds,
+                selected_attrs=[
+                    "long_name",
+                    "description",
+                    "units",
+                ],
+            )
+            # if "spatial_ref" in ds_out.coords:
+            #     # rename it to crs which is more common in CF conventions
+            #     ds_out = ds_out.rename({"spatial_ref": "crs"})
+            #     self._logger.info("Renamed 'spatial_ref' coordinate to 'crs'.")
+
             ds_out = ds_out.load()
 
         if os.path.exists(self.netcdf_filepath):
@@ -1196,6 +1196,7 @@ class HSI(vt.VegTransition):
         attrs_df.to_csv(outpath, index=False)
 
         self._logger.info("Post-processing complete.")
+
 
 class _TimestepFilter(logging.Filter):
     """A roundabout way to inject the current timestep into log records.

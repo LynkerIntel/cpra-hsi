@@ -1106,7 +1106,7 @@ class HSI(vt.VegTransition):
             attrs={"title": "HSI"},
         )
 
-        ds = ds.rio.write_crs("EPSG:6344", inplace=True)
+        ds = ds.rio.write_crs("EPSG:6344")
 
         # Save dataset to NetCDF with explicit encoding
         ds.to_netcdf(self.netcdf_filepath, encoding=encoding)

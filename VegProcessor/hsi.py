@@ -1106,7 +1106,7 @@ class HSI(vt.VegTransition):
             attrs={"title": "HSI"},
         )
 
-        ds = ds.rio.write_crs("EPSG:6344")
+        ds = ds.rio.write_crs("EPSG:6344", inplace=True)
 
         # Save dataset to NetCDF with explicit encoding
         ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
@@ -1183,31 +1183,35 @@ class HSI(vt.VegTransition):
         # -------- crop data --------
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
+            # create sidecar info
+            attrs_df = utils.dataset_attrs_to_df(
+                ds,
+                selected_attrs=[
+                    "long_name",
+                    "description",
+                    "units",
+                ],
+            )
+            # if "spatial_ref" in ds_out.coords:
+            #     # rename it to crs which is more common in CF conventions
+            #     ds_out = ds_out.rename({"spatial_ref": "crs"})
+            #     self._logger.info("Renamed 'spatial_ref' coordinate to 'crs'.")
 
-            # hack: remove the file before writing to prevent conflicts
-            # not sure why the file would be open at this point
-            if os.path.exists(self.netcdf_filepath):
-                os.remove(self.netcdf_filepath)
+            ds_out = ds_out.load()
 
-            ds_out.close()
-            ds_out.to_netcdf(self.netcdf_filepath, mode="w")
+        if os.path.exists(self.netcdf_filepath):
+            os.remove(self.netcdf_filepath)
+
+        ds_out.to_netcdf(self.netcdf_filepath, mode="w")
 
         # -------- create sidecar file ---------
-        logging.info("Creating variable name text file")
+        self._logger.info("Creating variable name text file")
         outpath = os.path.join(
             self.run_metadata_dir, "hsi_netcdf_variables.csv"
         )
-        attrs_df = utils.dataset_attrs_to_df(
-            ds,
-            selected_attrs=[
-                "long_name",
-                "description",
-                "units",
-            ],
-        )
         attrs_df.to_csv(outpath, index=False)
 
-        logging.info("Post-processing complete.")
+        self._logger.info("Post-processing complete.")
 
     def log_data_attribute_types(self):
         """Log the data type of all non-private attributes to help with debugging

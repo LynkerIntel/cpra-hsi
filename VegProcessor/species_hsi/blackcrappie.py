@@ -659,9 +659,7 @@ class BlackCrappieHSI:
             mask_3 = (self.v13_min_do_in_spawning_bw >= 2.7) & (
                 self.v13_min_do_in_spawning_bw < 3.5
             )
-            si_13[mask_3] = (
-                0.5 * self.v13_min_do_in_spawning_bw[mask_3] - 1.335
-            )
+            si_13[mask_3] = 0.5 * self.v13_min_do_in_spawning_bw[mask_3] - 1.35
 
             # condition 4
             mask_4 = (self.v13_min_do_in_spawning_bw >= 3.5) & (

@@ -11,7 +11,7 @@ def get_hsi_variables(hsi):
     - dtype (numpy data type, e.g., np.float32) used when writing the variable to a
         NetCDF file
     - metadata (dict[str, str]) containing NetCDF attribute metadata, including keys such as:
-        - "grid_mapping": typically set to "crs"
+        - "grid_mapping": typically set to "spatial_ref"
         - "units": string representing the measurement units (e.g., "meters", "%", or an
             empty string if unitless)
         - "long_name": human-readable name of the variable
@@ -22,7 +22,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -32,7 +32,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -42,7 +42,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -52,7 +52,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -62,7 +62,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -72,7 +72,7 @@ def get_hsi_variables(hsi):
             hsi.alligator.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -82,7 +82,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -92,7 +92,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -102,7 +102,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -112,7 +112,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -122,7 +122,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -132,7 +132,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -142,7 +142,7 @@ def get_hsi_variables(hsi):
             hsi.baldeagle.si_6,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -152,7 +152,7 @@ def get_hsi_variables(hsi):
             hsi.crawfish.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -162,7 +162,7 @@ def get_hsi_variables(hsi):
             hsi.crawfish.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -172,7 +172,7 @@ def get_hsi_variables(hsi):
             hsi.crawfish.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -182,7 +182,7 @@ def get_hsi_variables(hsi):
             hsi.crawfish.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -192,7 +192,7 @@ def get_hsi_variables(hsi):
             hsi.crawfish.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -202,7 +202,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -212,7 +212,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -222,7 +222,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -232,7 +232,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -242,7 +242,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -252,7 +252,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -262,7 +262,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_6,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -272,7 +272,7 @@ def get_hsi_variables(hsi):
             hsi.gizzardshad.si_7,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -282,7 +282,7 @@ def get_hsi_variables(hsi):
             hsi.bass.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -292,7 +292,7 @@ def get_hsi_variables(hsi):
             hsi.bass.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -302,7 +302,7 @@ def get_hsi_variables(hsi):
             hsi.bass.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -312,7 +312,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -322,7 +322,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -332,7 +332,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -342,7 +342,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -352,7 +352,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -362,7 +362,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -372,7 +372,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_6,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -382,7 +382,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_7,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -392,7 +392,7 @@ def get_hsi_variables(hsi):
             hsi.blackbear.si_8,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -402,7 +402,7 @@ def get_hsi_variables(hsi):
             hsi.bluecrab.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -412,7 +412,7 @@ def get_hsi_variables(hsi):
             hsi.bluecrab.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -422,7 +422,7 @@ def get_hsi_variables(hsi):
             hsi.bluecrab.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -432,7 +432,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "bottomland_hardwood_wetland_value_assessment",
                 "description": "",
@@ -442,7 +442,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -451,7 +451,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -460,7 +460,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -469,7 +469,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -478,7 +478,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -487,7 +487,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_6,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value assessment",
             },
@@ -496,7 +496,7 @@ def get_hsi_variables(hsi):
             hsi.blhwva.si_7,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "bottomland hardwood wetland value_assessment",
             },
@@ -505,7 +505,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -514,7 +514,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -523,7 +523,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -532,7 +532,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -541,7 +541,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -550,7 +550,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -559,7 +559,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_6,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -568,7 +568,7 @@ def get_hsi_variables(hsi):
             hsi.swampwva.si_7,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "description": "swamp wetland value assessment",
             },
@@ -577,7 +577,7 @@ def get_hsi_variables(hsi):
             hsi.pct_open_water,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -587,7 +587,7 @@ def get_hsi_variables(hsi):
             hsi.mean_annual_salinity,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -597,7 +597,7 @@ def get_hsi_variables(hsi):
             hsi.mean_annual_temperature,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -607,7 +607,7 @@ def get_hsi_variables(hsi):
             hsi.pct_swamp_bottom_hardwood,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -617,7 +617,7 @@ def get_hsi_variables(hsi):
             hsi.pct_fresh_marsh,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -627,7 +627,7 @@ def get_hsi_variables(hsi):
             hsi.pct_intermediate_marsh,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -637,7 +637,7 @@ def get_hsi_variables(hsi):
             hsi.pct_brackish_marsh,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -647,7 +647,7 @@ def get_hsi_variables(hsi):
             hsi.pct_saline_marsh,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -657,7 +657,7 @@ def get_hsi_variables(hsi):
             hsi.pct_zone_v,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -667,7 +667,7 @@ def get_hsi_variables(hsi):
             hsi.pct_zone_iv,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -677,7 +677,7 @@ def get_hsi_variables(hsi):
             hsi.pct_zone_iii,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -687,7 +687,7 @@ def get_hsi_variables(hsi):
             hsi.pct_zone_ii,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -697,7 +697,7 @@ def get_hsi_variables(hsi):
             hsi.pct_fresh_shrubs,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -707,7 +707,7 @@ def get_hsi_variables(hsi):
             hsi.pct_bare_ground,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -717,7 +717,7 @@ def get_hsi_variables(hsi):
             hsi.pct_dev_upland,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -727,7 +727,7 @@ def get_hsi_variables(hsi):
             hsi.pct_flotant_marsh,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -737,7 +737,7 @@ def get_hsi_variables(hsi):
             hsi.pct_vegetated,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -747,7 +747,7 @@ def get_hsi_variables(hsi):
             hsi.pct_soft_mast,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -757,7 +757,7 @@ def get_hsi_variables(hsi):
             hsi.pct_hard_mast,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -767,7 +767,7 @@ def get_hsi_variables(hsi):
             hsi.pct_no_mast,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -777,7 +777,7 @@ def get_hsi_variables(hsi):
             hsi.pct_near_forest,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -787,7 +787,7 @@ def get_hsi_variables(hsi):
             hsi.water_depth_annual_mean,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -797,7 +797,7 @@ def get_hsi_variables(hsi):
             hsi.water_depth_monthly_mean_jan_aug,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -807,7 +807,7 @@ def get_hsi_variables(hsi):
             hsi.water_depth_monthly_mean_sept_dec,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -817,7 +817,7 @@ def get_hsi_variables(hsi):
             hsi.water_depth_spawning_season,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -827,7 +827,7 @@ def get_hsi_variables(hsi):
             hsi.human_influence,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -837,7 +837,7 @@ def get_hsi_variables(hsi):
             hsi.forested_connectivity_cat,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "forested_connectivity category",
                 "description": "",
@@ -847,7 +847,7 @@ def get_hsi_variables(hsi):
             hsi.story_class,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "forested story classification (mode of 60m)",
                 "description": "",
@@ -857,7 +857,7 @@ def get_hsi_variables(hsi):
             hsi.pct_overstory,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -867,7 +867,7 @@ def get_hsi_variables(hsi):
             hsi.pct_midstory,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -877,7 +877,7 @@ def get_hsi_variables(hsi):
             hsi.pct_understory,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -887,7 +887,7 @@ def get_hsi_variables(hsi):
             hsi.pct_shrub_scrub_midstory,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "summed pct cover of shrub/scrup & midstory",
                 "description": "",
@@ -1108,7 +1108,7 @@ def get_veg_variables(veg):
     - dtype (numpy data type, e.g., np.float32) used when writing the variable to a
         NetCDF file
     - metadata (dict[str, str]) containing NetCDF attribute metadata, including keys such as:
-        - "grid_mapping": typically set to "crs"
+        - "grid_mapping": typically set to "spatial_ref"
         - "units": string representing the measurement units (e.g., "meters", "%", or an
             empty string if unitless)
         - "long_name": human-readable name of the variable
@@ -1119,7 +1119,7 @@ def get_veg_variables(veg):
             veg.veg_type,
             np.float32,
             {
-                "grid_mapping": "crs",  # Link CRS variable
+                "grid_mapping": "spatial_ref",  # Link CRS variable
                 "units": "unitless",
                 "long_name": "veg type",
             },
@@ -1128,7 +1128,7 @@ def get_veg_variables(veg):
             veg.maturity,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "years",
                 "long_name": "forested vegetation age",
             },
@@ -1138,7 +1138,7 @@ def get_veg_variables(veg):
             veg.qc_annual_mean_salinity,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "mean annual salinity",
             },
@@ -1147,7 +1147,7 @@ def get_veg_variables(veg):
             veg.qc_annual_inundation_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "annual inundation depth",
             },
@@ -1156,7 +1156,7 @@ def get_veg_variables(veg):
             veg.qc_annual_inundation_duration,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "%",
                 "long_name": "annual inundation duration",
                 "description": "Percentage of time flooded over the year",
@@ -1166,7 +1166,7 @@ def get_veg_variables(veg):
             veg.qc_growing_season_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "growing season depth",
                 "description": (
@@ -1178,7 +1178,7 @@ def get_veg_variables(veg):
             veg.qc_growing_season_inundation,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "%",
                 "long_name": "growing season inundation",
                 "description": (
@@ -1190,7 +1190,7 @@ def get_veg_variables(veg):
             veg.qc_tree_establishment_bool,
             bool,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "unitless",
                 "long_name": "tree establishment (true or false)",
                 "description": "Areas where establishment condition is met",
@@ -1201,7 +1201,7 @@ def get_veg_variables(veg):
             veg.qc_march_water_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "march water depth",
                 "description": "Depth in m for the month of march.",
@@ -1211,7 +1211,7 @@ def get_veg_variables(veg):
             veg.qc_april_water_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "april water depth",
                 "description": "Depth in m for the month of april.",
@@ -1221,7 +1221,7 @@ def get_veg_variables(veg):
             veg.qc_may_water_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "may water depth",
                 "description": "Depth in m for the month of may.",
@@ -1231,7 +1231,7 @@ def get_veg_variables(veg):
             veg.qc_june_water_depth,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "june water depth",
                 "description": "Depth in m for the month of june.",

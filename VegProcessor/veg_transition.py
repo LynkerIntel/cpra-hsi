@@ -1016,6 +1016,15 @@ class VegTransition:
             freq="YS-OCT",
         )  # Annual start
 
+        # encoding defined here and at append
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
+
         ds = xr.Dataset(
             {  # init with arrays that have t=0 values
                 "veg_type": (
@@ -1064,7 +1073,14 @@ class VegTransition:
                         "standard_name": "projection_y_coordinate",
                     },
                 ),
-                "time": ("time", time_range, {"long_name": "Time"}),
+                "time": (
+                    "time",
+                    time_range,
+                    {
+                        "long_name": "time",
+                        "standard_name": "time",
+                    },
+                ),
             },
             attrs={"title": "VEG"},
         )
@@ -1085,8 +1101,8 @@ class VegTransition:
 
         ds = ds.rio.write_crs("EPSG:6344")
 
-        # Save initial file
-        ds.to_netcdf(self.netcdf_filepath)
+        # Save dataset to NetCDF with explicit encoding
+        ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
         ds.close()
         da.close()
         self._logger.info("Initialized NetCDF file: %s", self.netcdf_filepath)
@@ -1137,6 +1153,14 @@ class VegTransition:
         - Boolean data arrays are converted to boolean type after replacing NaN with False.
         - The dataset is saved in append mode before closing it.
         """
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
+
         timestep_str = timestep.strftime("%Y-%m-%d")
 
         # Set default variables to append if not supplied, excluding all QC variables
@@ -1171,12 +1195,17 @@ class VegTransition:
                 data = np.nan_to_num(data, nan=False).astype(bool)
 
             # Assign the data to the dataset for the specific time step
-            ds_loaded[var_name].loc[{"time": timestep_str}] = data.astype(
+            ds_loaded[var_name].loc[{"time": timestep}] = data.astype(
                 ds_loaded[var_name].dtype
             )
 
         # ds.close()
-        ds_loaded.to_netcdf(self.netcdf_filepath, mode="a", engine="h5netcdf")
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath,
+            mode="a",
+            engine="h5netcdf",
+            encoding=encoding,
+        )
         ds_loaded.close()
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 

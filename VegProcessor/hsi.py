@@ -6,6 +6,8 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 import shutil
+import pprint
+
 import glob
 import os
 from typing import Optional
@@ -34,6 +36,7 @@ from species_hsi import (
     blackbear,
     blhwva,
     swampwva,
+    blackcrappie,
 )
 
 
@@ -180,6 +183,7 @@ class HSI(vt.VegTransition):
         self.bluecrab = None
         self.blhwva = None
         self.swampwva = None
+        self.blackcrappie = None
 
         # datasets
         self.pct_cover_veg = None
@@ -246,6 +250,20 @@ class HSI(vt.VegTransition):
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
+        # black-crappie
+        self.max_monthly_avg_summer_turbidity = None
+        self.pct_cover_in_midsummer_pools_overflow_bw = None  # set to ideal
+        self.stream_gradient = None  # set to ideal
+        self.avg_vel_summer_flow_pools_bw = None
+        self.pct_pools_bw_avg_spring_summer_flow = None
+        self.ph_year = None  # set to ideal
+        self.most_suit_temp_in_midsummer_pools_bw_adult = None
+        self.most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        self.avg_midsummer_temp_in_pools_bw_fry = None
+        self.avg_spawning_temp_in_bw_embryo = None
+        self.min_do_in_midsummer_temp_strata = None
+        self.min_do_in_spawning_bw = None
+
         self._create_output_file(self.file_params)
 
     def step(self, date: pd.DatetimeTZDtype):
@@ -265,10 +283,7 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # # water depth vars --------------------------------------
-        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-        #     # for daily NetCDF, this methods loads analog year directly,
-        #     # using lookup and mapping
+        # water depth vars --------------------------------------
         self.water_depth = self._load_stage_daily(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
@@ -282,25 +297,6 @@ class HSI(vt.VegTransition):
         self.water_depth_spawning_season = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
-        # else:
-        #     # for pre-generated monthly hydro .tifs
-        #     # TODO: refactor this subset logic out of the step method,
-        #     # but really we should move away from have two branching methods
-        #     # for loading hydro data
-        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-        #     self.wse = self._reproject_match_to_dem(self.wse)
-        #     # self.water_depth = self._get_depth()
-
-        #     self.water_depth_annual_mean = self._get_depth_filtered()
-        #     self.water_depth_monthly_mean_jan_aug = self._get_depth_filtered(
-        #         months=[1, 2, 3, 4, 5, 6, 7, 8]
-        #     )
-        #     self.water_depth_monthly_mean_sept_dec = self._get_depth_filtered(
-        #         months=[9, 10, 11, 12]
-        #     )
-        #     self.water_depth_spawning_season = self._get_depth_filtered(
-        #         months=[4, 5, 6]
-        #     )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -332,6 +328,7 @@ class HSI(vt.VegTransition):
             self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
             self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
             self.swampwva = swampwva.SwampHSI.from_hsi(self)
+            self.blackcrappie = blackcrappie.BlackCrappieHSI.from_hsi(self)
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -350,7 +347,6 @@ class HSI(vt.VegTransition):
             self.water_year_start,
             self.water_year_end,
         )
-
         # plus 1 to make inclusive
         simulation_period = range(
             self.water_year_start, self.water_year_end + 1
@@ -358,14 +354,14 @@ class HSI(vt.VegTransition):
         self._logger.info(
             "Running model for: %s timesteps", len(simulation_period)
         )
-
-        # static variable calculations are outside of
-        # simulation loop
+        # static vars calcs outside of simulation loop
         self._calculate_static_vars()
-
+        # run the model
         for wy in simulation_period:
             self.step(pd.to_datetime(f"{wy}-10-01"))
-
+        # log data vars being supplied to the model
+        # (after main loop to include all vars)
+        self.log_data_attribute_types()
         self._logger.info("Simulation complete")
         logging.shutdown()
 
@@ -1061,6 +1057,14 @@ class HSI(vt.VegTransition):
             end=f"{self.water_year_end}-10-01",
             freq="YS-OCT",  # Annual start
         )
+        # encoding defined here and at append
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
 
         ds = xr.Dataset(
             # initialize w/ no data vars
@@ -1090,15 +1094,22 @@ class HSI(vt.VegTransition):
                         "standard_name": "projection_y_coordinate",
                     },
                 ),
-                "time": ("time", time_range, {"long_name": "Time"}),
+                "time": (
+                    "time",
+                    time_range,
+                    {
+                        "long_name": "time",
+                        "standard_name": "time",
+                    },
+                ),
             },
             attrs={"title": "HSI"},
         )
 
-        ds = ds.rio.write_crs("EPSG:6344", inplace=True)
+        ds = ds.rio.write_crs("EPSG:6344")
 
-        # Save dataset to NetCDF
-        ds.to_netcdf(self.netcdf_filepath)
+        # Save dataset to NetCDF with explicit encoding
+        ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
         self._logger.info(
             "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
         )
@@ -1119,6 +1130,14 @@ class HSI(vt.VegTransition):
         -------
         None
         """
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
+
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
@@ -1146,15 +1165,12 @@ class HSI(vt.VegTransition):
                         data = np.nan_to_num(data, nan=False).astype(bool)
 
                     # Assign the data to the dataset for the specific time step
-                    ds[var_name].loc[{"time": timestep_str}] = data.astype(
+                    ds[var_name].loc[{"time": timestep}] = data.astype(
                         ds[var_name].dtype
                     )
 
         ds.close()
-        ds.to_netcdf(
-            self.netcdf_filepath,
-            mode="a",
-        )
+        ds.to_netcdf(self.netcdf_filepath, mode="a", encoding=encoding)
         # ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
@@ -1196,6 +1212,39 @@ class HSI(vt.VegTransition):
         attrs_df.to_csv(outpath, index=False)
 
         self._logger.info("Post-processing complete.")
+
+    def log_data_attribute_types(self):
+        """Log the data type of all non-private attributes to help with debugging
+        and understanding the current state of HSI variables.
+        """
+        self._logger.info("=== HSI Data Attribute Types ===")
+        # non-private attributes, exclude those containing "path",
+        # we just want to track data vars being supplied to the model
+        attributes = [
+            attr
+            for attr in dir(self)
+            if not attr.startswith("_") and "path" not in attr
+        ]
+
+        # dict of attribute types
+        attr_types = {}
+        for attr_name in sorted(attributes):
+            try:
+                attr_value = getattr(self, attr_name)
+                attr_type = type(attr_value).__name__
+
+                # Add shape info for arrays
+                if hasattr(attr_value, "shape"):
+                    attr_type += f"{attr_value.shape}"
+
+                attr_types[attr_name] = attr_type
+
+            except Exception as e:
+                attr_types[attr_name] = f"Error: {e}"
+
+        # log the full dictionary with pretty formatting
+        formatted_dict = pprint.pformat(attr_types, width=100, indent=2)
+        self._logger.info("HSI data inputs for run:\n%s", formatted_dict)
 
 
 class _TimestepFilter(logging.Filter):

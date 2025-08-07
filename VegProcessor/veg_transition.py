@@ -134,22 +134,18 @@ class VegTransition:
             "year_range": (
                 f"00_{str(sim_length + 1).zfill(2)}"
             ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
         }
 
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
         )
-        
+
         self._create_output_dirs()
         self.current_timestep = None
         self._setup_logger(log_level)
         self.timestep_output_dir = None
-
-        # # Pretty-print the configuration
-        # config_pretty = yaml.dump(
-        #     self.config, default_flow_style=False, sort_keys=False
-        # )
 
         # load sequence mapping (used for daily hydro data input)
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
@@ -211,7 +207,9 @@ class VegTransition:
 
         run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(run_metadata_dir, exist_ok=True)
-        log_file_path = os.path.join(run_metadata_dir, f"{self.file_name}_simulation.log")
+        log_file_path = os.path.join(
+            run_metadata_dir, f"{self.file_name}_simulation.log"
+        )
         fh = logging.FileHandler(log_file_path)
         fh.setLevel(log_level)
 
@@ -990,7 +988,10 @@ class VegTransition:
         if os.path.exists(self.config_path):
             config_filename = os.path.basename(self.config_path)
             config_name, config_ext = os.path.splitext(config_filename)
-            new_config_path = os.path.join(self.run_metadata_dir, f"{self.file_name}_{config_name}{config_ext}")
+            new_config_path = os.path.join(
+                self.run_metadata_dir,
+                f"{self.file_name}_{config_name}{config_ext}",
+            )
             shutil.copy(self.config_path, new_config_path)
         else:
             print("Config file not found at %s", self.config_path)

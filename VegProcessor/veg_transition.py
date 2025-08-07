@@ -136,6 +136,11 @@ class VegTransition:
             ),  # 00 start (initial conditions)
         }
 
+        # Generate filename early so it's available for logger and metadata files
+        self.file_name = utils.generate_filename(
+            params=self.file_params,
+        )
+        
         self._create_output_dirs()
         self.current_timestep = None
         self._setup_logger(log_level)
@@ -185,7 +190,7 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-        self._create_output_file(self.file_params)
+        self._create_output_file()
 
     def _setup_logger(self, log_level=logging.INFO):
         # always create a unique logger for each instance, using class name
@@ -206,7 +211,7 @@ class VegTransition:
 
         run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(run_metadata_dir, exist_ok=True)
-        log_file_path = os.path.join(run_metadata_dir, "simulation.log")
+        log_file_path = os.path.join(run_metadata_dir, f"{self.file_name}_simulation.log")
         fh = logging.FileHandler(log_file_path)
         fh.setLevel(log_level)
 
@@ -983,28 +988,20 @@ class VegTransition:
         os.makedirs(self.run_figs_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, self.run_metadata_dir)
+            config_filename = os.path.basename(self.config_path)
+            config_name, config_ext = os.path.splitext(config_filename)
+            new_config_path = os.path.join(self.run_metadata_dir, f"{self.file_name}_{config_name}{config_ext}")
+            shutil.copy(self.config_path, new_config_path)
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _create_output_file(self, params: dict):
+    def _create_output_file(self):
         """VegTransition: Create NetCDF file for data output.
-
-        Parameters
-        ----------
-        params : dict
-            Dict of filename attributes, specified in
-            `utils.generate_filename()`
 
         Returns
         -------
         None
         """
-        self.file_name = utils.generate_filename(
-            params=params,
-            # base_path=self.timestep_output_dir,
-            # parameter="DATA",
-        )
 
         self.netcdf_filepath = os.path.join(
             self.output_dir_path, f"{self.file_name}.nc"
@@ -1297,7 +1294,9 @@ class VegTransition:
         logging.info("Calculating full-domain veg type sums.")
 
         df_full_domain = utils.pixel_sums_full_domain(ds=ds)
-        outpath = os.path.join(self.run_metadata_dir, "vegtype_timeseries.csv")
+        outpath = os.path.join(
+            self.run_metadata_dir, f"{self.file_name}_vegtype_timeseries.csv"
+        )
         df_full_domain.to_csv(outpath)
 
         logging.info("Creating variable name text file")

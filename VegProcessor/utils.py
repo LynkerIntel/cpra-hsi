@@ -579,11 +579,11 @@ def generate_filename(
         "water_year",
         "sea_level_condition",
         "flow_scenario",
+        "year_range",
         "group",
         "wpu",
         "io_type",
         "time_freq",
-        "year_range",
     ]
 
     # Collect available values from params in order

@@ -558,6 +558,8 @@ def generate_filename(
         - io_type : str
         - time_freq : str
         - year_range : str
+        - output_version : str
+
         This dict is created in `VegTransition.step` and includes metadata from the
         current timestep as well as the model config file. It excludes "parameter",
         which is specified separately.
@@ -584,6 +586,7 @@ def generate_filename(
         "wpu",
         "io_type",
         "time_freq",
+        "output_version",
     ]
 
     # Collect available values from params in order

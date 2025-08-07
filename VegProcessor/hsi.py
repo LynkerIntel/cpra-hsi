@@ -128,13 +128,14 @@ class HSI(vt.VegTransition):
             "year_range": (
                 f"00_{str(sim_length + 1).zfill(2)}"
             ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
         }
 
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
         )
-        
+
         self._create_output_dirs()
         self.current_timestep = None  # set in step() method
         self._setup_logger(log_level)

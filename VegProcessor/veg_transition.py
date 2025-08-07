@@ -141,10 +141,10 @@ class VegTransition:
         self._setup_logger(log_level)
         self.timestep_output_dir = None
 
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        # # Pretty-print the configuration
+        # config_pretty = yaml.dump(
+        #     self.config, default_flow_style=False, sort_keys=False
+        # )
 
         # load sequence mapping (used for daily hydro data input)
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
@@ -945,17 +945,25 @@ class VegTransition:
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,
-        input data, and QC plots.
+        input data, and QC plots. And copy config file into output
+        location.
 
         (No logging because logger needs output location for log file first.)
         """
-        folder_name = utils.generate_filename(
+        naming_convention = utils.generate_filename(
             params=self.file_params,
             # base_path=self.timestep_output_dir,
             # parameter="DATA",
         )
+        # create output file before NetCDF, so that
+        # metadatafiles can use it.
+        # self.file_name = utils.generate_filename(
+        #     params=self.file_params,
+        #     # base_path=self.timestep_output_dir,
+        #     # parameter="DATA",
+        # )
 
-        output_dir_name = folder_name
+        output_dir_name = naming_convention
 
         # Combine base directory and new directory name
         self.output_dir_path = os.path.join(
@@ -992,14 +1000,14 @@ class VegTransition:
         -------
         None
         """
-        file_name = utils.generate_filename(
+        self.file_name = utils.generate_filename(
             params=params,
-            base_path=self.timestep_output_dir,
+            # base_path=self.timestep_output_dir,
             # parameter="DATA",
         )
 
         self.netcdf_filepath = os.path.join(
-            self.output_dir_path, f"{file_name}.nc"
+            self.output_dir_path, f"{self.file_name}.nc"
         )
 
         # load DEM, use coords
@@ -1281,7 +1289,8 @@ class VegTransition:
         # df.rename(columns=types_dict, inplace=True)
 
         outpath = os.path.join(
-            self.run_metadata_dir, "wpu_vegtype_timeseries.csv"
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_vegtype_timeseries.csv",
         )
         df.to_csv(outpath)
 
@@ -1293,7 +1302,7 @@ class VegTransition:
 
         logging.info("Creating variable name text file")
         outpath = os.path.join(
-            self.run_metadata_dir, "veg_netcdf_variables.csv"
+            self.run_metadata_dir, f"{self.file_name}_veg_netcdf_variables.csv"
         )
         attrs_df = utils.dataset_attrs_to_df(
             ds,

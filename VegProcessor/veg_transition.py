@@ -1041,7 +1041,7 @@ class VegTransition:
                         dtype=np.float32,
                     ),
                     {
-                        "grid_mapping": "crs",  # Link CRS variable
+                        "grid_mapping": "spatial_ref",  # Link CRS variable
                         "units": "unitless",
                         "long_name": "veg type",
                     },
@@ -1054,7 +1054,7 @@ class VegTransition:
                         dtype=np.float32,
                     ),
                     {
-                        "grid_mapping": "crs",
+                        "grid_mapping": "spatial_ref",
                         "units": "years",
                         "long_name": "forested vegetation age",
                     },

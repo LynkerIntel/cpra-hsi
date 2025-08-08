@@ -897,7 +897,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.hsi,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "black crappie HSI",
                 "description": "HSI",
@@ -907,7 +907,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_1,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -917,7 +917,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_2,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -927,7 +927,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_3,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -937,7 +937,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_4,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -947,7 +947,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_5,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -957,7 +957,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_7,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -967,7 +967,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_8,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -977,7 +977,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_9,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -987,7 +987,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_10,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -997,7 +997,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_11,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -1007,7 +1007,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_12,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -1017,7 +1017,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.si_13,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "",
@@ -1027,7 +1027,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.fc,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie food components",
@@ -1037,7 +1037,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.wq_tcr,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie water quality component",
@@ -1047,7 +1047,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.wq_tcr_adj,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": (
@@ -1059,7 +1059,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.wq_init,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie water quality initial",
@@ -1069,7 +1069,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.wq,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie water quality",
@@ -1079,7 +1079,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.rc,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie reproduction component",
@@ -1089,7 +1089,7 @@ def get_hsi_variables(hsi):
             hsi.blackcrappie.ot,
             np.float32,
             {
-                "grid_mapping": "crs",
+                "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
                 "description": "black crappie other component",

@@ -582,10 +582,10 @@ def generate_filename(
         "sea_level_condition",
         "flow_scenario",
         "year_range",
+        "time_freq",
         "group",
         "wpu",
         "io_type",
-        "time_freq",
         "output_version",
     ]
 

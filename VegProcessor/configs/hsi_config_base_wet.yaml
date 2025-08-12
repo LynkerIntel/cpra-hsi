@@ -7,7 +7,7 @@ raster_data:
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_path: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEGH_WY99_000_W_G511_AB_O_ANN_00_10/AMP_VEGH_WY99_000_W_G511_AB_O_ANN_00_10.nc" # VegTransition output folder
+  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEGH_WY99_000_W_00_10_ANN_G900_AB_O_V12/AMP_VEGH_WY99_000_W_00_10_ANN_G900_AB_O_V12.nc" # VegTransition output folder
   flotant_marsh_raster: "/Users/dillonragar/data/cpra/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif"
   #flotant_marsh_keys: "/Users/jessicagarrett/Documents/CPRA Royal 2024/GIS/AMP_lndtyp_60m_Nearest_Resample/AMP_lndtyp_60m_Nearest_Resample.tif.vat.dbf"
 
@@ -27,8 +27,9 @@ metadata:
   model: HSIH # H indicates HEC-RAS input
   sea_level_condition: "000" # 1.08ft or 0.328m SLR
   flow_scenario: "W" #"W"? # scenario info for plots and metadata
-  group: G511
+  group: G900
   wpu: ARS
+  output_version: v12
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

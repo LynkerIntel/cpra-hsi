@@ -126,9 +126,15 @@ class HSI(vt.VegTransition):
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": (
-                f"00_{str(sim_length + 1).zfill(2)}"
+                f"01_{str(sim_length + 1).zfill(2)}"
             ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
         }
+
+        # Generate filename early so it's available for logger and metadata files
+        self.file_name = utils.generate_filename(
+            params=self.file_params,
+        )
 
         self._create_output_dirs()
         self.current_timestep = None  # set in step() method
@@ -264,7 +270,7 @@ class HSI(vt.VegTransition):
         self.min_do_in_midsummer_temp_strata = None
         self.min_do_in_spawning_bw = None
 
-        self._create_output_file(self.file_params)
+        self._create_output_file()
 
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
@@ -1012,27 +1018,16 @@ class HSI(vt.VegTransition):
     #         self.salinity,
     #     )
 
-    def _create_output_file(self, params: dict):
+    def _create_output_file(self):
         """HSI: Create NetCDF file for data output.
-
-        Parameters
-        ----------
-        params : dict
-            Dict of filename attributes, specified in
-            `utils.generate_filename()`
 
         Returns
         -------
         None
         """
-        file_name = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            # parameter="DATA",
-        )
 
         self.netcdf_filepath = os.path.join(
-            self.output_dir_path, f"{file_name}.nc"
+            self.output_dir_path, f"{self.file_name}.nc"
         )
 
         # Load DEM as a template for coordinates
@@ -1207,7 +1202,7 @@ class HSI(vt.VegTransition):
         # -------- create sidecar file ---------
         self._logger.info("Creating variable name text file")
         outpath = os.path.join(
-            self.run_metadata_dir, "hsi_netcdf_variables.csv"
+            self.run_metadata_dir, f"{self.file_name}_hsi_netcdf_variables.csv"
         )
         attrs_df.to_csv(outpath, index=False)
 

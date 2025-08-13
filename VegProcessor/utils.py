@@ -558,6 +558,8 @@ def generate_filename(
         - io_type : str
         - time_freq : str
         - year_range : str
+        - output_version : str
+
         This dict is created in `VegTransition.step` and includes metadata from the
         current timestep as well as the model config file. It excludes "parameter",
         which is specified separately.
@@ -579,11 +581,12 @@ def generate_filename(
         "water_year",
         "sea_level_condition",
         "flow_scenario",
+        "year_range",
+        "time_freq",
         "group",
         "wpu",
         "io_type",
-        "time_freq",
-        "year_range",
+        "output_version",
     ]
 
     # Collect available values from params in order

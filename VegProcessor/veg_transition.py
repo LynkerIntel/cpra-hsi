@@ -134,17 +134,18 @@ class VegTransition:
             "year_range": (
                 f"00_{str(sim_length + 1).zfill(2)}"
             ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
         }
+
+        # Generate filename early so it's available for logger and metadata files
+        self.file_name = utils.generate_filename(
+            params=self.file_params,
+        )
 
         self._create_output_dirs()
         self.current_timestep = None
         self._setup_logger(log_level)
         self.timestep_output_dir = None
-
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
 
         # load sequence mapping (used for daily hydro data input)
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
@@ -185,7 +186,7 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
-        self._create_output_file(self.file_params)
+        self._create_output_file()
 
     def _setup_logger(self, log_level=logging.INFO):
         # always create a unique logger for each instance, using class name
@@ -206,7 +207,9 @@ class VegTransition:
 
         run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
         os.makedirs(run_metadata_dir, exist_ok=True)
-        log_file_path = os.path.join(run_metadata_dir, "simulation.log")
+        log_file_path = os.path.join(
+            run_metadata_dir, f"{self.file_name}_simulation.log"
+        )
         fh = logging.FileHandler(log_file_path)
         fh.setLevel(log_level)
 
@@ -945,17 +948,25 @@ class VegTransition:
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,
-        input data, and QC plots.
+        input data, and QC plots. And copy config file into output
+        location.
 
         (No logging because logger needs output location for log file first.)
         """
-        folder_name = utils.generate_filename(
+        naming_convention = utils.generate_filename(
             params=self.file_params,
             # base_path=self.timestep_output_dir,
             # parameter="DATA",
         )
+        # create output file before NetCDF, so that
+        # metadatafiles can use it.
+        # self.file_name = utils.generate_filename(
+        #     params=self.file_params,
+        #     # base_path=self.timestep_output_dir,
+        #     # parameter="DATA",
+        # )
 
-        output_dir_name = folder_name
+        output_dir_name = naming_convention
 
         # Combine base directory and new directory name
         self.output_dir_path = os.path.join(
@@ -975,31 +986,26 @@ class VegTransition:
         os.makedirs(self.run_figs_dir, exist_ok=True)
 
         if os.path.exists(self.config_path):
-            shutil.copy(self.config_path, self.run_metadata_dir)
+            config_filename = os.path.basename(self.config_path)
+            config_name, config_ext = os.path.splitext(config_filename)
+            new_config_path = os.path.join(
+                self.run_metadata_dir,
+                f"{self.file_name}_{config_name}{config_ext}",
+            )
+            shutil.copy(self.config_path, new_config_path)
         else:
             print("Config file not found at %s", self.config_path)
 
-    def _create_output_file(self, params: dict):
+    def _create_output_file(self):
         """VegTransition: Create NetCDF file for data output.
-
-        Parameters
-        ----------
-        params : dict
-            Dict of filename attributes, specified in
-            `utils.generate_filename()`
 
         Returns
         -------
         None
         """
-        file_name = utils.generate_filename(
-            params=params,
-            base_path=self.timestep_output_dir,
-            # parameter="DATA",
-        )
 
         self.netcdf_filepath = os.path.join(
-            self.output_dir_path, f"{file_name}.nc"
+            self.output_dir_path, f"{self.file_name}.nc"
         )
 
         # load DEM, use coords
@@ -1035,7 +1041,7 @@ class VegTransition:
                         dtype=np.float32,
                     ),
                     {
-                        "grid_mapping": "crs",  # Link CRS variable
+                        "grid_mapping": "spatial_ref",  # Link CRS variable
                         "units": "unitless",
                         "long_name": "veg type",
                     },
@@ -1048,7 +1054,7 @@ class VegTransition:
                         dtype=np.float32,
                     ),
                     {
-                        "grid_mapping": "crs",
+                        "grid_mapping": "spatial_ref",
                         "units": "years",
                         "long_name": "forested vegetation age",
                     },
@@ -1281,19 +1287,22 @@ class VegTransition:
         # df.rename(columns=types_dict, inplace=True)
 
         outpath = os.path.join(
-            self.run_metadata_dir, "wpu_vegtype_timeseries.csv"
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_vegtype_timeseries.csv",
         )
         df.to_csv(outpath)
 
         logging.info("Calculating full-domain veg type sums.")
 
         df_full_domain = utils.pixel_sums_full_domain(ds=ds)
-        outpath = os.path.join(self.run_metadata_dir, "vegtype_timeseries.csv")
+        outpath = os.path.join(
+            self.run_metadata_dir, f"{self.file_name}_vegtype_timeseries.csv"
+        )
         df_full_domain.to_csv(outpath)
 
         logging.info("Creating variable name text file")
         outpath = os.path.join(
-            self.run_metadata_dir, "veg_netcdf_variables.csv"
+            self.run_metadata_dir, f"{self.file_name}_veg_netcdf_variables.csv"
         )
         attrs_df = utils.dataset_attrs_to_df(
             ds,

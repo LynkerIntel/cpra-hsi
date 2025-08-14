@@ -113,7 +113,7 @@ class BlackCrappieHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        # Riverine Catfish has depth related vars, and is
+        # Riverine Black Crappie has depth related vars, and is
         # limited to hydrologic model domain
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr

@@ -27,7 +27,7 @@ metadata:
   flow_scenario: "W" #"W"? # scenario info for plots and metadata
   group: G900
   wpu: ARS
-  output_version: v12
+  output_version: v13
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

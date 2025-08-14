@@ -29,6 +29,7 @@ class BlackCrappieHSI:
     v11_avg_spawning_temp_in_bw_embryo: np.ndarray = None
     v12_min_do_in_midsummer_temp_strata: np.ndarray = None
     v13_min_do_in_spawning_bw: np.ndarray = None
+    v14_max_salinity_gs: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -77,6 +78,7 @@ class BlackCrappieHSI:
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.avg_spawning_temp_in_bw_embryo,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.min_do_in_midsummer_temp_strata,
             v13_min_do_in_spawning_bw=hsi_instance.min_do_in_spawning_bw,
+            v14_max_salinity_gs=hsi_instance.max_salinity_gs,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -673,8 +675,47 @@ class BlackCrappieHSI:
         return self.clip_array(si_13)
 
     def calculate_si_14(self) -> np.ndarray:
-        """No logic exists for si_14."""
-        return NotImplementedError
+        """Maximum salinity during growing season (Apr - Sept)"""
+        self._logger.info("Running SI 14")
+        si_14 = self.template.copy()
+
+        if self.v14_max_salinity_gs is None:
+            self._logger.info(
+                "Maximum salinity during growing season is not provided. Setting index to 1."
+            )
+            si_14[~np.isnan(si_14)] = 1
+        
+        else:
+            # condition 1
+            mask_1 = self.v14_max_salinity_gs < 0.1
+            si_14[mask_1] = 10 * self.v14_max_salinity_gs[mask_1]
+
+            # condition 2
+            mask_2 = (self.v14_max_salinity_gs >= 0.1) & (
+                self.v14_max_salinity_gs < 2
+            )
+            si_14[mask_2] = 1
+
+            # condition 3
+            mask_3 = (self.v14_max_salinity_gs >= 2) & (
+                self.v14_max_salinity_gs < 4.7
+            )
+            si_14[mask_3] = -0.2963 * self.v14_max_salinity_gs[mask_3] + 1.5926
+
+            # condition 4
+            mask_4 = (self.v14_max_salinity_gs >= 4.7) & (
+                self.v14_max_salinity_gs < 5
+            )
+            si_14[mask_4] = -0.6667 * self.v14_max_salinity_gs[mask_4] + 3.3333
+
+            # condition 5
+            mask_5 = self.v14_max_salinity_gs >= 5
+            si_14[mask_5] = 0
+
+        if np.any(np.isclose(si_14, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
+
+        return self.clip_array(si_14)
 
     def calculate_si_15(self) -> np.ndarray:
         """No logic exists for si_15."""
@@ -696,6 +737,7 @@ class BlackCrappieHSI:
             ("SI 11", self.si_11),
             ("SI 12", self.si_12),
             ("SI 13", self.si_13),
+            ("SI 14", self.si_14),
         ]:
             invalid_values = (si_array < 0) | (si_array > 1)
             if np.any(invalid_values):
@@ -726,8 +768,8 @@ class BlackCrappieHSI:
 
         # water quality initial equation
         self.wq_init = (
-            2 * (self.wq_tcr_adj) + 2 * (self.si_12) + self.si_7 + self.si_1
-        ) / 6
+            2 * (self.wq_tcr_adj) + 2 * (self.si_12) + self.si_7 + self.si_1 + self.si_14
+        ) / 7
 
         # condition 2
         wq_mask = ((self.wq_tcr_adj) <= 0.4) | (self.si_12 <= 0.4)

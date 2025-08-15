@@ -269,6 +269,7 @@ class HSI(vt.VegTransition):
         self.avg_spawning_temp_in_bw_embryo = None
         self.min_do_in_midsummer_temp_strata = None
         self.min_do_in_spawning_bw = None
+        self.max_salinity_gs = None
 
         self._create_output_file()
 

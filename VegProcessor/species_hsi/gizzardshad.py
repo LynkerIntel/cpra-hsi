@@ -40,6 +40,12 @@ class GizzardShadHSI:
     si_6: np.ndarray = field(init=False)
     si_7: np.ndarray = field(init=False)
 
+    
+    # Set up components and equations
+    food_component: np.ndarray = field(init=False)
+    water_quality: np.ndarray = field(init=False)
+    reproduction: np.ndarray = field(init=False)
+
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
 
@@ -354,23 +360,17 @@ class GizzardShadHSI:
                     num_invalid,
                 )
 
-        # Set up components and equations
-        food_component: np.ndarray = field(init=False)
-        water_quality: np.ndarray = field(init=False)
-        reproduction: np.ndarray = field(init=False)
-
-        # TODO: may want to move these outside calculate_overall_suitability() into their own methods
-        # so they can be accessed individually
-        food_component = self.si_1  # will be 1 for hec-ras
-        water_quality = (
+        # individual model components
+        self.food_component = self.si_1  # will be 1 for hec-ras
+        self.water_quality = (
             np.minimum(self.si_3, self.si_4) * self.si_2
-        )  # will be 1 for hec-ras
-        reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
+        )  
+        self.reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
 
-        # hsi = reproduction
+        # combine individual suitability indices
         hsi = np.minimum(
-            food_component, np.minimum(water_quality, reproduction)
-        )  # will be reproduction for hec-ras
+            self.food_component, np.minimum(self.water_quality, self.reproduction)
+        )  
 
         # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
         # Check the final HSI array for invalid values

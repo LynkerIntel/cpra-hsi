@@ -165,24 +165,43 @@ class GizzardShadHSI:
 
         # Set to Ideal
         if self.v2_avg_num_frost_free_days_growing_season is None:
-            # self._logger.info(
-            #     "avg num of frost free days in growing season data not provided. Setting index to 1."
-            # )
             self._logger.info(
                 "avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
             )
-            # Replace all non-NaN values with 1
             si_2[~np.isnan(si_2)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = (self.v2_avg_num_frost_free_days_growing_season >= 80) & (
+                self.v2_avg_num_frost_free_days_growing_season < 105
+            )
+            si_2[mask_1] = (
+                0.002 * (self.v2_avg_num_frost_free_days_growing_season[mask_1])
+            ) - 0.11
 
-        # if self.hydro_domain_flag:
-        #         si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+            # condition 2
+            mask_2 = (self.v2_avg_num_frost_free_days_growing_season >= 105) & (
+                self.v2_avg_num_frost_free_days_growing_season < 245
+            )
+            si_2[mask_2] = (
+                0.0061 * (self.v2_avg_num_frost_free_days_growing_season[mask_2])
+            ) - 0.5375
 
+            # condition 3
+            mask_3 = (self.v2_avg_num_frost_free_days_growing_season >= 245) & (
+                self.v2_avg_num_frost_free_days_growing_season <= 265
+            )
+            si_2[mask_3] = (
+                0.0019 * (self.v2_avg_num_frost_free_days_growing_season[mask_3])
+            ) + 0.4963
+
+            # condition 4
+            mask_4 = self.v2_avg_num_frost_free_days_growing_season > 265
+            si_2[mask_4] = 1
+
+        if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
+        
         return si_2
 
     def calculate_si_3(self) -> np.ndarray:

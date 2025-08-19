@@ -298,14 +298,12 @@ class GizzardShadHSI:
         return si_6
 
     def calculate_si_7(self) -> np.ndarray:
-        """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON."""
-        # Use Curve A - Spawning season April-June in Upper Barataria
+        """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON (APR - JUN)."""
+     
         self._logger.info("Running SI 7")
         si_7 = self.template.copy()
 
-        # Note: equations use % values not decimals
-        # self.v7a_pct_vegetated /= 100
-
+        # use Curve A
         # condition 1
         mask_1 = (self.v7a_pct_vegetated <= 10) & (
             self.v7b_water_depth_spawning_season <= 2
@@ -320,21 +318,18 @@ class GizzardShadHSI:
         )
         si_7[mask_2] = (0.04 * self.v7a_pct_vegetated[mask_2]) + 0.4
 
-        # condition 3 USE CURVE A
+        # condition 3
         mask_3 = (self.v7a_pct_vegetated > 15) & (
             self.v7b_water_depth_spawning_season <= 2
-        )  # & (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 30)
+        )
         si_7[mask_3] = 1
 
+        # condition 4
         mask_4 = self.v7b_water_depth_spawning_season > 2
         si_7[mask_4] = 0
 
-        # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-
-        # if self.hydro_domain_flag:
-        #         si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
 
         return si_7
 

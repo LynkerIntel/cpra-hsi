@@ -247,33 +247,53 @@ class GizzardShadHSI:
         return si_5
 
     def calculate_si_6(self) -> np.ndarray:
-        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        """MEAN WEEKLY TEMPERATURE IN TRIBUTARIES OR UPPER END OF LAKE OR RESERVOIR DURING SPAWNING SEASON (APR - JUN)."""
         self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
-        # TMP: Set to ideal for HecRas only (20 degrees C)
-        # April - June is considered spawning season
         if self.v6_mean_weekly_temp_reservoir_spawning_season is None:
-            # self._logger.info(
-            #     "mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly temperature in reservoirs during spawning season data assumes ideal conditions (20 degrees) for HEC-RAS. Setting index to 1."
+                "Mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
             )
             si_6[~np.isnan(si_6)] = 1
 
-        # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
-        # SI6 = 0, when V6 ≤ 10
-        # (0.2041*V6) – 2.2245, when 10.9 < V6 ≤ 15.8
-        # 1, when 15.8 < V6 ≤ 22.7
-        # (-0.1923*V6) + 5.3654, when 22.7 < V6 ≤ 25.3
-        # (-0.1064*V6) + 3.1915, when 25.3 < V6 ≤ 30.2
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else: 
+             # condition 1
+            mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
+            si_6[mask_1] = 0
 
-        # if self.hydro_domain_flag:
-        #         si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
+            # condition 2
+            mask_2 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 10.9) & (
+                self.v6_mean_weekly_temp_reservoir_spawning_season <= 15.8
+            )
+            si_6[mask_2] = (
+                0.2041 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_2])
+            ) - 2.2245
+
+            # condition 3
+            mask_3 =  (self.v6_mean_weekly_temp_reservoir_spawning_season > 15.8) & (
+                self.v6_mean_weekly_temp_reservoir_spawning_season <= 22.7
+            )
+            si_6[mask_3] = 1
+
+            # condition 4
+            mask_4 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 22.7) & (
+                self.v6_mean_weekly_temp_reservoir_spawning_season <= 25.3
+            )
+            si_6[mask_4] = (
+                -0.1923 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_4])
+            ) + 5.3654
+
+            # condition 5
+            mask_5 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 25.3) & (
+                self.v6_mean_weekly_temp_reservoir_spawning_season <= 30
+            )
+            si_6[mask_5] = (
+                -0.1064 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_5])
+            ) + 3.1915
+
+        if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_6
 

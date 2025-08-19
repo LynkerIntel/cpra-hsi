@@ -121,20 +121,40 @@ class GizzardShadHSI:
 
         # Set to ideal – there is no food limitation
         if self.v1_tds_summer_growing_season is None:
-            # self._logger.info("TDS during summer growing season data not provided. Setting index to 1.")
             self._logger.info(
                 "TDS during summer growing season data assumes ideal conditions. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else: 
+            # condition 1
+            mask_1 = (self.v1_tds_summer_growing_season >= 0) & (
+                self.v1_tds_summer_growing_season < 1.2
+            )
+            si_1[mask_1] = 0.0833 * self.v1_tds_summer_growing_season[mask_1]
 
-        # if self.hydro_domain_flag:
-        #         si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+            # condition 2
+            mask_2 = (self.v1_tds_summer_growing_season >= 1.2) & (
+                self.v1_tds_summer_growing_season < 3
+            )
+            si_1[mask_2] = (
+                0.5 * (self.v1_tds_summer_growing_season[mask_2])
+            ) - 0.5
+
+            # condition 3
+            mask_3 = (self.v1_tds_summer_growing_season >= 3) & (
+                self.v1_tds_summer_growing_season < 4
+            )
+            si_1[mask_3] = (
+                -1 * (self.v1_tds_summer_growing_season[mask_3])
+            ) + 4
+
+            # condition 4
+            mask_4 = self.v1_tds_summer_growing_season > 4
+            si_1[mask_4] = 0
+
+        if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_1
 

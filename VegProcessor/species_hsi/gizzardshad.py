@@ -210,24 +210,51 @@ class GizzardShadHSI:
         # initialize with NaN from depth array, else 999
         si_3 = self.template.copy()
 
-        # Set to ideal for HecRas only (25 degrees C)
+        # Set to ideal 
         if self.v3_mean_weekly_summer_temp is None:
-            # self._logger.info(
-            #     "mean weekly summer temperature data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions (25 degrees) for HEC-RAS. Setting index to 1."
+                "mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
             )
             si_3[~np.isnan(si_3)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = (self.v3_mean_weekly_summer_temp >= 15) & (
+                self.v3_mean_weekly_summer_temp < 18.5
+            )
+            si_3[mask_1] = (
+                0.0286 * (self.v3_mean_weekly_summer_temp[mask_1])
+            ) - 0.4286
 
-        # if self.hydro_domain_flag:
-        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+            # condition 2
+            mask_2 = (self.v3_mean_weekly_summer_temp >= 18.5) & (
+                self.v3_mean_weekly_summer_temp < 22
+            )
+            si_3[mask_2] = (
+                0.2571 * (self.v3_mean_weekly_summer_temp[mask_2])
+            ) - 4.6571
+
+            # condition 3
+            mask_3 = (self.v3_mean_weekly_summer_tempn >= 22) & (
+                self.v3_mean_weekly_summer_temp <= 29
+            )
+            si_3[mask_3] = 1
+
+            # condition 4
+            mask_4 = (self.v3_mean_weekly_summer_tempn > 29) & (
+                self.v3_mean_weekly_summer_temp < 33
+            )
+            si_3[mask_4] = (
+                -0.1875 * (self.v3_mean_weekly_summer_temp[mask_4])
+            ) + 6.4375
+
+            # condition 5
+            mask_5 = (self.v3_mean_weekly_summer_temp >= 33) & (
+                self.v3_mean_weekly_summer_temp <= 35
+            )
+            si_3[mask_5] = (
+                -0.1 * (self.v3_mean_weekly_summer_temp[mask_5])
+            ) + 3.55
 
         return si_3
 

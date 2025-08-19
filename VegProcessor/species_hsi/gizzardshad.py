@@ -187,30 +187,36 @@ class GizzardShadHSI:
         return si_3
 
     def calculate_si_4(self) -> np.ndarray:
-        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION (JUL - SEPT)."""
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
-        # TMP: Set to ideal for HecRas only
         if self.v4_max_do_summer is None:
-            # self._logger.info(
-            #     "mean weekly summer temperature data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions (6 ppm) for HEC-RAS. Setting index to 1."
+                "Maximum available dissolved oxygen in epilimnion during summer stratification"
+                "is not provided. Setting index to 1."
             )
             si_4[~np.isnan(si_4)] = 1
 
-        # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
-        # SI4 = 0, when V4 (ppm) ≤ 1
-        # (0.2*V4) - 0.2, when 1 < V4 ≤ 6
-        # 1, when V4 > 6
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = self.v4_max_do_summer <= 1
+            si_4[mask_1] = 0
 
-        # if self.hydro_domain_flag:
-        #         si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+            # condition 2
+            mask_2 = (self.v4_max_do_summer > 1) & (
+                self.v4_max_do_summer < 6
+            )
+            si_4[mask_2] = (
+                0.2 * (self.v4_max_do_summer[mask_2])
+            ) - 0.2
+
+            # condition 3
+            mask_3 = self.v4_max_do_summer > 6
+            si_4[mask_3] = 1
+
+        if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
 

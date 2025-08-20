@@ -160,14 +160,14 @@ class GizzardShadHSI:
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
-        """GROWING SEASON (AVERAGE NUMBER OF DAYS BETWEEN LAST SPRING AND FIRST FALL FROST ANUALLY."""
+        """GROWING SEASON AVERAGE NUMBER OF DAYS BETWEEN LAST SPRING AND FIRST FALL FROST ANUALLY."""
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
         # Set to Ideal
         if self.v2_avg_num_frost_free_days_growing_season is None:
             self._logger.info(
-                "avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
+                "Avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
@@ -218,7 +218,7 @@ class GizzardShadHSI:
         # Set to ideal 
         if self.v3_mean_weekly_summer_temp is None:
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
+                "Mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
             )
             si_3[~np.isnan(si_3)] = 1
 

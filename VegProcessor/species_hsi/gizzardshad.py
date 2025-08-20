@@ -236,7 +236,7 @@ class GizzardShadHSI:
             ) - 4.6571
 
             # condition 3
-            mask_3 = (self.v3_mean_weekly_summer_tempn >= 22) & (
+            mask_3 = (self.v3_mean_weekly_summer_temp >= 22) & (
                 self.v3_mean_weekly_summer_temp <= 29
             )
             si_3[mask_3] = 1
@@ -257,6 +257,15 @@ class GizzardShadHSI:
                 -0.1 * (self.v3_mean_weekly_summer_temp[mask_5])
             ) + 3.55
 
+            # condition 6
+            mask_6 = (self.v3_mean_weekly_summer_temp < 15) | (
+                self.v3_mean_weekly_summer_temp > 30
+            )
+            si_3[mask_6] = 0
+
+        if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
+        
         return si_3
 
     def calculate_si_4(self) -> np.ndarray:

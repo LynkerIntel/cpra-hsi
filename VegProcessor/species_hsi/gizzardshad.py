@@ -263,7 +263,7 @@ class GizzardShadHSI:
 
             # condition 6
             mask_6 = (self.v3_mean_weekly_summer_temp < 15) | (
-                self.v3_mean_weekly_summer_temp > 30
+                self.v3_mean_weekly_summer_temp > 35
             )
             si_3[mask_6] = 0
 

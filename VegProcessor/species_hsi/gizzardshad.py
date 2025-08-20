@@ -172,6 +172,10 @@ class GizzardShadHSI:
             si_2[~np.isnan(si_2)] = 1
 
         else:
+            # condition 0
+            mask_0 = self.v2_avg_num_frost_free_days_growing_season < 80
+            si_2[mask_0] = 0
+
             # condition 1
             mask_1 = (self.v2_avg_num_frost_free_days_growing_season >= 80) & (
                 self.v2_avg_num_frost_free_days_growing_season < 105

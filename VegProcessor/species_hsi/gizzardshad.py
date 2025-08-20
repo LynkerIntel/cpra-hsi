@@ -25,9 +25,9 @@ class GizzardShadHSI:
     v2_avg_num_frost_free_days_growing_season: np.ndarray = None  # ideal
     v3_mean_weekly_summer_temp: np.ndarray = None  # ideal
     v4_max_do_summer: np.ndarray = None  # ideal
-    v5_water_lvl_spawning_season: np.ndarray = None  # ideal
+    v5a_water_lvl_change: np.ndarray = None  # ideal
+    v5b_is_veg_inundated: np.ndarray = None #ideal
     v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None  # ideal
-    # v7_pct_vegetated_and_2m_depth_spawning_season : np.ndarray = None #use curve A
     v7a_pct_vegetated: np.ndarray = None
     v7b_water_depth_spawning_season: np.ndarray = None
 
@@ -57,7 +57,8 @@ class GizzardShadHSI:
             v2_avg_num_frost_free_days_growing_season=hsi_instance.avg_num_frost_free_days_growing_season,
             v3_mean_weekly_summer_temp=hsi_instance.mean_weekly_summer_temp,
             v4_max_do_summer=hsi_instance.max_do_summer,
-            v5_water_lvl_spawning_season=hsi_instance.water_lvl_spawning_season,
+            v5a_water_lvl_change=hsi_instance.water_lvl_change,
+            v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
@@ -199,7 +200,7 @@ class GizzardShadHSI:
             mask_4 = self.v2_avg_num_frost_free_days_growing_season > 265
             si_2[mask_4] = 1
 
-        if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+        if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
         
         return si_2
@@ -298,24 +299,40 @@ class GizzardShadHSI:
         si_5 = self.template.copy()
 
         # Set to ideal
-        if self.v5_water_lvl_spawning_season is None:
-            # self._logger.info(
-            #     "water level during spawning season data not provided. Setting index to 1."
-            # )
+        if self.v5a_water_lvl_change is None:
             self._logger.info(
-                "water level during spawning season assumes ideal conditions. Setting index to 1."
+                "Water level during spawning season assumes ideal conditions. Setting index to 1."
             )
             si_5[~np.isnan(si_5)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1: level = 1, rising water levels (wl) and inundated veg
+            mask_1 = (self.v5a_water_lvl_change > 0) & (
+                (self.v5b_is_veg_inundated == True)
+            )
+            si_5[mask_1] = 1
 
-        # if self.hydro_domain_flag:
-        #         si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+            # condition 2: level = 2, stable wl or no inundated veg
+            mask_2 = (self.v5a_water_lvl_change == 0) | (
+                (self.v5b_is_veg_inundated == False)
+            )
+            si_5[mask_2] = 0.8
 
+            # condition 3: level = 3, decline (negative change) in wl <= 0.5m
+            mask_3 = (self.v5a_water_lvl_change >= -0.5) & (
+                self.v5a_water_lvl_change < 0 
+            ) & (self.v5b_is_veg_inundated == True)
+            si_5[mask_3] = 0.5
+
+            # condition 4: level = 4, decline (negative change) in wl > 0.5m
+            mask_4 = (self.v5a_water_lvl_change < -0.5) & (
+                self.v5b_is_veg_inundated == True
+            )
+            si_5[mask_4] = 0.2
+
+        if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
+        
         return si_5
 
     def calculate_si_6(self) -> np.ndarray:
@@ -330,7 +347,7 @@ class GizzardShadHSI:
             si_6[~np.isnan(si_6)] = 1
 
         else: 
-             # condition 1
+            # condition 1
             mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
             si_6[mask_1] = 0
 

@@ -394,6 +394,10 @@ class GizzardShadHSI:
                 -0.1064 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_5])
             ) + 3.1915
 
+            # condition 6 
+            mask_6 = self.v6_mean_weekly_temp_reservoir_spawning_season > 30
+            si_6[mask_6] = 0
+
         if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 

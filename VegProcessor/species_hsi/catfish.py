@@ -73,7 +73,7 @@ class RiverineCatfishHSI:
             v2_pct_cover_in_summer_pools_bw=hsi_instance.pct_cover_in_summer_pools_bw, #set to ideal
             v4_fpp_substrate_avg_summer_flow=hsi_instance.fpp_substrate_avg_summer_flow,#set to ideal
             v5_avg_temp_in_midsummer_pools_bw=hsi_instance.avg_temp_in_midsummer_pools_bw,
-            v6_grow_season_length_frost_free_days=hsi_instance.grow_season_length_frost_free_days, #set to ideal
+            v6_grow_season_length_frost_free_days=hsi_instance.grow_season_length_frost_free_days, 
             v7_max_monthly_avg_summer_turbidity=hsi_instance.max_monthly_avg_summer_turbidity,
             v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.avg_min_do_in_midsummer_pools_bw,
             v9_max_summer_salinity=hsi_instance.max_summer_salinity, 

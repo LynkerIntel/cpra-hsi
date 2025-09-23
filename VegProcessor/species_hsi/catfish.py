@@ -160,7 +160,7 @@ class RiverineCatfishHSI:
 
         if self.v1_pct_pools_avg_summer_flow is None:
             self._logger.info(
-                "Percent pools during avg summer flow data is not provided. Setting index to 1."
+                "Percent pools during avg summer flow is not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 

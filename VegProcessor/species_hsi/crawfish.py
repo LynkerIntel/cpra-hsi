@@ -257,7 +257,7 @@ class CrawfishHSI:
         # if self.hydro_domain_flag:
         #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
-        return si_3
+        return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
         """Mean water depth from September to December in cm.

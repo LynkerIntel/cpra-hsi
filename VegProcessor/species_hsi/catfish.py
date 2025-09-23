@@ -769,8 +769,14 @@ class RiverineCatfishHSI:
         self.cc = (self.si_1 * self.si_2 * self.si_18) ** (1/3)
 
         # water quality component (wq)
+        if self.v5_avg_temp_in_midsummer_pools_bw is None:
+            self._logger.info("Temperature data unavailable. Using SI_6 for WQ calculation.")
+            wq_term1 = 2 * self.si_6
+        else:
+            # The data is available, use the standard WQ equation
+            wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
         self.wq = (
-            (2 * (self.si_5 + self.si_12 + self.si_14) / (3)) + 
+            wq_term1 + 
             self.si_7 + 
             2 * (self.si_8) + 
             self.si_9 + 

@@ -793,7 +793,7 @@ class RiverineCatfishHSI:
         rc_mask = (self.si_8 <= 0.4) | (self.si_10 <= 0.4) | (self.si_11 <= 0.4)
         self.rc = np.where(rc_mask, 
                       np.minimum(np.stack(
-                          [self.si_8, self.si_10, self.si_11, self.rc]), axis=0).min(axis=0), 
+                          [self.si_6, self.si_10, self.si_11, self.rc]), axis=0).min(axis=0), 
                           self.rc)
 
         # Combine individual suitability indices

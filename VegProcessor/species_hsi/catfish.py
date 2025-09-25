@@ -830,9 +830,7 @@ class RiverineCatfishHSI:
         )
         self.rc = np.where(
             rc_mask,
-            np.minimum(
-                np.stack([self.si_6, self.si_10, self.si_11, self.rc]), axis=0
-            ).min(axis=0),
+            np.minimum.reduce([self.si_6, self.si_10, self.si_11, self.rc]),
             self.rc,
         )
 

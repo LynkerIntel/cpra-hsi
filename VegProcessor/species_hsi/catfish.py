@@ -676,7 +676,7 @@ class RiverineCatfishHSI:
             # condition 4
             mask_4 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 30
-            ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 36)
+            ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 36.5)
             si_14[mask_4] = (
                 -0.1538
                 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_4])

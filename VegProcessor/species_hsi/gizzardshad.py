@@ -411,7 +411,6 @@ class GizzardShadHSI:
 
     def calculate_si_7(self) -> np.ndarray:
         """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON (APR - JUN)."""
-
         self._logger.info("Running SI 7")
         si_7 = self.template.copy()
 

@@ -26,7 +26,7 @@ class GizzardShadHSI:
     v3_mean_weekly_summer_temp: np.ndarray = None  # ideal
     v4_max_do_summer: np.ndarray = None  # ideal
     v5a_water_lvl_change: np.ndarray = None  # ideal
-    v5b_is_veg_inundated: np.ndarray = None #ideal
+    v5b_is_veg_inundated: np.ndarray = None  # ideal
     v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None  # ideal
     v7a_pct_vegetated: np.ndarray = None
     v7b_water_depth_spawning_season: np.ndarray = None
@@ -40,7 +40,6 @@ class GizzardShadHSI:
     si_6: np.ndarray = field(init=False)
     si_7: np.ndarray = field(init=False)
 
-    
     # Set up components and equations
     food_component: np.ndarray = field(init=False)
     water_quality: np.ndarray = field(init=False)
@@ -127,7 +126,7 @@ class GizzardShadHSI:
             )
             si_1[~np.isnan(si_1)] = 1
 
-        else: 
+        else:
             # condition 1
             mask_1 = (self.v1_tds_summer_growing_season >= 0) & (
                 self.v1_tds_summer_growing_season < 1.2
@@ -181,23 +180,26 @@ class GizzardShadHSI:
                 self.v2_avg_num_frost_free_days_growing_season < 105
             )
             si_2[mask_1] = (
-                0.002 * (self.v2_avg_num_frost_free_days_growing_season[mask_1])
+                0.002
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_1])
             ) - 0.11
 
             # condition 2
-            mask_2 = (self.v2_avg_num_frost_free_days_growing_season >= 105) & (
-                self.v2_avg_num_frost_free_days_growing_season < 245
-            )
+            mask_2 = (
+                self.v2_avg_num_frost_free_days_growing_season >= 105
+            ) & (self.v2_avg_num_frost_free_days_growing_season < 245)
             si_2[mask_2] = (
-                0.0061 * (self.v2_avg_num_frost_free_days_growing_season[mask_2])
+                0.0061
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_2])
             ) - 0.5375
 
             # condition 3
-            mask_3 = (self.v2_avg_num_frost_free_days_growing_season >= 245) & (
-                self.v2_avg_num_frost_free_days_growing_season <= 265
-            )
+            mask_3 = (
+                self.v2_avg_num_frost_free_days_growing_season >= 245
+            ) & (self.v2_avg_num_frost_free_days_growing_season <= 265)
             si_2[mask_3] = (
-                0.0019 * (self.v2_avg_num_frost_free_days_growing_season[mask_3])
+                0.0019
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_3])
             ) + 0.4963
 
             # condition 4
@@ -206,7 +208,7 @@ class GizzardShadHSI:
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return si_2
 
     def calculate_si_3(self) -> np.ndarray:
@@ -215,7 +217,7 @@ class GizzardShadHSI:
         # initialize with NaN from depth array, else 999
         si_3 = self.template.copy()
 
-        # Set to ideal 
+        # Set to ideal
         if self.v3_mean_weekly_summer_temp is None:
             self._logger.info(
                 "Mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
@@ -246,7 +248,7 @@ class GizzardShadHSI:
             si_3[mask_3] = 1
 
             # condition 4
-            mask_4 = (self.v3_mean_weekly_summer_tempn > 29) & (
+            mask_4 = (self.v3_mean_weekly_summer_temp > 29) & (
                 self.v3_mean_weekly_summer_temp < 33
             )
             si_3[mask_4] = (
@@ -269,7 +271,7 @@ class GizzardShadHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return si_3
 
     def calculate_si_4(self) -> np.ndarray:
@@ -279,7 +281,7 @@ class GizzardShadHSI:
 
         if self.v4_max_do_summer is None:
             self._logger.info(
-                "Maximum available dissolved oxygen in epilimnion during summer stratification"
+                "Maximum available dissolved oxygen in epilimnion during summer stratification "
                 "is not provided. Setting index to 1."
             )
             si_4[~np.isnan(si_4)] = 1
@@ -290,12 +292,8 @@ class GizzardShadHSI:
             si_4[mask_1] = 0
 
             # condition 2
-            mask_2 = (self.v4_max_do_summer > 1) & (
-                self.v4_max_do_summer < 6
-            )
-            si_4[mask_2] = (
-                0.2 * (self.v4_max_do_summer[mask_2])
-            ) - 0.2
+            mask_2 = (self.v4_max_do_summer > 1) & (self.v4_max_do_summer < 6)
+            si_4[mask_2] = (0.2 * (self.v4_max_do_summer[mask_2])) - 0.2
 
             # condition 3
             mask_3 = self.v4_max_do_summer > 6
@@ -332,9 +330,11 @@ class GizzardShadHSI:
             si_5[mask_2] = 0.8
 
             # condition 3: level = 3, decline (negative change) in wl <= 0.5m
-            mask_3 = (self.v5a_water_lvl_change >= -0.5) & (
-                self.v5a_water_lvl_change < 0 
-            ) & (self.v5b_is_veg_inundated == True)
+            mask_3 = (
+                (self.v5a_water_lvl_change >= -0.5)
+                & (self.v5a_water_lvl_change < 0)
+                & (self.v5b_is_veg_inundated == True)
+            )
             si_5[mask_3] = 0.5
 
             # condition 4: level = 4, decline (negative change) in wl > 0.5m
@@ -345,7 +345,7 @@ class GizzardShadHSI:
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-        
+
         return si_5
 
     def calculate_si_6(self) -> np.ndarray:
@@ -359,42 +359,45 @@ class GizzardShadHSI:
             )
             si_6[~np.isnan(si_6)] = 1
 
-        else: 
+        else:
             # condition 1
             mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
             si_6[mask_1] = 0
 
             # condition 2
-            mask_2 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 10.9) & (
-                self.v6_mean_weekly_temp_reservoir_spawning_season <= 15.8
-            )
+            mask_2 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 10.9
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 15.8)
             si_6[mask_2] = (
-                0.2041 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_2])
+                0.2041
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_2])
             ) - 2.2245
 
             # condition 3
-            mask_3 =  (self.v6_mean_weekly_temp_reservoir_spawning_season > 15.8) & (
-                self.v6_mean_weekly_temp_reservoir_spawning_season <= 22.7
-            )
+            mask_3 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 15.8
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 22.7)
             si_6[mask_3] = 1
 
             # condition 4
-            mask_4 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 22.7) & (
-                self.v6_mean_weekly_temp_reservoir_spawning_season <= 25.3
-            )
+            mask_4 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 22.7
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 25.3)
             si_6[mask_4] = (
-                -0.1923 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_4])
+                -0.1923
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_4])
             ) + 5.3654
 
             # condition 5
-            mask_5 = (self.v6_mean_weekly_temp_reservoir_spawning_season > 25.3) & (
-                self.v6_mean_weekly_temp_reservoir_spawning_season <= 30
-            )
+            mask_5 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 25.3
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 30)
             si_6[mask_5] = (
-                -0.1064 * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_5])
+                -0.1064
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_5])
             ) + 3.1915
 
-            # condition 6 
+            # condition 6
             mask_6 = self.v6_mean_weekly_temp_reservoir_spawning_season > 30
             si_6[mask_6] = 0
 
@@ -405,7 +408,7 @@ class GizzardShadHSI:
 
     def calculate_si_7(self) -> np.ndarray:
         """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON (APR - JUN)."""
-     
+
         self._logger.info("Running SI 7")
         si_7 = self.template.copy()
 
@@ -462,15 +465,14 @@ class GizzardShadHSI:
 
         # individual model components
         self.food_component = self.si_1  # will be 1 for hec-ras
-        self.water_quality = (
-            np.minimum(self.si_3, self.si_4) * self.si_2
-        )  
+        self.water_quality = np.minimum(self.si_3, self.si_4) * self.si_2
         self.reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
 
         # combine individual suitability indices
         hsi = np.minimum(
-            self.food_component, np.minimum(self.water_quality, self.reproduction)
-        )  
+            self.food_component,
+            np.minimum(self.water_quality, self.reproduction),
+        )
 
         # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
         # Check the final HSI array for invalid values

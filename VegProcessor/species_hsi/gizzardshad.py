@@ -318,14 +318,14 @@ class GizzardShadHSI:
 
         else:
             # condition 1: level = 1, rising water levels (wl) and inundated veg
-            mask_1 = (self.v5a_water_lvl_change > 0) & (
-                (self.v5b_is_veg_inundated == True)
-            )
+            mask_1 = (
+                self.v5a_water_lvl_change > 0
+            ) & self.v5b_is_veg_inundated
             si_5[mask_1] = 1
 
             # condition 2: level = 2, stable wl or no inundated veg
             mask_2 = (self.v5a_water_lvl_change == 0) | (
-                (self.v5b_is_veg_inundated == False)
+                ~self.v5b_is_veg_inundated
             )
             si_5[mask_2] = 0.8
 
@@ -333,14 +333,14 @@ class GizzardShadHSI:
             mask_3 = (
                 (self.v5a_water_lvl_change >= -0.5)
                 & (self.v5a_water_lvl_change < 0)
-                & (self.v5b_is_veg_inundated == True)
+                & self.v5b_is_veg_inundated
             )
             si_5[mask_3] = 0.5
 
             # condition 4: level = 4, decline (negative change) in wl > 0.5m
-            mask_4 = (self.v5a_water_lvl_change < -0.5) & (
-                self.v5b_is_veg_inundated == True
-            )
+            mask_4 = (
+                self.v5a_water_lvl_change < -0.5
+            ) & self.v5b_is_veg_inundated
             si_5[mask_4] = 0.2
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):

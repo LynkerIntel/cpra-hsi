@@ -317,31 +317,34 @@ class GizzardShadHSI:
             si_5[~np.isnan(si_5)] = 1
 
         else:
-            # condition 1: level = 1, rising water levels (wl) and inundated veg
-            mask_1 = (
-                self.v5a_water_lvl_change > 0
-            ) & self.v5b_is_veg_inundated
-            si_5[mask_1] = 1
-
-            # condition 2: level = 2, stable wl or no inundated veg
-            mask_2 = (self.v5a_water_lvl_change == 0) | (
-                ~self.v5b_is_veg_inundated
+            raise NotImplementedError(
+                "HSI vars must be added to use this logic."
             )
-            si_5[mask_2] = 0.8
+            # # condition 1: level = 1, rising water levels (wl) and inundated veg
+            # mask_1 = (
+            #     self.v5a_water_lvl_change > 0
+            # ) & self.v5b_is_veg_inundated
+            # si_5[mask_1] = 1
 
-            # condition 3: level = 3, decline (negative change) in wl <= 0.5m
-            mask_3 = (
-                (self.v5a_water_lvl_change >= -0.5)
-                & (self.v5a_water_lvl_change < 0)
-                & self.v5b_is_veg_inundated
-            )
-            si_5[mask_3] = 0.5
+            # # condition 2: level = 2, stable wl or no inundated veg
+            # mask_2 = (self.v5a_water_lvl_change == 0) | (
+            #     ~self.v5b_is_veg_inundated
+            # )
+            # si_5[mask_2] = 0.8
 
-            # condition 4: level = 4, decline (negative change) in wl > 0.5m
-            mask_4 = (
-                self.v5a_water_lvl_change < -0.5
-            ) & self.v5b_is_veg_inundated
-            si_5[mask_4] = 0.2
+            # # condition 3: level = 3, decline (negative change) in wl <= 0.5m
+            # mask_3 = (
+            #     (self.v5a_water_lvl_change >= -0.5)
+            #     & (self.v5a_water_lvl_change < 0)
+            #     & self.v5b_is_veg_inundated
+            # )
+            # si_5[mask_3] = 0.5
+
+            # # condition 4: level = 4, decline (negative change) in wl > 0.5m
+            # mask_4 = (
+            #     self.v5a_water_lvl_change < -0.5
+            # ) & self.v5b_is_veg_inundated
+            # si_5[mask_4] = 0.2
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

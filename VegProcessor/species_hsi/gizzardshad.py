@@ -25,9 +25,9 @@ class GizzardShadHSI:
     v2_avg_num_frost_free_days_growing_season: np.ndarray = None  # ideal
     v3_mean_weekly_summer_temp: np.ndarray = None  # ideal
     v4_max_do_summer: np.ndarray = None  # ideal
-    v5_water_lvl_spawning_season: np.ndarray = None  # ideal
+    v5a_water_lvl_change: np.ndarray = None  # ideal
+    v5b_is_veg_inundated: np.ndarray = None  # ideal
     v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None  # ideal
-    # v7_pct_vegetated_and_2m_depth_spawning_season : np.ndarray = None #use curve A
     v7a_pct_vegetated: np.ndarray = None
     v7b_water_depth_spawning_season: np.ndarray = None
 
@@ -40,6 +40,11 @@ class GizzardShadHSI:
     si_6: np.ndarray = field(init=False)
     si_7: np.ndarray = field(init=False)
 
+    # Set up components and equations
+    food_component: np.ndarray = field(init=False)
+    water_quality: np.ndarray = field(init=False)
+    reproduction: np.ndarray = field(init=False)
+
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
 
@@ -51,7 +56,8 @@ class GizzardShadHSI:
             v2_avg_num_frost_free_days_growing_season=hsi_instance.avg_num_frost_free_days_growing_season,
             v3_mean_weekly_summer_temp=hsi_instance.mean_weekly_summer_temp,
             v4_max_do_summer=hsi_instance.max_do_summer,
-            v5_water_lvl_spawning_season=hsi_instance.water_lvl_spawning_season,
+            v5a_water_lvl_change=hsi_instance.water_lvl_change,
+            v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
@@ -115,47 +121,93 @@ class GizzardShadHSI:
 
         # Set to ideal – there is no food limitation
         if self.v1_tds_summer_growing_season is None:
-            # self._logger.info("TDS during summer growing season data not provided. Setting index to 1.")
             self._logger.info(
                 "TDS during summer growing season data assumes ideal conditions. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = (self.v1_tds_summer_growing_season >= 0) & (
+                self.v1_tds_summer_growing_season < 1.2
+            )
+            si_1[mask_1] = 0.0833 * self.v1_tds_summer_growing_season[mask_1]
 
-        # if self.hydro_domain_flag:
-        #         si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
+            # condition 2
+            mask_2 = (self.v1_tds_summer_growing_season >= 1.2) & (
+                self.v1_tds_summer_growing_season < 3
+            )
+            si_1[mask_2] = (
+                0.5 * (self.v1_tds_summer_growing_season[mask_2])
+            ) - 0.5
+
+            # condition 3
+            mask_3 = (self.v1_tds_summer_growing_season >= 3) & (
+                self.v1_tds_summer_growing_season < 4
+            )
+            si_1[mask_3] = (
+                -1 * (self.v1_tds_summer_growing_season[mask_3])
+            ) + 4
+
+            # condition 4
+            mask_4 = self.v1_tds_summer_growing_season > 4
+            si_1[mask_4] = 0
+
+        if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
-        """GROWING SEASON (AVERAGE NUMBER OF DAYS BETWEEN LAST SPRING AND FIRST FALL FROST ANUALLY."""
+        """GROWING SEASON AVERAGE NUMBER OF DAYS BETWEEN LAST SPRING AND FIRST FALL FROST ANUALLY."""
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
         # Set to Ideal
         if self.v2_avg_num_frost_free_days_growing_season is None:
-            # self._logger.info(
-            #     "avg num of frost free days in growing season data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
+                "Avg num of frost free days in growing season data assumes ideal conditions. Setting index to 1."
             )
-            # Replace all non-NaN values with 1
             si_2[~np.isnan(si_2)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 0
+            mask_0 = self.v2_avg_num_frost_free_days_growing_season < 80
+            si_2[mask_0] = 0
 
-        # if self.hydro_domain_flag:
-        #         si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
+            # condition 1
+            mask_1 = (self.v2_avg_num_frost_free_days_growing_season >= 80) & (
+                self.v2_avg_num_frost_free_days_growing_season < 105
+            )
+            si_2[mask_1] = (
+                0.002
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_1])
+            ) - 0.11
+
+            # condition 2
+            mask_2 = (
+                self.v2_avg_num_frost_free_days_growing_season >= 105
+            ) & (self.v2_avg_num_frost_free_days_growing_season < 245)
+            si_2[mask_2] = (
+                0.0061
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_2])
+            ) - 0.5375
+
+            # condition 3
+            mask_3 = (
+                self.v2_avg_num_frost_free_days_growing_season >= 245
+            ) & (self.v2_avg_num_frost_free_days_growing_season <= 265)
+            si_2[mask_3] = (
+                0.0019
+                * (self.v2_avg_num_frost_free_days_growing_season[mask_3])
+            ) + 0.4963
+
+            # condition 4
+            mask_4 = self.v2_avg_num_frost_free_days_growing_season > 265
+            si_2[mask_4] = 1
+
+        if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_2
 
@@ -165,52 +217,90 @@ class GizzardShadHSI:
         # initialize with NaN from depth array, else 999
         si_3 = self.template.copy()
 
-        # Set to ideal for HecRas only (25 degrees C)
+        # Set to ideal
         if self.v3_mean_weekly_summer_temp is None:
-            # self._logger.info(
-            #     "mean weekly summer temperature data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions (25 degrees) for HEC-RAS. Setting index to 1."
+                "Mean weekly summer temperature data assumes ideal conditions. Setting index to 1."
             )
             si_3[~np.isnan(si_3)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = (self.v3_mean_weekly_summer_temp >= 15) & (
+                self.v3_mean_weekly_summer_temp < 18.5
+            )
+            si_3[mask_1] = (
+                0.0286 * (self.v3_mean_weekly_summer_temp[mask_1])
+            ) - 0.4286
 
-        # if self.hydro_domain_flag:
-        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
+            # condition 2
+            mask_2 = (self.v3_mean_weekly_summer_temp >= 18.5) & (
+                self.v3_mean_weekly_summer_temp < 22
+            )
+            si_3[mask_2] = (
+                0.2571 * (self.v3_mean_weekly_summer_temp[mask_2])
+            ) - 4.6571
+
+            # condition 3
+            mask_3 = (self.v3_mean_weekly_summer_temp >= 22) & (
+                self.v3_mean_weekly_summer_temp <= 29
+            )
+            si_3[mask_3] = 1
+
+            # condition 4
+            mask_4 = (self.v3_mean_weekly_summer_temp > 29) & (
+                self.v3_mean_weekly_summer_temp < 33
+            )
+            si_3[mask_4] = (
+                -0.1875 * (self.v3_mean_weekly_summer_temp[mask_4])
+            ) + 6.4375
+
+            # condition 5
+            mask_5 = (self.v3_mean_weekly_summer_temp >= 33) & (
+                self.v3_mean_weekly_summer_temp <= 35
+            )
+            si_3[mask_5] = (
+                -0.1 * (self.v3_mean_weekly_summer_temp[mask_5])
+            ) + 3.55
+
+            # condition 6
+            mask_6 = (self.v3_mean_weekly_summer_temp < 15) | (
+                self.v3_mean_weekly_summer_temp > 35
+            )
+            si_3[mask_6] = 0
+
+        if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_3
 
     def calculate_si_4(self) -> np.ndarray:
-        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION (JUL - SEPT)."""
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
-        # TMP: Set to ideal for HecRas only
         if self.v4_max_do_summer is None:
-            # self._logger.info(
-            #     "mean weekly summer temperature data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly summer temperature data assumes ideal conditions (6 ppm) for HEC-RAS. Setting index to 1."
+                "Maximum available dissolved oxygen in epilimnion during summer stratification "
+                "is not provided. Setting index to 1."
             )
             si_4[~np.isnan(si_4)] = 1
 
-        # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
-        # SI4 = 0, when V4 (ppm) ≤ 1
-        # (0.2*V4) - 0.2, when 1 < V4 ≤ 6
-        # 1, when V4 > 6
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = self.v4_max_do_summer <= 1
+            si_4[mask_1] = 0
 
-        # if self.hydro_domain_flag:
-        #         si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
+            # condition 2
+            mask_2 = (self.v4_max_do_summer > 1) & (self.v4_max_do_summer < 6)
+            si_4[mask_2] = (0.2 * (self.v4_max_do_summer[mask_2])) - 0.2
+
+            # condition 3
+            mask_3 = self.v4_max_do_summer > 6
+            si_4[mask_3] = 1
+
+        if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_4
 
@@ -220,66 +310,109 @@ class GizzardShadHSI:
         si_5 = self.template.copy()
 
         # Set to ideal
-        if self.v5_water_lvl_spawning_season is None:
-            # self._logger.info(
-            #     "water level during spawning season data not provided. Setting index to 1."
-            # )
+        if self.v5a_water_lvl_change is None:
             self._logger.info(
-                "water level during spawning season assumes ideal conditions. Setting index to 1."
+                "Water level during spawning season assumes ideal conditions. Setting index to 1."
             )
             si_5[~np.isnan(si_5)] = 1
 
-        # TODO: This will ALWAYS be set to ideal per hsi specs
-        # consider include a diff if/else statement to handle ALWAYS IDEAL cases
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1: level = 1, rising water levels (wl) and inundated veg
+            mask_1 = (
+                self.v5a_water_lvl_change > 0
+            ) & self.v5b_is_veg_inundated
+            si_5[mask_1] = 1
 
-        # if self.hydro_domain_flag:
-        #         si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
+            # condition 2: level = 2, stable wl or no inundated veg
+            mask_2 = (self.v5a_water_lvl_change == 0) | (
+                ~self.v5b_is_veg_inundated
+            )
+            si_5[mask_2] = 0.8
+
+            # condition 3: level = 3, decline (negative change) in wl <= 0.5m
+            mask_3 = (
+                (self.v5a_water_lvl_change >= -0.5)
+                & (self.v5a_water_lvl_change < 0)
+                & self.v5b_is_veg_inundated
+            )
+            si_5[mask_3] = 0.5
+
+            # condition 4: level = 4, decline (negative change) in wl > 0.5m
+            mask_4 = (
+                self.v5a_water_lvl_change < -0.5
+            ) & self.v5b_is_veg_inundated
+            si_5[mask_4] = 0.2
+
+        if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_5
 
     def calculate_si_6(self) -> np.ndarray:
-        """MAXIMUM AVAILABLE DISSOLVED OXYGEN IN EPILIMNION DURING SUMMER STRATIFICATION."""
+        """MEAN WEEKLY TEMPERATURE IN TRIBUTARIES OR UPPER END OF LAKE OR RESERVOIR DURING SPAWNING SEASON (APR - JUN)."""
         self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
-        # TMP: Set to ideal for HecRas only (20 degrees C)
-        # April - June is considered spawning season
         if self.v6_mean_weekly_temp_reservoir_spawning_season is None:
-            # self._logger.info(
-            #     "mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
-            # )
             self._logger.info(
-                "mean weekly temperature in reservoirs during spawning season data assumes ideal conditions (20 degrees) for HEC-RAS. Setting index to 1."
+                "Mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
             )
             si_6[~np.isnan(si_6)] = 1
 
-        # TODO: this is a quick fix for hec-ras, need to implement the actual logic for other HH models
-        # SI6 = 0, when V6 ≤ 10
-        # (0.2041*V6) – 2.2245, when 10.9 < V6 ≤ 15.8
-        # 1, when 15.8 < V6 ≤ 22.7
-        # (-0.1923*V6) + 5.3654, when 22.7 < V6 ≤ 25.3
-        # (-0.1064*V6) + 3.1915, when 25.3 < V6 ≤ 30.2
-        # else:
-        #    self._logger.info("Running SI 1")
-        #    si_1 = np.full(self._shape, 999.0)
+        else:
+            # condition 1
+            mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
+            si_6[mask_1] = 0
 
-        # if self.hydro_domain_flag:
-        #         si_6 = np.where(~np.isnan(self.hydro_domain_480), si_6, np.nan)
+            # condition 2
+            mask_2 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 10.9
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 15.8)
+            si_6[mask_2] = (
+                0.2041
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_2])
+            ) - 2.2245
+
+            # condition 3
+            mask_3 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 15.8
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 22.7)
+            si_6[mask_3] = 1
+
+            # condition 4
+            mask_4 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 22.7
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 25.3)
+            si_6[mask_4] = (
+                -0.1923
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_4])
+            ) + 5.3654
+
+            # condition 5
+            mask_5 = (
+                self.v6_mean_weekly_temp_reservoir_spawning_season > 25.3
+            ) & (self.v6_mean_weekly_temp_reservoir_spawning_season <= 30)
+            si_6[mask_5] = (
+                -0.1064
+                * (self.v6_mean_weekly_temp_reservoir_spawning_season[mask_5])
+            ) + 3.1915
+
+            # condition 6
+            mask_6 = self.v6_mean_weekly_temp_reservoir_spawning_season > 30
+            si_6[mask_6] = 0
+
+        if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in SI logic!")
 
         return si_6
 
     def calculate_si_7(self) -> np.ndarray:
-        """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON."""
-        # Use Curve A - Spawning season April-June in Upper Barataria
+        """% AREA VEGETATED AND ≤ 2m DEEP DURING SPAWNING SEASON (APR - JUN)."""
+
         self._logger.info("Running SI 7")
         si_7 = self.template.copy()
 
-        # Note: equations use % values not decimals
-        # self.v7a_pct_vegetated /= 100
-
+        # use Curve A
         # condition 1
         mask_1 = (self.v7a_pct_vegetated <= 10) & (
             self.v7b_water_depth_spawning_season <= 2
@@ -294,21 +427,18 @@ class GizzardShadHSI:
         )
         si_7[mask_2] = (0.04 * self.v7a_pct_vegetated[mask_2]) + 0.4
 
-        # condition 3 USE CURVE A
+        # condition 3
         mask_3 = (self.v7a_pct_vegetated > 15) & (
             self.v7b_water_depth_spawning_season <= 2
-        )  # & (self.v7_pct_vegetated_and_2m_depth_spawning_season <= 30)
+        )
         si_7[mask_3] = 1
 
+        # condition 4
         mask_4 = self.v7b_water_depth_spawning_season > 2
         si_7[mask_4] = 0
 
-        # Check for unhandled condition with tolerance
         if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-
-        # if self.hydro_domain_flag:
-        #         si_7 = np.where(~np.isnan(self.hydro_domain_480), si_7, np.nan)
 
         return si_7
 
@@ -333,23 +463,16 @@ class GizzardShadHSI:
                     num_invalid,
                 )
 
-        # Set up components and equations
-        food_component: np.ndarray = field(init=False)
-        water_quality: np.ndarray = field(init=False)
-        reproduction: np.ndarray = field(init=False)
+        # individual model components
+        self.food_component = self.si_1  # will be 1 for hec-ras
+        self.water_quality = np.minimum(self.si_3, self.si_4) * self.si_2
+        self.reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
 
-        # TODO: may want to move these outside calculate_overall_suitability() into their own methods
-        # so they can be accessed individually
-        food_component = self.si_1  # will be 1 for hec-ras
-        water_quality = (
-            np.minimum(self.si_3, self.si_4) * self.si_2
-        )  # will be 1 for hec-ras
-        reproduction = (self.si_5 + self.si_6 + self.si_7) / 3
-
-        # hsi = reproduction
+        # combine individual suitability indices
         hsi = np.minimum(
-            food_component, np.minimum(water_quality, reproduction)
-        )  # will be reproduction for hec-ras
+            self.food_component,
+            np.minimum(self.water_quality, self.reproduction),
+        )
 
         # Note on np.minimum(): If one of the elements being compared is NaN (Not a Number), NaN is returned.
         # Check the final HSI array for invalid values

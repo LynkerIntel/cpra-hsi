@@ -7,7 +7,7 @@ raster_data:
   veg_keys: "/Users/dillonragar/data/cpra/AMP_10km_LULC_60m_Nearest_Resample/AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf"
   wpu_grid: /Users/dillonragar/Library/CloudStorage/OneDrive-LynkerTechnologies/2024 CPRA Atchafalaya DSS/data/WPU_id_60m.tif # 60m domain with pixels labeled by WPU
   salinity_raster: #str (optional)
-  veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S06_AB_O_ANN_01_25_DATA_20250321_145846/AMP_VEG_S06_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
+  #veg_type_path: "/Users/dillonragar/data/cpra/AMP_VEG_S06_AB_O_ANN_01_25_DATA_20250321_145846/AMP_VEG_S06_AB_O_ANN_01_25_DATA.nc" # VegTransition output folder
   initial_maturity:  "/Users/dillonragar/data/tmp/cpra/AMP_Tree_Age/AMP_Tree_Age.tif"
   
 polygon_data:
@@ -26,17 +26,9 @@ metadata:
   model: VEGH
   sea_level_condition: "328" # 1.08ft or 0.328m SLR
   flow_scenario: "W" #"W"? # scenario info for plots and metadata
-  group: G511
+  group: G900
   wpu: ARS
+  output_version: v12
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"
-
-
-# Scenario codes (20250116)
-# 01: Dry, base
-# 02: Dry, +2' SLR
-# 03: Moderate, base
-# 04: Moderate, +2' SLR
-# 05: Wet, base
-# 06: Wet, +2' SLR

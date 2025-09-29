@@ -28,6 +28,7 @@ metadata:
   flow_scenario: "W" #"W"? # scenario info for plots and metadata
   group: TEST
   wpu: ARS
+  output_version: v # code version OR a specific output version
 
 output:
   output_base: "/Users/dillonragar/data/cpra/"

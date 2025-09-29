@@ -226,6 +226,8 @@ class HSI(vt.VegTransition):
         )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
+        self.water_lvl_change = None  # ideal
+        self.is_veg_inundated = None  # ideal
         # ideal HEC-RAS SI6 = 20 degrees
         self.mean_weekly_temp_reservoir_spawning_season = None
 
@@ -269,6 +271,7 @@ class HSI(vt.VegTransition):
         self.avg_spawning_temp_in_bw_embryo = None
         self.min_do_in_midsummer_temp_strata = None
         self.min_do_in_spawning_bw = None
+        self.max_salinity_gs = None
 
         self._create_output_file()
 

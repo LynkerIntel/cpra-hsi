@@ -49,11 +49,13 @@ class BlackBearHSI:
     def from_hsi(cls, hsi_instance):
         """Create BlackBearHSI instance from an HSI instance."""
 
-        def safe_divide(array: np.ndarray, divisor: int = 100) -> np.ndarray:
-            """Helper function to divide arrays when decimal values are required
+        def safe_multiply(
+            array: np.ndarray, multiplier: int = 100
+        ) -> np.ndarray:
+            """Helper function to multiply arrays when different units are required
             by the SI logic. In the case of None (no array) it is preserved and
             passed to SI methods."""
-            return array / divisor if array is not None else None
+            return array * multiplier if array is not None else None
 
         return cls(
             v1_pct_area_wetland_cover=hsi_instance.pct_vegetated,
@@ -63,7 +65,9 @@ class BlackBearHSI:
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
             v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
             v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_hard_mast,
-            v8_pct_eval_area_inside_zones=hsi_instance.human_influence,
+            v8_pct_eval_area_inside_zones=safe_multiply(
+                hsi_instance.human_influence
+            ),
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )

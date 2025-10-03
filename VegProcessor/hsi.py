@@ -1172,33 +1172,28 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
-        # Open existing NetCDF file
         with xr.open_dataset(self.netcdf_filepath) as ds:
 
             for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
                 if data is not None:  # only write arrays that have data
+                    # Convert bool dtype to int8 for NetCDF compatibility
+                    netcdf_dtype = np.int8 if dtype == bool else dtype
+
                     # Check if the variable exists in the dataset, if not, initialize it
                     if var_name not in ds:
-                        shape = (
-                            len(ds.time),
-                            len(ds.y),
-                            len(ds.x),
-                        )
-                        default_value = False if dtype == bool else np.nan
+                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        default_value = 0 if dtype == bool else np.nan
                         ds[var_name] = (
                             ["time", "y", "x"],
-                            np.full(shape, default_value, dtype=dtype),
+                            np.full(shape, default_value, dtype=netcdf_dtype),
                             nc_attrs,
                         )
 
-                    # Handle 'condition' variables (booleans)
+                    # Convert boolean data to int8 (0 and 1)
                     if dtype == bool:
-                        data = np.nan_to_num(data, nan=False).astype(bool)
+                        data = np.nan_to_num(data, nan=False).astype(np.int8)
 
-                    # Assign the data to the dataset for the specific time step
-                    ds[var_name].loc[{"time": timestep}] = data.astype(
-                        ds[var_name].dtype
-                    )
+                    ds[var_name].loc[{"time": timestep}] = data.astype(netcdf_dtype)
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a", encoding=encoding)

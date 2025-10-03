@@ -1202,10 +1202,6 @@ class HSI(vt.VegTransition):
                     "units",
                 ],
             )
-            # if "spatial_ref" in ds_out.coords:
-            #     # rename it to crs which is more common in CF conventions
-            #     ds_out = ds_out.rename({"spatial_ref": "crs"})
-            #     self._logger.info("Renamed 'spatial_ref' coordinate to 'crs'.")
 
             ds_out = ds_out.load()
 

@@ -181,6 +181,7 @@ class HSI(vt.VegTransition):
 
         # HSI models
         self.alligator = None
+        self.catfish = None
         self.crawfish = None
         self.baldeagle = None
         self.gizzardshad = None
@@ -259,19 +260,37 @@ class HSI(vt.VegTransition):
         self.disturbance = None  # always ideal
 
         # black-crappie
-        self.max_monthly_avg_summer_turbidity = None
-        self.pct_cover_in_midsummer_pools_overflow_bw = None  # set to ideal
-        self.stream_gradient = None  # set to ideal
-        self.avg_vel_summer_flow_pools_bw = None
-        self.pct_pools_bw_avg_spring_summer_flow = None
-        self.ph_year = None  # set to ideal
-        self.most_suit_temp_in_midsummer_pools_bw_adult = None
-        self.most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        self.avg_midsummer_temp_in_pools_bw_fry = None
-        self.avg_spawning_temp_in_bw_embryo = None
-        self.min_do_in_midsummer_temp_strata = None
-        self.min_do_in_spawning_bw = None
-        self.max_salinity_gs = None
+        self.blackcrappie_max_monthly_avg_summer_turbidity = None
+        self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
+            None  # set to ideal
+        )
+        self.blackcrappie_stream_gradient = None  # set to ideal
+        self.blackcrappie_avg_vel_summer_flow_pools_bw = None
+        self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
+        self.blackcrappie_ph_year = None  # set to ideal
+        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
+        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
+        self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
+        self.blackcrappie_min_do_in_midsummer_temp_strata = None
+        self.blackcrappie_min_do_in_spawning_bw = None
+        self.blackcrappie_max_salinity_gs = None
+
+        # catfish
+        self.catfish_pct_pools_avg_summer_flow = None
+        self.catfish_pct_cover_in_summer_pools_bw = None
+        self.catfish_fpp_substrate_avg_summer_flow = None
+        self.catfish_avg_temp_in_midsummer_pools_bw = None
+        self.catfish_grow_season_length_frost_free_days = None
+        self.catfish_max_monthly_avg_summer_turbidity = None
+        self.catfish_avg_min_do_in_midsummer_pools_bw = None
+        self.catfish_max_summer_salinity = None
+        self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
+        self.catfish_max_salinity_spawning_embryo = None
+        self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
+        self.catfish_max_summer_salinity_fry_juvenile = None
+        self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
+        self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file()
 

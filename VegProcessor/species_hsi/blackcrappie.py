@@ -66,19 +66,19 @@ class BlackCrappieHSI:
         """Create Riverine Black Crappie HSI instance from an HSI instance."""
 
         return cls(
-            v1_max_monthly_avg_summer_turbidity=hsi_instance.max_monthly_avg_summer_turbidity,
-            v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
-            v3_stream_gradient=hsi_instance.stream_gradient,  # set to ideal
-            v4_avg_vel_summer_flow_pools_bw=hsi_instance.avg_vel_summer_flow_pools_bw,
-            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_bw_avg_spring_summer_flow,
-            v7_ph_year=hsi_instance.ph_year,  # set to ideal
-            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.most_suit_temp_in_midsummer_pools_bw_adult,
-            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.most_suit_temp_in_midsummer_pools_bw_juvenile,
-            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.avg_midsummer_temp_in_pools_bw_fry,
-            v11_avg_spawning_temp_in_bw_embryo=hsi_instance.avg_spawning_temp_in_bw_embryo,
-            v12_min_do_in_midsummer_temp_strata=hsi_instance.min_do_in_midsummer_temp_strata,
-            v13_min_do_in_spawning_bw=hsi_instance.min_do_in_spawning_bw,
-            v14_max_salinity_gs=hsi_instance.max_salinity_gs,
+            v1_max_monthly_avg_summer_turbidity=hsi_instance.blackcrappie_max_monthly_avg_summer_turbidity,
+            v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
+            v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
+            v4_avg_vel_summer_flow_pools_bw=hsi_instance.blackcrappie_avg_vel_summer_flow_pools_bw,
+            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.blackcrappie_pct_pools_bw_avg_spring_summer_flow,
+            v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
+            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult,
+            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile,
+            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.blackcrappie_avg_midsummer_temp_in_pools_bw_fry,
+            v11_avg_spawning_temp_in_bw_embryo=hsi_instance.blackcrappie_avg_spawning_temp_in_bw_embryo,
+            v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
+            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,
+            v14_max_salinity_gs=hsi_instance.blackcrappie_max_salinity_gs,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -684,7 +684,7 @@ class BlackCrappieHSI:
                 "Maximum salinity during growing season is not provided. Setting index to 1."
             )
             si_14[~np.isnan(si_14)] = 1
-        
+
         else:
             # condition 1
             mask_1 = self.v14_max_salinity_gs < 0.1
@@ -768,7 +768,11 @@ class BlackCrappieHSI:
 
         # water quality initial equation
         self.wq_init = (
-            2 * (self.wq_tcr_adj) + 2 * (self.si_12) + self.si_7 + self.si_1 + self.si_14
+            2 * (self.wq_tcr_adj)
+            + 2 * (self.si_12)
+            + self.si_7
+            + self.si_1
+            + self.si_14
         ) / 7
 
         # condition 2

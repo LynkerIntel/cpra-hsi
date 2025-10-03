@@ -41,7 +41,21 @@ from species_hsi import (
 
 
 class HSI(vt.VegTransition):
-    """HSI model framework."""
+    """HSI model framework.
+
+    This class handles the creation and execution of HSI models, using
+    methods from the inherited `VetTransition` parent class to provide
+    the execution framwork, and HSI variables defined below. HSI variables
+    can be static (i.e. calculated before model steps forward and used for
+    all timestep) or they can be dynamic (updated for each timestep).
+
+    The HSI framework is designed to run with highly varying numbers of
+    input variables. All variables are initialized as "None" and either
+    replace with actual data, or replaced with stand-in values during
+    execution. The stand-in values are eiher "1" indicating an ideal
+    SI (suitability index score), or an empircal value provided  to the
+    S.I. function that results in a approximate scoring.
+    """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
         """

@@ -1,0 +1,37 @@
+# Example VegTransition Configuration File
+# Copy this file to create your own configuration:
+#   cp veg_config.example.yaml veg_config_myrun.yaml
+# Then edit the paths and parameters to match your local setup
+
+raster_data:
+  dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
+  wse_domain_raster: # HECRAS_domain_60m.tif - HEC-RAS model domain mask
+  netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
+  veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
+  veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
+  wpu_grid: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
+  salinity_raster: # Optional: path to salinity raster
+  initial_maturity: # AMP_Tree_Age.tif - Initial forest maturity/age raster
+
+polygon_data:
+  wpu_polygons: # Atchafalaya MP WPUs.shp - Water Planning Unit polygon shapefile
+
+simulation:
+  water_year_start: 1963 # Start year of simulation
+  water_year_end: 1972 # End year of simulation
+  wse_sequence_input: true # true if using synthetic/analog WSE sequence, false for continuous
+  years_mapping: # Maps simulation years to observed data years (for analog sequences)
+    1: 2006
+    3: 2022
+    5: 2020
+
+metadata:
+  model: VEGH # Model identifier (VegTransition with HEC-RAS input)
+  sea_level_condition: "000" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
+  flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
+  group: G900 # Model group identifier
+  wpu: ARS # Water Planning Unit identifier
+  output_version: v12 # Output version for tracking
+
+output:
+  output_base: # output/ - Base directory for all model outputs

@@ -837,7 +837,7 @@ class HSI(vt.VegTransition):
         ------
         da_coarse : xr.DataArray
             A water depth data, averaged over a list of months (if provided)
-            and then downscaled to 480m.
+            and then upscaled to 480m.
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
@@ -1044,16 +1044,6 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    # def create_qc_arrays(self):
-    #     """
-    #     Create QC arrays with variables defined by JV, used to ensure
-    #     vegetation transition ruleset is working as intended.
-    #     """
-    #     self._logger.info("Creating HSI QA/QC arrays.")
-    #     self.qc_influence_towns = utils.qc_influence_towns(
-    #         self.salinity,
-    #     )
-
     def _create_output_file(self):
         """HSI: Create NetCDF file for data output.
 
@@ -1098,14 +1088,6 @@ class HSI(vt.VegTransition):
         }
 
         ds = xr.Dataset(
-            # initialize w/ no data vars
-            # {
-            #     "initial_conditions": (
-            #         ["time", "y", "x"],
-            #         data_values,
-            #         {"grid_mapping": "crs"},
-            #     ),  # Link CRS variable
-            # },
             coords={
                 "x": (
                     "x",
@@ -1193,7 +1175,9 @@ class HSI(vt.VegTransition):
                     if dtype == bool:
                         data = np.nan_to_num(data, nan=False).astype(np.int8)
 
-                    ds[var_name].loc[{"time": timestep}] = data.astype(netcdf_dtype)
+                    ds[var_name].loc[{"time": timestep}] = data.astype(
+                        netcdf_dtype
+                    )
 
         ds.close()
         ds.to_netcdf(self.netcdf_filepath, mode="a", encoding=encoding)

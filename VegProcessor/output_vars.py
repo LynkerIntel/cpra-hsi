@@ -585,6 +585,16 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_blh": [
+            hsi.pct_blh,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
         "pct_swamp_bottom_hardwood": [
             hsi.pct_swamp_bottom_hardwood,
             np.float32,

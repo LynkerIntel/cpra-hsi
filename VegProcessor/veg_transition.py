@@ -1387,6 +1387,13 @@ class VegTransition:
         self.qc_june_water_depth = None
         gc.collect()
 
+    def parse_hydro_input(self, path):
+        """
+        This method parses the input data file names to determine
+        model parameters.
+        """
+        raise NotImplementedError
+
 
 class _TimestepFilter(logging.Filter):
     """A roundabout way to inject the current timestep into log records.

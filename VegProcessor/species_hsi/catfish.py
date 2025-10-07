@@ -266,7 +266,7 @@ class RiverineCatfishHSI:
 
         if self.v5_avg_temp_in_midsummer_pools_bw is None:
             self._logger.info(
-                "Average midsummer water temperature within pools, backwaters not provided. Setting index to 1."
+                "Average midsummer water temperature within pools, backwaters is not provided. Setting index to 1."
             )
             si_5[~np.isnan(si_5)] = 1
 
@@ -312,10 +312,10 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
-        # Set to ideal
+        # If using, set to ideal
         if self.v6_grow_season_length_frost_free_days is None:
             self._logger.info(
-                "Length of agricultural growing season assumes ideal conditions. Setting index to 1."
+                "Length of agricultural growing season is not provided. Setting index to 1."
             )
             si_6[~np.isnan(si_6)] = 1
 
@@ -392,7 +392,7 @@ class RiverineCatfishHSI:
         if self.v8_avg_min_do_in_midsummer_pools_bw is None:
             self._logger.info(
                 "Avg min DO levels within pools, backwaters, during midsummer"
-                "assumes ideal conditions. Setting index to 1."
+                "is not provided. Setting index to 1."
             )
             si_8[~np.isnan(si_8)] = 1
 
@@ -426,7 +426,7 @@ class RiverineCatfishHSI:
 
         if self.v9_max_summer_salinity is None:
             self._logger.info(
-                "Maximum salinity during summer (Adult) assumes ideal conditions. Setting index to 1."
+                "Maximum salinity during summer (Adult) is not provided. Setting index to 1."
             )
             si_9[~np.isnan(si_9)] = 1
 
@@ -466,7 +466,7 @@ class RiverineCatfishHSI:
         if self.v10_avg_temp_in_spawning_embryo_pools_bw is None:
             self._logger.info(
                 "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)"
-                "assumes ideal conditions. Setting index to 1."
+                "is not provided. Setting index to 1."
             )
             si_10[~np.isnan(si_10)] = 1
 
@@ -515,7 +515,7 @@ class RiverineCatfishHSI:
 
         if self.v11_max_salinity_spawning_embryo is None:
             self._logger.info(
-                "Maximum salinity during spawning and embryo development (Embryo) assumes ideal conditions."
+                "Maximum salinity during spawning and embryo development (Embryo) is not provided."
                 "Setting index to 1."
             )
             si_11[~np.isnan(si_11)] = 1
@@ -610,7 +610,7 @@ class RiverineCatfishHSI:
 
         if self.v13_max_summer_salinity_fry_juvenile is None:
             self._logger.info(
-                "Maximum salinity during summer (Fry, Juvenile). Setting index to 1."
+                "Maximum salinity during summer (Fry, Juvenile) is not provided. Setting index to 1."
             )
             si_13[~np.isnan(si_13)] = 1
 
@@ -776,6 +776,14 @@ class RiverineCatfishHSI:
         self.cc = (self.si_1 * self.si_2 * self.si_18) ** (1 / 3)
 
         # water quality component (wq)
+        if self.v5_avg_temp_in_midsummer_pools_bw is None:
+            self._logger.info(
+                "Temperature data unavailable. Using SI_6 for WQ calculation."
+            )
+            wq_term1 = 2 * self.si_6
+        else:
+            # The data is available, use the standard WQ equation
+            wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
         self.wq = (
             (2 * (self.si_5 + self.si_12 + self.si_14) / (3))
             + self.si_7

@@ -75,50 +75,7 @@ class HSI(vt.VegTransition):
         with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
-        # fetch raster data paths
-        self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get(
-            "wse_directory_path"
-        )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
-        )
-        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
-        self.veg_type_path = self.config["raster_data"].get("veg_type_path")
-        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
-
-        self.flotant_marsh_path = self.config["raster_data"].get(
-            "flotant_marsh_raster"
-        )
-        # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
-
-        # simulation
-        self.water_year_start = self.config["simulation"].get(
-            "water_year_start"
-        )
-        self.water_year_end = self.config["simulation"].get("water_year_end")
-        self.run_hsi = self.config["simulation"].get("run_hsi")
-        self.analog_sequence = self.config["simulation"].get(
-            "wse_sequence_input"
-        )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
-        )
-        self.blue_crab_lookup_path = self.config["simulation"].get(
-            "blue_crab_lookup_table"
-        )
-        self.years_mapping = self.config["simulation"].get("years_mapping")
-        self.testing_radius = self.config["simulation"].get("testing_radius")
-
-        # metadata
-        self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
-
-        # output
-        self.output_base_dir = self.config["output"].get("output_base")
+        self._load_config_attributes()
 
         # Pretty-print the configuration
         config_pretty = yaml.dump(
@@ -307,6 +264,53 @@ class HSI(vt.VegTransition):
         self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file()
+
+    def _load_config_attributes(self):
+        """Load configuration attributes from the config dictionary."""
+        # fetch raster data paths
+        self.dem_path = self.config["raster_data"].get("dem_path")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.wse_domain_path = self.config["raster_data"].get(
+            "wse_domain_raster"
+        )
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_type_path = self.config["raster_data"].get("veg_type_path")
+        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
+        self.salinity_path = self.config["raster_data"].get("salinity_raster")
+
+        self.flotant_marsh_path = self.config["raster_data"].get(
+            "flotant_marsh_raster"
+        )
+        # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # simulation
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
+        self.water_year_end = self.config["simulation"].get("water_year_end")
+        self.run_hsi = self.config["simulation"].get("run_hsi")
+        self.analog_sequence = self.config["simulation"].get(
+            "wse_sequence_input"
+        )
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
+        )
+        self.blue_crab_lookup_path = self.config["simulation"].get(
+            "blue_crab_lookup_table"
+        )
+        self.years_mapping = self.config["simulation"].get("years_mapping")
+        self.testing_radius = self.config["simulation"].get("testing_radius")
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
+
+        # output
+        self.output_base_dir = self.config["output"].get("output_base")
 
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.

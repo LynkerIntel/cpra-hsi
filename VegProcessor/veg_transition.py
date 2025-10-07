@@ -513,7 +513,8 @@ class VegTransition:
         date_format: str = "%Y_%m_%d",
         analog_sequence: bool = True,
     ) -> xr.Dataset:
-        """
+        """DEPRECATED
+
         Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
         uses lazy-loading via Dask.
 

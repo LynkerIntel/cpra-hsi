@@ -77,31 +77,6 @@ class HSI(vt.VegTransition):
 
         self._load_config_attributes()
 
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config,
-            default_flow_style=False,
-            sort_keys=False,
-        )
-
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
-
-        self.file_params = {
-            "model": self.metadata.get("model"),
-            "water_year": "WY99",  # default for now, may be needed
-            "sea_level_condition": self.metadata.get("sea_level_condition"),
-            "flow_scenario": self.metadata.get("flow_scenario"),
-            "group": self.metadata.get("group"),
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": (
-                f"01_{str(sim_length + 1).zfill(2)}"
-            ),  # 00 start (initial conditions)
-            "output_version": self.metadata.get("output_version"),
-        }
-
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
@@ -311,6 +286,24 @@ class HSI(vt.VegTransition):
 
         # output
         self.output_base_dir = self.config["output"].get("output_base")
+
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get("model"),
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": (
+                f"01_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
+        }
 
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.

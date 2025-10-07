@@ -1158,10 +1158,9 @@ class HSI(vt.VegTransition):
 
             for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
                 if data is not None:  # only write arrays that have data
-                    # Convert bool dtype to int8 for NetCDF compatibility
                     netcdf_dtype = np.int8 if dtype == bool else dtype
 
-                    # Check if the variable exists in the dataset, if not, initialize it
+                    # if the var exists in the dataset, if not, initialize it
                     if var_name not in ds:
                         shape = (len(ds.time), len(ds.y), len(ds.x))
                         default_value = 0 if dtype == bool else np.nan
@@ -1171,7 +1170,7 @@ class HSI(vt.VegTransition):
                             nc_attrs,
                         )
 
-                    # Convert boolean data to int8 (0 and 1)
+                    # boolean to int8 (0 and 1)
                     if dtype == bool:
                         data = np.nan_to_num(data, nan=False).astype(np.int8)
 

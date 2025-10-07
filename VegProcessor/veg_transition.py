@@ -186,6 +186,17 @@ class VegTransition:
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
 
+        # init qc arrays
+        self.qc_annual_mean_salinity = None
+        self.qc_annual_inundation_depth = None
+        self.qc_annual_inundation_duration = None
+        self.qc_growing_season_depth = None
+        self.qc_growing_season_inundation = None
+        self.qc_march_water_depth = None
+        self.qc_april_water_depth = None
+        self.qc_may_water_depth = None
+        self.qc_june_water_depth = None
+
         self._create_output_file()
 
     def _setup_logger(self, log_level=logging.INFO):

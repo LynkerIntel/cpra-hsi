@@ -903,6 +903,9 @@ def parse_hydro_input(path) -> dict[str, str]:
     Expected filename format:
     AMP_HEC_WY06_000_X_99_99_DLY_G900_AB_O_STAGE_V1.nc
 
+    For now it just returns the model identifier,
+    as the other components are set manually in the config.
+
     Parameters:
     -----------
     ds (str)

@@ -792,6 +792,7 @@ class VegTransition:
         # extract height var as da
         height_da = ds["height"]
 
+        # handle varied CRS metadata locations between model files
         if self.file_params["hydro_source_model"] == "D3D":
             # D3D: Get CRS from crs variable's crs_wkt attribute
             crs_wkt = ds["crs"].attrs.get("crs_wkt")

@@ -67,7 +67,7 @@ class AlligatorHSI:
                 hsi_instance.pct_brackish_marsh
             ),
             v4_edge=hsi_instance.edge,
-            v5_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+            v5_mean_annual_salinity=None,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )

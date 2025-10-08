@@ -76,49 +76,7 @@ class VegTransition:
         with open(config_file, "r") as file:
             self.config = yaml.safe_load(file)
 
-        # fetch raster data paths
-        self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get(
-            "wse_directory_path"
-        )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
-        )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
-        )
-        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
-        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
-        self.initial_maturity_path = self.config["raster_data"].get(
-            "initial_maturity"
-        )
-
-        # polygon data
-        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
-
-        # simulation
-        self.water_year_start = self.config["simulation"].get(
-            "water_year_start"
-        )
-        self.water_year_end = self.config["simulation"].get("water_year_end")
-        self.netcdf_hydro = self.config["simulation"].get("daily_hydro")
-        self.years_mapping = self.config["simulation"].get("years_mapping")
-
-        # metadata
-        self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
-
-        # output
-        self.output_base_dir = self.config["output"].get("output_base")
-
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
+        self._load_config_attributes()
 
         # NetCDF data output
         sim_length = self.water_year_end - self.water_year_start
@@ -259,6 +217,52 @@ class VegTransition:
         except subprocess.CalledProcessError as e:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
+
+    def _load_config_attributes(self):
+        """Load configuration attributes from the config dictionary."""
+        # fetch raster data paths
+        self.dem_path = self.config["raster_data"].get("dem_path")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.wse_domain_path = self.config["raster_data"].get(
+            "wse_domain_raster"
+        )
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
+        )
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
+        self.salinity_path = self.config["raster_data"].get("salinity_raster")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.initial_maturity_path = self.config["raster_data"].get(
+            "initial_maturity"
+        )
+
+        # polygon data
+        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
+
+        # simulation
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
+        self.water_year_end = self.config["simulation"].get("water_year_end")
+        self.netcdf_hydro = self.config["simulation"].get("daily_hydro")
+        self.years_mapping = self.config["simulation"].get("years_mapping")
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
+
+        # output
+        self.output_base_dir = self.config["output"].get("output_base")
+
+        # Pretty-print the configuration
+        config_pretty = yaml.dump(
+            self.config, default_flow_style=False, sort_keys=False
+        )
 
     def step(self, timestep: pd.DatetimeTZDtype):
         """Advance the transition model by one step.

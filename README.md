@@ -116,10 +116,10 @@ To execute the vegetation transition model:
 from VegProcessor.veg_transition import VegTransition
 
 # Initialize the model with a config file
-veg_model = VegTransition(config_file="./configs/veg_config.yaml")
+Veg = VegTransition(config_file="./configs/veg_config.yaml")
 
 # Run the model
-veg_model.run()
+Veg.run()
 Veg.post_process() # optionally produce summaries
 ```
 ##### These steps are demonstrated in `./VegProcessor/run.ipynb`
@@ -130,10 +130,10 @@ Keep in mind that the HSI models depend on the `VegTransition` output, and must 
 from VegProcessor.hsi import HSI
 
 # Initialize the HSI model
-hsi_model = HSI(config_file="./configs/hsi_config.yaml")
+hsi = HSI(config_file="./configs/hsi_config.yaml")
 
 # Run the model
-hsi_model.run()
+hsi.run()
 hsi.post_process() # optionally produce summaries
 ```
 ##### These steps are demonstrated in `./VegProcessor/run.ipynb`
@@ -143,12 +143,12 @@ hsi.post_process() # optionally produce summaries
 
 - Logs are stored in `output/run-metadata/simulation.log`
 - Check logs if the model fails to run or if there are errors in output files.
-- If running `VegTransition` or `HSI` in a notebook, the class instance (i.e. `hsi_model` as defind above) holds all of the interediate and QA/QC arrays as attributes. For example: `hsi_model.alligator.si_1` is the location of suitability index #1 array for alligator. This array be be visualized by:
+- If running `VegTransition` or `HSI` in a notebook, the class instance (i.e. `hsi` as defined above) holds all of the intermediate and QA/QC arrays as attributes. For example: `hsi.alligator.si_1` is the location of suitability index #1 array for alligator. This array be be visualized by:
 
     ```python
     import matplotlib.pyplot as plt
 
-    plt.matshow(hsi_model.alligator.si_1) # np.ndarray
+    plt.matshow(hsi.alligator.si_1) # np.ndarray
     plt.colorbar()
     ```
 

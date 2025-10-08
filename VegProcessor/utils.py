@@ -553,7 +553,7 @@ def generate_filename(
         Dictionary containing optional keys:
         - model : str
         - scenario : str
-        - group : str
+        - output_group : str
         - wpu : str
         - io_type : str
         - time_freq : str
@@ -583,7 +583,7 @@ def generate_filename(
         "flow_scenario",
         "year_range",
         "time_freq",
-        "group",
+        "output_group",
         "wpu",
         "io_type",
         "output_version",

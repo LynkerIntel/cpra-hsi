@@ -53,7 +53,7 @@ class HSI(vt.VegTransition):
     input variables. All variables are initialized as "None" and either
     replace with actual data, or replaced with stand-in values during
     execution. The stand-in values are either "1" indicating an ideal
-    SI (suitability index score), or an empircal value provided  to the
+    SI (suitability index score), or an empirical value provided to the
     S.I. function that results in a approximate scoring.
     """
 

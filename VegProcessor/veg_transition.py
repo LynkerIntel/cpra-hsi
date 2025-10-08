@@ -76,7 +76,75 @@ class VegTransition:
         with open(config_file, "r") as file:
             self.config = yaml.safe_load(file)
 
-        self._load_config_attributes()
+        # fetch raster data paths
+        self.dem_path = self.config["raster_data"].get("dem_path")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.wse_domain_path = self.config["raster_data"].get(
+            "wse_domain_raster"
+        )
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
+        )
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
+        self.salinity_path = self.config["raster_data"].get("salinity_raster")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.initial_maturity_path = self.config["raster_data"].get(
+            "initial_maturity"
+        )
+
+        # polygon data
+        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
+
+        # simulation
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
+        self.water_year_end = self.config["simulation"].get("water_year_end")
+        self.netcdf_hydro = self.config["simulation"].get("daily_hydro")
+        self.years_mapping = self.config["simulation"].get("years_mapping")
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
+
+        # output
+        self.output_base_dir = self.config["output"].get("output_base")
+
+        # Pretty-print the configuration
+        config_pretty = yaml.dump(
+            self.config, default_flow_style=False, sort_keys=False
+        )
+
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get(
+                "model"
+            ),  # which model to run: one of VEG or HSI
+            "hydro_source_model": self.metadata.get(
+                "hydro_source_model"
+            ),  # one of: HEC, MIK, or D3D
+            "hydro_source_model_version": self.metadata.get(
+                "hydro_source_model_version"
+            ),  # model version, i.e. V1
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
+        }
 
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
@@ -90,6 +158,9 @@ class VegTransition:
 
         # load sequence mapping (used for daily hydro data input)
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
+
+        # Log the configuration
+        self._logger.info("Loaded Configuration:\n%s", config_pretty)
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
@@ -123,17 +194,6 @@ class VegTransition:
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
         # self.pct_no_mast = template
-
-        # init qc arrays
-        self.qc_annual_mean_salinity = None
-        self.qc_annual_inundation_depth = None
-        self.qc_annual_inundation_duration = None
-        self.qc_growing_season_depth = None
-        self.qc_growing_season_inundation = None
-        self.qc_march_water_depth = None
-        self.qc_april_water_depth = None
-        self.qc_may_water_depth = None
-        self.qc_june_water_depth = None
 
         self._create_output_file()
 
@@ -196,71 +256,6 @@ class VegTransition:
         except subprocess.CalledProcessError as e:
             self._logger.warning("Unable to fetch Git commit hash: %s", e)
             return "unknown"
-
-    def _load_config_attributes(self):
-        """Load configuration attributes from the config dictionary."""
-        # fetch raster data paths
-        self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get(
-            "wse_directory_path"
-        )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
-        )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
-        )
-        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
-        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
-        self.initial_maturity_path = self.config["raster_data"].get(
-            "initial_maturity"
-        )
-
-        # polygon data
-        self.wpu_polygons = self.config["polygon_data"].get("wpu_polygons")
-
-        # simulation
-        self.water_year_start = self.config["simulation"].get(
-            "water_year_start"
-        )
-        self.water_year_end = self.config["simulation"].get("water_year_end")
-        self.netcdf_hydro = self.config["simulation"].get("daily_hydro")
-        self.years_mapping = self.config["simulation"].get("years_mapping")
-
-        # metadata
-        self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
-
-        # output
-        self.output_base_dir = self.config["output"].get("output_base")
-
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
-
-        self.file_params = {
-            "model": self.metadata.get("model"),
-            "water_year": "WY99",  # default for now, may be needed
-            "sea_level_condition": self.metadata.get("sea_level_condition"),
-            "flow_scenario": self.metadata.get("flow_scenario"),
-            "group": self.metadata.get("group"),
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": (
-                f"00_{str(sim_length + 1).zfill(2)}"
-            ),  # 00 start (initial conditions)
-            "output_version": self.metadata.get("output_version"),
-        }
-
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config, default_flow_style=False, sort_keys=False
-        )
-        self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
     def step(self, timestep: pd.DatetimeTZDtype):
         """Advance the transition model by one step.
@@ -726,6 +721,7 @@ class VegTransition:
     def _load_stage_general(self, water_year: int) -> xr.Dataset:
         """IN PROGRESS
         This is designed to ingest stage data from HEC-RAS, as an annual NetCDF.
+        This function is called at the start of each timestep in the run loop.
 
         It is "general" because it is designed to work for all H&H model inputs:
         HECRAS, MIKE21, and Delf3D.
@@ -737,7 +733,7 @@ class VegTransition:
         in the raw model output. Finally, this data uses the `rio` `reproject_match()` method
         to ensure perfect overlap of the DEM and the hydro data.
 
-        UNIT: Input in feet is converted to meters
+        UNIT: Input in feet is converted to meters???
 
         Parameters
         -----------
@@ -766,61 +762,58 @@ class VegTransition:
             ~((target_range.month == 2) & (target_range.day == 29))
         ]
 
-        nc_dir_path = os.path.join(
+        nc_path = os.path.join(
             self.netcdf_hydro_path,
-            f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/netcdf4_**.nc",
+            f"AMP_{self.hydro_source_model}_WY{analog_year}_{self.metadata['sea_level_condition']}",
+            f"_X_99_99_DLY_{self.group_number}_AB_O_STAGE_{self.hydro_source_model_version}",
         )
-        self._logger.info("Loading files: %s", nc_dir_path)
+        self._logger.info("Loading files: %s", nc_path)
 
         ds = xr.open_dataset(
-            nc_dir_path,
-            # concat_dim="time",
-            # combine="nested",
-            parallel=True,
-            chunks={"time": 10},  # speedup (does not improve memory use)
+            nc_path,
             engine="h5netcdf",
         )
 
-        # # if analog has 366 timesteps (is leap)
-        # if ds.sizes["time"] == 366:
-        #     # use filepath to get actual year
-        #     match = re.search(r"WY(\d{4})", nc_dir_path)
-        #     if match:
-        #         actual_wy = int(match.group(1))
-        #         # print(f"Extracted water year: {actual_wy}")
-        #     else:
-        #         raise ValueError("Water year not found in path.")
+        # if analog has 366 timesteps (is leap)
+        if ds.sizes["time"] == 366:
+            # use filepath to get actual year
+            match = re.search(r"WY(\d{4})", nc_path)
+            if match:
+                actual_wy = int(match.group(1))
+                # print(f"Extracted water year: {actual_wy}")
+            else:
+                raise ValueError("Water year not found in path.")
 
-        #     # assign "actual" datetime to time dim, temporarily,
-        #     # in order to drop feb 29
-        #     full_range = pd.date_range(
-        #         f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
-        #     )
-        #     ds = ds.assign_coords(time=("time", full_range))
-        #     mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
-        #     ds = ds.isel(time=mask)
+            # assign "actual" datetime to time dim, temporarily,
+            # in order to drop feb 29
+            full_range = pd.date_range(
+                f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
+            )
+            ds = ds.assign_coords(time=("time", full_range))
+            mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+            ds = ds.isel(time=mask)
 
-        # # lastly rename to match expected simulation dates, i.e. water year
-        # ds = ds.assign_coords(time=("time", target_range))
-        # ds = ds.rename({"Band1": "height"})
+        # lastly rename to match expected simulation dates, i.e. water year
+        ds = ds.assign_coords(time=("time", target_range))
+        ds = ds.rename({"Band1": "height"})
 
-        # # make crs visible to xarray/rio
-        # crs_obj = ds["transverse_mercator"].spatial_ref
-        # ds = ds.rio.write_crs(crs_obj)
-        # # reproject match to DEM
-        # ds = self._reproject_match_to_dem(ds)
+        # make crs visible to xarray/rio
+        crs_obj = ds["transverse_mercator"].spatial_ref
+        ds = ds.rio.write_crs(crs_obj)
+        # reproject match to DEM
+        ds = self._reproject_match_to_dem(ds)
 
-        # # fill zeros. This step is necessary to get 0 water depth from DEM and missing
-        # # WSE pixels, where missing data indicates "no inundation"
-        # ds = ds.fillna(0)
-        # # after filling zeros for areas with no inundation, apply domain mask,
-        # # so that areas outside of HECRAS domain are not classified as
-        # # dry (na is 0-filled above) when in fact that are outside of the domain.
-        # ds = ds.where(self.hydro_domain)
+        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+        # WSE pixels, where missing data indicates "no inundation"
+        ds = ds.fillna(0)
+        # after filling zeros for areas with no inundation, apply domain mask,
+        # so that areas outside of HECRAS domain are not classified as
+        # dry (na is 0-filled above) when in fact that are outside of the domain.
+        ds = ds.where(self.hydro_domain)
 
         # self._logger.warning("Converting daily hydro: feet to meters")
         # ds["height"] *= 0.3048  # UNIT: feet to meters
-        # return ds
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

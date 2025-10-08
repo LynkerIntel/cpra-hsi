@@ -1,0 +1,37 @@
+# Example HSI Configuration File
+# Copy this file to create your own configuration:
+#   cp hsi_config.example.yaml hsi_config_myrun.yaml
+# Then edit the paths and parameters to match your local setup
+
+raster_data:
+  dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
+  netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
+  wse_domain_raster: # HECRAS_domain_60m.tif - HEC-RAS model domain mask
+  veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
+  veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
+  salinity_raster: # Optional: path to salinity raster
+  veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
+  flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
+
+simulation:
+  water_year_start: 1963 # Start year of simulation
+  water_year_end: 1972 # End year of simulation
+  wse_sequence_input: true # true if using synthetic/analog WSE sequence, false for continuous
+  run_hsi: true # Set to true to run HSI models, false to skip
+  blue_crab_lookup_table: # seine_bluecrab_gamm_table_1dec.csv - Blue crab HSI lookup table
+  years_mapping: # Maps simulation years to observed data years (for analog sequences)
+    1: 2006
+    3: 2022
+    5: 2020
+  testing_radius: null # Optional: set to integer to speed up testing (reduces kernel radius)
+
+metadata:
+  model: HSIH # Model identifier (H indicates HEC-RAS input)
+  sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
+  flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
+  group: G900 # Model group identifier
+  wpu: AB # Water Planning Unit identifier
+  output_version: v13 # Output version for tracking
+
+output:
+  output_base: # output/ - Base directory for all model outputs

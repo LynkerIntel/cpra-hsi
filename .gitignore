@@ -3,3 +3,6 @@
 **/data/tmp/scratch/
 test.ipynb
 hsi_testing.ipynb
+
+VegProcessor/configs/*.yaml
+!VegProcessor/configs/*.example.yaml

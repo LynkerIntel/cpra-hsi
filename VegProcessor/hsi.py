@@ -41,7 +41,21 @@ from species_hsi import (
 
 
 class HSI(vt.VegTransition):
-    """HSI model framework."""
+    """HSI model framework.
+
+    This class handles the creation and execution of HSI models, using
+    methods from the inherited `VegTransition` parent class to provide
+    the execution framework, and HSI variables defined below. HSI variables
+    can be static (i.e. calculated before model steps forward and used for
+    all timestep) or they can be dynamic (updated for each timestep).
+
+    The HSI framework is designed to run with highly varying numbers of
+    input variables. All variables are initialized as "None" and either
+    replace with actual data, or replaced with stand-in values during
+    execution. The stand-in values are either "1" indicating an ideal
+    SI (suitability index score), or an empirical value provided to the
+    S.I. function that results in a approximate scoring.
+    """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
         """
@@ -181,6 +195,7 @@ class HSI(vt.VegTransition):
 
         # HSI models
         self.alligator = None
+        self.catfish = None
         self.crawfish = None
         self.baldeagle = None
         self.gizzardshad = None
@@ -259,19 +274,37 @@ class HSI(vt.VegTransition):
         self.disturbance = None  # always ideal
 
         # black-crappie
-        self.max_monthly_avg_summer_turbidity = None
-        self.pct_cover_in_midsummer_pools_overflow_bw = None  # set to ideal
-        self.stream_gradient = None  # set to ideal
-        self.avg_vel_summer_flow_pools_bw = None
-        self.pct_pools_bw_avg_spring_summer_flow = None
-        self.ph_year = None  # set to ideal
-        self.most_suit_temp_in_midsummer_pools_bw_adult = None
-        self.most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        self.avg_midsummer_temp_in_pools_bw_fry = None
-        self.avg_spawning_temp_in_bw_embryo = None
-        self.min_do_in_midsummer_temp_strata = None
-        self.min_do_in_spawning_bw = None
-        self.max_salinity_gs = None
+        self.blackcrappie_max_monthly_avg_summer_turbidity = None
+        self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
+            None  # set to ideal
+        )
+        self.blackcrappie_stream_gradient = None  # set to ideal
+        self.blackcrappie_avg_vel_summer_flow_pools_bw = None
+        self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
+        self.blackcrappie_ph_year = None  # set to ideal
+        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
+        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
+        self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
+        self.blackcrappie_min_do_in_midsummer_temp_strata = None
+        self.blackcrappie_min_do_in_spawning_bw = None
+        self.blackcrappie_max_salinity_gs = None
+
+        # catfish
+        self.catfish_pct_pools_avg_summer_flow = None
+        self.catfish_pct_cover_in_summer_pools_bw = None
+        self.catfish_fpp_substrate_avg_summer_flow = None
+        self.catfish_avg_temp_in_midsummer_pools_bw = None
+        self.catfish_grow_season_length_frost_free_days = None
+        self.catfish_max_monthly_avg_summer_turbidity = None
+        self.catfish_avg_min_do_in_midsummer_pools_bw = None
+        self.catfish_max_summer_salinity = None
+        self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
+        self.catfish_max_salinity_spawning_embryo = None
+        self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
+        self.catfish_max_summer_salinity_fry_juvenile = None
+        self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
+        self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file()
 
@@ -1011,16 +1044,6 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    # def create_qc_arrays(self):
-    #     """
-    #     Create QC arrays with variables defined by JV, used to ensure
-    #     vegetation transition ruleset is working as intended.
-    #     """
-    #     self._logger.info("Creating HSI QA/QC arrays.")
-    #     self.qc_influence_towns = utils.qc_influence_towns(
-    #         self.salinity,
-    #     )
-
     def _create_output_file(self):
         """HSI: Create NetCDF file for data output.
 
@@ -1065,14 +1088,6 @@ class HSI(vt.VegTransition):
         }
 
         ds = xr.Dataset(
-            # initialize w/ no data vars
-            # {
-            #     "initial_conditions": (
-            #         ["time", "y", "x"],
-            #         data_values,
-            #         {"grid_mapping": "crs"},
-            #     ),  # Link CRS variable
-            # },
             coords={
                 "x": (
                     "x",
@@ -1139,32 +1154,28 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
-        # Open existing NetCDF file
         with xr.open_dataset(self.netcdf_filepath) as ds:
 
             for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
                 if data is not None:  # only write arrays that have data
-                    # Check if the variable exists in the dataset, if not, initialize it
+                    netcdf_dtype = np.int8 if dtype == bool else dtype
+
+                    # if the var exists in the dataset, if not, initialize it
                     if var_name not in ds:
-                        shape = (
-                            len(ds.time),
-                            len(ds.y),
-                            len(ds.x),
-                        )
-                        default_value = False if dtype == bool else np.nan
+                        shape = (len(ds.time), len(ds.y), len(ds.x))
+                        default_value = 0 if dtype == bool else np.nan
                         ds[var_name] = (
                             ["time", "y", "x"],
-                            np.full(shape, default_value, dtype=dtype),
+                            np.full(shape, default_value, dtype=netcdf_dtype),
                             nc_attrs,
                         )
 
-                    # Handle 'condition' variables (booleans)
+                    # boolean to int8 (0 and 1)
                     if dtype == bool:
-                        data = np.nan_to_num(data, nan=False).astype(bool)
+                        data = np.nan_to_num(data, nan=False).astype(np.int8)
 
-                    # Assign the data to the dataset for the specific time step
                     ds[var_name].loc[{"time": timestep}] = data.astype(
-                        ds[var_name].dtype
+                        netcdf_dtype
                     )
 
         ds.close()
@@ -1190,10 +1201,6 @@ class HSI(vt.VegTransition):
                     "units",
                 ],
             )
-            # if "spatial_ref" in ds_out.coords:
-            #     # rename it to crs which is more common in CF conventions
-            #     ds_out = ds_out.rename({"spatial_ref": "crs"})
-            #     self._logger.info("Renamed 'spatial_ref' coordinate to 'crs'.")
 
             ds_out = ds_out.load()
 

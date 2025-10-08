@@ -837,7 +837,7 @@ class HSI(vt.VegTransition):
         ------
         da_coarse : xr.DataArray
             A water depth data, averaged over a list of months (if provided)
-            and then upscaled to 480m.
+            and then downscaled to 480m.
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]

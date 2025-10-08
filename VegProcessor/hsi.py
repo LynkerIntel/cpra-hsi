@@ -44,7 +44,7 @@ class HSI(vt.VegTransition):
     """HSI model framework.
 
     This class handles the creation and execution of HSI models, using
-    methods from the inherited `VetTransition` parent class to provide
+    methods from the inherited `VegTransition` parent class to provide
     the execution framework, and HSI variables defined below. HSI variables
     can be static (i.e. calculated before model steps forward and used for
     all timestep) or they can be dynamic (updated for each timestep).

@@ -136,7 +136,8 @@ class VegTransition:
             "water_year": "WY99",  # default for now, may be needed
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),
-            "group": self.metadata.get("group"),
+            "input_group": self.metadata.get("input_group"),
+            "output_group": self.metadata.get("output_group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
@@ -279,26 +280,11 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
 
-        # # hydro input data
-        # if self.scenario_type in ["S10", "S11", "S12"]:  # 1.8ft SLR scenarios
-        # for daily NetCDF, this methods loads analog year directly,
-        # using lookup and mapping
-        self.water_depth = self._load_stage_daily(self.wy)
-        # else:
-        #     # for pre-generated monthly hydro .tifs
-        #     self.wse = self.load_wse_wy(self.wy, variable_name="WSE_MEAN")
-        #     self.wse = self._reproject_match_to_dem(self.wse)
-        #     self.water_depth = self._get_depth()
+        # self.water_depth = self._load_stage_daily(self.wy)
+        self.water_depth = self._load_stage_general(self.wy)
 
         # get salinity
         self.salinity = self._get_salinity()
-
-        # plotting.np_arr(
-        #     self.veg_type,
-        #     f"All Types Input {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-        #     out_path=self.timestep_output_dir_figs,
-        #     veg_palette=True,
-        # )
 
         self.create_qc_arrays()
 
@@ -764,8 +750,10 @@ class VegTransition:
 
         nc_path = os.path.join(
             self.netcdf_hydro_path,
-            f"AMP_{self.hydro_source_model}_WY{analog_year}_{self.metadata['sea_level_condition']}",
-            f"_X_99_99_DLY_{self.group_number}_AB_O_STAGE_{self.hydro_source_model_version}",
+            f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year}_"
+            f"{self.metadata['sea_level_condition']}_X_99_99_DLY_"
+            f"{self.file_params['input_group']}_AB_O_STAGE_"
+            f"{self.file_params['hydro_source_model_version']}.nc",
         )
         self._logger.info("Loading files: %s", nc_path)
 

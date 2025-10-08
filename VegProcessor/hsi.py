@@ -291,7 +291,15 @@ class HSI(vt.VegTransition):
         sim_length = self.water_year_end - self.water_year_start
 
         self.file_params = {
-            "model": self.metadata.get("model"),
+            "model": self.metadata.get(
+                "model"
+            ),  # which model to run: one of VEG or HSI
+            "hydro_source_model": self.metadata.get(
+                "hydro_source_model"
+            ),  # one of: HEC, MIK, or D3D
+            "hydro_source_model_version": self.metadata.get(
+                "hydro_source_model_version"
+            ),  # model version, i.e. V1
             "water_year": "WY99",  # default for now, may be needed
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),
@@ -300,7 +308,7 @@ class HSI(vt.VegTransition):
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": (
-                f"01_{str(sim_length + 1).zfill(2)}"
+                f"00_{str(sim_length + 1).zfill(2)}"
             ),  # 00 start (initial conditions)
             "output_version": self.metadata.get("output_version"),
         }

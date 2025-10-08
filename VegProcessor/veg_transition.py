@@ -778,46 +778,46 @@ class VegTransition:
             engine="h5netcdf",
         )
 
-        # if analog has 366 timesteps (is leap)
-        if ds.sizes["time"] == 366:
-            # use filepath to get actual year
-            match = re.search(r"WY(\d{4})", nc_dir_path)
-            if match:
-                actual_wy = int(match.group(1))
-                # print(f"Extracted water year: {actual_wy}")
-            else:
-                raise ValueError("Water year not found in path.")
+        # # if analog has 366 timesteps (is leap)
+        # if ds.sizes["time"] == 366:
+        #     # use filepath to get actual year
+        #     match = re.search(r"WY(\d{4})", nc_dir_path)
+        #     if match:
+        #         actual_wy = int(match.group(1))
+        #         # print(f"Extracted water year: {actual_wy}")
+        #     else:
+        #         raise ValueError("Water year not found in path.")
 
-            # assign "actual" datetime to time dim, temporarily,
-            # in order to drop feb 29
-            full_range = pd.date_range(
-                f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
-            )
-            ds = ds.assign_coords(time=("time", full_range))
-            mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
-            ds = ds.isel(time=mask)
+        #     # assign "actual" datetime to time dim, temporarily,
+        #     # in order to drop feb 29
+        #     full_range = pd.date_range(
+        #         f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
+        #     )
+        #     ds = ds.assign_coords(time=("time", full_range))
+        #     mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+        #     ds = ds.isel(time=mask)
 
-        # lastly rename to match expected simulation dates, i.e. water year
-        ds = ds.assign_coords(time=("time", target_range))
-        ds = ds.rename({"Band1": "height"})
+        # # lastly rename to match expected simulation dates, i.e. water year
+        # ds = ds.assign_coords(time=("time", target_range))
+        # ds = ds.rename({"Band1": "height"})
 
-        # make crs visible to xarray/rio
-        crs_obj = ds["transverse_mercator"].spatial_ref
-        ds = ds.rio.write_crs(crs_obj)
-        # reproject match to DEM
-        ds = self._reproject_match_to_dem(ds)
+        # # make crs visible to xarray/rio
+        # crs_obj = ds["transverse_mercator"].spatial_ref
+        # ds = ds.rio.write_crs(crs_obj)
+        # # reproject match to DEM
+        # ds = self._reproject_match_to_dem(ds)
 
-        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
-        # WSE pixels, where missing data indicates "no inundation"
-        ds = ds.fillna(0)
-        # after filling zeros for areas with no inundation, apply domain mask,
-        # so that areas outside of HECRAS domain are not classified as
-        # dry (na is 0-filled above) when in fact that are outside of the domain.
-        ds = ds.where(self.hydro_domain)
+        # # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+        # # WSE pixels, where missing data indicates "no inundation"
+        # ds = ds.fillna(0)
+        # # after filling zeros for areas with no inundation, apply domain mask,
+        # # so that areas outside of HECRAS domain are not classified as
+        # # dry (na is 0-filled above) when in fact that are outside of the domain.
+        # ds = ds.where(self.hydro_domain)
 
-        self._logger.warning("Converting daily hydro: feet to meters")
-        ds["height"] *= 0.3048  # UNIT: feet to meters
-        return ds
+        # self._logger.warning("Converting daily hydro: feet to meters")
+        # ds["height"] *= 0.3048  # UNIT: feet to meters
+        # return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

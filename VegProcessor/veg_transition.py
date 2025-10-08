@@ -781,15 +781,29 @@ class VegTransition:
             mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
             ds = ds.isel(time=mask)
 
-        # lastly rename to match expected simulation dates, i.e. water year
+        # rename to match expected simulation dates, i.e. water year
         ds = ds.assign_coords(time=("time", target_range))
-        ds = ds.rename({"Band1": "height"})
 
-        # make crs visible to xarray/rio
-        crs_obj = ds["transverse_mercator"].spatial_ref
-        ds = ds.rio.write_crs(crs_obj)
-        # reproject match to DEM
-        ds = self._reproject_match_to_dem(ds)
+        # model specific var names:
+        if self.file_params["hydro_source_model"] == "HEC":
+            ds = ds.rename({"Band1": "height"})
+        if self.file_params["hydro_source_model"] == "D3D":
+            ds = ds.rename({"waterlevel": "height"})
+        # extract height var as da
+        height_da = ds["height"]
+
+        if self.file_params["hydro_source_model"] == "D3D":
+            # D3D: Get CRS from crs variable's crs_wkt attribute
+            crs_wkt = ds["crs"].attrs.get("crs_wkt")
+            height_da = height_da.rio.write_crs(crs_wkt)
+        elif "transverse_mercator" in ds:
+            # HEC-RAS: Get CRS from transverse_mercator variable's spatial_ref attribute
+            crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+            height_da = height_da.rio.write_crs(crs_wkt)
+
+        height_da = self._reproject_match_to_dem(height_da)
+        # new dataset with reprojected height
+        ds = xr.Dataset({"height": height_da})
 
         # fill zeros. This step is necessary to get 0 water depth from DEM and missing
         # WSE pixels, where missing data indicates "no inundation"

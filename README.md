@@ -38,10 +38,16 @@ ___
 Description: this folder contains the individual species HSI logic.
 #### Contents:
 - `alligator.py`
-- `bald_eagle.py`
+- `baldeagle.py`
 - `bass.py`
-- `gizzardshad.py`
+- `blackbear.py`
+- `blackcrappie.py`
+- `blhwva.py`
+- `bluecrab.py`
+- `catfish.py`
 - `crawfish.py`
+- `gizzardshad.py`
+- `swampwva.py`
 
 ___
 ### Setup for Model Runs & Development

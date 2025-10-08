@@ -1062,17 +1062,8 @@ class VegTransition:
         """
         naming_convention = utils.generate_filename(
             params=self.file_params,
-            # base_path=self.timestep_output_dir,
-            # parameter="DATA",
+            hydro_source_model=self.file_params["hydro_source_model"],
         )
-        # create output file before NetCDF, so that
-        # metadatafiles can use it.
-        # self.file_name = utils.generate_filename(
-        #     params=self.file_params,
-        #     # base_path=self.timestep_output_dir,
-        #     # parameter="DATA",
-        # )
-
         output_dir_name = naming_convention
 
         # Combine base directory and new directory name

@@ -356,8 +356,8 @@ class RiverineCatfishHSI:
 
         if self.v7_max_monthly_avg_summer_turbidity is None:
             self._logger.info(
-                "Maximum monthly average turbidity during summer assumes "
-                "ideal conditions. Setting index to 1."
+                "Maximum monthly average turbidity during summer"
+                "is not provided. Setting index to 1."
             )
             si_7[~np.isnan(si_7)] = 1
 
@@ -561,7 +561,7 @@ class RiverineCatfishHSI:
         if self.v12_avg_midsummer_temp_in_pools_bw_fry is None:
             self._logger.info(
                 "Average midsummer water temperature within pools, backwaters (Fry)"
-                "assumes ideal conditions. Setting index to 1."
+                "is not provided. Setting index to 1."
             )
             si_12[~np.isnan(si_12)] = 1
 
@@ -646,7 +646,7 @@ class RiverineCatfishHSI:
         if self.v14_avg_midsummer_temp_in_pools_bw_juvenile is None:
             self._logger.info(
                 "Average midsummer water temperature within "
-                "pools, backwaters (Juvenile) assumes ideal conditions. Setting index to 1."
+                "pools, backwaters (Juvenile) is not provided. Setting index to 1."
             )
             si_14[~np.isnan(si_14)] = 1
 
@@ -676,7 +676,7 @@ class RiverineCatfishHSI:
             # condition 4
             mask_4 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 30
-            ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 36)
+            ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile < 36.5)
             si_14[mask_4] = (
                 -0.1538
                 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_4])
@@ -694,15 +694,15 @@ class RiverineCatfishHSI:
 
     def calculate_si_15(self) -> np.ndarray:
         """No logic exists for si_15."""
-        return NotImplementedError
+        raise NotImplementedError()
 
     def calculate_si_16(self) -> np.ndarray:
         """No logic exists for si_16."""
-        return NotImplementedError
+        raise NotImplementedError()
 
     def calculate_si_17(self) -> np.ndarray:
         """No logic exists for si_17."""
-        return NotImplementedError
+        raise NotImplementedError()
 
     def calculate_si_18(self) -> np.ndarray:
         """Average current velocity in cover areas during average summer flow"""
@@ -785,11 +785,7 @@ class RiverineCatfishHSI:
             # The data is available, use the standard WQ equation
             wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
         self.wq = (
-            (2 * (self.si_5 + self.si_12 + self.si_14) / (3))
-            + self.si_7
-            + 2 * (self.si_8)
-            + self.si_9
-            + self.si_13
+            wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
         ) / 7
 
         # water quality component conditions
@@ -834,9 +830,7 @@ class RiverineCatfishHSI:
         )
         self.rc = np.where(
             rc_mask,
-            np.minimum(
-                np.stack([self.si_8, self.si_10, self.si_11, self.rc]), axis=0
-            ).min(axis=0),
+            np.minimum.reduce([self.si_6, self.si_10, self.si_11, self.rc]),
             self.rc,
         )
 

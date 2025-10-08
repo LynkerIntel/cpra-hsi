@@ -762,7 +762,7 @@ class VegTransition:
             engine="h5netcdf",
         )
 
-        # if analog has 366 timesteps (is leap)
+        # if leap
         if ds.sizes["time"] == 366:
             # use filepath to get actual year
             match = re.search(r"WY(\d{4})", nc_path)

@@ -44,16 +44,16 @@ class HSI(vt.VegTransition):
     """HSI model framework.
 
     This class handles the creation and execution of HSI models, using
-    methods from the inherited `VetTransition` parent class to provide
-    the execution framwork, and HSI variables defined below. HSI variables
+    methods from the inherited `VegTransition` parent class to provide
+    the execution framework, and HSI variables defined below. HSI variables
     can be static (i.e. calculated before model steps forward and used for
     all timestep) or they can be dynamic (updated for each timestep).
 
     The HSI framework is designed to run with highly varying numbers of
     input variables. All variables are initialized as "None" and either
     replace with actual data, or replaced with stand-in values during
-    execution. The stand-in values are eiher "1" indicating an ideal
-    SI (suitability index score), or an empircal value provided  to the
+    execution. The stand-in values are either "1" indicating an ideal
+    SI (suitability index score), or an empirical value provided to the
     S.I. function that results in a approximate scoring.
     """
 
@@ -834,7 +834,7 @@ class HSI(vt.VegTransition):
         ------
         da_coarse : xr.DataArray
             A water depth data, averaged over a list of months (if provided)
-            and then upscaled to 480m.
+            and then downscaled to 480m.
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]

@@ -896,6 +896,37 @@ def load_sequence_csvs(directory: str) -> dict[int, int]:
     return dict_out
 
 
+def parse_hydro_input(path) -> dict[str, str]:
+    """
+    Parse the hydro input filename to extract model parameters.
+
+    Expected filename format:
+    AMP_HEC_WY06_000_X_99_99_DLY_G900_AB_O_STAGE_V1.nc
+
+    Parameters:
+    -----------
+    ds (str)
+        Input path, from the config, as a string
+
+    Returns
+    -------
+    dict[str, str]
+        Dictionary with key 'model' containing the hydro source model (HEC, MIKE, or Delft)
+    """
+    nc_files = list(Path(path).glob("*.nc"))
+
+    if not nc_files:
+        raise FileNotFoundError(f"No .nc files found in {path}")
+
+    # parse the filename (remove .nc extension)
+    filename = nc_files[0].stem
+    parts = filename.split("_")
+
+    return {
+        "model": parts[1] if len(parts) > 1 else None,
+    }
+
+
 # def load_netcdf_variable_definitions(instance, filename: str) -> dict:
 #     with open(filename, "r") as f:
 #         raw_definitions = yaml.safe_load(f)

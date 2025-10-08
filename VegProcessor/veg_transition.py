@@ -1484,33 +1484,6 @@ class VegTransition:
         self.qc_june_water_depth = None
         gc.collect()
 
-    def parse_hydro_input(self) -> dict[str, str]:
-        """
-        Parse the hydro input filename to extract model parameters.
-
-        Expected filename format:
-        AMP_HEC_WY06_000_X_99_99_DLY_G900_AB_O_STAGE_V1.nc
-
-        Returns
-        -------
-        dict[str, str]
-            Dictionary with key 'model' containing the hydro source model (HEC, MIKE, or Delft)
-        """
-        nc_files = list(Path(self.netcdf_hydro_path).glob("*.nc"))
-
-        if not nc_files:
-            raise FileNotFoundError(
-                f"No .nc files found in {self.netcdf_hydro_path}"
-            )
-
-        # parse the filename (remove .nc extension)
-        filename = nc_files[0].stem
-        parts = filename.split("_")
-
-        return {
-            "model": parts[1] if len(parts) > 1 else None,
-        }
-
 
 class _TimestepFilter(logging.Filter):
     """A roundabout way to inject the current timestep into log records.

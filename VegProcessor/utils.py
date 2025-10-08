@@ -541,7 +541,10 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
 
 def generate_filename(
-    params: dict, parameter: str = None, base_path: str = None
+    params: dict,
+    variable: str = None,
+    base_path: str = None,
+    hydro_source_model: str = None,
 ) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
@@ -564,18 +567,22 @@ def generate_filename(
         current timestep as well as the model config file. It excludes "parameter",
         which is specified separately.
 
-    parameter : str
+    variable : str
         The name of the variable being saved, i.e. "VEGTYPE".
 
     base_path : str or Path, optional
         Base directory path where the file should be located.
+
+    hydro_source_model : str, optional
+        The hydro source model (e.g., "HEC", "D3D"). A letter will be appended to the
+        model component based on this value (e.g., "HEC" -> "H", "D3D" -> "D").
 
     Returns:
     --------
     Path
         A `Path` object representing the full path to the generated file.
     """
-    # Define the order of keys
+    # the order of keys
     key_order = [
         "model",
         "water_year",
@@ -589,22 +596,33 @@ def generate_filename(
         "output_version",
     ]
 
-    # Collect available values from params in order
-    values = [
-        (
-            params[key].upper()
-            if isinstance(params.get(key), str)
-            else params.get(key)
-        )
-        for key in key_order
-        if key in params and params[key] is not None
-    ]
+    hydro_model_map = {
+        "HEC": "H",
+        "D3D": "D",
+        "MIK": "M",
+    }
 
-    # Append parameter to the filename if provided
-    if parameter:
-        values.append(parameter)
+    # get existing values from params in order
+    values = []
+    for key in key_order:
+        if key in params and params[key] is not None:
+            value = (
+                params[key].upper()
+                if isinstance(params.get(key), str)
+                else params.get(key)
+            )
 
-    # Construct the filename
+            # if model key, and hydro_source_model is provided, append the letter
+            if key == "model" and hydro_source_model is not None:
+                suffix = hydro_model_map.get(hydro_source_model.upper(), "")
+                value = f"{value}{suffix}"
+
+            values.append(value)
+
+    # add param to the filename
+    if variable:
+        values.append(variable)
+
     filename = "AMP_" + "_".join(map(str, values))
 
     # Combine with base path if provided

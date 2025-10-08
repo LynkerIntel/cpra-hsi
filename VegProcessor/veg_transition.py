@@ -1497,6 +1497,7 @@ class VegTransition:
             Dictionary with key 'model' containing the hydro source model (HEC, MIKE, or Delft)
         """
         nc_files = list(Path(self.netcdf_hydro_path).glob("*.nc"))
+
         if not nc_files:
             raise FileNotFoundError(
                 f"No .nc files found in {self.netcdf_hydro_path}"
@@ -1507,9 +1508,7 @@ class VegTransition:
         parts = filename.split("_")
 
         return {
-            "model": (
-                parts[1] if len(parts) > 1 else None
-            ),  # HEC, MIKE, or Delft
+            "model": parts[1] if len(parts) > 1 else None,
         }
 
 

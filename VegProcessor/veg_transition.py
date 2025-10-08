@@ -794,11 +794,11 @@ class VegTransition:
 
         # handle varied CRS metadata locations between model files
         if self.file_params["hydro_source_model"] == "D3D":
-            # D3D: Get CRS from crs variable's crs_wkt attribute
+            # D3D: CRS from crs variable's crs_wkt attribute
             crs_wkt = ds["crs"].attrs.get("crs_wkt")
             height_da = height_da.rio.write_crs(crs_wkt)
         elif "transverse_mercator" in ds:
-            # HEC-RAS: Get CRS from transverse_mercator variable's spatial_ref attribute
+            # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
             crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
             height_da = height_da.rio.write_crs(crs_wkt)
 

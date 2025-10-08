@@ -67,20 +67,20 @@ class RiverineCatfishHSI:
         """Create Riverine Catfish HSI instance from an HSI instance."""
 
         return cls(
-            v1_pct_pools_avg_summer_flow=hsi_instance.pct_pools_avg_summer_flow,
-            v2_pct_cover_in_summer_pools_bw=hsi_instance.pct_cover_in_summer_pools_bw,  # set to ideal
-            v4_fpp_substrate_avg_summer_flow=hsi_instance.fpp_substrate_avg_summer_flow,  # set to ideal
-            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.avg_temp_in_midsummer_pools_bw,
-            v6_grow_season_length_frost_free_days=hsi_instance.grow_season_length_frost_free_days,  # if using, set to ideal
-            v7_max_monthly_avg_summer_turbidity=hsi_instance.max_monthly_avg_summer_turbidity,
-            v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.avg_min_do_in_midsummer_pools_bw,
-            v9_max_summer_salinity=hsi_instance.max_summer_salinity,
-            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.avg_temp_in_spawning_embryo_pools_bw,
-            v11_max_salinity_spawning_embryo=hsi_instance.max_salinity_spawning_embryo,
-            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.avg_midsummer_temp_in_pools_bw_fry,
-            v13_max_summer_salinity_fry_juvenile=hsi_instance.max_summer_salinity_fry_juvenile,
-            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.avg_midsummer_temp_in_pools_bw_juvenile,
-            v18_avg_vel_summer_flow=hsi_instance.avg_vel_summer_flow,
+            v1_pct_pools_avg_summer_flow=hsi_instance.catfish_pct_pools_avg_summer_flow,
+            v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
+            v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
+            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.catfish_avg_temp_in_midsummer_pools_bw,
+            v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
+            v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
+            v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
+            v9_max_summer_salinity=hsi_instance.catfish_max_summer_salinity,
+            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.catfish_avg_temp_in_spawning_embryo_pools_bw,
+            v11_max_salinity_spawning_embryo=hsi_instance.catfish_max_salinity_spawning_embryo,
+            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_fry,
+            v13_max_summer_salinity_fry_juvenile=hsi_instance.catfish_max_summer_salinity_fry_juvenile,
+            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_juvenile,
+            v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )

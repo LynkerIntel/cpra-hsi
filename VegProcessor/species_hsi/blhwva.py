@@ -27,8 +27,6 @@ class BottomlandHardwoodHSI:
     v4a_flood_duration: np.ndarray = None
     v4b_flow_exchange: np.ndarray = None
     v5_forested_connectivity_cat: np.ndarray = None
-    v6_suit_trav_surr_lu: np.ndarray = None
-    v7_disturbance: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -36,8 +34,6 @@ class BottomlandHardwoodHSI:
     si_3: np.ndarray = field(init=False)
     si_4: np.ndarray = field(init=False)
     si_5: np.ndarray = field(init=False)
-    si_6: np.ndarray = field(init=False)
-    si_7: np.ndarray = field(init=False)
 
     # Overall Habitat Suitability Index (HSI)
     hsi: np.ndarray = field(init=False)
@@ -56,8 +52,6 @@ class BottomlandHardwoodHSI:
             v4a_flood_duration=hsi_instance.flood_duration,
             v4b_flow_exchange=hsi_instance.flow_exchange,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
-            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
-            v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             pct_blh_cover=hsi_instance.pct_blh,
@@ -75,8 +69,6 @@ class BottomlandHardwoodHSI:
         self.si_3 = self.calculate_si_3()
         self.si_4 = self.calculate_si_4()
         self.si_5 = self.calculate_si_5()
-        self.si_6 = self.calculate_si_6()
-        self.si_7 = self.calculate_si_7()
 
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
@@ -441,54 +433,6 @@ class BottomlandHardwoodHSI:
 
         return self.clip_array(si_5)
 
-    def calculate_si_6(self) -> np.ndarray:
-        """Suitability and Traversability of Surrounding Land Uses"""
-        self._logger.info("Running SI 6")
-        si_6 = self.template.copy()
-
-        # Set to ideal
-        if self.v6_suit_trav_surr_lu is None:
-            self._logger.info(
-                "Suit and Trav of Surrounding Land Uses assumes ideal conditions. Setting index to 1."
-            )
-            si_6[~np.isnan(si_6)] = 1
-
-        else:
-            raise NotImplementedError(
-                "No logic for bottomland hardwood v6 exists. Either use ideal (set array None) or add logic."
-            )
-
-        si_6 = self.blh_cover_mask(si_6)
-
-        if np.any(np.isclose(si_6, 999.0, atol=1e-5)):
-            raise ValueError("Unhandled condition in SI logic!")
-
-        return self.clip_array(si_6)
-
-    def calculate_si_7(self) -> np.ndarray:
-        """Disturbance"""
-        self._logger.info("Running SI 7")
-        si_7 = self.template.copy()
-
-        # Set to ideal.
-        if self.v7_disturbance is None:
-            self._logger.info(
-                "Disturbance assumes ideal conditions. Setting index to 1."
-            )
-            si_7[~np.isnan(si_7)] = 1
-
-        else:
-            raise NotImplementedError(
-                "No logic for bottomland hardwood v7 exists. Either use ideal (set array None) or add logic."
-            )
-
-        si_7 = self.blh_cover_mask(si_7)
-
-        if np.any(np.isclose(si_7, 999.0, atol=1e-5)):
-            raise ValueError("Unhandled condition in SI logic!")
-
-        return self.clip_array(si_7)
-
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Bottomland Hardwood final HSI.")
@@ -499,8 +443,6 @@ class BottomlandHardwoodHSI:
             ("SI 3", self.si_3),
             ("SI 4", self.si_4),
             ("SI 5", self.si_5),
-            ("SI 6", self.si_6),
-            ("SI 7", self.si_7),
         ]:
             invalid_values = (si_array < 0) | (si_array > 1)
             if np.any(invalid_values):

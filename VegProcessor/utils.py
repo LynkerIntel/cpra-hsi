@@ -340,11 +340,11 @@ def calculate_buffered_land_use_percentages(
     """
     # Define the land use groups directly
     land_use_groups = {
-        "nonhabitat": [2, 3, 4, 5, 13, 14],
+        "nonhabitat": [2, 3, 4, 5, 14],
         "active_ag_water": [6, 26],
         "pasture": [7, 8],
-        "forested": [9, 10, 11, 19, 20, 21, 22, 23, 24, 25],
-        "abandoned_ag": [12]
+        "forested": [9, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
+        "abandoned_ag": [12, 19]
     }
 
     # Define the buffer kernel in pixel units

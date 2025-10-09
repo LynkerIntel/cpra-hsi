@@ -27,7 +27,11 @@ class SwampHSI:
     v3b_flow_exchange: np.ndarray = None
     v4_mean_high_salinity_gs: np.ndarray = None
     v5_forested_connectivity_cat: np.ndarray = None
-    v6_suit_trav_surr_lu: np.ndarray = None
+    v6a_pct_forested_half_mi: np.ndarray = None
+    v6b_pct_abandoned_ag_half_mi: np.ndarray = None
+    v6c_pct_pasture_half_mi: np.ndarray = None
+    v6d_pct_active_ag_water_half_mi: np.ndarray = None
+    v6e_pct_nonhabitat_half_mi: np.ndarray = None
     v7_disturbance: np.ndarray = None
 
     # Suitability indices (calculated)
@@ -55,7 +59,11 @@ class SwampHSI:
             v3b_flow_exchange=hsi_instance.flow_exchange,
             v4_mean_high_salinity_gs=hsi_instance.mean_high_salinity_gs,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
-            v6_suit_trav_surr_lu=hsi_instance.suit_trav_surr_lu,  # set to ideal
+            v6a_pct_forested_half_mi=hsi_instance.pct_forested_half_mi,
+            v6b_pct_abandoned_ag_half_mi=hsi_instance.pct_abandoned_ag_half_mi,
+            v6c_pct_pasture_half_mi=hsi_instance.pct_pasture_half_mi,
+            v6d_pct_active_ag_water_half_mi=hsi_instance.pct_active_ag_water_half_mi, 
+            v6e_pct_nonhabitat_half_mi=hsi_instance.pct_nonhabitat_half_mi,
             v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -393,17 +401,35 @@ class SwampHSI:
         self._logger.info("Running SI 6")
         si_6 = self.template.copy()
 
-        # Set to ideal
-        if self.v6_suit_trav_surr_lu is None:
+        # Fixed but varies spatially
+        v6_pct_cover_are_none = (
+        self.v6a_pct_forested_half_mi is None
+        or self.v6b_pct_abandoned_ag_half_mi is None
+        or self.v6c_pct_pasture_half_mi is None
+        or self.v6d_pct_active_ag_water_half_mi is None
+        or self.v6e_pct_nonhabitat_half_mi is None
+        )
+
+        if v6_pct_cover_are_none:
             self._logger.info(
-                "Suit and Trav of Surrounding Land Uses assumes ideal conditions. Setting index to 1."
-            )
+            "Surrounding land use data not provided. Setting index to 1."
+        )
             si_6[~np.isnan(si_6)] = 1
 
-        else:
-            raise NotImplementedError(
-                "No logic for swamp v6 exists. Either use ideal (set array None) or add logic."
+        else: 
+        # Calculate the weighted sum of the percentages
+            weighted_sum = (
+            (self.v6a_pct_forested_half_mi * 1.0)
+            + (self.v6b_pct_abandoned_ag_half_mi * 0.6)
+            + (self.v6c_pct_pasture_half_mi * 0.4)
+            + (self.v6d_pct_active_ag_water_half_mi * 0.2)
+            + (self.v6e_pct_nonhabitat_half_mi * 0.01)
             )
+
+            calculated_si6 = weighted_sum / 100.0
+
+            valid_pixels = ~np.isnan(si_6)
+            si_6[valid_pixels] = calculated_si6[valid_pixels]
 
         si_6 = self.swamp_blh_mask(si_6)
 

@@ -1,6 +1,8 @@
 import xarray as xr
 import pathlib
 from scipy import ndimage
+from scipy.ndimage import generic_filter
+from skimage.morphology import disk
 import scipy.stats as stats
 
 import numpy as np
@@ -324,6 +326,54 @@ def generate_pct_cover_custom(
     )
     # da_out.to_netcdf("./pct_cover.nc")
     return da_out
+
+def calculate_buffered_land_use_percentages(
+    land_cover_da: xr.DataArray,
+    resolution_m: int = 60,
+    buffer_miles: float = 0.5
+) -> dict[str, xr.DataArray]:
+    """
+    Performs a focal analysis to calculate the percentage of broad land use
+    categories within a circular buffer around each pixel.
+    """
+    # Define the land use groups directly
+    land_use_groups = {
+        "nonhabitat": [2, 3, 4, 5, 13, 14],
+        "active_ag_water": [6, 26],
+        "pasture": [7, 8],
+        "forested": [9, 10, 11, 19, 20, 21, 22, 23, 24, 25],
+        "abandoned_ag": [12]
+    }
+
+    # Define the buffer kernel in pixel units
+    buffer_m = buffer_miles * 1609.34
+    radius_pixels = int(round(buffer_m / resolution_m))
+    kernel = disk(radius_pixels)
+    
+    # Perform focal analysis for each land use group
+    percentage_arrays = {}
+    for name, codes_list in land_use_groups.items():
+        print(f"Calculating buffered percentages for: {name}...")
+        
+        binary_mask = np.isin(land_cover_da.values, codes_list).astype(np.float32)
+
+        focal_mean = generic_filter(
+            binary_mask,
+            function=np.mean,
+            footprint=kernel,
+            mode='constant',
+            cval=0
+        )
+        
+        percentage_da = xr.DataArray(
+            focal_mean * 100,
+            coords=land_cover_da.coords,
+            dims=land_cover_da.dims,
+            name=f"pct_{name}_half_mi"
+        )
+        percentage_arrays[name] = percentage_da
+
+    return percentage_arrays
 
 
 def read_veg_key(path: str) -> pd.DataFrame:

@@ -709,6 +709,10 @@ class VegTransition:
         This is designed to ingest stage data from HEC-RAS, as an annual NetCDF.
         This function is called at the start of each timestep in the run loop.
 
+        Note: stage must always be subtraced from the DEM in order to get
+        water level, and that both datasets must use the same vertical datum
+        (the project datum is NAVD88).
+
         It is "general" because it is designed to work for all H&H model inputs:
         HECRAS, MIKE21, and Delf3D.
 
@@ -716,7 +720,7 @@ class VegTransition:
         `utils.generate_combined_sequence()`, as it will load the correct analog year
         based on the sequence mappings. This method also includes the logic from
         `get_depth()` to correctly identify 0 depth and NaN, which are not distinguished
-        in the raw model output. Finally, this data uses the `rio` `reproject_match()` method
+        in the raw model output for HEC. Finally, this data uses the `rio` `reproject_match()` method
         to ensure perfect overlap of the DEM and the hydro data.
 
         UNIT: Input in feet is converted to meters???
@@ -725,7 +729,7 @@ class VegTransition:
         -----------
         water_year : int
             model timestep (as water year) used to select and load the
-            corret analog year.
+            correct analog year.
 
         Returns
         --------
@@ -739,14 +743,6 @@ class VegTransition:
         )
         quintile = self.sequence_mapping[water_year]
         analog_year = self.years_mapping[quintile]
-
-        # build a 365-day date range by dropping Feb 29
-        target_range = pd.date_range(
-            f"{water_year-1}-10-01", f"{water_year}-09-30"
-        )
-        target_range = target_range[
-            ~((target_range.month == 2) & (target_range.day == 29))
-        ]
 
         nc_path = os.path.join(
             self.netcdf_hydro_path,
@@ -762,29 +758,9 @@ class VegTransition:
             engine="h5netcdf",
         )
 
-        # if leap
-        if ds.sizes["time"] == 366:
-            # use filepath to get actual year
-            match = re.search(r"WY(\d{4})", nc_path)
-            if match:
-                actual_wy = int(match.group(1))
-                # print(f"Extracted water year: {actual_wy}")
-            else:
-                raise ValueError("Water year not found in path.")
+        ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-            # assign "actual" datetime to time dim, temporarily,
-            # in order to drop feb 29
-            full_range = pd.date_range(
-                f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
-            )
-            ds = ds.assign_coords(time=("time", full_range))
-            mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
-            ds = ds.isel(time=mask)
-
-        # rename to match expected simulation dates, i.e. water year
-        ds = ds.assign_coords(time=("time", target_range))
-
-        # model specific var names:
+        # model specific var names: -----------------------------------------------
         if self.file_params["hydro_source_model"] == "HEC":
             ds = ds.rename({"Band1": "height"})
         if self.file_params["hydro_source_model"] == "D3D":
@@ -792,7 +768,7 @@ class VegTransition:
         # extract height var as da
         height_da = ds["height"]
 
-        # handle varied CRS metadata locations between model files
+        # handle varied CRS metadata locations between model files-----------------
         if self.file_params["hydro_source_model"] == "D3D":
             # D3D: CRS from crs variable's crs_wkt attribute
             crs_wkt = ds["crs"].attrs.get("crs_wkt")
@@ -803,20 +779,31 @@ class VegTransition:
             height_da = height_da.rio.write_crs(crs_wkt)
 
         height_da = self._reproject_match_to_dem(height_da)
-        # new dataset with reprojected height
         ds = xr.Dataset({"height": height_da})
 
-        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
-        # WSE pixels, where missing data indicates "no inundation"
-        ds = ds.fillna(0)
-        # after filling zeros for areas with no inundation, apply domain mask,
-        # so that areas outside of HECRAS domain are not classified as
-        # dry (na is 0-filled above) when in fact that are outside of the domain.
-        ds = ds.where(self.hydro_domain)
+        # handle formatting differences between models--------------------------------
+        if self.file_params["hydro_source_model"] == "HEC":
+            # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+            # WSE pixels, where missing data indicates "no inundation"
+            ds = ds.fillna(0)
+            # after filling zeros for areas with no inundation, apply domain mask,
+            # so that areas outside of HECRAS domain are not classified as
+            # dry (na is 0-filled above) when in fact that are outside of the domain.
+            ds = ds.where(self.hydro_domain)
 
-        # self._logger.warning("Converting daily hydro: feet to meters")
-        # ds["height"] *= 0.3048  # UNIT: feet to meters
-        return ds
+            # self._logger.warning("Converting daily hydro: feet to meters")
+            # ds["height"] *= 0.3048  # UNIT: feet to meters
+            return ds
+
+        elif self.file_params["hydro_source_model"] == "D3D":
+            # Delft formatting opts:
+            return ds
+
+        elif self.file_params["hydro_source_model"] == "MIK":
+            # MIKE21 formatting opts:
+            return ds
+
+        raise NotImplementedError("Model must be one of: HEC, D3D, MIK")
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

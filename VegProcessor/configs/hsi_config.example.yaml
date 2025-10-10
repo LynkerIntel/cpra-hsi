@@ -17,7 +17,6 @@ simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
   run_hsi: true # Set to true to run HSI models, false to skip
-  hydro_domain_flag: true # Flag for hydro domain processing
   blue_crab_lookup_table: # seine_bluecrab_gamm_table_1dec.csv - Blue crab HSI lookup table
   years_mapping: # Maps simulation years to observed data years (for analog sequences)
     1: 2006

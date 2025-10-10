@@ -116,7 +116,7 @@ class HSI(vt.VegTransition):
         # self._calculate_pct_cover_static()
 
         # Dynamic Variables
-        self.wse = None
+        # self.wse = None
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
@@ -812,34 +812,34 @@ class HSI(vt.VegTransition):
 
         return combined_flotant
 
-    def _get_depth_filtered(
-        self, months: None | list[int] = None
-    ) -> np.ndarray:
-        """Calls the VegTransition _get_depth(), then adds a time
-        filter (if supplied) and then resample to 480m cell size.
+    # def _get_depth_filtered(
+    #     self, months: None | list[int] = None
+    # ) -> np.ndarray:
+    #     """Calls the VegTransition _get_depth(), then adds a time
+    #     filter (if supplied) and then resample to 480m cell size.
 
-        Parameters
-        ----------
-        months : list (optional)
-            List of months to average water depth over. If a list is not
-            provided, the default is all months
+    #     Parameters
+    #     ----------
+    #     months : list (optional)
+    #         List of months to average water depth over. If a list is not
+    #         provided, the default is all months
 
-        Return
-        ------
-        da_coarse : xr.DataArray
-            A water depth data, averaged over a list of months (if provided)
-            and then downscaled to 480m.
-        """
-        ds = super()._get_depth()  # VegTransition._get_depth()
+    #     Return
+    #     ------
+    #     da_coarse : xr.DataArray
+    #         A water depth data, averaged over a list of months (if provided)
+    #         and then downscaled to 480m.
+    #     """
+    #     ds = super()._get_depth()  # VegTransition._get_depth()
 
-        if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+    #     if not months:
+    #         months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
-        filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
-        ds = filtered_ds.mean(dim="time", skipna=True)["height"]
+    #     filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
+    #     ds = filtered_ds.mean(dim="time", skipna=True)["height"]
 
-        da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+    #     da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+    #     return da_coarse.to_numpy()
 
     def _get_daily_depth_filtered(
         self, months: None | list[int] = None

@@ -16,17 +16,31 @@ raster_data:
 simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
-  wse_sequence_input: true # true if using synthetic/analog WSE sequence, false for continuous
   run_hsi: true # Set to true to run HSI models, false to skip
+  hydro_domain_flag: true # Flag for hydro domain processing
   blue_crab_lookup_table: # seine_bluecrab_gamm_table_1dec.csv - Blue crab HSI lookup table
   years_mapping: # Maps simulation years to observed data years (for analog sequences)
     1: 2006
     3: 2022
     5: 2020
-  testing_radius: null # Optional: set to integer to speed up testing (reduces kernel radius)
+  # testing_radius: 2 # Optional: set to integer to speed up testing (reduces kernel radius)
+  hsi_run_species: # List of HSI species models to run
+    - alligator
+    - baldeagle
+    - bass
+    - blackbear
+    - blackcrappie
+    - blhwva
+    - bluecrab
+    - catfish
+    - crawfish
+    - gizzardshad
+    - swampwva
 
 metadata:
   model: HSIH # Model identifier (H indicates HEC-RAS input)
+  hydro_source_model: HEC # the hydro input model to use, one of: HEC, MIK, or D3D
+  hydro_source_model_version: V1 # version option for hydro source model
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   group: G900 # Model group identifier

@@ -31,7 +31,8 @@ metadata:
   hydro_source_model_version: V1 # version option for hydro source model
   sea_level_condition: "000" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
-  group: G900 # Model group identifier
+  input_group: G900 # Group for hydro input model
+  output_group: G900 # Model output group identifier
   wpu: ARS # Water Planning Unit identifier
   output_version: v12 # Output version for tracking the output from this config
 

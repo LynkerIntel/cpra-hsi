@@ -357,8 +357,10 @@ def calculate_buffered_land_use_percentages(
     for name, codes_list in land_use_groups.items():
         print(f"Calculating buffered percentages for: {name}...")
         
+        # Create a binary mask where pixels matching the group's codes are True
         binary_mask = np.isin(land_cover_da.values, codes_list).astype(np.float32)
 
+        # Calculate the mean within the moving window (kernel)
         focal_mean = generic_filter(
             binary_mask,
             function=np.mean,

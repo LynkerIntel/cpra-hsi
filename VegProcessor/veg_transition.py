@@ -281,7 +281,7 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
 
         # self.water_depth = self._load_stage_daily(self.wy)
-        self.water_depth = self._load_stage_general(self.wy)
+        self.water_depth = self._load_depth_general(self.wy)
 
         # get salinity
         self.salinity = self._get_salinity()
@@ -706,7 +706,9 @@ class VegTransition:
 
     def _load_depth_general(self, water_year: int) -> xr.Dataset:
         """IN PROGRESS
-        This is designed to ingest stage data from HEC-RAS, as an annual NetCDF.
+        This is designed to ingest stage data from HEC-RAS, as a daily NetCDF,
+        and return water depth.
+
         This function is called at the start of each timestep in the run loop.
 
         Note: stage must always be differenced with the DEM in order to get

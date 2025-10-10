@@ -175,7 +175,7 @@ class VegTransition:
         self.veg_keys = self._load_veg_keys()
 
         self.maturity = self._load_initial_maturity_raster()
-        self.wse = None
+        # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
         self.salinity = None
@@ -784,7 +784,7 @@ class VegTransition:
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
             # get depth (critical)
-            ds = self.wse - self.dem
+            ds = ds - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
             # WSE pixels, where missing data indicates "no inundation"
             ds = ds.fillna(0)

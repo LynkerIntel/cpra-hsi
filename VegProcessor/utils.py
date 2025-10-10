@@ -541,7 +541,10 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
 
 def generate_filename(
-    params: dict, parameter: str = None, base_path: str = None
+    params: dict,
+    variable: str = None,
+    base_path: str = None,
+    hydro_source_model: str = None,
 ) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
@@ -553,7 +556,7 @@ def generate_filename(
         Dictionary containing optional keys:
         - model : str
         - scenario : str
-        - group : str
+        - output_group : str
         - wpu : str
         - io_type : str
         - time_freq : str
@@ -564,18 +567,22 @@ def generate_filename(
         current timestep as well as the model config file. It excludes "parameter",
         which is specified separately.
 
-    parameter : str
+    variable : str
         The name of the variable being saved, i.e. "VEGTYPE".
 
     base_path : str or Path, optional
         Base directory path where the file should be located.
+
+    hydro_source_model : str, optional
+        The hydro source model (e.g., "HEC", "D3D"). A letter will be appended to the
+        model component based on this value (e.g., "HEC" -> "H", "D3D" -> "D").
 
     Returns:
     --------
     Path
         A `Path` object representing the full path to the generated file.
     """
-    # Define the order of keys
+    # the order of keys
     key_order = [
         "model",
         "water_year",
@@ -583,28 +590,39 @@ def generate_filename(
         "flow_scenario",
         "year_range",
         "time_freq",
-        "group",
+        "output_group",
         "wpu",
         "io_type",
         "output_version",
     ]
 
-    # Collect available values from params in order
-    values = [
-        (
-            params[key].upper()
-            if isinstance(params.get(key), str)
-            else params.get(key)
-        )
-        for key in key_order
-        if key in params and params[key] is not None
-    ]
+    hydro_model_map = {
+        "HEC": "H",
+        "D3D": "D",
+        "MIK": "M",
+    }
 
-    # Append parameter to the filename if provided
-    if parameter:
-        values.append(parameter)
+    # get existing values from params in order
+    values = []
+    for key in key_order:
+        if key in params and params[key] is not None:
+            value = (
+                params[key].upper()
+                if isinstance(params.get(key), str)
+                else params.get(key)
+            )
 
-    # Construct the filename
+            # if model key, and hydro_source_model is provided, append the letter
+            if key == "model" and hydro_source_model is not None:
+                suffix = hydro_model_map.get(hydro_source_model.upper(), "")
+                value = f"{value}{suffix}"
+
+            values.append(value)
+
+    # add param to the filename
+    if variable:
+        values.append(variable)
+
     filename = "AMP_" + "_".join(map(str, values))
 
     # Combine with base path if provided
@@ -870,6 +888,55 @@ def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def analog_years_handler(
+    analog_year: int,
+    water_year: int,
+    ds: xr.Dataset,
+) -> xr.Dataset:
+    """
+    A method to reassign the time dimension of a netcdf
+    from the original hydrologic simulation timestamps
+    to the synthetic water-year used by `VegTransition` and
+    `HSI`.
+
+    Parameters:
+    -----------
+    quintile : int
+        The quintile, from the sequence mapping
+    analog_year : int
+        The simulation WY from a hydrologic model.
+    water_year : int
+        The VEG or HSI model timestep WY.
+    ds : xr.Dataset
+        The hydrologic model single WY NetCDF file
+    """
+    # build a 365-day date range by dropping Feb 29
+    target_range = pd.date_range(
+        f"{water_year-1}-10-01", f"{water_year}-09-30"
+    )
+    target_range = target_range[
+        ~((target_range.month == 2) & (target_range.day == 29))
+    ]
+
+    # if leap
+    if ds.sizes["time"] == 366:
+        # assign "actual" datetime to time dim, temporarily,
+        # in order to drop feb 29
+        full_range = pd.date_range(
+            f"{analog_year-1}-10-01", f"{analog_year}-09-30"
+        )
+        ds = ds.assign_coords(time=("time", full_range))
+        mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+        ds = ds.isel(time=mask)
+
+        # rename to match expected simulation dates, i.e. water year
+        ds = ds.assign_coords(time=("time", target_range))
+
+    # rename to match expected simulation dates, i.e. water year
+    ds = ds.assign_coords(time=("time", target_range))
+    return ds
+
+
 def load_sequence_csvs(directory: str) -> dict[int, int]:
     """load all csvs in a directory that include 'sequence' in the name
 
@@ -894,6 +961,40 @@ def load_sequence_csvs(directory: str) -> dict[int, int]:
     df.drop(columns="Water Year", inplace=True)
     dict_out = df["Adjusted"].to_dict()
     return dict_out
+
+
+# def parse_hydro_input(path) -> dict[str, str]:
+#     """
+#     Parse the hydro input filename to extract model parameters.
+
+#     Expected filename format:
+#     AMP_HEC_WY06_000_X_99_99_DLY_G900_AB_O_STAGE_V1.nc
+
+#     For now it just returns the model identifier,
+#     as the other components are set manually in the config.
+
+#     Parameters:
+#     -----------
+#     ds (str)
+#         Input path, from the config, as a string
+
+#     Returns
+#     -------
+#     dict[str, str]
+#         Dictionary with key 'model' containing the hydro source model (HEC, MIKE, or Delft)
+#     """
+#     nc_files = list(Path(path).glob("*.nc"))
+
+#     if not nc_files:
+#         raise FileNotFoundError(f"No .nc files found in {path}")
+
+#     # parse the filename (remove .nc extension)
+#     filename = nc_files[0].stem
+#     parts = filename.split("_")
+
+#     return {
+#         "model": parts[1] if len(parts) > 1 else None,
+#     }
 
 
 # def load_netcdf_variable_definitions(instance, filename: str) -> dict:

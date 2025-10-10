@@ -783,6 +783,7 @@ class VegTransition:
 
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
+            # get depth
             ds = self.wse - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
             # WSE pixels, where missing data indicates "no inundation"
@@ -819,34 +820,34 @@ class VegTransition:
         da_dem.close()
         return ds_reprojected
 
-    def _get_depth(self) -> xr.Dataset:
-        """Calculate water depth from DEM and Water Surface Elevation and subset
-        difference array to valid HECRAS domain. Results is subset to valid HECRAS
-        pixels before being returned.
+    # def _get_depth(self) -> xr.Dataset:
+    #     """Calculate water depth from DEM and Water Surface Elevation and subset
+    #     difference array to valid HECRAS domain. Results is subset to valid HECRAS
+    #     pixels before being returned.
 
-        NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
-        equivalent to 0 water depth. This is necessary so that inundation checks do
-        not have NaN values for periods without inundation (logic relies
-        on > or < comparison operators).
+    #     NOTE: NaN values are changed to 0 after differencing, so that Null WSE becomes
+    #     equivalent to 0 water depth. This is necessary so that inundation checks do
+    #     not have NaN values for periods without inundation (logic relies
+    #     on > or < comparison operators).
 
-        TODO: make conditions for models other than HEC that natively
-        differentiate between 0 and NaN.
-        """
-        self._logger.info("Creating depth")
-        ds = self.wse - self.dem
+    #     TODO: make conditions for models other than HEC that natively
+    #     differentiate between 0 and NaN.
+    #     """
+    #     self._logger.info("Creating depth")
+    #     ds = self.wse - self.dem
 
-        self._logger.info(
-            "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
-        )
-        # fill zeros. This step is necessary to get 0 water depth from DEM and missing
-        # WSE pixels, where missing data indicates "no inundation"
-        ds = ds.fillna(0)
+    #     self._logger.info(
+    #         "Replacing all NaN in depth array with 0 (assuming full domain coverage.)"
+    #     )
+    #     # fill zeros. This step is necessary to get 0 water depth from DEM and missing
+    #     # WSE pixels, where missing data indicates "no inundation"
+    #     ds = ds.fillna(0)
 
-        # after filling zeros for areas with no inundation, apply domain mask,
-        # so that areas outside of HECRAS domain are not classified as
-        # dry (na is 0-filled above) when in fact that are outside of the domain.
-        ds = ds.where(self.hydro_domain)
-        return ds
+    #     # after filling zeros for areas with no inundation, apply domain mask,
+    #     # so that areas outside of HECRAS domain are not classified as
+    #     # dry (na is 0-filled above) when in fact that are outside of the domain.
+    #     ds = ds.where(self.hydro_domain)
+    #     return ds
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """

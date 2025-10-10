@@ -888,6 +888,55 @@ def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def analog_years_handler(
+    analog_year: int,
+    water_year: int,
+    ds: xr.Dataset,
+) -> xr.Dataset:
+    """
+    A method to reassign the time dimension of a netcdf
+    from the original hydrologic simulation timestamps
+    to the synthetic water-year used by `VegTransition` and
+    `HSI`.
+
+    Parameters:
+    -----------
+    quintile : int
+        The quintile, from the sequence mapping
+    analog_year : int
+        The simulation WY from a hydrologic model.
+    water_year : int
+        The VEG or HSI model timestep WY.
+    ds : xr.Dataset
+        The hydrologic model single WY NetCDF file
+    """
+    # build a 365-day date range by dropping Feb 29
+    target_range = pd.date_range(
+        f"{water_year-1}-10-01", f"{water_year}-09-30"
+    )
+    target_range = target_range[
+        ~((target_range.month == 2) & (target_range.day == 29))
+    ]
+
+    # if leap
+    if ds.sizes["time"] == 366:
+        # assign "actual" datetime to time dim, temporarily,
+        # in order to drop feb 29
+        full_range = pd.date_range(
+            f"{analog_year-1}-10-01", f"{analog_year}-09-30"
+        )
+        ds = ds.assign_coords(time=("time", full_range))
+        mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+        ds = ds.isel(time=mask)
+
+        # rename to match expected simulation dates, i.e. water year
+        ds = ds.assign_coords(time=("time", target_range))
+
+    # rename to match expected simulation dates, i.e. water year
+    ds = ds.assign_coords(time=("time", target_range))
+    return ds
+
+
 def load_sequence_csvs(directory: str) -> dict[int, int]:
     """load all csvs in a directory that include 'sequence' in the name
 

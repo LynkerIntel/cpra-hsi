@@ -1316,15 +1316,9 @@ class VegTransition:
         -------
         None
         """
-
         self.timestep_output_dir_figs = os.path.join(
             self.run_figs_dir, f"{date.strftime('%Y%m%d')}"
         )
-        # self.timestep_output_dir_figs = os.path.join(
-        #     self.timestep_output_dir,
-        #     "figs",
-        # )
-        # os.makedirs(self.timestep_output_dir, exist_ok=True)
         os.makedirs(self.timestep_output_dir_figs, exist_ok=True)
 
     # def save_water_depth(self, params: dict):

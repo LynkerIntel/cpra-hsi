@@ -278,6 +278,9 @@ class HSI(vt.VegTransition):
         )
         self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
+        self.hsi_run_species = self.config["simulation"].get(
+            "hsi_run_species", []
+        )
 
         # metadata
         self.metadata = self.config["metadata"]
@@ -366,17 +369,23 @@ class HSI(vt.VegTransition):
 
         # run ---------------------------------------------------------
         if self.run_hsi:
+            species_map = {
+                "alligator": alligator.AlligatorHSI,
+                "crawfish": crawfish.CrawfishHSI,
+                "baldeagle": baldeagle.BaldEagleHSI,
+                "gizzardshad": gizzardshad.GizzardShadHSI,
+                "bass": bass.BassHSI,
+                "bluecrab": bluecrab.BlueCrabHSI,
+                "blackbear": blackbear.BlackBearHSI,
+                "blhwva": blhwva.BottomlandHardwoodHSI,
+                "swampwva": swampwva.SwampHSI,
+                "blackcrappie": blackcrappie.BlackCrappieHSI,
+            }
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
-            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            self.bass = bass.BassHSI.from_hsi(self)
-            self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
-            self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
-            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
-            self.swampwva = swampwva.SwampHSI.from_hsi(self)
-            self.blackcrappie = blackcrappie.BlackCrappieHSI.from_hsi(self)
+            # Run only species listed in config
+            for species in self.hsi_run_species:
+                if species in species_map:
+                    setattr(self, species, species_map[species].from_hsi(self))
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 

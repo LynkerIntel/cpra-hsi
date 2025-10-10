@@ -709,7 +709,7 @@ class VegTransition:
         This is designed to ingest stage data from HEC-RAS, as an annual NetCDF.
         This function is called at the start of each timestep in the run loop.
 
-        Note: stage must always be subtraced from the DEM in order to get
+        Note: stage must always be differenced with the DEM in order to get
         water level, and that both datasets must use the same vertical datum
         (the project datum is NAVD88).
 

@@ -704,7 +704,7 @@ class VegTransition:
         ds["height"] *= 0.3048  # UNIT: feet to meters
         return ds
 
-    def _load_stage_general(self, water_year: int) -> xr.Dataset:
+    def _load_depth_general(self, water_year: int) -> xr.Dataset:
         """IN PROGRESS
         This is designed to ingest stage data from HEC-RAS, as an annual NetCDF.
         This function is called at the start of each timestep in the run loop.
@@ -783,6 +783,7 @@ class VegTransition:
 
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
+            ds = self.wse - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
             # WSE pixels, where missing data indicates "no inundation"
             ds = ds.fillna(0)
@@ -793,17 +794,16 @@ class VegTransition:
 
             # self._logger.warning("Converting daily hydro: feet to meters")
             # ds["height"] *= 0.3048  # UNIT: feet to meters
-            return ds
 
         elif self.file_params["hydro_source_model"] == "D3D":
             # Delft formatting opts:
-            return ds
+            raise NotImplementedError
 
         elif self.file_params["hydro_source_model"] == "MIK":
             # MIKE21 formatting opts:
-            return ds
+            raise NotImplementedError
 
-        raise NotImplementedError("Model must be one of: HEC, D3D, MIK")
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

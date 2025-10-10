@@ -783,7 +783,7 @@ class VegTransition:
 
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
-            # get depth
+            # get depth (critical)
             ds = self.wse - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
             # WSE pixels, where missing data indicates "no inundation"

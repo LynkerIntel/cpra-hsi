@@ -334,8 +334,10 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
+        # self._load_salinity()
+
         # water depth vars --------------------------------------
-        self.water_depth = self._load_stage_daily(self.wy)
+        self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8],
@@ -457,6 +459,10 @@ class HSI(vt.VegTransition):
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
         return da.to_numpy()
+
+    def _load_salinity(self) -> xr.Dataset:
+        """Load modeled salinity from either: (1) Delft or (2) MIKE21."""
+        return NotImplementedError
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This

@@ -127,16 +127,17 @@ class HSI(vt.VegTransition):
 
         # HSI models
         self.alligator = None
-        self.catfish = None
-        self.crawfish = None
         self.baldeagle = None
-        self.gizzardshad = None
         self.bass = None
         self.blackbear = None
-        self.bluecrab = None
-        self.blhwva = None
-        self.swampwva = None
         self.blackcrappie = None
+        self.blhwva = None
+        self.bluecrab = None
+        self.bass = None
+        self.catfish = None
+        self.crawfish = None
+        self.gizzardshad = None
+        self.swampwva = None
 
         # datasets
         self.pct_cover_veg = None

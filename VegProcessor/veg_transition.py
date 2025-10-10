@@ -781,7 +781,7 @@ class VegTransition:
         height_da = self._reproject_match_to_dem(height_da)
         ds = xr.Dataset({"height": height_da})
 
-        # handle formatting differences between models--------------------------------
+        # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
             # WSE pixels, where missing data indicates "no inundation"
@@ -828,6 +828,9 @@ class VegTransition:
         equivalent to 0 water depth. This is necessary so that inundation checks do
         not have NaN values for periods without inundation (logic relies
         on > or < comparison operators).
+
+        TODO: make conditions for models other than HEC that natively
+        differentiate between 0 and NaN.
         """
         self._logger.info("Creating depth")
         ds = self.wse - self.dem
@@ -1214,7 +1217,8 @@ class VegTransition:
             }
 
         Where:
-            <variable_name>: a string representing the name of the variable (e.g., "veg_type", "maturity", "qc_annual_mean_salinity", etc.).
+            <variable_name>: a string representing the name of the variable (e.g., "veg_type", "maturity",
+                "qc_annual_mean_salinity", etc.).
             <data_array>: the corresponding data array for the variable at the current timestep.
             <data_type>: the NumPy data type (e.g., np.float32 or bool).
             <nc_attributes_dict>: a dictionary containing attributes for the NetCDF variable, typically including:

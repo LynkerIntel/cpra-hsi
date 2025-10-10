@@ -19,9 +19,9 @@ simulation:
   run_hsi: true # Set to true to run HSI models, false to skip
   blue_crab_lookup_table: # seine_bluecrab_gamm_table_1dec.csv - Blue crab HSI lookup table
   years_mapping: # Maps simulation years to observed data years (for analog sequences)
-    1: 2006
-    3: 2022
-    5: 2020
+    1: "06"
+    3: "22"
+    5: "20"
   # testing_radius: 2 # Optional: set to integer to speed up testing (reduces kernel radius)
   hsi_run_species: # List of HSI species models to run
     - alligator

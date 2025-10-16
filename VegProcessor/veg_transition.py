@@ -150,6 +150,7 @@ class VegTransition:
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
+            hydro_source_model=self.file_params["hydro_source_model"],
         )
 
         self._create_output_dirs()
@@ -785,6 +786,7 @@ class VegTransition:
 
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
+            self._logger.info("Loading HEC-RAS hydro source...")
             # get depth (critical)
             ds = ds - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
@@ -792,18 +794,24 @@ class VegTransition:
             ds = ds.fillna(0)
             # after filling zeros for areas with no inundation, apply domain mask,
             # so that areas outside of HECRAS domain are not classified as
-            # dry (na is 0-filled above) when in fact that are outside of the domain.
+            # dry (na is 0-filled above) when in fact they are outside of the domain.
             ds = ds.where(self.hydro_domain)
 
             # self._logger.warning("Converting daily hydro: feet to meters")
             # ds["height"] *= 0.3048  # UNIT: feet to meters
 
         elif self.file_params["hydro_source_model"] == "D3D":
+            self._logger.info("Loading Delft3D hydro source...")
             # Delft formatting opts:
+
+            # ds = ds - self.dem
             raise NotImplementedError
 
         elif self.file_params["hydro_source_model"] == "MIK":
+            self._logger.info("Loading MIKE21 hydro source...")
             # MIKE21 formatting opts:
+
+            # ds = ds - self.dem
             raise NotImplementedError
 
         return ds

@@ -4,10 +4,10 @@ from veg_transition import VegTransition
 from hsi import HSI
 
 veg_config_files = [
-    "./configs/veg_config_1-08ft_slr_dry.yaml",
-    "./configs/veg_config_1-08ft_slr_wet.yaml",
-    "./configs/veg_config_base_dry.yaml",
-    "./configs/veg_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_wet.yaml",
 ]
 
 

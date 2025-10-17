@@ -109,8 +109,8 @@ class HSI(vt.VegTransition):
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
         self.human_influence = None
-        self.hydro_domain = self._load_hecras_domain_raster()
-        self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
+        self.hydro_domain = self._load_hydro_domain_raster()
+        self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
         # self._calculate_pct_cover_static()

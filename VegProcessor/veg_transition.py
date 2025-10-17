@@ -1021,6 +1021,10 @@ class VegTransition:
     def _load_hecras_domain_raster(self, cell: bool = False) -> np.ndarray:
         """Load raster file specifying the boundary of the HECRAS domain.
 
+        If a domain raster is not supplied, the DEM will be used as the
+        domain raster. Masking with the DEM will generally not have an
+        effect, but keeps the code consistent between models.
+
         Params
         -------
         cell : bool
@@ -1028,12 +1032,21 @@ class VegTransition:
             the array is returned as "data" with NaN. If False, data is returned as
             boolean (the format expected by `VegTransition` methods).
         """
-        # load raster
-        self._logger.info("Loading WSE domain extent raster.")
-        da = xr.open_dataarray(self.wse_domain_path)
-        da = da.squeeze(drop="band")
-        # reproject match to DEM
-        da = self._reproject_match_to_dem(da)
+        if self.wse_domain_path is None:
+            self._logger.info(
+                "hydrologic domain not proved. Using DEM as domain."
+            )
+            # if no file: use dem as domain
+            da = self.dem.copy()
+            # all valid data to 1
+            da = xr.where(~da.isnull(), 1, da)
+
+        else:
+            self._logger.info("Loading WSE domain extent raster.")
+            da = xr.open_dataarray(self.wse_domain_path)
+            da = da.squeeze(drop="band")
+            # reproject match to DEM
+            da = self._reproject_match_to_dem(da)
 
         if cell:
             da = da.coarsen(y=8, x=8, boundary="pad").mean()

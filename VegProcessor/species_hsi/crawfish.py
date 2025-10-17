@@ -113,7 +113,7 @@ class CrawfishHSI:
         """
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
-    
+
     def clip_array(self, result: np.ndarray) -> np.ndarray:
         """Clip array values to between 0 and 1, for cases
         where equations may result in slightly higher than 1.
@@ -182,9 +182,6 @@ class CrawfishHSI:
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # if self.hydro_domain_flag:
-            #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
-
         return self.clip_array(si_1)
 
     def calculate_si_2(self) -> np.ndarray:
@@ -231,9 +228,6 @@ class CrawfishHSI:
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # if self.hydro_domain_flag:
-            #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
-
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
@@ -253,9 +247,6 @@ class CrawfishHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-
-        # if self.hydro_domain_flag:
-        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return self.clip_array(si_3)
 
@@ -294,9 +285,6 @@ class CrawfishHSI:
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
-            # if self.hydro_domain_flag:
-            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return self.clip_array(si_4)
 

@@ -166,7 +166,7 @@ class VegTransition:
         self._get_git_commit_hash()
 
         self.dem = self._load_dem()
-        self.hydro_domain = self._load_hecras_domain_raster()
+        self.hydro_domain = self._load_hydro_domain_raster()
 
         self.initial_veg_type = self._load_veg_initial_raster()  # static
         self.veg_type = self._load_veg_initial_raster()  # dynamic
@@ -1018,7 +1018,7 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hecras_domain_raster(self, cell: bool = False) -> np.ndarray:
+    def _load_hydro_domain_raster(self, cell: bool = False) -> np.ndarray:
         """Load raster file specifying the boundary of the HECRAS domain.
 
         If a domain raster is not supplied, the DEM will be used as the

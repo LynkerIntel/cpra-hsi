@@ -86,14 +86,6 @@ class BassHSI:
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
         return arr
 
-    # def _determine_shape(self) -> tuple:
-    #     """Determine the shape of the environmental variable arrays."""
-    #     # Iterate over instance attributes and return the shape of the first non None numpy array
-    #     for name, value in vars(self).items():
-    #         if value is not None and isinstance(value, np.ndarray):
-    #             self._logger.info("Using attribute %s as shape for output: %s", name, value.shape)
-    #             return value.shape
-
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         self._logger.info("Running SI 1")
@@ -148,9 +140,6 @@ class BassHSI:
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # if self.hydro_domain_flag:
-            #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
-
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -204,9 +193,6 @@ class BassHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
-            # if self.hydro_domain_flag:
-            #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 

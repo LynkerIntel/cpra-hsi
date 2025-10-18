@@ -75,75 +75,7 @@ class HSI(vt.VegTransition):
         with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
-        # fetch raster data paths
-        self.dem_path = self.config["raster_data"].get("dem_path")
-        self.wse_directory_path = self.config["raster_data"].get(
-            "wse_directory_path"
-        )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
-        )
-        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
-        self.veg_type_path = self.config["raster_data"].get("veg_type_path")
-        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
-
-        self.flotant_marsh_path = self.config["raster_data"].get(
-            "flotant_marsh_raster"
-        )
-        # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
-
-        # simulation
-        self.water_year_start = self.config["simulation"].get(
-            "water_year_start"
-        )
-        self.water_year_end = self.config["simulation"].get("water_year_end")
-        self.run_hsi = self.config["simulation"].get("run_hsi")
-        self.analog_sequence = self.config["simulation"].get(
-            "wse_sequence_input"
-        )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
-        )
-        self.blue_crab_lookup_path = self.config["simulation"].get(
-            "blue_crab_lookup_table"
-        )
-        self.years_mapping = self.config["simulation"].get("years_mapping")
-        self.testing_radius = self.config["simulation"].get("testing_radius")
-
-        # metadata
-        self.metadata = self.config["metadata"]
-        self.scenario_type = self.config["metadata"].get(
-            "scenario", ""
-        )  # empty str if missing
-
-        # output
-        self.output_base_dir = self.config["output"].get("output_base")
-
-        # Pretty-print the configuration
-        config_pretty = yaml.dump(
-            self.config,
-            default_flow_style=False,
-            sort_keys=False,
-        )
-
-        # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
-
-        self.file_params = {
-            "model": self.metadata.get("model"),
-            "water_year": "WY99",  # default for now, may be needed
-            "sea_level_condition": self.metadata.get("sea_level_condition"),
-            "flow_scenario": self.metadata.get("flow_scenario"),
-            "group": self.metadata.get("group"),
-            "wpu": "AB",
-            "io_type": "O",
-            "time_freq": "ANN",  # for annual output
-            "year_range": (
-                f"01_{str(sim_length + 1).zfill(2)}"
-            ),  # 00 start (initial conditions)
-            "output_version": self.metadata.get("output_version"),
-        }
+        self._load_config_attributes()
 
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
@@ -177,14 +109,14 @@ class HSI(vt.VegTransition):
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
         self.human_influence = None
-        self.hydro_domain = self._load_hecras_domain_raster()
-        self.hydro_domain_480 = self._load_hecras_domain_raster(cell=True)
+        self.hydro_domain = self._load_hydro_domain_raster()
+        self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
         # Get pct cover for prevously defined static variables
         # self._calculate_pct_cover_static()
 
         # Dynamic Variables
-        self.wse = None
+        # self.wse = None
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
@@ -195,16 +127,17 @@ class HSI(vt.VegTransition):
 
         # HSI models
         self.alligator = None
-        self.catfish = None
-        self.crawfish = None
         self.baldeagle = None
-        self.gizzardshad = None
         self.bass = None
         self.blackbear = None
-        self.bluecrab = None
-        self.blhwva = None
-        self.swampwva = None
         self.blackcrappie = None
+        self.blhwva = None
+        self.bluecrab = None
+        self.bass = None
+        self.catfish = None
+        self.crawfish = None
+        self.gizzardshad = None
+        self.swampwva = None
 
         # datasets
         self.pct_cover_veg = None
@@ -308,6 +241,83 @@ class HSI(vt.VegTransition):
 
         self._create_output_file()
 
+    def _load_config_attributes(self):
+        """Load configuration attributes from the config dictionary."""
+        # fetch raster data paths
+        self.dem_path = self.config["raster_data"].get("dem_path")
+        self.wse_directory_path = self.config["raster_data"].get(
+            "wse_directory_path"
+        )
+        self.hydro_domain_path = self.config["raster_data"].get(
+            "hydro_domain_raster"
+        )
+        self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
+        self.veg_type_path = self.config["raster_data"].get("veg_type_path")
+        self.veg_keys_path = self.config["raster_data"].get("veg_keys")
+        self.salinity_path = self.config["raster_data"].get("salinity_raster")
+
+        self.flotant_marsh_path = self.config["raster_data"].get(
+            "flotant_marsh_raster"
+        )
+        # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # simulation
+        self.water_year_start = self.config["simulation"].get(
+            "water_year_start"
+        )
+        self.water_year_end = self.config["simulation"].get("water_year_end")
+        self.run_hsi = self.config["simulation"].get("run_hsi")
+        self.analog_sequence = self.config["simulation"].get(
+            "wse_sequence_input"
+        )
+        self.netcdf_hydro_path = self.config["raster_data"].get(
+            "netcdf_hydro_path"
+        )
+        self.blue_crab_lookup_path = self.config["simulation"].get(
+            "blue_crab_lookup_table"
+        )
+        self.years_mapping = self.config["simulation"].get("years_mapping")
+        self.testing_radius = self.config["simulation"].get("testing_radius")
+        self.hsi_run_species = self.config["simulation"].get(
+            "hsi_run_species", []
+        )
+
+        # metadata
+        self.metadata = self.config["metadata"]
+        self.scenario_type = self.config["metadata"].get(
+            "scenario", ""
+        )  # empty str if missing
+
+        # output
+        self.output_base_dir = self.config["output"].get("output_base")
+
+        # NetCDF data output
+        sim_length = self.water_year_end - self.water_year_start
+
+        self.file_params = {
+            "model": self.metadata.get(
+                "model"
+            ),  # which model to run: one of VEG or HSI
+            "hydro_source_model": self.metadata.get(
+                "hydro_source_model"
+            ),  # one of: HEC, MIK, or D3D
+            "hydro_source_model_version": self.metadata.get(
+                "hydro_source_model_version"
+            ),  # model version, i.e. V1
+            "water_year": "WY99",  # default for now, may be needed
+            "sea_level_condition": self.metadata.get("sea_level_condition"),
+            "flow_scenario": self.metadata.get("flow_scenario"),
+            "input_group": self.metadata.get("input_group"),
+            "group": self.metadata.get("group"),
+            "wpu": "AB",
+            "io_type": "O",
+            "time_freq": "ANN",  # for annual output
+            "year_range": (
+                f"00_{str(sim_length + 1).zfill(2)}"
+            ),  # 00 start (initial conditions)
+            "output_version": self.metadata.get("output_version"),
+        }
+
     def step(self, date: pd.DatetimeTZDtype):
         """Calculate Indices & Advance the HSI models by one step.
 
@@ -325,8 +335,10 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
+        # self._load_salinity()
+
         # water depth vars --------------------------------------
-        self.water_depth = self._load_stage_daily(self.wy)
+        self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8],
@@ -360,17 +372,23 @@ class HSI(vt.VegTransition):
 
         # run ---------------------------------------------------------
         if self.run_hsi:
+            species_map = {
+                "alligator": alligator.AlligatorHSI,
+                "crawfish": crawfish.CrawfishHSI,
+                "baldeagle": baldeagle.BaldEagleHSI,
+                "gizzardshad": gizzardshad.GizzardShadHSI,
+                "bass": bass.BassHSI,
+                "bluecrab": bluecrab.BlueCrabHSI,
+                "blackbear": blackbear.BlackBearHSI,
+                "blhwva": blhwva.BottomlandHardwoodHSI,
+                "swampwva": swampwva.SwampHSI,
+                "blackcrappie": blackcrappie.BlackCrappieHSI,
+            }
 
-            self.alligator = alligator.AlligatorHSI.from_hsi(self)
-            self.crawfish = crawfish.CrawfishHSI.from_hsi(self)
-            self.baldeagle = baldeagle.BaldEagleHSI.from_hsi(self)
-            self.gizzardshad = gizzardshad.GizzardShadHSI.from_hsi(self)
-            self.bass = bass.BassHSI.from_hsi(self)
-            self.bluecrab = bluecrab.BlueCrabHSI.from_hsi(self)
-            self.blackbear = blackbear.BlackBearHSI.from_hsi(self)
-            self.blhwva = blhwva.BottomlandHardwoodHSI.from_hsi(self)
-            self.swampwva = swampwva.SwampHSI.from_hsi(self)
-            self.blackcrappie = blackcrappie.BlackCrappieHSI.from_hsi(self)
+            # Run only species listed in config
+            for species in self.hsi_run_species:
+                if species in species_map:
+                    setattr(self, species, species_map[species].from_hsi(self))
 
             self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
@@ -442,6 +460,10 @@ class HSI(vt.VegTransition):
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
         return da.to_numpy()
+
+    def _load_salinity(self) -> xr.Dataset:
+        """Load modeled salinity from either: (1) Delft or (2) MIKE21."""
+        return NotImplementedError
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -791,34 +813,34 @@ class HSI(vt.VegTransition):
 
         return combined_flotant
 
-    def _get_depth_filtered(
-        self, months: None | list[int] = None
-    ) -> np.ndarray:
-        """Calls the VegTransition _get_depth(), then adds a time
-        filter (if supplied) and then resample to 480m cell size.
+    # def _get_depth_filtered(
+    #     self, months: None | list[int] = None
+    # ) -> np.ndarray:
+    #     """Calls the VegTransition _get_depth(), then adds a time
+    #     filter (if supplied) and then resample to 480m cell size.
 
-        Parameters
-        ----------
-        months : list (optional)
-            List of months to average water depth over. If a list is not
-            provided, the default is all months
+    #     Parameters
+    #     ----------
+    #     months : list (optional)
+    #         List of months to average water depth over. If a list is not
+    #         provided, the default is all months
 
-        Return
-        ------
-        da_coarse : xr.DataArray
-            A water depth data, averaged over a list of months (if provided)
-            and then downscaled to 480m.
-        """
-        ds = super()._get_depth()  # VegTransition._get_depth()
+    #     Return
+    #     ------
+    #     da_coarse : xr.DataArray
+    #         A water depth data, averaged over a list of months (if provided)
+    #         and then downscaled to 480m.
+    #     """
+    #     ds = super()._get_depth()  # VegTransition._get_depth()
 
-        if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+    #     if not months:
+    #         months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
-        filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
-        ds = filtered_ds.mean(dim="time", skipna=True)["height"]
+    #     filtered_ds = ds.sel(time=self.wse["time"].dt.month.isin(months))
+    #     ds = filtered_ds.mean(dim="time", skipna=True)["height"]
 
-        da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+    #     da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
+    #     return da_coarse.to_numpy()
 
     def _get_daily_depth_filtered(
         self, months: None | list[int] = None

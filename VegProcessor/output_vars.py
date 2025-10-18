@@ -1180,7 +1180,7 @@ def get_veg_variables(veg):
         ],
         "qc_tree_establishment_bool": [
             veg.qc_tree_establishment_bool,
-            bool,
+            np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "unitless",

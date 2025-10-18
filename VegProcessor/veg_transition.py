@@ -1034,12 +1034,13 @@ class VegTransition:
         """
         if self.wse_domain_path is None:
             self._logger.info(
-                "hydrologic domain not proved. Using DEM as domain."
+                "hydrologic domain not provided. Using DEM as domain."
             )
-            # if no file: use dem as domain
-            da = self.dem.copy()
+            # if no file: load DEM as dataarray to use as domain
+            da = xr.open_dataarray(self.dem_path)
+            da = da.squeeze(drop="band")
             # all valid data to 1
-            da = xr.where(~da.isnull(), 1, da)
+            da = xr.where(da.notnull(), 1, da)
 
         else:
             self._logger.info("Loading WSE domain extent raster.")

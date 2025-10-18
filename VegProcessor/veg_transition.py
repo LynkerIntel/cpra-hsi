@@ -81,8 +81,8 @@ class VegTransition:
         self.wse_directory_path = self.config["raster_data"].get(
             "wse_directory_path"
         )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
+        self.hydro_domain_path = self.config["raster_data"].get(
+            "hydro_domain_raster"
         )
         self.netcdf_hydro_path = self.config["raster_data"].get(
             "netcdf_hydro_path"
@@ -1032,7 +1032,7 @@ class VegTransition:
             the array is returned as "data" with NaN. If False, data is returned as
             boolean (the format expected by `VegTransition` methods).
         """
-        if self.wse_domain_path is None:
+        if self.hydro_domain_path is None:
             self._logger.info(
                 "hydrologic domain not provided. Using DEM as domain."
             )
@@ -1043,8 +1043,8 @@ class VegTransition:
             da = xr.where(da.notnull(), 1, da)
 
         else:
-            self._logger.info("Loading WSE domain extent raster.")
-            da = xr.open_dataarray(self.wse_domain_path)
+            self._logger.info("Loading hydro domain extent raster.")
+            da = xr.open_dataarray(self.hydro_domain_path)
             da = da.squeeze(drop="band")
             # reproject match to DEM
             da = self._reproject_match_to_dem(da)

@@ -248,8 +248,8 @@ class HSI(vt.VegTransition):
         self.wse_directory_path = self.config["raster_data"].get(
             "wse_directory_path"
         )
-        self.wse_domain_path = self.config["raster_data"].get(
-            "wse_domain_raster"
+        self.hydro_domain_path = self.config["raster_data"].get(
+            "hydro_domain_raster"
         )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")

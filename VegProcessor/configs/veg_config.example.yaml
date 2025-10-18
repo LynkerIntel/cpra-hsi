@@ -5,7 +5,7 @@
 
 raster_data:
   dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
-  wse_domain_raster: # HECRAS_domain_60m.tif - HEC-RAS model domain mask
+  hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
   netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table

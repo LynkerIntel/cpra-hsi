@@ -707,15 +707,15 @@ class VegTransition:
     #     return ds
 
     def _load_depth_general(self, water_year: int) -> xr.Dataset:
-        """IN PROGRESS
-        This is designed to ingest stage data from HEC-RAS, as a daily NetCDF,
-        and return water depth.
+        """
+        Ingest stage data from hydro models, as a daily NetCDF, and return water depth.
 
         This function is called at the start of each timestep in the run loop.
 
-        Note: stage must always be differenced with the DEM in order to get
+        Stage must always be differenced with the DEM in order to get
         water level, and that both datasets must use the same vertical datum
-        (the project datum is NAVD88).
+        (the project datum is NAVD88). This step is included in this function,
+        and occurs for all models.
 
         It is "general" because it is designed to work for all H&H model inputs:
         HECRAS, MIKE21, and Delf3D.
@@ -727,7 +727,7 @@ class VegTransition:
         in the raw model output for HEC. Finally, this data uses the `rio` `reproject_match()` method
         to ensure perfect overlap of the DEM and the hydro data.
 
-        UNIT: Input in feet is converted to meters???
+        UNIT: Input stage is expected to be in meters. No unit conversion occurs.
 
         Parameters
         -----------

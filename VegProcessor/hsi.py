@@ -308,7 +308,7 @@ class HSI(vt.VegTransition):
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),
             "input_group": self.metadata.get("input_group"),
-            "group": self.metadata.get("group"),
+            "output_group": self.metadata.get("output_group"),
             "wpu": "AB",
             "io_type": "O",
             "time_freq": "ANN",  # for annual output

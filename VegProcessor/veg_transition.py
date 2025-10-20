@@ -822,8 +822,6 @@ class VegTransition:
             ds = ds - self.dem
             return ds
 
-        return ds
-
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
     ) -> xr.Dataset | xr.DataArray:

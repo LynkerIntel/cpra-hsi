@@ -771,18 +771,25 @@ class VegTransition:
             ds = ds.rename({"Band1": "height"})
         if self.file_params["hydro_source_model"] == "D3D":
             ds = ds.rename({"waterlevel": "height"})
+        if self.file_params["hydro_source_model"] == "MIK":
+            ds = ds.rename({"water_level": "height"})
         # extract height var as da
         height_da = ds["height"]
 
         # handle varied CRS metadata locations between model files-----------------
-        if self.file_params["hydro_source_model"] == "D3D":
-            # D3D: CRS from crs variable's crs_wkt attribute
+        try:
+            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
             crs_wkt = ds["crs"].attrs.get("crs_wkt")
             height_da = height_da.rio.write_crs(crs_wkt)
-        elif "transverse_mercator" in ds:
+        except Exception:
             # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
-            crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
-            height_da = height_da.rio.write_crs(crs_wkt)
+            try:
+                crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+                height_da = height_da.rio.write_crs(crs_wkt)
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
         ds = xr.Dataset({"height": height_da})
@@ -806,16 +813,14 @@ class VegTransition:
         elif self.file_params["hydro_source_model"] == "D3D":
             self._logger.info("Loading Delft3D hydro source...")
             # Delft formatting opts:
-
             ds = ds - self.dem
             return ds
 
         elif self.file_params["hydro_source_model"] == "MIK":
             self._logger.info("Loading MIKE21 hydro source...")
             # MIKE21 formatting opts:
-
-            # ds = ds - self.dem
-            raise NotImplementedError
+            ds = ds - self.dem
+            return ds
 
         return ds
 

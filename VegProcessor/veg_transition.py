@@ -809,6 +809,7 @@ class VegTransition:
 
             # self._logger.warning("Converting daily hydro: feet to meters")
             # ds["height"] *= 0.3048  # UNIT: feet to meters
+            return ds
 
         elif self.file_params["hydro_source_model"] == "D3D":
             self._logger.info("Loading Delft3D hydro source...")

@@ -1036,14 +1036,19 @@ class VegTransition:
             boolean (the format expected by `VegTransition` methods).
         """
         if self.hydro_domain_path is None:
-            self._logger.info(
-                "hydrologic domain not provided. Using DEM as domain."
-            )
-            # if no file: load DEM as dataarray to use as domain
-            da = xr.open_dataarray(self.dem_path)
-            da = da.squeeze(drop="band")
-            # all valid data to 1
-            da = xr.where(da.notnull(), 1, da)
+            if self.metadata["hydro_source_model"] == "D3D":
+                self._logger.info(
+                    "hydrologic domain not provided. Using DEM as domain."
+                )
+                # if no file: load DEM as dataarray to use as domain
+                da = xr.open_dataarray(self.dem_path)
+                da = da.squeeze(drop="band")
+                # all valid data to 1
+                da = xr.where(da.notnull(), 1, da)
+            else:
+                raise ValueError(
+                    "For HEC-RAS and MIKE21 hydro input, a domain raster must be supplied."
+                )
 
         else:
             self._logger.info("Loading hydro domain extent raster.")

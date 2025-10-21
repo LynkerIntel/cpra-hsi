@@ -775,6 +775,56 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_forested_half_mi": [
+            hsi.pct_forested_half_mi,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "pct_abandoned_ag_half_mi": [
+            hsi.abandoned_ag_half_mi,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "pct_pasture_half_mi": [
+            hsi.pasture_half_mi,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "pct_active_ag_water_half_mi": [
+            hsi.active_ag_water_half_mi,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
+        "pct_nonhabitat_half_mi": [
+            hsi.nonhabitat_half_mi,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
         "water_depth_annual_mean": [
             hsi.water_depth_annual_mean,
             np.float32,

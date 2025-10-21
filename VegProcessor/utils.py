@@ -3,7 +3,7 @@ import geopandas as gpd
 import xarray as xr
 import pathlib
 from scipy import ndimage
-from scipy.ndimage import generic_filter
+from scipy.ndimage import convolve
 from skimage.morphology import disk
 import scipy.stats as stats
 
@@ -340,17 +340,19 @@ def calculate_buffered_land_use_percentages(
     """
     # Define the land use groups directly
     land_use_groups = {
-        "nonhabitat": [2, 3, 4, 5, 14],
-        "active_ag_water": [6, 26],
+        "nonhabitat": [2, 3, 4, 5],
+        "active_ag_water": [6, 13, 14, 24, 25, 26],
         "pasture": [7, 8],
-        "forested": [9, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
-        "abandoned_ag": [12, 19]
+        "forested": [9, 10, 11, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+        "abandoned_ag": [12]
     }
 
     # Define the buffer kernel in pixel units
     buffer_m = buffer_miles * 1609.34
     radius_pixels = int(round(buffer_m / resolution_m))
     kernel = disk(radius_pixels)
+
+    normalized_kernel = kernel.astype(np.float32) / np.sum(kernel)
     
     # Perform focal analysis for each land use group
     percentage_arrays = {}
@@ -360,13 +362,12 @@ def calculate_buffered_land_use_percentages(
         # Create a binary mask where pixels matching the group's codes are True
         binary_mask = np.isin(land_cover_da.values, codes_list).astype(np.float32)
 
-        # Calculate the mean within the moving window (kernel)
-        focal_mean = generic_filter(
+        # Calculate the mean over a footprint
+        focal_mean = convolve(
             binary_mask,
-            function=np.mean,
-            footprint=kernel,
-            mode='constant',
-            cval=0
+            weights = normalized_kernel,
+            mode ='constant',
+            cval =0
         )
         
         percentage_da = xr.DataArray(

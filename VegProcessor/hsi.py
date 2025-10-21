@@ -757,25 +757,20 @@ class HSI(vt.VegTransition):
             buffer_miles=0.5
         )
 
-        forested = utils.coarsen_and_reduce(
-        da=pct_dict_60m["forested"], x=8, y=8
-        ).to_numpy()
+        forested = pct_dict_60m["forested"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
     
-        abandoned_ag = utils.coarsen_and_reduce(
-            da=pct_dict_60m["abandoned_ag"], x=8, y=8
-        ).to_numpy()
+        abandoned_ag = pct_dict_60m["abandoned_ag"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
     
-        pasture = utils.coarsen_and_reduce(
-            da=pct_dict_60m["pasture"], x=8, y=8
-        ).to_numpy()
+        pasture = pct_dict_60m["pasture"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
     
-        active_ag_water = utils.coarsen_and_reduce(
-            da=pct_dict_60m["active_ag_water"], x=8, y=8
-        ).to_numpy()
+        active_ag_water = pct_dict_60m["active_ag_water"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
     
-        nonhabitat = utils.coarsen_and_reduce(
-            da=pct_dict_60m["nonhabitat"], x=8, y=8
-        ).to_numpy()
+        nonhabitat = pct_dict_60m["nonhabitat"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
 
         return {
             "forested": forested,

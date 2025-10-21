@@ -168,13 +168,19 @@ class AlligatorHSI:
 
             # condition 2 (AND)
             mask_2 = (self.v2_water_depth_annual_mean >= -0.55) & (
-                self.v2_water_depth_annual_mean <= 0.15
+                self.v2_water_depth_annual_mean <= -0.15
             )
             si_2[mask_2] = (
                 2.25 * self.v2_water_depth_annual_mean[mask_2]
             ) + 1.3375
 
-            # condition 3 (AND)
+            # condition 3: V2 = -0.15 (with tolerance for floating point)
+            mask_special = np.isclose(
+                self.v2_water_depth_annual_mean, -0.15, atol=1e-6
+            )
+            si_2[mask_special] = 1.0
+
+            # condition 4: -0.15 < V2 < 0.25
             mask_3 = (self.v2_water_depth_annual_mean > -0.15) & (
                 self.v2_water_depth_annual_mean < 0.25
             )

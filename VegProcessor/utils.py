@@ -2,6 +2,7 @@ import xarray as xr
 import pathlib
 from scipy import ndimage
 import scipy.stats as stats
+import glob
 
 import numpy as np
 import pandas as pd
@@ -938,7 +939,9 @@ def analog_years_handler(
 
 
 def load_sequence_csvs(directory: str) -> dict[int, int]:
-    """load all csvs in a directory that include 'sequence' in the name
+    """DEPRECATED
+
+    load all csvs in a directory that include 'sequence' in the name
 
     keys in the output dict are the first part of each filename (before the first underscore)
 
@@ -961,6 +964,133 @@ def load_sequence_csvs(directory: str) -> dict[int, int]:
     df.drop(columns="Water Year", inplace=True)
     dict_out = df["Adjusted"].to_dict()
     return dict_out
+
+
+def create_binary_max_domain(
+    netcdf_dir: str,
+    variable_name: str = None,
+    time_chunks: int = 10,
+) -> xr.DataArray:
+    """Create a binary maximum spatial domain mask from NetCDF files.
+
+    This function loads all NetCDF files from a directory and creates a binary
+    mask where pixels are True (1) if they have at least one non-NaN value
+    across all timesteps, and False (0) otherwise.
+
+    The function processes data in chunks along the time dimension to avoid
+    out-of-memory errors with large datasets. Spatial coordinates are preserved
+    in the output xarray DataArray.
+
+    Parameters
+    ----------
+    netcdf_dir : str
+        Path to directory containing NetCDF files.
+    variable_name : str, optional
+        Name of the variable to check for non-NaN values. If None, will use
+        the first data variable in the dataset.
+    time_chunks : int, optional
+        Number of timesteps to process at once. Default is 10. Reduce this
+        if you encounter memory errors.
+
+    Returns
+    -------
+    xr.DataArray
+        Binary mask as an integer (int8) xarray DataArray where 1 indicates at
+        least one non-NaN value existed across all timesteps at that pixel
+        location, and 0 indicates all values were NaN. Spatial coordinates
+        (e.g., x, y) are preserved from the input data.
+    """
+    nc_files = sorted(glob.glob(os.path.join(netcdf_dir, "*.nc")))
+
+    if not nc_files:
+        raise FileNotFoundError(f"No NetCDF files found in {netcdf_dir}")
+
+    print(f"Found {len(nc_files)} NetCDF files")
+
+    # open w/ chunking to enable lazy loading
+    ds = xr.open_mfdataset(
+        nc_files,
+        combine="by_coords",
+        chunks={"time": time_chunks},
+        parallel=True,
+    )
+
+    # If variable name not specified, use first data variable
+    if variable_name is None:
+        variable_name = list(ds.data_vars.keys())[0]
+        print(f"Using variable: {variable_name}")
+
+    if variable_name not in ds.data_vars:
+        raise ValueError(
+            f"Variable '{variable_name}' not found in dataset. "
+            f"Available variables: {list(ds.data_vars.keys())}"
+        )
+
+    # Get the data variable
+    data = ds[variable_name]
+    total_timesteps = data.sizes.get("time", 1)
+
+    # Get spatial dimensions (all dims except time)
+    spatial_dims = [dim for dim in data.dims if dim != "time"]
+    spatial_coords = {dim: data.coords[dim] for dim in spatial_dims}
+    spatial_shape = tuple(data.sizes[dim] for dim in spatial_dims)
+
+    print(
+        f"Processing {total_timesteps} timesteps with spatial shape {spatial_shape}"
+    )
+
+    # Initialize the binary mask as False (all pixels start as invalid)
+    max_domain = np.zeros(spatial_shape, dtype=bool)
+
+    # Process in chunks along time dimension
+    num_chunks = int(np.ceil(total_timesteps / time_chunks))
+
+    for i in range(num_chunks):
+        start_idx = i * time_chunks
+        end_idx = min((i + 1) * time_chunks, total_timesteps)
+
+        print(f"Processing timesteps {start_idx} to {end_idx-1}...")
+
+        # Load only this chunk into memory
+        if "time" in data.dims:
+            chunk_data = data.isel(time=slice(start_idx, end_idx))
+        else:
+            # No time dimension, process all at once
+            chunk_data = data
+
+        # Check for non-NaN values in this chunk
+        has_valid = (~chunk_data.isnull()).any(dim="time").compute().values
+
+        # Update the maximum domain mask using logical OR
+        max_domain = np.logical_or(max_domain, has_valid)
+
+        # If no time dimension, we're done after one iteration
+        if "time" not in data.dims:
+            break
+
+    # Convert boolean mask to integer (1 and 0)
+    max_domain_int = max_domain.astype(np.int8)
+
+    # Create xarray DataArray with spatial coordinates preserved
+    max_domain_da = xr.DataArray(
+        max_domain_int,
+        coords=spatial_coords,
+        dims=spatial_dims,
+        attrs={
+            "description": "Binary maximum spatial domain mask",
+            "long_name": (
+                "Maximum domain mask indicating pixels with at least one non-NaN value"
+            ),
+            "units": "1 (valid) or 0 (invalid)",
+        },
+    )
+
+    # Close the dataset
+    ds.close()
+
+    print(f"Domain mask created: {max_domain_da.sum().values} valid pixels")
+
+    return max_domain_da
 
 
 # def parse_hydro_input(path) -> dict[str, str]:

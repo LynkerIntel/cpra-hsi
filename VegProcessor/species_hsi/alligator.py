@@ -160,15 +160,15 @@ class AlligatorHSI:
             si_2[~np.isnan(si_2)] = 1
 
         else:
-            # condition 1 (OR)
+            # condition 1: V2 ≤ -0.55 or V2 ≥ 0.25
             mask_1 = (self.v2_water_depth_annual_mean <= -0.55) | (
                 self.v2_water_depth_annual_mean >= 0.25
             )
             si_2[mask_1] = 0.1
 
-            # condition 2 (AND)
-            mask_2 = (self.v2_water_depth_annual_mean >= -0.55) & (
-                self.v2_water_depth_annual_mean <= -0.15
+            # condition 2: -0.55 < V2 < -0.15
+            mask_2 = (self.v2_water_depth_annual_mean > -0.55) & (
+                self.v2_water_depth_annual_mean < -0.15
             )
             si_2[mask_2] = (
                 2.25 * self.v2_water_depth_annual_mean[mask_2]
@@ -189,7 +189,19 @@ class AlligatorHSI:
             ) + 0.6625
 
             # Check for unhandled condition with tolerance
-            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+            # Allow NaN values to remain (they represent areas outside domain)
+            unhandled = np.isclose(si_2, 999.0, atol=1e-5) & ~np.isnan(
+                self.v2_water_depth_annual_mean
+            )
+            if np.any(unhandled):
+                # Debug: print problematic values
+                bad_values = self.v2_water_depth_annual_mean[unhandled]
+                self._logger.error(
+                    f"Unhandled water depth values in SI_2: min={np.min(bad_values)}, max={np.max(bad_values)}, count={np.sum(unhandled)}"
+                )
+                self._logger.error(
+                    f"Sample values: {bad_values.flatten()[:10]}"
+                )
                 raise ValueError("Unhandled condition in SI logic!")
 
         return si_2

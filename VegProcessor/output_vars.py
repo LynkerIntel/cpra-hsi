@@ -786,7 +786,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "pct_abandoned_ag_half_mi": [
-            hsi.abandoned_ag_half_mi,
+            hsi.pct_abandoned_ag_half_mi,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -796,7 +796,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "pct_pasture_half_mi": [
-            hsi.pasture_half_mi,
+            hsi.pct_pasture_half_mi,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -806,7 +806,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "pct_active_ag_water_half_mi": [
-            hsi.active_ag_water_half_mi,
+            hsi.pct_active_ag_water_half_mi,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -816,7 +816,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "pct_nonhabitat_half_mi": [
-            hsi.nonhabitat_half_mi,
+            hsi.pct_nonhabitat_half_mi,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

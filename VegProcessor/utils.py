@@ -974,8 +974,8 @@ def create_binary_max_domain(
     """Create a binary maximum spatial domain mask from NetCDF files.
 
     This function loads all NetCDF files from a directory and creates a binary
-    mask where pixels are True (1) if they have at least one non-NaN value
-    across all timesteps, and False (0) otherwise.
+    mask where pixels are 1.0 if they have at least one non-NaN value
+    across all timesteps, and NaN otherwise.
 
     The function processes data in chunks along the time dimension to avoid
     out-of-memory errors with large datasets. Spatial coordinates are preserved
@@ -995,9 +995,9 @@ def create_binary_max_domain(
     Returns
     -------
     xr.DataArray
-        Binary mask as an integer (int8) xarray DataArray where 1 indicates at
+        Binary mask as a float xarray DataArray where 1.0 indicates at
         least one non-NaN value existed across all timesteps at that pixel
-        location, and 0 indicates all values were NaN. Spatial coordinates
+        location, and NaN indicates all values were NaN. Spatial coordinates
         (e.g., x, y) are preserved from the input data.
     """
     nc_files = sorted(glob.glob(os.path.join(netcdf_dir, "*.nc")))
@@ -1068,12 +1068,12 @@ def create_binary_max_domain(
         if "time" not in data.dims:
             break
 
-    # Convert boolean mask to integer (1 and 0)
-    max_domain_int = max_domain.astype(np.int8)
+    # Convert boolean mask to float (1.0 for valid, NaN for invalid)
+    max_domain_float = np.where(max_domain, 1.0, np.nan)
 
     # Create xarray DataArray with spatial coordinates preserved
     max_domain_da = xr.DataArray(
-        max_domain_int,
+        max_domain_float,
         coords=spatial_coords,
         dims=spatial_dims,
         attrs={
@@ -1081,7 +1081,7 @@ def create_binary_max_domain(
             "long_name": (
                 "Maximum domain mask indicating pixels with at least one non-NaN value"
             ),
-            "units": "1 (valid) or 0 (invalid)",
+            "units": "1.0 (valid) or NaN (invalid)",
         },
     )
 

@@ -22,6 +22,7 @@ from scipy.ndimage import label
 import hydro_logic
 import plotting
 import utils
+import validate
 
 import veg_transition as vt
 from output_vars import get_hsi_variables
@@ -74,6 +75,9 @@ class HSI(vt.VegTransition):
 
         with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
+
+        # Validate configuration before proceeding
+        validate.validate_config(self.config, config_file)
 
         self._load_config_attributes()
 
@@ -1176,33 +1180,63 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
-        with xr.open_dataset(self.netcdf_filepath) as ds:
+        # # Debug: Check how many variables have data
+        # vars_with_data = sum(1 for var_name, (data, dtype, nc_attrs) in hsi_variables.items() if data is not None)
+        # self._logger.info(f"HSI variables with data: {vars_with_data} out of {len(hsi_variables)} total variables")
 
-            for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
-                if data is not None:  # only write arrays that have data
-                    netcdf_dtype = np.int8 if dtype == bool else dtype
+        # # Debug: List which species objects exist
+        # species_status = {
+        #     'alligator': self.alligator is not None,
+        #     'baldeagle': self.baldeagle is not None,
+        #     'bass': self.bass is not None,
+        #     'blackbear': self.blackbear is not None,
+        #     'blackcrappie': self.blackcrappie is not None,
+        #     'blhwva': self.blhwva is not None,
+        #     'bluecrab': self.bluecrab is not None,
+        #     'crawfish': self.crawfish is not None,
+        #     'gizzardshad': self.gizzardshad is not None,
+        #     'swampwva': self.swampwva is not None,
+        # }
+        # self._logger.info(f"Species objects created: {species_status}")
 
-                    # if the var exists in the dataset, if not, initialize it
-                    if var_name not in ds:
-                        shape = (len(ds.time), len(ds.y), len(ds.x))
-                        default_value = 0 if dtype == bool else np.nan
-                        ds[var_name] = (
-                            ["time", "y", "x"],
-                            np.full(shape, default_value, dtype=netcdf_dtype),
-                            nc_attrs,
-                        )
+        # Open dataset and load into memory
+        with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
+            ds_loaded = ds.load()  # loads into memory and closes file
 
-                    # boolean to int8 (0 and 1)
-                    if dtype == bool:
-                        data = np.nan_to_num(data, nan=False).astype(np.int8)
+        for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
+            if data is not None:  # only write arrays that have data
+                netcdf_dtype = np.int8 if dtype == bool else dtype
 
-                    ds[var_name].loc[{"time": timestep}] = data.astype(
-                        netcdf_dtype
+                # if the var exists in the dataset, if not, initialize it
+                if var_name not in ds_loaded:
+                    shape = (
+                        len(ds_loaded.time),
+                        len(ds_loaded.y),
+                        len(ds_loaded.x),
+                    )
+                    default_value = 0 if dtype == bool else np.nan
+                    ds_loaded[var_name] = (
+                        ["time", "y", "x"],
+                        np.full(shape, default_value, dtype=netcdf_dtype),
+                        nc_attrs,
                     )
 
-        ds.close()
-        ds.to_netcdf(self.netcdf_filepath, mode="a", encoding=encoding)
-        # ds.to_netcdf(self.netcdf_filepath, mode="a")  # netcdf4 backend not preserving crs
+                # boolean to int8 (0 and 1)
+                if dtype == bool:
+                    data = np.nan_to_num(data, nan=False).astype(np.int8)
+
+                ds_loaded[var_name].loc[{"time": timestep}] = data.astype(
+                    netcdf_dtype
+                )
+
+        # Save and close
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath,
+            mode="a",
+            engine="h5netcdf",
+            encoding=encoding,
+        )
+        ds_loaded.close()
         self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
 
     def post_process(self):
@@ -1229,7 +1263,7 @@ class HSI(vt.VegTransition):
         if os.path.exists(self.netcdf_filepath):
             os.remove(self.netcdf_filepath)
 
-        ds_out.to_netcdf(self.netcdf_filepath, mode="w")
+        ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
 
         # -------- create sidecar file ---------
         self._logger.info("Creating variable name text file")

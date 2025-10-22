@@ -84,7 +84,7 @@ class HSI(vt.VegTransition):
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
-            hydro_source_model=self.metadata.get('hydro_source_model'),
+            hydro_source_model=self.metadata.get("hydro_source_model"),
         )
 
         self._create_output_dirs()
@@ -318,8 +318,8 @@ class HSI(vt.VegTransition):
             "io_type": "O",
             "time_freq": "ANN",  # for annual output
             "year_range": (
-                f"00_{str(sim_length + 1).zfill(2)}"
-            ),  # 00 start (initial conditions)
+                f"01_{str(sim_length).zfill(2)}"
+            ),  # HSI does not include initial conditions (unlike VEG)
             "output_version": self.metadata.get("output_version"),
         }
 

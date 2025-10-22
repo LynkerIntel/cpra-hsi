@@ -84,6 +84,7 @@ class HSI(vt.VegTransition):
         # Generate filename early so it's available for logger and metadata files
         self.file_name = utils.generate_filename(
             params=self.file_params,
+            hydro_source_model=self.metadata.get('hydro_source_model'),
         )
 
         self._create_output_dirs()

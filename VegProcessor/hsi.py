@@ -746,7 +746,7 @@ class HSI(vt.VegTransition):
     
     def _calculate_surrounding_land_use(self):
         """
-        Calculates buffered land use percentages, coarsens them results to the 480m,
+        Calculates buffered land use percentages, coarsens the results to the 480m,
         and return to a dictionary.
         """
         self._logger.info("Calculating surrounding land use percentages (0.5-mile buffer).")

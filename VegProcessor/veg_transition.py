@@ -229,6 +229,15 @@ class VegTransition:
 
         self._logger.info("Logger setup complete.")
 
+        # add the veg transition logger
+        utils_logger = logging.getLogger("VegTransition")
+        utils_logger.setLevel(log_level)
+
+        utils_logger.addHandler(ch)
+        utils_logger.addHandler(fh)
+
+        utils_logger.addFilter(filter_instance)
+
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""
         try:

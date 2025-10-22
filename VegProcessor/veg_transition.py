@@ -796,7 +796,7 @@ class VegTransition:
 
         # handle formatting & domain differences between models----------------------------
         if self.file_params["hydro_source_model"] == "HEC":
-            self._logger.info("Loading HEC-RAS hydro source...")
+            self._logger.info("Creating HEC-RAS hydro source...")
             # get depth (critical)
             ds = ds - self.dem
             # fill zeros. This step is necessary to get 0 water depth from DEM and missing
@@ -812,15 +812,19 @@ class VegTransition:
             return ds
 
         elif self.file_params["hydro_source_model"] == "D3D":
-            self._logger.info("Loading Delft3D hydro source...")
+            self._logger.info("Creating Delft3D hydro source...")
             # Delft formatting opts:
             ds = ds - self.dem
+            ds = ds.fillna(0)
+            ds = ds.where(self.hydro_domain)
             return ds
 
         elif self.file_params["hydro_source_model"] == "MIK":
-            self._logger.info("Loading MIKE21 hydro source...")
+            self._logger.info("Creating MIKE21 hydro source...")
             # MIKE21 formatting opts:
             ds = ds - self.dem
+            ds = ds.fillna(0)
+            ds = ds.where(self.hydro_domain)
             return ds
 
     def _reproject_match_to_dem(
@@ -1035,6 +1039,12 @@ class VegTransition:
             True if array should be downscaled to 480m "cell" resolution. If True,
             the array is returned as "data" with NaN. If False, data is returned as
             boolean (the format expected by `VegTransition` methods).
+
+        Returns
+        --------
+        da : np.ndarray
+            A boolean numpy array at 60m, or a binary numpy array at 480m. This
+            accomdates the requirements of both `VegTransition` and `HSI`.
         """
         if self.hydro_domain_path is None:
             if self.metadata["hydro_source_model"] == "D3D":

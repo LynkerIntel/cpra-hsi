@@ -273,6 +273,13 @@ class HSI(vt.VegTransition):
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
+        # surrounding land use
+        self.pct_forested_half_mi = None
+        self.pct_abandoned_ag_half_mi = None
+        self.pct_pasture_half_mi = None
+        self.pct_active_ag_water_half_mi = None
+        self.pct_nonhabitat_half_mi = None
+
         # black-crappie
         self.blackcrappie_max_monthly_avg_summer_turbidity = None
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
@@ -586,6 +593,13 @@ class HSI(vt.VegTransition):
             radius=self.testing_radius
         )
 
+        surrounding_lu_data = self._calculate_surrounding_land_use()
+        self.pct_forested_half_mi = surrounding_lu_data["forested"]
+        self.pct_abandoned_ag_half_mi = surrounding_lu_data["abandoned_ag"]
+        self.pct_pasture_half_mi = surrounding_lu_data["pasture"]
+        self.pct_active_ag_water_half_mi = surrounding_lu_data["active_ag_water"]
+        self.pct_nonhabitat_half_mi = surrounding_lu_data["nonhabitat"]
+
     @staticmethod
     def _calculate_near_landtype(
         landcover_arr: np.ndarray,
@@ -729,6 +743,42 @@ class HSI(vt.VegTransition):
         stacked = np.stack([crops_expanded, developed_expanded])
         influence_bool = np.any(stacked, axis=0)
         return influence_bool
+    
+    def _calculate_surrounding_land_use(self):
+        """
+        Calculates buffered land use percentages, coarsens the results to the 480m,
+        and return to a dictionary.
+        """
+        self._logger.info("Calculating surrounding land use percentages (0.5-mile buffer).")
+    
+        pct_dict_60m = utils.calculate_buffered_land_use_percentages(
+            land_cover_da=self.initial_veg_type,
+            resolution_m=60,
+            buffer_miles=0.5
+        )
+
+        forested = pct_dict_60m["forested"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
+    
+        abandoned_ag = pct_dict_60m["abandoned_ag"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
+    
+        pasture = pct_dict_60m["pasture"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
+    
+        active_ag_water = pct_dict_60m["active_ag_water"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
+    
+        nonhabitat = pct_dict_60m["nonhabitat"].coarsen(
+            x=8, y=8, boundary="pad").mean().to_numpy()
+
+        return {
+            "forested": forested,
+            "abandoned_ag": abandoned_ag,
+            "pasture": pasture,
+            "active_ag_water": active_ag_water,
+            "nonhabitat": nonhabitat
+        }
 
     def _calculate_edge(self) -> np.ndarray:
         """

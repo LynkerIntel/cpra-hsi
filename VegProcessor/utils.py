@@ -786,22 +786,22 @@ def qc_tree_establishment_info(
     march = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 3)
-        .isel(time=0)
+        .mean(dim="time")
     )
     april = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 4)
-        .isel(time=0)
+        .mean(dim="time")
     )
     may = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 5)
-        .isel(time=0)
+        .mean(dim="time")
     )
     june = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 6)
-        .isel(time=0)
+        .mean(dim="time")
     )
     return [
         march.to_numpy(),

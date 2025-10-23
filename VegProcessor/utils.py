@@ -6,6 +6,7 @@ from scipy import ndimage
 from scipy.ndimage import convolve
 from skimage.morphology import disk
 import scipy.stats as stats
+import glob
 
 import numpy as np
 import pandas as pd
@@ -596,7 +597,10 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
 
 def generate_filename(
-    params: dict, parameter: str = None, base_path: str = None
+    params: dict,
+    variable: str = None,
+    base_path: str = None,
+    hydro_source_model: str = None,
 ) -> Path:
     """
     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
@@ -608,7 +612,7 @@ def generate_filename(
         Dictionary containing optional keys:
         - model : str
         - scenario : str
-        - group : str
+        - output_group : str
         - wpu : str
         - io_type : str
         - time_freq : str
@@ -619,18 +623,22 @@ def generate_filename(
         current timestep as well as the model config file. It excludes "parameter",
         which is specified separately.
 
-    parameter : str
+    variable : str
         The name of the variable being saved, i.e. "VEGTYPE".
 
     base_path : str or Path, optional
         Base directory path where the file should be located.
+
+    hydro_source_model : str, optional
+        The hydro source model (e.g., "HEC", "D3D"). A letter will be appended to the
+        model component based on this value (e.g., "HEC" -> "H", "D3D" -> "D").
 
     Returns:
     --------
     Path
         A `Path` object representing the full path to the generated file.
     """
-    # Define the order of keys
+    # the order of keys
     key_order = [
         "model",
         "water_year",
@@ -638,28 +646,39 @@ def generate_filename(
         "flow_scenario",
         "year_range",
         "time_freq",
-        "group",
+        "output_group",
         "wpu",
         "io_type",
         "output_version",
     ]
 
-    # Collect available values from params in order
-    values = [
-        (
-            params[key].upper()
-            if isinstance(params.get(key), str)
-            else params.get(key)
-        )
-        for key in key_order
-        if key in params and params[key] is not None
-    ]
+    hydro_model_map = {
+        "HEC": "H",
+        "D3D": "D",
+        "MIK": "M",
+    }
 
-    # Append parameter to the filename if provided
-    if parameter:
-        values.append(parameter)
+    # get existing values from params in order
+    values = []
+    for key in key_order:
+        if key in params and params[key] is not None:
+            value = (
+                params[key].upper()
+                if isinstance(params.get(key), str)
+                else params.get(key)
+            )
 
-    # Construct the filename
+            # if model key, and hydro_source_model is provided, append the letter
+            if key == "model" and hydro_source_model is not None:
+                suffix = hydro_model_map.get(hydro_source_model.upper(), "")
+                value = f"{value}{suffix}"
+
+            values.append(value)
+
+    # add param to the filename
+    if variable:
+        values.append(variable)
+
     filename = "AMP_" + "_".join(map(str, values))
 
     # Combine with base path if provided
@@ -822,22 +841,22 @@ def qc_tree_establishment_info(
     march = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 3)
-        .isel(time=0)
+        .mean(dim="time")
     )
     april = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 4)
-        .isel(time=0)
+        .mean(dim="time")
     )
     may = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 5)
-        .isel(time=0)
+        .mean(dim="time")
     )
     june = (
         water_depth["height"]
         .sel(time=water_depth["time"].dt.month == 6)
-        .isel(time=0)
+        .mean(dim="time")
     )
     return [
         march.to_numpy(),
@@ -925,8 +944,59 @@ def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def analog_years_handler(
+    analog_year: int,
+    water_year: int,
+    ds: xr.Dataset,
+) -> xr.Dataset:
+    """
+    A method to reassign the time dimension of a netcdf
+    from the original hydrologic simulation timestamps
+    to the synthetic water-year used by `VegTransition` and
+    `HSI`.
+
+    Parameters:
+    -----------
+    quintile : int
+        The quintile, from the sequence mapping
+    analog_year : int
+        The simulation WY from a hydrologic model.
+    water_year : int
+        The VEG or HSI model timestep WY.
+    ds : xr.Dataset
+        The hydrologic model single WY NetCDF file
+    """
+    # build a 365-day date range by dropping Feb 29
+    target_range = pd.date_range(
+        f"{water_year-1}-10-01", f"{water_year}-09-30"
+    )
+    target_range = target_range[
+        ~((target_range.month == 2) & (target_range.day == 29))
+    ]
+
+    # if leap
+    if ds.sizes["time"] == 366:
+        # assign "actual" datetime to time dim, temporarily,
+        # in order to drop feb 29
+        full_range = pd.date_range(
+            f"{analog_year-1}-10-01", f"{analog_year}-09-30"
+        )
+        ds = ds.assign_coords(time=("time", full_range))
+        mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
+        ds = ds.isel(time=mask)
+
+        # rename to match expected simulation dates, i.e. water year
+        ds = ds.assign_coords(time=("time", target_range))
+
+    # rename to match expected simulation dates, i.e. water year
+    ds = ds.assign_coords(time=("time", target_range))
+    return ds
+
+
 def load_sequence_csvs(directory: str) -> dict[int, int]:
-    """load all csvs in a directory that include 'sequence' in the name
+    """DEPRECATED
+
+    load all csvs in a directory that include 'sequence' in the name
 
     keys in the output dict are the first part of each filename (before the first underscore)
 
@@ -949,6 +1019,167 @@ def load_sequence_csvs(directory: str) -> dict[int, int]:
     df.drop(columns="Water Year", inplace=True)
     dict_out = df["Adjusted"].to_dict()
     return dict_out
+
+
+def create_binary_max_domain(
+    netcdf_dir: str,
+    variable_name: str = None,
+    time_chunks: int = 10,
+) -> xr.DataArray:
+    """Create a binary maximum spatial domain mask from NetCDF files.
+
+    This function loads all NetCDF files from a directory and creates a binary
+    mask where pixels are 1.0 if they have at least one non-NaN value
+    across all timesteps, and NaN otherwise.
+
+    The function processes data in chunks along the time dimension to avoid
+    out-of-memory errors with large datasets. Spatial coordinates are preserved
+    in the output xarray DataArray.
+
+    Parameters
+    ----------
+    netcdf_dir : str
+        Path to directory containing NetCDF files.
+    variable_name : str, optional
+        Name of the variable to check for non-NaN values. If None, will use
+        the first data variable in the dataset.
+    time_chunks : int, optional
+        Number of timesteps to process at once. Default is 10. Reduce this
+        if you encounter memory errors.
+
+    Returns
+    -------
+    xr.DataArray
+        Binary mask as a float xarray DataArray where 1.0 indicates at
+        least one non-NaN value existed across all timesteps at that pixel
+        location, and NaN indicates all values were NaN. Spatial coordinates
+        (e.g., x, y) are preserved from the input data.
+    """
+    nc_files = sorted(glob.glob(os.path.join(netcdf_dir, "*.nc")))
+
+    if not nc_files:
+        raise FileNotFoundError(f"No NetCDF files found in {netcdf_dir}")
+
+    print(f"Found {len(nc_files)} NetCDF files")
+
+    # open w/ chunking to enable lazy loading
+    ds = xr.open_mfdataset(
+        nc_files,
+        combine="by_coords",
+        chunks={"time": time_chunks},
+        parallel=True,
+    )
+
+    # If variable name not specified, use first data variable
+    if variable_name is None:
+        variable_name = list(ds.data_vars.keys())[0]
+        print(f"Using variable: {variable_name}")
+
+    if variable_name not in ds.data_vars:
+        raise ValueError(
+            f"Variable '{variable_name}' not found in dataset. "
+            f"Available variables: {list(ds.data_vars.keys())}"
+        )
+
+    # Get the data variable
+    data = ds[variable_name]
+    total_timesteps = data.sizes.get("time", 1)
+
+    # Get spatial dimensions (all dims except time)
+    spatial_dims = [dim for dim in data.dims if dim != "time"]
+    spatial_coords = {dim: data.coords[dim] for dim in spatial_dims}
+    spatial_shape = tuple(data.sizes[dim] for dim in spatial_dims)
+
+    print(
+        f"Processing {total_timesteps} timesteps with spatial shape {spatial_shape}"
+    )
+
+    # Initialize the binary mask as False (all pixels start as invalid)
+    max_domain = np.zeros(spatial_shape, dtype=bool)
+
+    # Process in chunks along time dimension
+    num_chunks = int(np.ceil(total_timesteps / time_chunks))
+
+    for i in range(num_chunks):
+        start_idx = i * time_chunks
+        end_idx = min((i + 1) * time_chunks, total_timesteps)
+
+        print(f"Processing timesteps {start_idx} to {end_idx-1}...")
+
+        # Load only this chunk into memory
+        if "time" in data.dims:
+            chunk_data = data.isel(time=slice(start_idx, end_idx))
+        else:
+            # No time dimension, process all at once
+            chunk_data = data
+
+        # Check for non-NaN values in this chunk
+        has_valid = (~chunk_data.isnull()).any(dim="time").compute().values
+
+        # Update the maximum domain mask using logical OR
+        max_domain = np.logical_or(max_domain, has_valid)
+
+        # If no time dimension, we're done after one iteration
+        if "time" not in data.dims:
+            break
+
+    # Convert boolean mask to float (1.0 for valid, NaN for invalid)
+    max_domain_float = np.where(max_domain, 1.0, np.nan)
+
+    # Create xarray DataArray with spatial coordinates preserved
+    max_domain_da = xr.DataArray(
+        max_domain_float,
+        coords=spatial_coords,
+        dims=spatial_dims,
+        attrs={
+            "description": "Binary maximum spatial domain mask",
+            "long_name": (
+                "Maximum domain mask indicating pixels with at least one non-NaN value"
+            ),
+            "units": "1.0 (valid) or NaN (invalid)",
+        },
+    )
+
+    # Close the dataset
+    ds.close()
+
+    print(f"Domain mask created: {max_domain_da.sum().values} valid pixels")
+
+    return max_domain_da
+
+
+# def parse_hydro_input(path) -> dict[str, str]:
+#     """
+#     Parse the hydro input filename to extract model parameters.
+
+#     Expected filename format:
+#     AMP_HEC_WY06_000_X_99_99_DLY_G900_AB_O_STAGE_V1.nc
+
+#     For now it just returns the model identifier,
+#     as the other components are set manually in the config.
+
+#     Parameters:
+#     -----------
+#     ds (str)
+#         Input path, from the config, as a string
+
+#     Returns
+#     -------
+#     dict[str, str]
+#         Dictionary with key 'model' containing the hydro source model (HEC, MIKE, or Delft)
+#     """
+#     nc_files = list(Path(path).glob("*.nc"))
+
+#     if not nc_files:
+#         raise FileNotFoundError(f"No .nc files found in {path}")
+
+#     # parse the filename (remove .nc extension)
+#     filename = nc_files[0].stem
+#     parts = filename.split("_")
+
+#     return {
+#         "model": parts[1] if len(parts) > 1 else None,
+#     }
 
 
 # def load_netcdf_variable_definitions(instance, filename: str) -> dict:

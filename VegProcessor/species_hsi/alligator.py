@@ -145,9 +145,6 @@ class AlligatorHSI:
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # if self.hydro_domain_flag:
-            #     si_1 = np.where(~np.isnan(self.hydro_domain_480), si_1, np.nan)
-
         return si_1
 
     def calculate_si_2(self) -> np.ndarray:
@@ -163,21 +160,27 @@ class AlligatorHSI:
             si_2[~np.isnan(si_2)] = 1
 
         else:
-            # condition 1 (OR)
+            # condition 1: V2 ≤ -0.55 or V2 ≥ 0.25
             mask_1 = (self.v2_water_depth_annual_mean <= -0.55) | (
                 self.v2_water_depth_annual_mean >= 0.25
             )
             si_2[mask_1] = 0.1
 
-            # condition 2 (AND)
-            mask_2 = (self.v2_water_depth_annual_mean >= -0.55) & (
-                self.v2_water_depth_annual_mean <= 0.15
+            # condition 2: -0.55 < V2 < -0.15
+            mask_2 = (self.v2_water_depth_annual_mean > -0.55) & (
+                self.v2_water_depth_annual_mean < -0.15
             )
             si_2[mask_2] = (
                 2.25 * self.v2_water_depth_annual_mean[mask_2]
             ) + 1.3375
 
-            # condition 3 (AND)
+            # condition 3: V2 = -0.15 (with tolerance for floating point)
+            mask_special = np.isclose(
+                self.v2_water_depth_annual_mean, -0.15, atol=1e-6
+            )
+            si_2[mask_special] = 1.0
+
+            # condition 4: -0.15 < V2 < 0.25
             mask_3 = (self.v2_water_depth_annual_mean > -0.15) & (
                 self.v2_water_depth_annual_mean < 0.25
             )
@@ -186,11 +189,20 @@ class AlligatorHSI:
             ) + 0.6625
 
             # Check for unhandled condition with tolerance
-            if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
+            # Allow NaN values to remain (they represent areas outside domain)
+            unhandled = np.isclose(si_2, 999.0, atol=1e-5) & ~np.isnan(
+                self.v2_water_depth_annual_mean
+            )
+            if np.any(unhandled):
+                # Debug: print problematic values
+                bad_values = self.v2_water_depth_annual_mean[unhandled]
+                self._logger.error(
+                    f"Unhandled water depth values in SI_2: min={np.min(bad_values)}, max={np.max(bad_values)}, count={np.sum(unhandled)}"
+                )
+                self._logger.error(
+                    f"Sample values: {bad_values.flatten()[:10]}"
+                )
                 raise ValueError("Unhandled condition in SI logic!")
-
-            # if self.hydro_domain_flag:
-            #     si_2 = np.where(~np.isnan(self.hydro_domain_480), si_2, np.nan)
 
         return si_2
 
@@ -209,9 +221,6 @@ class AlligatorHSI:
 
         if np.any(np.isclose(si_3, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
-
-        # if self.hydro_domain_flag:
-        #         si_3 = np.where(~np.isnan(self.hydro_domain_480), si_3, np.nan)
 
         return si_3
 
@@ -235,9 +244,6 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
-            # if self.hydro_domain_flag:
-            #     si_4 = np.where(~np.isnan(self.hydro_domain_480), si_4, np.nan)
 
         return si_4
 
@@ -266,9 +272,6 @@ class AlligatorHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
-
-            # if self.hydro_domain_flag:
-            #     si_5 = np.where(~np.isnan(self.hydro_domain_480), si_5, np.nan)
 
         return si_5
 

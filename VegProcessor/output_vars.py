@@ -1,6 +1,11 @@
 import numpy as np
 
 
+def _safe_get_attr(obj, attr):
+    """Safely get attribute from object, returning None if object is None."""
+    return getattr(obj, attr) if obj is not None else None
+
+
 def get_hsi_variables(hsi):
     """
     returns a dictionary where each key is a string representing a variable name (str),
@@ -16,10 +21,14 @@ def get_hsi_variables(hsi):
             empty string if unitless)
         - "long_name": human-readable name of the variable
         - "description": optional extended description of the variable
+
+    Only returns variables for species listed in hsi.hsi_run_species config.
+    Variables for species not run will have None data and will be filtered by
+    the NetCDF append function.
     """
-    return {
+    all_variables = {
         "alligator_hsi": [
-            hsi.alligator.hsi,
+            _safe_get_attr(hsi.alligator, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -29,7 +38,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "alligator_si_1": [
-            hsi.alligator.si_1,
+            _safe_get_attr(hsi.alligator, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -39,7 +48,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "alligator_si_2": [
-            hsi.alligator.si_2,
+            _safe_get_attr(hsi.alligator, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -49,7 +58,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "alligator_si_3": [
-            hsi.alligator.si_3,
+            _safe_get_attr(hsi.alligator, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -59,7 +68,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "alligator_si_4": [
-            hsi.alligator.si_4,
+            _safe_get_attr(hsi.alligator, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -69,7 +78,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "alligator_si_5": [
-            hsi.alligator.si_5,
+            _safe_get_attr(hsi.alligator, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -79,7 +88,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_hsi": [
-            hsi.baldeagle.hsi,
+            _safe_get_attr(hsi.baldeagle, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -89,7 +98,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_1": [
-            hsi.baldeagle.si_1,
+            _safe_get_attr(hsi.baldeagle, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -99,7 +108,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_2": [
-            hsi.baldeagle.si_2,
+            _safe_get_attr(hsi.baldeagle, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -109,7 +118,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_3": [
-            hsi.baldeagle.si_3,
+            _safe_get_attr(hsi.baldeagle, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -119,7 +128,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_4": [
-            hsi.baldeagle.si_4,
+            _safe_get_attr(hsi.baldeagle, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -129,7 +138,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_5": [
-            hsi.baldeagle.si_5,
+            _safe_get_attr(hsi.baldeagle, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -139,7 +148,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bald_eagle_si_6": [
-            hsi.baldeagle.si_6,
+            _safe_get_attr(hsi.baldeagle, "si_6"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -149,7 +158,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "crawfish_hsi": [
-            hsi.crawfish.hsi,
+            _safe_get_attr(hsi.crawfish, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -159,7 +168,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "crawfish_si_1": [
-            hsi.crawfish.si_1,
+            _safe_get_attr(hsi.crawfish, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -169,7 +178,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "crawfish_si_2": [
-            hsi.crawfish.si_2,
+            _safe_get_attr(hsi.crawfish, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -179,7 +188,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "crawfish_si_3": [
-            hsi.crawfish.si_3,
+            _safe_get_attr(hsi.crawfish, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -189,7 +198,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "crawfish_si_4": [
-            hsi.crawfish.si_4,
+            _safe_get_attr(hsi.crawfish, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -199,7 +208,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_hsi": [
-            hsi.gizzardshad.hsi,
+            _safe_get_attr(hsi.gizzardshad, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -209,7 +218,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_1": [
-            hsi.gizzardshad.si_1,
+            _safe_get_attr(hsi.gizzardshad, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -219,7 +228,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_2": [
-            hsi.gizzardshad.si_2,
+            _safe_get_attr(hsi.gizzardshad, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -229,7 +238,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_3": [
-            hsi.gizzardshad.si_3,
+            _safe_get_attr(hsi.gizzardshad, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -239,7 +248,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_4": [
-            hsi.gizzardshad.si_4,
+            _safe_get_attr(hsi.gizzardshad, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -249,7 +258,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_5": [
-            hsi.gizzardshad.si_5,
+            _safe_get_attr(hsi.gizzardshad, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -259,7 +268,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_6": [
-            hsi.gizzardshad.si_6,
+            _safe_get_attr(hsi.gizzardshad, "si_6"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -269,7 +278,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "gizzard_shad_si_7": [
-            hsi.gizzardshad.si_7,
+            _safe_get_attr(hsi.gizzardshad, "si_7"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -279,7 +288,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bass_hsi": [
-            hsi.bass.hsi,
+            _safe_get_attr(hsi.bass, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -289,7 +298,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bass_si_1": [
-            hsi.bass.si_1,
+            _safe_get_attr(hsi.bass, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -299,7 +308,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bass_si_2": [
-            hsi.bass.si_2,
+            _safe_get_attr(hsi.bass, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -308,8 +317,198 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "catfish_hsi": [
+            _safe_get_attr(hsi.catfish, "hsi"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "riverine catfish HSI",
+                "description": "",
+            },
+        ],
+        "catfish_si_1": [
+            _safe_get_attr(hsi.catfish, "si_1"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "percent pools during average summer flow",
+            },
+        ],
+        "catfish_si_2": [
+            _safe_get_attr(hsi.catfish, "si_2"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "percent cover in summer pools backwater",
+            },
+        ],
+        "catfish_si_4": [
+            _safe_get_attr(hsi.catfish, "si_4"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "food production potential substrate",
+            },
+        ],
+        "catfish_si_5": [
+            _safe_get_attr(hsi.catfish, "si_5"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (adult)",
+            },
+        ],
+        "catfish_si_6": [
+            _safe_get_attr(hsi.catfish, "si_6"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "growing season length frost free days",
+            },
+        ],
+        "catfish_si_7": [
+            _safe_get_attr(hsi.catfish, "si_7"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum monthly average summer turbidity",
+            },
+        ],
+        "catfish_si_8": [
+            _safe_get_attr(hsi.catfish, "si_8"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average minimum dissolved oxygen in midsummer pools backwater",
+            },
+        ],
+        "catfish_si_9": [
+            _safe_get_attr(hsi.catfish, "si_9"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum salinity during summer (adult)",
+            },
+        ],
+        "catfish_si_10": [
+            _safe_get_attr(hsi.catfish, "si_10"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average temperature in spawning embryo pools backwater (embryo)",
+            },
+        ],
+        "catfish_si_11": [
+            _safe_get_attr(hsi.catfish, "si_11"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum salinity spawning embryo (embryo)",
+            },
+        ],
+        "catfish_si_12": [
+            _safe_get_attr(hsi.catfish, "si_12"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (fry)",
+            },
+        ],
+        "catfish_si_13": [
+            _safe_get_attr(hsi.catfish, "si_13"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum summer salinity fry juvenile",
+            },
+        ],
+        "catfish_si_14": [
+            _safe_get_attr(hsi.catfish, "si_14"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (juvenile)",
+            },
+        ],
+        "catfish_si_18": [
+            _safe_get_attr(hsi.catfish, "si_18"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average current velocity in cover areas during average summer flow",
+            },
+        ],
+        "catfish_fc": [
+            _safe_get_attr(hsi.catfish, "fc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish food component",
+            },
+        ],
+        "catfish_cc": [
+            _safe_get_attr(hsi.catfish, "cc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish cover component",
+            },
+        ],
+        "catfish_wq": [
+            _safe_get_attr(hsi.catfish, "wq"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish water quality component",
+            },
+        ],
+        "catfish_rc": [
+            _safe_get_attr(hsi.catfish, "rc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish reproduction component",
+            },
+        ],
         "blackbear_hsi": [
-            hsi.blackbear.hsi,
+            _safe_get_attr(hsi.blackbear, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -319,7 +518,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_1": [
-            hsi.blackbear.si_1,
+            _safe_get_attr(hsi.blackbear, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -329,7 +528,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_2": [
-            hsi.blackbear.si_2,
+            _safe_get_attr(hsi.blackbear, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -339,7 +538,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_3": [
-            hsi.blackbear.si_3,
+            _safe_get_attr(hsi.blackbear, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -349,7 +548,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_4": [
-            hsi.blackbear.si_4,
+            _safe_get_attr(hsi.blackbear, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -359,7 +558,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_5": [
-            hsi.blackbear.si_5,
+            _safe_get_attr(hsi.blackbear, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -369,7 +568,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_6": [
-            hsi.blackbear.si_6,
+            _safe_get_attr(hsi.blackbear, "si_6"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -379,7 +578,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_7": [
-            hsi.blackbear.si_7,
+            _safe_get_attr(hsi.blackbear, "si_7"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -389,7 +588,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackbear_si_8": [
-            hsi.blackbear.si_8,
+            _safe_get_attr(hsi.blackbear, "si_8"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -399,7 +598,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bluecrab_si_1": [
-            hsi.bluecrab.si_1,
+            _safe_get_attr(hsi.bluecrab, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -409,7 +608,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bluecrab_si_2": [
-            hsi.bluecrab.si_2,
+            _safe_get_attr(hsi.bluecrab, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -419,7 +618,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "bluecrab_hsi": [
-            hsi.bluecrab.hsi,
+            _safe_get_attr(hsi.bluecrab, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -429,7 +628,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_hsi": [
-            hsi.blhwva.hsi,
+            _safe_get_attr(hsi.blhwva, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -439,7 +638,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_si_1": [
-            hsi.blhwva.si_1,
+            _safe_get_attr(hsi.blhwva, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -448,7 +647,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_si_2": [
-            hsi.blhwva.si_2,
+            _safe_get_attr(hsi.blhwva, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -457,7 +656,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_si_3": [
-            hsi.blhwva.si_3,
+            _safe_get_attr(hsi.blhwva, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -466,7 +665,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_si_4": [
-            hsi.blhwva.si_4,
+            _safe_get_attr(hsi.blhwva, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -475,7 +674,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blh_wva_si_5": [
-            hsi.blhwva.si_5,
+            _safe_get_attr(hsi.blhwva, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -484,7 +683,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_hsi": [
-            hsi.swampwva.hsi,
+            _safe_get_attr(hsi.swampwva, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -493,7 +692,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_1": [
-            hsi.swampwva.si_1,
+            _safe_get_attr(hsi.swampwva, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -502,7 +701,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_2": [
-            hsi.swampwva.si_2,
+            _safe_get_attr(hsi.swampwva, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -511,7 +710,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_3": [
-            hsi.swampwva.si_3,
+            _safe_get_attr(hsi.swampwva, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -520,7 +719,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_4": [
-            hsi.swampwva.si_4,
+            _safe_get_attr(hsi.swampwva, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -529,7 +728,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_5": [
-            hsi.swampwva.si_5,
+            _safe_get_attr(hsi.swampwva, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -538,7 +737,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_6": [
-            hsi.swampwva.si_6,
+            _safe_get_attr(hsi.swampwva, "si_6"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -547,7 +746,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "swamp_wva_si_7": [
-            hsi.swampwva.si_7,
+            _safe_get_attr(hsi.swampwva, "si_7"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -936,7 +1135,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_hsi": [
-            hsi.blackcrappie.hsi,
+            _safe_get_attr(hsi.blackcrappie, "hsi"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -946,7 +1145,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_1": [
-            hsi.blackcrappie.si_1,
+            _safe_get_attr(hsi.blackcrappie, "si_1"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -956,7 +1155,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_2": [
-            hsi.blackcrappie.si_2,
+            _safe_get_attr(hsi.blackcrappie, "si_2"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -966,7 +1165,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_3": [
-            hsi.blackcrappie.si_3,
+            _safe_get_attr(hsi.blackcrappie, "si_3"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -976,7 +1175,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_4": [
-            hsi.blackcrappie.si_4,
+            _safe_get_attr(hsi.blackcrappie, "si_4"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -986,7 +1185,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_5": [
-            hsi.blackcrappie.si_5,
+            _safe_get_attr(hsi.blackcrappie, "si_5"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -996,7 +1195,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_7": [
-            hsi.blackcrappie.si_7,
+            _safe_get_attr(hsi.blackcrappie, "si_7"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1006,7 +1205,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_8": [
-            hsi.blackcrappie.si_8,
+            _safe_get_attr(hsi.blackcrappie, "si_8"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1016,7 +1215,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_9": [
-            hsi.blackcrappie.si_9,
+            _safe_get_attr(hsi.blackcrappie, "si_9"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1026,7 +1225,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_10": [
-            hsi.blackcrappie.si_10,
+            _safe_get_attr(hsi.blackcrappie, "si_10"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1036,7 +1235,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_11": [
-            hsi.blackcrappie.si_11,
+            _safe_get_attr(hsi.blackcrappie, "si_11"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1046,7 +1245,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_12": [
-            hsi.blackcrappie.si_12,
+            _safe_get_attr(hsi.blackcrappie, "si_12"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1056,7 +1255,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_si_13": [
-            hsi.blackcrappie.si_13,
+            _safe_get_attr(hsi.blackcrappie, "si_13"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1066,7 +1265,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_fc": [
-            hsi.blackcrappie.fc,
+            _safe_get_attr(hsi.blackcrappie, "fc"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1076,7 +1275,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_wq_tcr": [
-            hsi.blackcrappie.wq_tcr,
+            _safe_get_attr(hsi.blackcrappie, "wq_tcr"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1086,7 +1285,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_wq_tcr_adj": [
-            hsi.blackcrappie.wq_tcr_adj,
+            _safe_get_attr(hsi.blackcrappie, "wq_tcr_adj"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1098,7 +1297,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_wq_init": [
-            hsi.blackcrappie.wq_init,
+            _safe_get_attr(hsi.blackcrappie, "wq_init"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1108,7 +1307,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_wq": [
-            hsi.blackcrappie.wq,
+            _safe_get_attr(hsi.blackcrappie, "wq"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1118,7 +1317,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_rc": [
-            hsi.blackcrappie.rc,
+            _safe_get_attr(hsi.blackcrappie, "rc"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1128,7 +1327,7 @@ def get_hsi_variables(hsi):
             },
         ],
         "blackcrappie_ot": [
-            hsi.blackcrappie.ot,
+            _safe_get_attr(hsi.blackcrappie, "ot"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1138,6 +1337,8 @@ def get_hsi_variables(hsi):
             },
         ],
     }
+
+    return all_variables
 
 
 def get_veg_variables(veg):
@@ -1230,7 +1431,7 @@ def get_veg_variables(veg):
         ],
         "qc_tree_establishment_bool": [
             veg.qc_tree_establishment_bool,
-            bool,
+            np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "unitless",

@@ -5,7 +5,7 @@
 
 raster_data:
   dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
-  wse_domain_raster: # HECRAS_domain_60m.tif - HEC-RAS model domain mask
+  hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
   netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
@@ -19,19 +19,22 @@ polygon_data:
 simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
-  wse_sequence_input: true # true if using synthetic/analog WSE sequence, false for continuous
-  years_mapping: # Maps simulation years to observed data years (for analog sequences)
-    1: 2006
-    3: 2022
-    5: 2020
+  #wse_sequence_input: true # DEPRECATED true if using synthetic/analog WSE sequence, false for continuous
+  years_mapping: # (YY) Maps simulation years to observed data years (for analog sequences)
+    1: "06"
+    3: "22"
+    5: "20"
 
 metadata:
-  model: VEGH # Model identifier (VegTransition with HEC-RAS input)
+  model: VEG # the model to RUN; either VEG or HSI
+  hydro_source_model: HEC # the hydro input model to use, one of: HEC, MIK, or D3D
+  hydro_source_model_version: V1 # version option for hydro source model
   sea_level_condition: "000" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
-  group: G900 # Model group identifier
+  input_group: G900 # Group for hydro input model
+  output_group: G900 # Model output group identifier
   wpu: ARS # Water Planning Unit identifier
-  output_version: v12 # Output version for tracking
+  output_version: v12 # Output version for tracking the output from this config
 
 output:
   output_base: # output/ - Base directory for all model outputs

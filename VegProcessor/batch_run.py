@@ -4,19 +4,31 @@ from veg_transition import VegTransition
 from hsi import HSI
 
 veg_config_files = [
-    "./configs/veg_config_1-08ft_slr_dry.yaml",
-    "./configs/veg_config_1-08ft_slr_wet.yaml",
-    "./configs/veg_config_base_dry.yaml",
-    "./configs/veg_config_base_wet.yaml",
+    # D3D
+    # "/Users/dillonragar/data/cpra/configs/veg_d3d_config_1-08ft_slr_dry.yaml",
+    # "/Users/dillonragar/data/cpra/configs/veg_d3d_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_base_wet.yaml",
+    # HEC
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_wet.yaml",
 ]
 
 
 # list of config files for each HSI run
 hsi_config_files = [
-    "./configs/hsi_config_1-08ft_slr_dry.yaml",
-    "./configs/hsi_config_1-08ft_slr_wet.yaml",
-    "./configs/hsi_config_base_dry.yaml",
-    "./configs/hsi_config_base_wet.yaml",
+    # D3D
+    # "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_1-08ft_dry.yaml",
+    # "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_1-08ft_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_base_wet.yaml",
+    # HEC
+    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_base_wet.yaml",
 ]
 
 
@@ -31,18 +43,36 @@ def main():
     if run_veg:
         # run each VegTransition scenario
         for config in veg_config_files:
-            print(f"Running VegTransition model for config: {config}")
-            veg = VegTransition(config_file=config)
-            veg.run()
-            veg.post_process()
+            try:
+                print(f"Running VegTransition model for config: {config}")
+                veg = VegTransition(config_file=config)
+                veg.run()
+                veg.post_process()
+                print(
+                    f"Successfully completed VegTransition model for: {config}"
+                )
+            except Exception as e:
+                print(
+                    f"ERROR: VegTransition model failed for config: {config}"
+                )
+                print(f"Error message: {e}")
+                print("Continuing to next config...")
+                continue
 
     if run_hsi:
         # run each HSI scenario
         for config in hsi_config_files:
-            print(f"Running HSI model for config: {config}")
-            hsi = HSI(config_file=config)
-            hsi.run()
-            hsi.post_process()
+            try:
+                print(f"Running HSI model for config: {config}")
+                hsi = HSI(config_file=config)
+                hsi.run()
+                hsi.post_process()
+                print(f"Successfully completed HSI model for: {config}")
+            except Exception as e:
+                print(f"ERROR: HSI model failed for config: {config}")
+                print(f"Error message: {e}")
+                print("Continuing to next config...")
+                continue
 
 
 if __name__ == "__main__":

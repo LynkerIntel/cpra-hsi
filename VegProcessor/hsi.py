@@ -138,7 +138,6 @@ class HSI(vt.VegTransition):
         self.blackcrappie = None
         self.blhwva = None
         self.bluecrab = None
-        self.bass = None
         self.catfish = None
         self.crawfish = None
         self.gizzardshad = None

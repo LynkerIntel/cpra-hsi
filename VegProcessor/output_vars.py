@@ -317,6 +317,196 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "catfish_hsi": [
+            _safe_get_attr(hsi.catfish, "hsi"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "riverine catfish HSI",
+                "description": "",
+            },
+        ],
+        "catfish_si_1": [
+            _safe_get_attr(hsi.catfish, "si_1"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "percent pools during average summer flow",
+            },
+        ],
+        "catfish_si_2": [
+            _safe_get_attr(hsi.catfish, "si_2"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "percent cover in summer pools backwater",
+            },
+        ],
+        "catfish_si_4": [
+            _safe_get_attr(hsi.catfish, "si_4"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "food production potential substrate",
+            },
+        ],
+        "catfish_si_5": [
+            _safe_get_attr(hsi.catfish, "si_5"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (adult)",
+            },
+        ],
+        "catfish_si_6": [
+            _safe_get_attr(hsi.catfish, "si_6"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "growing season length frost free days",
+            },
+        ],
+        "catfish_si_7": [
+            _safe_get_attr(hsi.catfish, "si_7"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum monthly average summer turbidity",
+            },
+        ],
+        "catfish_si_8": [
+            _safe_get_attr(hsi.catfish, "si_8"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average minimum dissolved oxygen in midsummer pools backwater",
+            },
+        ],
+        "catfish_si_9": [
+            _safe_get_attr(hsi.catfish, "si_9"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum salinity during summer (adult)",
+            },
+        ],
+        "catfish_si_10": [
+            _safe_get_attr(hsi.catfish, "si_10"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average temperature in spawning embryo pools backwater (embryo)",
+            },
+        ],
+        "catfish_si_11": [
+            _safe_get_attr(hsi.catfish, "si_11"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum salinity spawning embryo (embryo)",
+            },
+        ],
+        "catfish_si_12": [
+            _safe_get_attr(hsi.catfish, "si_12"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (fry)",
+            },
+        ],
+        "catfish_si_13": [
+            _safe_get_attr(hsi.catfish, "si_13"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "maximum summer salinity fry juvenile",
+            },
+        ],
+        "catfish_si_14": [
+            _safe_get_attr(hsi.catfish, "si_14"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average midsummer temperature in pools backwater (juvenile)",
+            },
+        ],
+        "catfish_si_18": [
+            _safe_get_attr(hsi.catfish, "si_18"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "average current velocity in cover areas during average summer flow",
+            },
+        ],
+        "catfish_fc": [
+            _safe_get_attr(hsi.catfish, "fc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish food component",
+            },
+        ],
+        "catfish_cc": [
+            _safe_get_attr(hsi.catfish, "cc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish cover component",
+            },
+        ],
+        "catfish_wq": [
+            _safe_get_attr(hsi.catfish, "wq"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish water quality component",
+            },
+        ],
+        "catfish_rc": [
+            _safe_get_attr(hsi.catfish, "rc"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish reproduction component",
+            },
+        ],
         "blackbear_hsi": [
             _safe_get_attr(hsi.blackbear, "hsi"),
             np.float32,

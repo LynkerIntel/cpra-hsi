@@ -29,6 +29,7 @@ from output_vars import get_hsi_variables
 
 from species_hsi import (
     alligator,
+    catfish,
     crawfish,
     baldeagle,
     gizzardshad,
@@ -378,6 +379,7 @@ class HSI(vt.VegTransition):
         if self.run_hsi:
             species_map = {
                 "alligator": alligator.AlligatorHSI,
+                "catfish": catfish.RiverineCatfishHSI,
                 "crawfish": crawfish.CrawfishHSI,
                 "baldeagle": baldeagle.BaldEagleHSI,
                 "gizzardshad": gizzardshad.GizzardShadHSI,
@@ -1180,26 +1182,6 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_variables(self)
 
-        # # Debug: Check how many variables have data
-        # vars_with_data = sum(1 for var_name, (data, dtype, nc_attrs) in hsi_variables.items() if data is not None)
-        # self._logger.info(f"HSI variables with data: {vars_with_data} out of {len(hsi_variables)} total variables")
-
-        # # Debug: List which species objects exist
-        # species_status = {
-        #     'alligator': self.alligator is not None,
-        #     'baldeagle': self.baldeagle is not None,
-        #     'bass': self.bass is not None,
-        #     'blackbear': self.blackbear is not None,
-        #     'blackcrappie': self.blackcrappie is not None,
-        #     'blhwva': self.blhwva is not None,
-        #     'bluecrab': self.bluecrab is not None,
-        #     'crawfish': self.crawfish is not None,
-        #     'gizzardshad': self.gizzardshad is not None,
-        #     'swampwva': self.swampwva is not None,
-        # }
-        # self._logger.info(f"Species objects created: {species_status}")
-
-        # Open dataset and load into memory
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
 

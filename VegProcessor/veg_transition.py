@@ -181,7 +181,7 @@ class VegTransition:
         # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.salinity = None
+        self.annual_avg_salinity = None
 
         # initialize partial update arrays as None
         self.veg_type_update_1 = None
@@ -292,7 +292,7 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
-        self._get_salinity()
+        self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
         # important: mask areas outside of domain before calculting transition:
@@ -334,35 +334,35 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.annual_avg_salinity,
             logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.annual_avg_salinity,
             logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.annual_avg_salinity,
             logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.annual_avg_salinity,
             logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.annual_avg_salinity,
             logger=self._logger,
         )
 
@@ -1161,14 +1161,15 @@ class VegTransition:
         da = da.astype(bool)
         return da.to_numpy()
 
-    def _get_salinity(self):
+    def _get_annual_avg_salinity(self):
         """Load salinity raster data if available, otherwise
         use defaults based on the vegetation type.
         """
         if self.netcdf_salinity_path:
-            self.salinity = self._load_salinity_general(water_year=self.wy)
+            salinity = self._load_salinity_general(water_year=self.wy)
+            self.annual_avg_salinity = salinity.resample("YE", dim="time")
         else:
-            self.salinity = hydro_logic.habitat_based_salinity(
+            self.annual_avg_salinity = hydro_logic.habitat_based_salinity(
                 veg_type=self.veg_type,
                 domain=self.hydro_domain,
             )

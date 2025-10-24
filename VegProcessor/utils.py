@@ -673,6 +673,10 @@ def generate_filename(
                 suffix = hydro_model_map.get(hydro_source_model.upper(), "")
                 value = f"{value}{suffix}"
 
+            # if flow_scenario key, prepend "F" prefix
+            if key == "flow_scenario":
+                value = f"F{value}"
+
             values.append(value)
 
     # add param to the filename

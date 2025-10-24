@@ -500,127 +500,127 @@ class VegTransition:
 
         return da[0].to_numpy()
 
-    def load_wse_wy(
-        self,
-        water_year: int,
-        variable_name: str = "WSE_MEAN",
-        date_format: str = "%Y_%m_%d",
-        analog_sequence: bool = True,
-    ) -> xr.Dataset:
-        """DEPRECATED
+    # def load_wse_wy(
+    #     self,
+    #     water_year: int,
+    #     variable_name: str = "WSE_MEAN",
+    #     date_format: str = "%Y_%m_%d",
+    #     analog_sequence: bool = True,
+    # ) -> xr.Dataset:
+    #     """DEPRECATED
 
-        Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
-        uses lazy-loading via Dask.
+    #     Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
+    #     uses lazy-loading via Dask.
 
-        Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
-        followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
-        automatically extract the timestamps and assign them to a 'time' dimension in the resulting
-        xarray.Dataset, but only for files within the specified water year.
+    #     Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
+    #     followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
+    #     automatically extract the timestamps and assign them to a 'time' dimension in the resulting
+    #     xarray.Dataset, but only for files within the specified water year.
 
-        NOTE: Input WSE data (as of 2024-12-13) uses NaN to designate 0 depth. If this is false,
-        because the input data has changed, or a different model with different NaN classification
-        is used, this function must be updated accordingly.
+    #     NOTE: Input WSE data (as of 2024-12-13) uses NaN to designate 0 depth. If this is false,
+    #     because the input data has changed, or a different model with different NaN classification
+    #     is used, this function must be updated accordingly.
 
-        UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
+    #     UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
 
-        Parameters
-        ----------
-        folder_path : str
-            Path to the folder containing the .tif files.
-        water_year : int
-            The water year to filter files by. Files from October 1 of the previous year
-            to September 30 of this year will be loaded.
-        variable_name : str, optional
-            The name of the variable to use in the dataset (not the output var name).
-        date_format : str, optional
-            Format string for parsing dates from file names, default is "%Y_%m_%d".
-            Adjust based on your file naming convention.
-        analog_sequence : bool
-            DEPRECATED. This is only for use when loading 25-year analog years sequences, where the
-            filenames have been updated to represent analog years, but the file data
-            reamain unchanged (i.e. uses the actual model-year). This flag will reset
-            the MONTHLY time series to match the year given in the file name, in order
-            for the vegetation model to run as normal.
+    #     Parameters
+    #     ----------
+    #     folder_path : str
+    #         Path to the folder containing the .tif files.
+    #     water_year : int
+    #         The water year to filter files by. Files from October 1 of the previous year
+    #         to September 30 of this year will be loaded.
+    #     variable_name : str, optional
+    #         The name of the variable to use in the dataset (not the output var name).
+    #     date_format : str, optional
+    #         Format string for parsing dates from file names, default is "%Y_%m_%d".
+    #         Adjust based on your file naming convention.
+    #     analog_sequence : bool
+    #         DEPRECATED. This is only for use when loading 25-year analog years sequences, where the
+    #         filenames have been updated to represent analog years, but the file data
+    #         reamain unchanged (i.e. uses the actual model-year). This flag will reset
+    #         the MONTHLY time series to match the year given in the file name, in order
+    #         for the vegetation model to run as normal.
 
-        Returns
-        -------
-        xr.Dataset or None
-            An xarray.Dataset with the raster data from each .tif file within the water year,
-            stacked along a 'time' dimension, with the specified variable name.
-            Returns None if no files are found for the specified water year.
-        """
-        tif_files = sorted(
-            glob.glob(
-                os.path.join(self.wse_directory_path, "**/*.tif"),
-                recursive=True,
-            )
-        )
+    #     Returns
+    #     -------
+    #     xr.Dataset or None
+    #         An xarray.Dataset with the raster data from each .tif file within the water year,
+    #         stacked along a 'time' dimension, with the specified variable name.
+    #         Returns None if no files are found for the specified water year.
+    #     """
+    #     tif_files = sorted(
+    #         glob.glob(
+    #             os.path.join(self.wse_directory_path, "**/*.tif"),
+    #             recursive=True,
+    #         )
+    #     )
 
-        start_date = pd.to_datetime(f"{water_year - 1}-10-01")
-        end_date = pd.to_datetime(f"{water_year}-09-30")
+    #     start_date = pd.to_datetime(f"{water_year - 1}-10-01")
+    #     end_date = pd.to_datetime(f"{water_year}-09-30")
 
-        selected_files = []
-        time_stamps = []
+    #     selected_files = []
+    #     time_stamps = []
 
-        for f in tif_files:
-            date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
-                ".tif", ""
-            )
-            file_date = pd.to_datetime(date_str, format=date_format)
+    #     for f in tif_files:
+    #         date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
+    #             ".tif", ""
+    #         )
+    #         file_date = pd.to_datetime(date_str, format=date_format)
 
-            if start_date <= file_date <= end_date:
-                selected_files.append(f)
-                time_stamps.append(file_date)
+    #         if start_date <= file_date <= end_date:
+    #             selected_files.append(f)
+    #             time_stamps.append(file_date)
 
-        if not selected_files:
-            self._logger.error(
-                "No WSE files found for water year: %s", water_year
-            )
-            raise RuntimeError(
-                f"No WSE files found for water year: {water_year}"
-            )
+    #     if not selected_files:
+    #         self._logger.error(
+    #             "No WSE files found for water year: %s", water_year
+    #         )
+    #         raise RuntimeError(
+    #             f"No WSE files found for water year: {water_year}"
+    #         )
 
-        if len(selected_files) < 12:
-            raise ValueError(f"month(s) missing from Water Year: {water_year}")
+    #     if len(selected_files) < 12:
+    #         raise ValueError(f"month(s) missing from Water Year: {water_year}")
 
-        # Preprocess function to remove the 'band' dimension
-        def preprocess(da):
-            return da.squeeze(dim="band").expand_dims(
-                time=[time_stamps[selected_files.index(da.encoding["source"])]]
-            )
+    #     # Preprocess function to remove the 'band' dimension
+    #     def preprocess(da):
+    #         return da.squeeze(dim="band").expand_dims(
+    #             time=[time_stamps[selected_files.index(da.encoding["source"])]]
+    #         )
 
-        # Load selected files into a single Dataset with open_mfdataset
-        ds = xr.open_mfdataset(
-            selected_files,
-            concat_dim="time",
-            combine="nested",
-            parallel=True,
-            preprocess=preprocess,
-        )
-        # rename
-        ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
+    #     # Load selected files into a single Dataset with open_mfdataset
+    #     ds = xr.open_mfdataset(
+    #         selected_files,
+    #         concat_dim="time",
+    #         combine="nested",
+    #         parallel=True,
+    #         preprocess=preprocess,
+    #     )
+    #     # rename
+    #     ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
 
-        ds[variable_name] *= 0.3048  # UNIT: feet to meters
+    #     ds[variable_name] *= 0.3048  # UNIT: feet to meters
 
-        if analog_sequence:
-            self._logger.info("Using sequence loading method.")
-            new_timesteps = pd.date_range(
-                f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
-            )
+    #     if analog_sequence:
+    #         self._logger.info("Using sequence loading method.")
+    #         new_timesteps = pd.date_range(
+    #             f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
+    #         )
 
-            if not len(new_timesteps) == len(ds["time"]):
-                raise ValueError("Timestep must be monthly.")
+    #         if not len(new_timesteps) == len(ds["time"]):
+    #             raise ValueError("Timestep must be monthly.")
 
-            # Replace the time coordinate with time from
-            ds = ds.assign_coords(time=("time", new_timesteps))
-            self._logger.info("Sequence timeseres updated to match filename.")
+    #         # Replace the time coordinate with time from
+    #         ds = ds.assign_coords(time=("time", new_timesteps))
+    #         self._logger.info("Sequence timeseres updated to match filename.")
 
-        # rename for internal consistency
-        ds = ds.rename({"WSE_MEAN": "height"})
-        self._logger.info(
-            "Loaded HEC-RAS WSE Datset for water-year: %s", water_year
-        )
-        return ds
+    #     # rename for internal consistency
+    #     ds = ds.rename({"WSE_MEAN": "height"})
+    #     self._logger.info(
+    #         "Loaded HEC-RAS WSE Datset for water-year: %s", water_year
+    #     )
+    #     return ds
 
     # def _load_stage_daily(self, water_year: int) -> xr.Dataset:
     #     """DEPRECATED

@@ -715,6 +715,45 @@ class VegTransition:
     #     ds["height"] *= 0.3048  # UNIT: feet to meters
     #     return ds
 
+    def _get_hydro_netcdf_path(
+        self, water_year: int, hydro_variable: str = "STAGE"
+    ) -> tuple[str, int]:
+        """
+        Generate the path to the hydro NetCDF file for a given water year.
+
+        This method uses the sequence mapping and years mapping to determine
+        the correct analog year, then constructs the file path following the
+        AMP naming convention.
+
+        Parameters
+        -----------
+        water_year : int
+            Model timestep (as water year) used to select the correct analog year.
+        hydro_variable : str, optional
+            The hydro variable to load (e.g., "STAGE", "SALINITY"). Default is "STAGE".
+
+        Returns
+        --------
+        tuple[str, int]
+            A tuple containing:
+            - nc_path: Full path to the NetCDF file
+            - analog_year: The analog year as a 4-digit integer (e.g., 2020)
+        """
+        quintile = self.sequence_mapping[water_year]
+        analog_year_str = self.years_mapping[quintile]
+        # Convert 2-digit year string to 4-digit year integer (e.g., "20" -> 2020)
+        analog_year = int(f"20{analog_year_str}")
+
+        nc_path = os.path.join(
+            self.netcdf_hydro_path,
+            f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
+            f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
+            f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
+            f"{self.file_params['hydro_source_model_version']}.nc",
+        )
+
+        return nc_path, analog_year
+
     def _load_depth_general(self, water_year: int) -> xr.Dataset:
         """
         Ingest stage data from hydro models, as a daily NetCDF, and return water depth.
@@ -754,17 +793,8 @@ class VegTransition:
         self._logger.info(
             f"Loading hydro data with universal daily stage method."
         )
-        quintile = self.sequence_mapping[water_year]
-        analog_year_str = self.years_mapping[quintile]
-        # Convert 2-digit year string to 4-digit year integer (e.g., "20" -> 2020)
-        analog_year = int(f"20{analog_year_str}")
-
-        nc_path = os.path.join(
-            self.netcdf_hydro_path,
-            f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
-            f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
-            f"{self.file_params['input_group']}_AB_O_STAGE_"
-            f"{self.file_params['hydro_source_model_version']}.nc",
+        nc_path, analog_year = self._get_hydro_netcdf_path(
+            water_year, hydro_variable="STAGE"
         )
         self._logger.info("Loading files: %s", nc_path)
 

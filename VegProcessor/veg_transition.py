@@ -746,6 +746,9 @@ class VegTransition:
         quintile = self.sequence_mapping[water_year]
         analog_year_str = self.years_mapping[quintile]
         # Convert 2-digit year string to 4-digit year integer (e.g., "20" -> 2020)
+        # TODO: WARNING: This assumes model years are all > 2000... which should be fine
+        # for this project. We probable should go back to using YYYY in the config,
+        # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
         nc_path = os.path.join(

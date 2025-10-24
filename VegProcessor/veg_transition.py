@@ -762,7 +762,7 @@ class VegTransition:
         nc_path = os.path.join(
             self.netcdf_hydro_path,
             f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
-            f"F{self.metadata['sea_level_condition']}_X_99_99_DLY_"
+            f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_STAGE_"
             f"{self.file_params['hydro_source_model_version']}.nc",
         )

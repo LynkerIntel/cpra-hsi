@@ -87,9 +87,11 @@ class VegTransition:
         self.netcdf_hydro_path = self.config["raster_data"].get(
             "netcdf_hydro_path"
         )
+        self.netcdf_salinity_path = self.config["raster_data"].get(
+            "netcdf_salinity_path"
+        )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
         self.initial_maturity_path = self.config["raster_data"].get(
             "initial_maturity"
@@ -289,13 +291,8 @@ class VegTransition:
 
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
-
-        # self.water_depth = self._load_stage_daily(self.wy)
         self.water_depth = self._load_depth_general(self.wy)
-
-        # get salinity
-        self.salinity = self._get_salinity()
-
+        self._get_salinity()
         self.create_qc_arrays()
 
         # important: mask areas outside of domain before calculting transition:
@@ -739,13 +736,20 @@ class VegTransition:
             - nc_path: Full path to the NetCDF file
             - analog_year: The analog year as a 4-digit integer (e.g., 2020)
         """
+        if hydro_variable == "STAGE":
+            variable_base_path = self.netcdf_hydro_path
+        elif hydro_variable == "SALINITY":
+            variable_base_path = self.netcdf_salinity_path
+        else:
+            raise ValueError("must be one of: STAGE, SALINITY")
+
         quintile = self.sequence_mapping[water_year]
         analog_year_str = self.years_mapping[quintile]
         # Convert 2-digit year string to 4-digit year integer (e.g., "20" -> 2020)
         analog_year = int(f"20{analog_year_str}")
 
         nc_path = os.path.join(
-            self.netcdf_hydro_path,
+            variable_base_path,
             f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
@@ -791,7 +795,7 @@ class VegTransition:
             model timestep.
         """
         self._logger.info(
-            f"Loading hydro data with universal daily stage method."
+            f"Loading stage data with universal daily stage method."
         )
         nc_path, analog_year = self._get_hydro_netcdf_path(
             water_year, hydro_variable="STAGE"
@@ -865,6 +869,45 @@ class VegTransition:
             ds = ds.fillna(0)
             ds = ds.where(self.hydro_domain)
             return ds
+
+    def _load_salinity_general(self, water_year: int) -> xr.Dataset:
+        """Load salinity data from either Delft3D or MIKE 21 models."""
+        self._logger.info(
+            f"Loading salinity data with universal daily method."
+        )
+        nc_path, analog_year = self._get_hydro_netcdf_path(
+            water_year, hydro_variable="SALINITY"
+        )
+        self._logger.info("Loading files: %s", nc_path)
+
+        ds = xr.open_dataset(
+            nc_path,
+            engine="h5netcdf",
+        )
+
+        ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+        # # model specific var names: -----------------------------------------------
+        # if self.file_params["hydro_source_model"] == "D3D":
+        #     ds = ds.rename({"waterlevel": "height"})
+        # if self.file_params["hydro_source_model"] == "MIK":
+        #     ds = ds.rename({"water_level": "height"})
+        # # extract height var as da
+        # height_da = ds["sali"]
+
+        # handle varied CRS metadata locations between model files-----------------
+        try:
+            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+            crs_wkt = ds["crs"].attrs.get("crs_wkt")
+            ds = ds.rio.write_crs(crs_wkt)
+
+        except Exception as exc:
+            raise ValueError(
+                "Unable to parse CRS from hydrologic input"
+            ) from exc
+
+        ds = self._reproject_match_to_dem(ds)
+        return ds
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
@@ -1115,19 +1158,20 @@ class VegTransition:
         da = da.astype(bool)
         return da.to_numpy()
 
-    def _get_salinity(self) -> np.ndarray:
-        """Load salinity raster data (if available.)"""
-        if self.salinity_path:
-            # add loading code here
-            self._logger.info("Loaded salinity from raster")
+    def _get_salinity(self):
+        """Load salinity raster data if available, otherwise
+        use defaults based on the vegetation type.
+        """
+        if self.netcdf_salinity_path:
+            self.salinity = self._load_salinity_general(water_year=self.wy)
         else:
             self.salinity = hydro_logic.habitat_based_salinity(
-                veg_type=self.veg_type, domain=self.hydro_domain
+                veg_type=self.veg_type,
+                domain=self.hydro_domain,
             )
-            self._logger.info(
-                "Creating salinity defaults from veg type array."
+            self._logger.warning(
+                "No salinity raster provided. Creating salinity defaults from veg type array."
             )
-            return self.salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

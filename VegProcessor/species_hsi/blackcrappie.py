@@ -546,7 +546,7 @@ class BlackCrappieHSI:
         return self.clip_array(si_10)
 
     def calculate_si_11(self) -> np.ndarray:
-        """Average water temperature in backwaters during spawning (embryo) (Mar - Jun)"""
+        """Average water temperature in backwaters during spawning (embryo) (Feb - Mar)"""
         self._logger.info("Running SI 11")
         si_11 = self.template.copy()
 

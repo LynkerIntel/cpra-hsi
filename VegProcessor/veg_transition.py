@@ -1542,7 +1542,7 @@ class VegTransition:
         """
         self._logger.info("Creating QA/QC arrays.")
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
-            self.salinity,
+            self.salinity_annual_avg,
         )
         self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
             self.water_depth

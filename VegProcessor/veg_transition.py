@@ -1171,12 +1171,12 @@ class VegTransition:
                 salinity["salinity"].mean(dim="time").to_numpy()
             )
         else:
+            self._logger.warning(
+                "No salinity raster provided. Creating salinity defaults from veg type array."
+            )
             self.annual_avg_salinity = hydro_logic.habitat_based_salinity(
                 veg_type=self.veg_type,
                 domain=self.hydro_domain,
-            )
-            self._logger.warning(
-                "No salinity raster provided. Creating salinity defaults from veg type array."
             )
 
     def _create_output_dirs(self):

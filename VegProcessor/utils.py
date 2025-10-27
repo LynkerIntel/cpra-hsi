@@ -982,9 +982,8 @@ def analog_years_handler(
     if ds.sizes["time"] == 366:
         # assign "actual" datetime to time dim, temporarily,
         # in order to drop feb 29
-        full_range = pd.date_range(
-            f"{analog_year-1}-10-01", f"{analog_year}-09-30"
-        )
+        # Use a known leap water year (2019-10-01 to 2020-09-30) to ensure 366 days
+        full_range = pd.date_range("2019-10-01", "2020-09-30")
         ds = ds.assign_coords(time=("time", full_range))
         mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
         ds = ds.isel(time=mask)

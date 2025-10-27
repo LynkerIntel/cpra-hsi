@@ -1167,7 +1167,9 @@ class VegTransition:
         """
         if self.netcdf_salinity_path:
             salinity = self._load_salinity_general(water_year=self.wy)
-            self.annual_avg_salinity = salinity.resample("YE", dim="time")
+            self.annual_avg_salinity = (
+                salinity["salinity"].mean(dim="time").to_numpy()
+            )
         else:
             self.annual_avg_salinity = hydro_logic.habitat_based_salinity(
                 veg_type=self.veg_type,

@@ -181,7 +181,7 @@ class VegTransition:
         # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.annual_avg_salinity = None
+        self.salinity_annual_avg = None
 
         # initialize partial update arrays as None
         self.veg_type_update_1 = None
@@ -334,35 +334,35 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.annual_avg_salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.annual_avg_salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.annual_avg_salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.annual_avg_salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.annual_avg_salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
 
@@ -1167,14 +1167,14 @@ class VegTransition:
         """
         if self.netcdf_salinity_path:
             salinity = self._load_salinity_general(water_year=self.wy)
-            self.annual_avg_salinity = (
+            self.salinity_annual_avg = (
                 salinity["salinity"].mean(dim="time").to_numpy()
             )
         else:
             self._logger.warning(
                 "No salinity raster provided. Creating salinity defaults from veg type array."
             )
-            self.annual_avg_salinity = hydro_logic.habitat_based_salinity(
+            self.salinity_annual_avg = hydro_logic.habitat_based_salinity(
                 veg_type=self.veg_type,
                 domain=self.hydro_domain,
             )

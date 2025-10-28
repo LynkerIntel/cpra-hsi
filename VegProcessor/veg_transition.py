@@ -839,7 +839,7 @@ class VegTransition:
                 ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
-        height_da = height_da.chunks = ({"time": -1, "x": 1000, "y": 1000},)
+        height_da = height_da.chunk({"time": -1, "x": 1000, "y": 1000})
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
@@ -1172,8 +1172,10 @@ class VegTransition:
         if self.netcdf_salinity_path:
             salinity = self._load_salinity_general(water_year=self.wy)
             self.salinity_annual_avg = (
-                salinity["salinity"].mean(dim="time").to_numpy()
+                salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
+            salinity.close()
+            del salinity
         else:
             self._logger.warning(
                 "No salinity raster provided. Creating salinity defaults from veg type array."

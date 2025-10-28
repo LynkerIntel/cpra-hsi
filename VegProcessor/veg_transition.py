@@ -295,7 +295,7 @@ class VegTransition:
         self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
-        # important: mask areas outside of domain before calculting transition:
+        # important: mask areas outside of domain before calculating transition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hydro_domain, self.veg_type, np.nan)
 

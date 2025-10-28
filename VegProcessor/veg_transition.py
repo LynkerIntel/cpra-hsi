@@ -184,16 +184,16 @@ class VegTransition:
         self.salinity_annual_avg = None
 
         # initialize partial update arrays as None
-        self.veg_type_update_1 = None
-        self.veg_type_update_2 = None
-        self.veg_type_update_3 = None
-        self.veg_type_update_4 = None
-        self.veg_type_update_5 = None
-        self.veg_type_update_6 = None
-        self.veg_type_update_7 = None
-        self.veg_type_update_8 = None
-        self.veg_type_update_9 = None
-        self.veg_type_update_10 = None
+        # self.veg_type_update_1 = None
+        # self.veg_type_update_2 = None
+        # self.veg_type_update_3 = None
+        # self.veg_type_update_4 = None
+        # self.veg_type_update_5 = None
+        # self.veg_type_update_6 = None
+        # self.veg_type_update_7 = None
+        # self.veg_type_update_8 = None
+        # self.veg_type_update_9 = None
+        # self.veg_type_update_10 = None
 
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template

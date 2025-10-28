@@ -808,6 +808,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
+            chunks={"time": -1, "x": 1000, "y": 1000},
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -838,6 +839,7 @@ class VegTransition:
                 ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
+        height_da = height_da.chunks = ({"time": -1, "x": 1000, "y": 1000},)
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
@@ -886,6 +888,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
+            chunks={"time": -1, "x": 1000, "y": 1000},
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -910,6 +913,7 @@ class VegTransition:
             ) from exc
 
         ds = self._reproject_match_to_dem(ds)
+        ds = ds.chunk({"time": -1, "x": 1000, "y": 1000})
         return ds
 
     def _reproject_match_to_dem(
@@ -1317,7 +1321,7 @@ class VegTransition:
 
         # add initial conditions to first timestep
         self._logger.info(
-            "Addining initial vegetation conditions to timestep zero."
+            "Adding initial vegetation conditions to timestep zero."
         )
         ds["veg_type"].loc[{"time": time_range[0]}] = (
             self.initial_veg_type.astype(np.float32)

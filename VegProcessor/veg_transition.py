@@ -1401,7 +1401,11 @@ class VegTransition:
 
         # Set default variables to append if not supplied, excluding all QC variables
         if variables_to_append is None:
-            variables_to_append = ["veg_type", "maturity"]
+            variables_to_append = [
+                "veg_type",
+                "maturity",
+                "salinity_annual_avg",
+            ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file

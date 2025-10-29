@@ -456,22 +456,40 @@ class BottomlandHardwoodHSI:
                     num_invalid,
                 )
 
-        # Combine individual suitability indices
-        # condition 1 (tree age < 7)
-        mask_1 = self.v2_stand_maturity < 7
-        hsi[mask_1] = (
-            (self.si_2[mask_1] ** 4) * (self.si_4[mask_1] ** 2)
-        ) ** (1 / 6)
+        # Check if maturity data is None
+        if self.v2_stand_maturity is None:
+            # No maturity data.
+            # Using the "mature" formula for all valid pixels.
+            self._logger.info(
+                "Stand maturity is None, using mature HSI equation."
+            )
+            mask_mature = ~np.isnan(hsi)  # Apply to all valid pixels
+            hsi[mask_mature] = (
+                (self.si_1[mask_mature] ** 4)
+                * (self.si_2[mask_mature] ** 4)  
+                * (self.si_3[mask_mature] ** 2)
+                * (self.si_4[mask_mature] ** 2)
+                * (self.si_5[mask_mature])
+            ) ** (1 / 13)
 
-        # condition 2 (tree age >= 7 and v3_understory/midstory data is available)
-        mask_2 = self.v2_stand_maturity >= 7
-        hsi[mask_2] = (
-            (self.si_1[mask_2] ** 4)
-            * (self.si_2[mask_2] ** 4)
-            * (self.si_3[mask_2] ** 2)
-            * (self.si_4[mask_2] ** 2)
-            * (self.si_5[mask_2])
-        ) ** (1 / 13)
+        else: 
+            # Stand Maturity data exists
+            # Combine individual suitability indices
+            # condition 1 (tree age < 7; inmature trees) 
+            mask_1 = self.v2_stand_maturity < 7
+            hsi[mask_1] = (
+                (self.si_2[mask_1] ** 4) * (self.si_4[mask_1] ** 2)
+            ) ** (1 / 6)
+
+            # condition 2 (tree age >= 7 and v3_understory/midstory data is available)
+            mask_2 = self.v2_stand_maturity >= 7
+            hsi[mask_2] = (
+                (self.si_1[mask_2] ** 4)
+                * (self.si_2[mask_2] ** 4)
+                * (self.si_3[mask_2] ** 2)
+                * (self.si_4[mask_2] ** 2)
+                * (self.si_5[mask_2])
+            ) ** (1 / 13)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)
@@ -482,7 +500,7 @@ class BottomlandHardwoodHSI:
                 num_invalid,
             )
 
-        # subset final HSI array to vegetation domain (not hydrologic domain)
+        # Subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
         # The blh_mask is already applied via the individual SIs.
         masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)

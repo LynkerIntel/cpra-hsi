@@ -181,19 +181,19 @@ class VegTransition:
         # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.salinity = None
+        self.salinity_annual_avg = None
 
         # initialize partial update arrays as None
-        self.veg_type_update_1 = None
-        self.veg_type_update_2 = None
-        self.veg_type_update_3 = None
-        self.veg_type_update_4 = None
-        self.veg_type_update_5 = None
-        self.veg_type_update_6 = None
-        self.veg_type_update_7 = None
-        self.veg_type_update_8 = None
-        self.veg_type_update_9 = None
-        self.veg_type_update_10 = None
+        # self.veg_type_update_1 = None
+        # self.veg_type_update_2 = None
+        # self.veg_type_update_3 = None
+        # self.veg_type_update_4 = None
+        # self.veg_type_update_5 = None
+        # self.veg_type_update_6 = None
+        # self.veg_type_update_7 = None
+        # self.veg_type_update_8 = None
+        # self.veg_type_update_9 = None
+        # self.veg_type_update_10 = None
 
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -292,10 +292,10 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
-        self._get_salinity()
+        self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
-        # important: mask areas outside of domain before calculting transition:
+        # important: mask areas outside of domain before calculating transition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hydro_domain, self.veg_type, np.nan)
 
@@ -334,35 +334,35 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_avg,
             logger=self._logger,
         )
 
@@ -808,6 +808,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
+            chunks={"time": -1, "x": 1000, "y": 1000},
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -838,6 +839,7 @@ class VegTransition:
                 ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
+        height_da = height_da.chunk({"time": -1, "x": 1000, "y": 1000})
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
@@ -886,6 +888,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
+            chunks={"time": -1, "x": 1000, "y": 1000},
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -910,6 +913,7 @@ class VegTransition:
             ) from exc
 
         ds = self._reproject_match_to_dem(ds)
+        ds = ds.chunk({"time": -1, "x": 1000, "y": 1000})
         return ds
 
     def _reproject_match_to_dem(
@@ -1161,19 +1165,24 @@ class VegTransition:
         da = da.astype(bool)
         return da.to_numpy()
 
-    def _get_salinity(self):
+    def _get_annual_avg_salinity(self):
         """Load salinity raster data if available, otherwise
         use defaults based on the vegetation type.
         """
         if self.netcdf_salinity_path:
-            self.salinity = self._load_salinity_general(water_year=self.wy)
-        else:
-            self.salinity = hydro_logic.habitat_based_salinity(
-                veg_type=self.veg_type,
-                domain=self.hydro_domain,
+            salinity = self._load_salinity_general(water_year=self.wy)
+            self.salinity_annual_avg = (
+                salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
+            salinity.close()
+            del salinity
+        else:
             self._logger.warning(
                 "No salinity raster provided. Creating salinity defaults from veg type array."
+            )
+            self.salinity_annual_avg = hydro_logic.habitat_based_salinity(
+                veg_type=self.veg_type,
+                domain=self.hydro_domain,
             )
 
     def _create_output_dirs(self):
@@ -1314,7 +1323,7 @@ class VegTransition:
 
         # add initial conditions to first timestep
         self._logger.info(
-            "Addining initial vegetation conditions to timestep zero."
+            "Adding initial vegetation conditions to timestep zero."
         )
         ds["veg_type"].loc[{"time": time_range[0]}] = (
             self.initial_veg_type.astype(np.float32)
@@ -1392,7 +1401,11 @@ class VegTransition:
 
         # Set default variables to append if not supplied, excluding all QC variables
         if variables_to_append is None:
-            variables_to_append = ["veg_type", "maturity"]
+            variables_to_append = [
+                "veg_type",
+                "maturity",
+                "salinity_annual_avg",
+            ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1539,7 +1552,7 @@ class VegTransition:
         """
         self._logger.info("Creating QA/QC arrays.")
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
-            self.salinity,
+            self.salinity_annual_avg,
         )
         self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
             self.water_depth

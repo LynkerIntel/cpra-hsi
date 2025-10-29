@@ -364,7 +364,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (adult)",
+                "description": (
+                    "average midsummer temperature in pools backwater (adult)"
+                ),
             },
         ],
         "catfish_si_6": [
@@ -394,7 +396,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average minimum dissolved oxygen in midsummer pools backwater",
+                "description": (
+                    "average minimum dissolved oxygen in midsummer pools backwater"
+                ),
             },
         ],
         "catfish_si_9": [
@@ -414,7 +418,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average temperature in spawning embryo pools backwater (embryo)",
+                "description": (
+                    "average temperature in spawning embryo pools backwater (embryo)"
+                ),
             },
         ],
         "catfish_si_11": [
@@ -434,7 +440,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (fry)",
+                "description": (
+                    "average midsummer temperature in pools backwater (fry)"
+                ),
             },
         ],
         "catfish_si_13": [
@@ -454,7 +462,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (juvenile)",
+                "description": (
+                    "average midsummer temperature in pools backwater (juvenile)"
+                ),
             },
         ],
         "catfish_si_18": [
@@ -464,7 +474,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average current velocity in cover areas during average summer flow",
+                "description": (
+                    "average current velocity in cover areas during average summer flow"
+                ),
             },
         ],
         "catfish_fc": [
@@ -675,6 +687,24 @@ def get_hsi_variables(hsi):
         ],
         "blh_wva_si_5": [
             _safe_get_attr(hsi.blhwva, "si_5"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_6": [
+            _safe_get_attr(hsi.blhwva, "si_6"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_7": [
+            _safe_get_attr(hsi.blhwva, "si_7"),
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1374,6 +1404,15 @@ def get_veg_variables(veg):
                 "grid_mapping": "spatial_ref",
                 "units": "years",
                 "long_name": "forested vegetation age",
+            },
+        ],
+        "salinity_annual_avg": [
+            veg.salinity_annual_avg,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "water salinity",
             },
         ],
         # QC variables below

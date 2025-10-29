@@ -694,6 +694,24 @@ def get_hsi_variables(hsi):
                 "description": "bottomland hardwood wetland value assessment",
             },
         ],
+        "blh_wva_si_6": [
+            _safe_get_attr(hsi.blhwva, "si_6"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
+        "blh_wva_si_7": [
+            _safe_get_attr(hsi.blhwva, "si_7"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "description": "bottomland hardwood wetland value assessment",
+            },
+        ],
         "swamp_wva_hsi": [
             _safe_get_attr(hsi.swampwva, "hsi"),
             np.float32,

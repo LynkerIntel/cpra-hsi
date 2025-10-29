@@ -124,7 +124,6 @@ class BottomlandHardwoodHSI:
             blh_mask = (
                 (self.pct_blh_cover < 40) 
                 & (~np.isnan(self.pct_blh_cover))
-                & (~np.isnan(self.pct_blh_cover))
                 & (~np.isnan(self.dem_480)) # include domain
             )  
             si_array[blh_mask] = np.nan

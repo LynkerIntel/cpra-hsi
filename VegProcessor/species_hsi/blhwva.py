@@ -118,13 +118,16 @@ class BottomlandHardwoodHSI:
     def blh_cover_mask(self, si_array: np.ndarray) -> np.ndarray:
         """To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5)
         has to be present. This applies a mask to each SI array where
-        the %BLH cover is < 40%. These areas are given an SI = 0.
+        the %BLH cover is < 40%. These areas are given an SI = NaN.
         """
         if self.pct_blh_cover is not None:
-            blh_mask = (self.pct_blh_cover < 40) & (
-                ~np.isnan(self.pct_blh_cover)
-            )
-            si_array[blh_mask] = 0
+            blh_mask = (
+                (self.pct_blh_cover < 40) 
+                & (~np.isnan(self.pct_blh_cover))
+                & (~np.isnan(self.pct_blh_cover))
+                & (~np.isnan(self.dem_480)) # include domain
+            )  
+            si_array[blh_mask] = np.nan
 
         return si_array
 
@@ -426,7 +429,7 @@ class BottomlandHardwoodHSI:
             mask_5 = self.v5_forested_connectivity_cat == 5
             si_5[mask_5] = 1
 
-            si_5 = self.blh_cover_mask(si_5)
+        si_5 = self.blh_cover_mask(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -479,11 +482,9 @@ class BottomlandHardwoodHSI:
                 num_invalid,
             )
 
-        # run overall mask for blh hsi conditionds
-        masked_hsi = self.blh_cover_mask(hsi)
-
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        # The blh_mask is already applied via the individual SIs.
         masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

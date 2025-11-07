@@ -808,7 +808,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
-            chunks={"time": -1, "x": 1000, "y": 1000},
+            chunks="auto",
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -839,7 +839,7 @@ class VegTransition:
                 ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
-        height_da = height_da.chunk({"time": -1, "x": 1000, "y": 1000})
+        # height_da = height_da.chunk({"time": -1, "y": 1599, "x": 1276})
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
@@ -888,7 +888,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
-            chunks={"time": -1, "x": 1000, "y": 1000},
+            chunks="auto",
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -913,7 +913,7 @@ class VegTransition:
             ) from exc
 
         ds = self._reproject_match_to_dem(ds)
-        ds = ds.chunk({"time": -1, "x": 1000, "y": 1000})
+        # ds = ds.chunk({"time": -1, "y": 1599, "x": 1276})
         return ds
 
     def _reproject_match_to_dem(

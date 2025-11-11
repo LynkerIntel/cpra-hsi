@@ -73,13 +73,28 @@ class BottomlandHardwoodHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self) -> np.ndarray:
-        """Create an array from a template all valid pixels are 999.0, and
-        NaN from the input are persisted.
+    def _create_template_array(self, *input_arrays) -> np.ndarray:
+        """Create an array from a template where valid pixels are 999.0, and
+        NaN values are propagated from hydro domain and optional input arrays.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        Returns
+        -------
+        np.ndarray
+            Template array with 999.0 for valid pixels and NaN elsewhere
         """
-        # Bottomland Hardwood Wetland Value Assessment (BLH WVA) has depth related vars, and is
-        # limited to hydrologic model domain
+        # Start with hydro domain mask
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def clip_array(self, result: np.ndarray) -> np.ndarray:
@@ -119,14 +134,19 @@ class BottomlandHardwoodHSI:
         """To apply the BLH WVA, at least 40% BLH cover (Zone 3 to 5)
         has to be present. This applies a mask to each SI array where
         the %BLH cover is < 40%. These areas are given an SI = NaN.
+
+        Also ensures areas outside the hydro domain remain NaN.
         """
+        ## Apply hydro domain mask
+        si_array = np.where(np.isnan(self.hydro_domain_480), np.nan, si_array)
+
+        # Apply BLH cover mask
         if self.pct_blh_cover is not None:
-            blh_mask = (
-                (self.pct_blh_cover < 40) 
-                & (~np.isnan(self.pct_blh_cover))
-                & (~np.isnan(self.dem_480)) # include domain
-            )  
+            blh_mask = self.pct_blh_cover < 40
             si_array[blh_mask] = np.nan
+
+        else:
+            raise ValueError("precent bottomland hardwood is required.")
 
         return si_array
 
@@ -146,19 +166,11 @@ class BottomlandHardwoodHSI:
             si_1[~np.isnan(si_1)] = 1
 
         else:
-            # Handle NaNs in input arrays
-            nan_mask = (
-                np.isnan(self.v1a_pct_overstory_w_mast)
-                | np.isnan(self.v1b_pct_overstory_w_soft_mast)
-                | np.isnan(self.v1c_pct_overstory_w_hard_mast)
-            )
-            si_1[nan_mask] = np.nan
-
             # class 1
             mask_1 = (self.v1a_pct_overstory_w_mast < 25) | (
                 (self.v1b_pct_overstory_w_soft_mast > 50)
                 & (self.v1c_pct_overstory_w_hard_mast == 0)
-            ) & ~nan_mask
+            )
             si_1[mask_1] = 0.2
 
             # class 2
@@ -166,7 +178,7 @@ class BottomlandHardwoodHSI:
                 (self.v1a_pct_overstory_w_mast >= 25)
                 & (self.v1a_pct_overstory_w_mast <= 50)
                 & (self.v1c_pct_overstory_w_hard_mast < 10)
-            ) & ~nan_mask
+            )
             si_1[mask_2] = 0.4
 
             # class 3
@@ -174,19 +186,19 @@ class BottomlandHardwoodHSI:
                 (self.v1a_pct_overstory_w_mast >= 25)
                 & (self.v1a_pct_overstory_w_mast <= 50)
                 & (self.v1c_pct_overstory_w_hard_mast >= 10)
-            ) & ~nan_mask
+            )
             si_1[mask_3] = 0.6
 
             # class 4
             mask_4 = (self.v1a_pct_overstory_w_mast > 50) & (
                 self.v1c_pct_overstory_w_hard_mast < 20
-            ) & ~nan_mask
+            )
             si_1[mask_4] = 0.8
 
             # class 5
             mask_5 = (self.v1a_pct_overstory_w_mast > 50) & (
                 self.v1c_pct_overstory_w_hard_mast >= 20
-            ) & ~nan_mask
+            )
             si_1[mask_5] = 1
 
         si_1 = self.blh_cover_mask(si_1)
@@ -199,57 +211,57 @@ class BottomlandHardwoodHSI:
     def calculate_si_2(self) -> np.ndarray:
         """Stand Maturity"""
         self._logger.info("Running SI 2")
-        si_2 = self.template.copy()
 
         if self.v2_stand_maturity is None:
+            si_2 = self.template.copy()
             self._logger.info(
                 "Stand maturity (tree age) is not provided. Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
         else:
-            # Handle NaN values in the input arrays.
-            nan_mask = np.isnan(self.v2_stand_maturity)
-            si_2[nan_mask] = np.nan
-            
+            # Create template with NaN propagated from maturity data
+            # Note: maturity has additional NaNs beyond hydro domain (non-forested areas)
+            si_2 = self._create_template_array(self.v2_stand_maturity)
+
             # condition 1
-            mask_1 = (self.v2_stand_maturity == 0) & ~nan_mask
+            mask_1 = self.v2_stand_maturity == 0
             si_2[mask_1] = 0
 
             # condition 2
             mask_2 = (self.v2_stand_maturity > 0) & (
                 self.v2_stand_maturity <= 3
-            ) & ~nan_mask
+            )
             si_2[mask_2] = 0.0033 * self.v2_stand_maturity[mask_2]
 
             # condition 3
             mask_3 = (self.v2_stand_maturity > 3) & (
                 self.v2_stand_maturity <= 7
-            ) & ~nan_mask
+            )
             si_2[mask_3] = (0.01 * self.v2_stand_maturity[mask_3]) - 0.02
 
             # condition 4
             mask_4 = (self.v2_stand_maturity > 7) & (
                 self.v2_stand_maturity <= 10
-            ) & ~nan_mask
+            )
             si_2[mask_4] = (0.017 * self.v2_stand_maturity[mask_4]) - 0.07
 
             # condition 5
             mask_5 = (self.v2_stand_maturity > 10) & (
                 self.v2_stand_maturity <= 20
-            ) & ~nan_mask
+            )
             si_2[mask_5] = (0.02 * self.v2_stand_maturity[mask_5]) - 0.1
 
             # condition 6
             mask_6 = (self.v2_stand_maturity > 20) & (
                 self.v2_stand_maturity <= 30
-            ) & ~nan_mask
+            )
             si_2[mask_6] = (0.03 * self.v2_stand_maturity[mask_6]) - 0.3
 
             # condition 7
             mask_7 = (self.v2_stand_maturity > 30) & (
                 self.v2_stand_maturity <= 50
-            ) & ~nan_mask
+            )
             si_2[mask_7] = 0.02 * self.v2_stand_maturity[mask_7]
 
             # condition 8
@@ -277,28 +289,24 @@ class BottomlandHardwoodHSI:
             u_si[~np.isnan(u_si)] = 1
 
         else:
-            # Handle NaN values in input array
-            nan_mask_u = np.isnan(self.v3a_pct_understory)
-            u_si[nan_mask_u] = np.nan
-
             # understory condition 1
-            mask_u1 = (self.v3a_pct_understory == 0) & ~nan_mask_u
+            mask_u1 = self.v3a_pct_understory == 0
             u_si[mask_u1] = 0.1
 
             # understory condition 2
             mask_u2 = (self.v3a_pct_understory > 0) & (
                 self.v3a_pct_understory <= 30
-            ) & ~nan_mask_u
+            )
             u_si[mask_u2] = (0.03 * self.v3a_pct_understory[mask_u2]) + 0.1
 
             # understory condition 3
             mask_u3 = (self.v3a_pct_understory > 30) & (
                 self.v3a_pct_understory <= 60
-            ) & ~nan_mask_u
+            )
             u_si[mask_u3] = 1
 
             # understory condition 4
-            mask_u4 = (self.v3a_pct_understory > 60) & ~nan_mask_u
+            mask_u4 = self.v3a_pct_understory > 60
             u_si[mask_u4] = (-0.01 * self.v3a_pct_understory[mask_u4]) + 1.6
 
         # Midstory SI
@@ -312,28 +320,24 @@ class BottomlandHardwoodHSI:
             m_si[~np.isnan(m_si)] = 1
 
         else:
-            # Handle NaN values in input array
-            nan_mask_m = np.isnan(self.v3b_pct_midstory)
-            m_si[nan_mask_m] = np.nan
-
             # midstory condition 1
-            mask_m1 = (self.v3b_pct_midstory == 0) & ~nan_mask_m
+            mask_m1 = self.v3b_pct_midstory == 0
             m_si[mask_m1] = 0.1
 
             # midstory condition 2
             mask_m2 = (self.v3b_pct_midstory > 0) & (
                 self.v3b_pct_midstory <= 20
-            ) & ~nan_mask_m
+            )
             m_si[mask_m2] = (0.045 * self.v3b_pct_midstory[mask_m2]) + 0.1
 
             # midstory condition 3
             mask_m3 = (self.v3b_pct_midstory > 20) & (
                 self.v3b_pct_midstory <= 50
-            ) & ~nan_mask_m
+            )
             m_si[mask_m3] = 1
 
             # midstory condition 4
-            mask_m4 = (self.v3b_pct_midstory > 50) & ~nan_mask_m
+            mask_m4 = self.v3b_pct_midstory > 50
             m_si[mask_m4] = (-0.01 * self.v3b_pct_midstory[mask_m4]) + 1.5
 
         # Combined SI 3
@@ -428,27 +432,23 @@ class BottomlandHardwoodHSI:
             si_5[~np.isnan(si_5)] = 1
 
         else:
-            # Handle NaN values in input array
-            nan_mask = np.isnan(self.v5_forested_connectivity_cat)
-            si_5[nan_mask] = np.nan
-            # extra mask for ouput of 0 (not forest) in forested
-            # connectivity, this becomes NaN
-            mask_0 = (self.v5_forested_connectivity_cat == 0) & ~nan_mask
+            # Set non-forested areas (0) to NaN
+            mask_0 = self.v5_forested_connectivity_cat == 0
             si_5[mask_0] = np.nan
 
-            mask_1 = (self.v5_forested_connectivity_cat == 1) & ~nan_mask
+            mask_1 = self.v5_forested_connectivity_cat == 1
             si_5[mask_1] = 0.2
 
-            mask_2 = (self.v5_forested_connectivity_cat == 2) & ~nan_mask
+            mask_2 = self.v5_forested_connectivity_cat == 2
             si_5[mask_2] = 0.4
 
-            mask_3 = (self.v5_forested_connectivity_cat == 3) & ~nan_mask
+            mask_3 = self.v5_forested_connectivity_cat == 3
             si_5[mask_3] = 0.6
 
-            mask_4 = (self.v5_forested_connectivity_cat == 4) & ~nan_mask
+            mask_4 = self.v5_forested_connectivity_cat == 4
             si_5[mask_4] = 0.8
 
-            mask_5 = (self.v5_forested_connectivity_cat == 5) & ~nan_mask
+            mask_5 = self.v5_forested_connectivity_cat == 5
             si_5[mask_5] = 1
 
         si_5 = self.blh_cover_mask(si_5)
@@ -485,29 +485,26 @@ class BottomlandHardwoodHSI:
             self._logger.info(
                 "Stand maturity is None, using mature HSI equation."
             )
-            mask_mature = ~np.isnan(hsi)  # Apply to all valid pixels
-            hsi[mask_mature] = (
-                (self.si_1[mask_mature] ** 4)
-                * (self.si_2[mask_mature] ** 4)  
-                * (self.si_3[mask_mature] ** 2)
-                * (self.si_4[mask_mature] ** 2)
-                * (self.si_5[mask_mature])
+            # Let NumPy handle NaN propagation - any NaN in SI arrays will result in NaN
+            hsi = (
+                (self.si_1**4)
+                * (self.si_2**4)
+                * (self.si_3**2)
+                * (self.si_4**2)
+                * (self.si_5)
             ) ** (1 / 13)
 
-        else: 
-            # Handle NaN values in input array
-            nan_mask = np.isnan(self.v2_stand_maturity)
-            hsi[nan_mask] = np.nan
+        else:
             # Stand Maturity data exists
             # Combine individual suitability indices
-            # condition 1 (tree age < 7; inmature trees) 
-            mask_1 = (self.v2_stand_maturity < 7) & ~nan_mask
+            # condition 1 (tree age < 7; immature trees)
+            mask_1 = self.v2_stand_maturity < 7
             hsi[mask_1] = (
                 (self.si_2[mask_1] ** 4) * (self.si_4[mask_1] ** 2)
             ) ** (1 / 6)
 
             # condition 2 (tree age >= 7 and v3_understory/midstory data is available)
-            mask_2 = (self.v2_stand_maturity >= 7) & ~nan_mask
+            mask_2 = self.v2_stand_maturity >= 7
             hsi[mask_2] = (
                 (self.si_1[mask_2] ** 4)
                 * (self.si_2[mask_2] ** 4)
@@ -525,9 +522,7 @@ class BottomlandHardwoodHSI:
                 num_invalid,
             )
 
-        # Subset final HSI array to vegetation domain (not hydrologic domain)
-        # Masking: Set values in `mask` to NaN wherever `data` is NaN
-        # The blh_mask is already applied via the individual SIs.
-        masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
+        # Apply domain and BLH cover masking (consistent with individual SI functions)
+        hsi = self.blh_cover_mask(hsi)
 
-        return masked_hsi
+        return hsi

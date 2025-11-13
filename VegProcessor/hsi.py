@@ -474,6 +474,46 @@ class HSI(vt.VegTransition):
 
         return da.to_numpy()
 
+    def _load_water_temp_general(self, water_year: int) -> xr.Dataset:
+        """Load water temperature data from either Delft3D or MIKE 21 models."""
+        self._logger.info(
+            f"Loading water temperature data with universal daily method."
+        )
+        nc_path, analog_year = self._get_hydro_netcdf_path(
+            water_year, hydro_variable="WTEMP"
+        )
+        self._logger.info("Loading file: %s", nc_path)
+
+        ds = xr.open_dataset(
+            nc_path,
+            engine="h5netcdf",
+            chunks="auto",
+        )
+
+        ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+        # # model specific var names: -----------------------------------------------
+        # if self.file_params["hydro_source_model"] == "D3D":
+        #     ds = ds.rename({"waterlevel": "height"})
+        # if self.file_params["hydro_source_model"] == "MIK":
+        #     ds = ds.rename({"water_level": "height"})
+        # # extract height var as da
+        # height_da = ds["sali"]
+
+        # handle varied CRS metadata locations between model files-----------------
+        try:
+            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+            crs_wkt = ds["crs"].attrs.get("crs_wkt")
+            ds = ds.rio.write_crs(crs_wkt)
+
+        except Exception as exc:
+            raise ValueError(
+                "Unable to parse CRS from hydrologic input"
+            ) from exc
+
+        ds = self._reproject_match_to_dem(ds)
+        return ds
+
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
         function is called for every HSI timestep.

@@ -36,7 +36,7 @@ class BassHSI:
     def from_hsi(cls, hsi_instance):
         """Create BassHSI instance from an HSI instance."""
         return cls(
-            v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+            v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             dem_480=hsi_instance.dem_480,

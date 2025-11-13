@@ -145,8 +145,13 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
+        self.water_temperature = None
+        self.water_temperature_annual_mean = None
+        self.water_temperature_july_august = None
+        self.water_temperature_july_sep = None
+        self.water_temperature_may_july = None
+        self.water_temperature_feb_march = None
         self.mean_annual_salinity = None
-        self.mean_annual_temperature = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -222,10 +227,10 @@ class HSI(vt.VegTransition):
         self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
         self.blackcrappie_ph_year = None  # set to ideal
-        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
-        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
-        self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
+        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
+        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        # self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
+        # self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
         self.blackcrappie_max_salinity_gs = None
@@ -358,11 +363,26 @@ class HSI(vt.VegTransition):
         self.water_depth_spawning_season = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
+        self.water_depth_july_august = self._get_daily_depth_filtered(
+            months=[7, 8],
+        )
 
         # temperature vars -------------------------------------------
         self.water_temperature = self._load_water_temp_general(self.wy)
         self.water_temperature_annual_mean = (
             self._get_water_temperature_subset()
+        )
+        self.water_temperature_july_august = (
+            self._get_water_temperature_subset(months=[7, 8])
+        )
+        self.water_temperature_may_july = self._get_water_temperature_subset(
+            months=[5, 6, 7]
+        )
+        self.water_temperature_july_sept = self._get_water_temperature_subset(
+            months=[7, 8, 9]
+        )
+        self.water_temperature_feb_march = self._get_water_temperature_subset(
+            months=[2, 3]
         )
 
         # load VegTransition output ----------------------------------

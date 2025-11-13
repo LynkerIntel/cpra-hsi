@@ -100,7 +100,9 @@ class BassHSI:
         else:
             # Setup ideal values for mean annual temperature (HEC-RAS)
             if self.v1b_mean_annual_temperature is None:
-                # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
+                self._logger.info(
+                    "Mean annual temperature data not provided. Setting index to 1."
+                )
                 # si_1 = np.ones(self._shape)
                 self._logger.info(
                     "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."

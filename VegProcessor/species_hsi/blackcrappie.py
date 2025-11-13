@@ -145,7 +145,6 @@ class BlackCrappieHSI:
             self.water_depth_midsummer > 3
         )
         si_array[backwaters_mask] = np.nan
-
         return si_array
 
     def _setup_logger(self):
@@ -443,6 +442,8 @@ class BlackCrappieHSI:
                 * (self.v8_most_suit_temp_in_midsummer_pools_bw_adult[mask_4])
                 + 4.86
             )
+
+        # TODO: apply backwater mask here? (either set to NaN or set to 0?)
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

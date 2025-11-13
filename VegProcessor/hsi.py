@@ -145,12 +145,14 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        self.water_temperature = None
+        self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
         self.water_temperature_july_august = None
         self.water_temperature_july_sep = None
         self.water_temperature_may_july = None
         self.water_temperature_feb_march = None
+
+        self.salinity = None  # the source xr.dataset
         self.mean_annual_salinity = None
 
         self.pct_swamp_bottom_hardwood = None
@@ -347,8 +349,6 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # self._load_salinity()
-
         # water depth vars --------------------------------------
         self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
@@ -384,6 +384,9 @@ class HSI(vt.VegTransition):
         self.water_temperature_feb_march = self._get_water_temperature_subset(
             months=[2, 3]
         )
+        # salinity vars -------------------------------------------------
+        self.salinity = self._load_salinity_general(self.wy)
+        self.mean_annual_salinity = self._get_salinity_subset()
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -392,11 +395,6 @@ class HSI(vt.VegTransition):
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
-        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
-            self.veg_type,
-            domain=self.hydro_domain,
-            cell=True,
-        )
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
@@ -1019,7 +1017,7 @@ class HSI(vt.VegTransition):
         Parameters
         ----------
         months : list (optional)
-            List of months to average water depth over. If a list is not
+            List of months to average water temp over. If a list is not
             provided, the default is all months
 
         Return
@@ -1038,6 +1036,50 @@ class HSI(vt.VegTransition):
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+
+    def _get_salinity_subset(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
+        """
+        If salinity raster is prodided: educe salinity dataset to temporal mean, then
+        resample to 480m cell size. If no raster path is provided, create an
+        approximate salinity array based on the habitat type.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to get average salinity over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : np.ndarray
+            salinity, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        if self.netcdf_salinity_path is None:
+            self._logger.info(
+                "No salinity NetCDF path provided, using approximate"
+                "salinity based on veg type."
+            )
+
+            salinity = hydro_logic.habitat_based_salinity(
+                self.veg_type,
+                domain=self.hydro_domain,
+                cell=True,
+            )
+            return salinity
+
+        else:
+            filtered_ds = self.salinity.sel(
+                time=self.salinity["time"].dt.month.isin(months)
+            )
+            da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
+            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da_coarse.to_numpy()
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a

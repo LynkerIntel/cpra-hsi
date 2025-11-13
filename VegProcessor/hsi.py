@@ -154,6 +154,7 @@ class HSI(vt.VegTransition):
 
         self.salinity = None  # the source xr.dataset
         self.mean_annual_salinity = None
+        self.max_salinity_april_sept = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -387,6 +388,9 @@ class HSI(vt.VegTransition):
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
         self.mean_annual_salinity = self._get_salinity_subset()
+        self.max_salinity_april_sept = self._get_salinity_subset(
+            months=[4, 5, 6, 7, 8, 9], method="max"
+        )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -1038,18 +1042,23 @@ class HSI(vt.VegTransition):
         return da_coarse.to_numpy()
 
     def _get_salinity_subset(
-        self, months: None | list[int] = None
+        self,
+        months: None | list[int] = None,
+        method: str = "mean",
     ) -> np.ndarray:
         """
-        If salinity raster is prodided: educe salinity dataset to temporal mean, then
+        If salinity raster is prodided: reduce salinity dataset to temporal mean or max, then
         resample to 480m cell size. If no raster path is provided, create an
         approximate salinity array based on the habitat type.
 
         Parameters
         ----------
         months : list (optional)
-            List of months to get average salinity over. If a list is not
+            List of months to reduce salinity over. If a list is not
             provided, the default is all months
+
+        method : str (optional)
+            How to reduce. One of ["mean", "max"]. Defaults to mean.
 
         Return
         ------
@@ -1077,7 +1086,11 @@ class HSI(vt.VegTransition):
             filtered_ds = self.salinity.sel(
                 time=self.salinity["time"].dt.month.isin(months)
             )
-            da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
+            if method == "mean":
+                da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
+            elif method == "max":
+                da = filtered_ds.max(dim="time", skipna=True)["salinity"]
+
             da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
             return da_coarse.to_numpy()
 

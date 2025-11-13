@@ -79,7 +79,7 @@ class BlackCrappieHSI:
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
             v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,
-            v14_max_salinity_gs=hsi_instance.blackcrappie_max_salinity_gs,
+            v14_max_salinity_gs=hsi_instance.max_salinity_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             water_depth_midsummer=hsi_instance.water_depth_july_august,

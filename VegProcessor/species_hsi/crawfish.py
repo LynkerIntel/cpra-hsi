@@ -65,7 +65,7 @@ class CrawfishHSI:
             return array * multiplier if array is not None else None
 
         return cls(
-            v1_mean_annual_salinity=hsi_instance.mean_annual_salinity,
+            v1_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v2_mean_water_depth_jan_aug=safe_multiply(
                 hsi_instance.water_depth_monthly_mean_jan_aug
             ),

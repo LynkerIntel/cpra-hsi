@@ -364,6 +364,12 @@ class HSI(vt.VegTransition):
             months=[4, 5, 6],
         )
 
+        # temperature vars -------------------------------------------
+        self.water_temperature = self._load_water_temp_general(self.wy)
+        self.water_temperature_annual_mean = (
+            self._get_water_temperature_subset()
+        )
+
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
@@ -973,9 +979,9 @@ class HSI(vt.VegTransition):
 
         Return
         ------
-        da_coarse : xr.DataArray
-            A water depth data, averaged over a list of months (if provided)
-            and then downscaled to 480m.
+        da_coarse : np.ndarray
+            A water depth data, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
@@ -984,6 +990,36 @@ class HSI(vt.VegTransition):
             time=self.water_depth["time"].dt.month.isin(months)
         )
         da = filtered_ds.mean(dim="time", skipna=True)["height"]
+
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _get_water_temperature_subset(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
+        """
+        Reduce daily water temperature dataset to temporal mean, then
+        resample to 480m cell size.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to average water depth over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : np.ndarray
+            water temperature, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        filtered_ds = self.water_temperature.sel(
+            time=self.water_temperature["time"].dt.month.isin(months)
+        )
+        da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()

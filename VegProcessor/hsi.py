@@ -118,18 +118,13 @@ class HSI(vt.VegTransition):
         self.hydro_domain = self._load_hydro_domain_raster()
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
-        # Get pct cover for prevously defined static variables
-        # self._calculate_pct_cover_static()
-
         # Dynamic Variables
-        # self.wse = None
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
-        # self.water_depth_monthly_mean_jan_aug_cm = None
 
         # HSI models
         self.alligator = None
@@ -175,7 +170,7 @@ class HSI(vt.VegTransition):
         self.tds_summer_growing_season = None  # ideal always
         self.avg_num_frost_free_days_growing_season = None  # ideal always
         self.mean_weekly_summer_temp = (
-            None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+            None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always

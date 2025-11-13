@@ -643,44 +643,51 @@ class VegTransition:
 
     def _load_salinity_general(self, water_year: int) -> xr.Dataset:
         """Load salinity data from either Delft3D or MIKE 21 models."""
-        self._logger.info(
-            f"Loading salinity data with universal daily method."
-        )
-        nc_path, analog_year = self._get_hydro_netcdf_path(
-            water_year, hydro_variable="SALINITY"
-        )
-        self._logger.info("Loading files: %s", nc_path)
+        if self.netcdf_salinity_path is not None:
+            self._logger.info(
+                f"Loading salinity data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="SALINITY"
+            )
+            self._logger.info("Loading files: %s", nc_path)
 
-        ds = xr.open_dataset(
-            nc_path,
-            engine="h5netcdf",
-            chunks="auto",
-        )
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
 
-        ds = utils.analog_years_handler(analog_year, water_year, ds)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-        # # model specific var names: -----------------------------------------------
-        # if self.file_params["hydro_source_model"] == "D3D":
-        #     ds = ds.rename({"waterlevel": "height"})
-        # if self.file_params["hydro_source_model"] == "MIK":
-        #     ds = ds.rename({"water_level": "height"})
-        # # extract height var as da
-        # height_da = ds["sali"]
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
 
-        # handle varied CRS metadata locations between model files-----------------
-        try:
-            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
-            crs_wkt = ds["crs"].attrs.get("crs_wkt")
-            ds = ds.rio.write_crs(crs_wkt)
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
 
-        except Exception as exc:
-            raise ValueError(
-                "Unable to parse CRS from hydrologic input"
-            ) from exc
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
 
-        ds = self._reproject_match_to_dem(ds)
-        # ds = ds.chunk({"time": -1, "y": 1599, "x": 1276})
-        return ds
+            ds = self._reproject_match_to_dem(ds)
+            # ds = ds.chunk({"time": -1, "y": 1599, "x": 1276})
+            return ds
+
+        else:
+            self._logger.info(
+                "Salinity raster not provided, using habitat approximation."
+            )
+            return None
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray

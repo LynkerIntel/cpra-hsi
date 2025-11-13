@@ -804,8 +804,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "mean_annual_temperature": [
-            hsi.mean_annual_temperature,
+        "water_temperature_annual_mean": [
+            hsi.water_temperature_annual_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

@@ -39,7 +39,7 @@ class BlueCrabHSI:
         """Create BlueCrabHSI instance from an HSI instance."""
         return cls(
             v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
+            v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             # TODO implement these variables/inputs in hsi.py
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,

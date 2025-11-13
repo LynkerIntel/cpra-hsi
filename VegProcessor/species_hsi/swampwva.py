@@ -62,7 +62,7 @@ class SwampHSI:
             v6a_pct_forested_half_mi=hsi_instance.pct_forested_half_mi,
             v6b_pct_abandoned_ag_half_mi=hsi_instance.pct_abandoned_ag_half_mi,
             v6c_pct_pasture_half_mi=hsi_instance.pct_pasture_half_mi,
-            v6d_pct_active_ag_water_half_mi=hsi_instance.pct_active_ag_water_half_mi, 
+            v6d_pct_active_ag_water_half_mi=hsi_instance.pct_active_ag_water_half_mi,
             v6e_pct_nonhabitat_half_mi=hsi_instance.pct_nonhabitat_half_mi,
             v7_disturbance=hsi_instance.disturbance,  # set to ideal
             dem_480=hsi_instance.dem_480,
@@ -403,27 +403,27 @@ class SwampHSI:
 
         # Fixed but varies spatially
         v6_pct_cover_are_none = (
-        self.v6a_pct_forested_half_mi is None
-        or self.v6b_pct_abandoned_ag_half_mi is None
-        or self.v6c_pct_pasture_half_mi is None
-        or self.v6d_pct_active_ag_water_half_mi is None
-        or self.v6e_pct_nonhabitat_half_mi is None
+            self.v6a_pct_forested_half_mi is None
+            or self.v6b_pct_abandoned_ag_half_mi is None
+            or self.v6c_pct_pasture_half_mi is None
+            or self.v6d_pct_active_ag_water_half_mi is None
+            or self.v6e_pct_nonhabitat_half_mi is None
         )
 
         if v6_pct_cover_are_none:
             self._logger.info(
-            "Surrounding land use data not provided. Setting index to 1."
-        )
+                "Surrounding land use data not provided. Setting index to 1."
+            )
             si_6[~np.isnan(si_6)] = 1
 
-        else: 
-        # Calculate the weighted sum of the percentages
+        else:
+            # Calculate the weighted sum of the percentages
             weighted_sum = (
-            (self.v6a_pct_forested_half_mi * 1.0)
-            + (self.v6b_pct_abandoned_ag_half_mi * 0.6)
-            + (self.v6c_pct_pasture_half_mi * 0.4)
-            + (self.v6d_pct_active_ag_water_half_mi * 0.2)
-            + (self.v6e_pct_nonhabitat_half_mi * 0.01)
+                (self.v6a_pct_forested_half_mi * 1.0)
+                + (self.v6b_pct_abandoned_ag_half_mi * 0.6)
+                + (self.v6c_pct_pasture_half_mi * 0.4)
+                + (self.v6d_pct_active_ag_water_half_mi * 0.2)
+                + (self.v6e_pct_nonhabitat_half_mi * 0.01)
             )
 
             calculated_si6 = weighted_sum / 100.0

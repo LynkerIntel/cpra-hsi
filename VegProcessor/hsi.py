@@ -153,8 +153,10 @@ class HSI(vt.VegTransition):
         self.water_temperature_feb_march = None
 
         self.salinity = None  # the source xr.dataset
-        self.mean_annual_salinity = None
-        self.max_salinity_april_sept = None
+        self.salinity_annual_mean = None
+        self.salinity_max_april_sept = None
+        self.salinity_max_july_sept = None
+        self.salinity_max_may_july = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -387,9 +389,18 @@ class HSI(vt.VegTransition):
         )
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
-        self.mean_annual_salinity = self._get_salinity_subset()
-        self.max_salinity_april_sept = self._get_salinity_subset(
-            months=[4, 5, 6, 7, 8, 9], method="max"
+        self.salinity_annual_mean = self._get_salinity_subset()
+        self.salinity_max_april_sept = self._get_salinity_subset(
+            months=[4, 5, 6, 7, 8, 9],
+            method="max",
+        )
+        self.salinity_max_july_sept = self._get_salinity_subset(
+            months=[7, 8, 9],
+            method="max",
+        )
+        self.salinity_max_may_july = self._get_salinity_subset(
+            months=[5, 6, 7],
+            method="max",
         )
 
         # load VegTransition output ----------------------------------

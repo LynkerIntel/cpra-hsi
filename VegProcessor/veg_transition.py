@@ -506,6 +506,8 @@ class VegTransition:
             variable_base_path = self.netcdf_hydro_path
         elif hydro_variable == "SALINITY":
             variable_base_path = self.netcdf_salinity_path
+        elif hydro_variable == "WTEMP":
+            variable_base_path = self.netcdf_water_temperature_path
         else:
             raise ValueError("must be one of: STAGE, SALINITY")
 

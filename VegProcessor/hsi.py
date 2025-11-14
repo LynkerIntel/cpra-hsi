@@ -290,6 +290,9 @@ class HSI(vt.VegTransition):
         self.netcdf_hydro_path = self.config["raster_data"].get(
             "netcdf_hydro_path"
         )
+        self.netcdf_water_temperature_path = self.config["raster_data"].get(
+            "netcdf_water_temperature_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
@@ -360,7 +363,12 @@ class HSI(vt.VegTransition):
         )
         self.water_depth_monthly_mean_sept_dec = (
             self._get_daily_depth_filtered(
-                months=[9, 10, 11, 12],
+                months=[
+                    9,
+                    10,
+                    11,
+                    12,
+                ],  # BUG: this includes months outside of the WY!
             )
         )
         self.water_depth_spawning_season = self._get_daily_depth_filtered(

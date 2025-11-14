@@ -776,8 +776,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "mean_annual_salinity": [
-            hsi.mean_annual_salinity,
+        "salinity_annual_mean": [
+            hsi.salinity_annual_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

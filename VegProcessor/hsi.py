@@ -290,6 +290,9 @@ class HSI(vt.VegTransition):
         self.netcdf_hydro_path = self.config["raster_data"].get(
             "netcdf_hydro_path"
         )
+        self.netcdf_salinity_path = self.config["raster_data"].get(
+            "netcdf_salinity_path"
+        )
         self.netcdf_water_temperature_path = self.config["raster_data"].get(
             "netcdf_water_temperature_path"
         )

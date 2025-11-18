@@ -799,8 +799,7 @@ class RiverineCatfishHSI:
         )
         self.wq = np.where(
             wq_mask,
-            np.minimum(
-                np.stack(
+            np.minimum.reduce(
                     [
                         self.si_5,
                         self.si_12,
@@ -811,8 +810,6 @@ class RiverineCatfishHSI:
                         self.wq,
                     ]
                 ),
-                axis=0,
-            ).min(axis=0),
             self.wq,
         )
 

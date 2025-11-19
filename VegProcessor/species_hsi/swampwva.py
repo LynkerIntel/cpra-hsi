@@ -133,16 +133,20 @@ class SwampHSI:
         """To apply the Swamp WVA, at least 33% forest cover (Zone II to V)
         has to be present of which greater than 60% is in Zone II.
         This applies a mask to each SI array where these conditions are not met.
-        These areas are given an SI = 0.
+        These areas are given an SI = 'no data'
         """
+        # hydro domain mask
+        si_array = np.where(np.isnan(self.hydro_domain_480), np.nan, si_array)
+
         if self.pct_swamp_bottom_hardwood is not None:
-            swamp_blh_mask = (
-                (self.pct_swamp_bottom_hardwood < 33)
-                & (self.pct_zone_ii < 60)
-                & (~np.isnan(self.pct_swamp_bottom_hardwood))
-                & (~np.isnan(self.dem_480))  # include domain
+            swamp_blh_mask = (self.pct_swamp_bottom_hardwood < 33) & (
+                self.pct_zone_ii < 60
             )
-            si_array[swamp_blh_mask] = 0
+            si_array[swamp_blh_mask] = np.nan
+
+        else:
+            raise ValueError("Percent swamp blh must be provided.")
+
         return si_array
 
     def calculate_si_1(self) -> np.ndarray:
@@ -506,6 +510,7 @@ class SwampHSI:
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN
+        # The swamp_blh_mask is already applied via the individual SIs.
         masked_hsi = np.where(np.isnan(self.dem_480), np.nan, hsi)
 
         return masked_hsi

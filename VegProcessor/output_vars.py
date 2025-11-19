@@ -1375,7 +1375,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",  # Link CRS variable
-                "units": "unitless",
+                "units": "",
                 "long_name": "veg type",
             },
         ],
@@ -1421,7 +1421,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "%",
+                "units": "% time",
                 "long_name": "annual inundation duration",
                 "description": "Percentage of time flooded over the year",
             },
@@ -1443,7 +1443,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "%",
+                "units": "% time",
                 "long_name": "growing season inundation",
                 "description": (
                     "Percentage of time flooded during the period from April 1 through September 30"
@@ -1455,7 +1455,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "unitless",
+                "units": "",
                 "long_name": "tree establishment (true or false)",
                 "description": "Areas where establishment condition is met",
             },

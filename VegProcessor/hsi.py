@@ -73,9 +73,7 @@ class HSI(vt.VegTransition):
         with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
-        # Validate configuration before proceeding
         validate.validate_config(self.config, config_file)
-
         self._load_config_attributes()
 
         # Generate filename early so it's available for logger and metadata files
@@ -89,15 +87,12 @@ class HSI(vt.VegTransition):
         self._setup_logger(log_level)
         self.timestep_output_dir = None  # set in step() method
 
-        # Pretty-print the configuration
         config_pretty = yaml.dump(
             self.config,
             default_flow_style=False,
             sort_keys=False,
         )
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
-
-        # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
         # Generate static variables
@@ -114,7 +109,7 @@ class HSI(vt.VegTransition):
         self.hydro_domain = self._load_hydro_domain_raster()
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
-        # Dynamic Variables
+        # Dynamic Variables --------------------------------------------
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None

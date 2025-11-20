@@ -31,7 +31,7 @@ class CrawfishHSI:
     v3e_pct_cell_brackish_marsh: np.ndarray = None
     v3f_pct_cell_saline_marsh: np.ndarray = None
     v3g_pct_cell_bare_ground: np.ndarray = None
-    v4_mean_water_depth_sept_dec: np.ndarray = None
+    v4_mean_water_depth_oct_dec: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -84,8 +84,8 @@ class CrawfishHSI:
                 hsi_instance.pct_saline_marsh
             ),
             v3g_pct_cell_bare_ground=safe_divide(hsi_instance.pct_bare_ground),
-            v4_mean_water_depth_sept_dec=safe_multiply(
-                hsi_instance.water_depth_monthly_mean_sept_dec
+            v4_mean_water_depth_oct_dec=safe_multiply(
+                hsi_instance.water_depth_monthly_mean_oct_dec
             ),
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -251,14 +251,14 @@ class CrawfishHSI:
         return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
-        """Mean water depth from September to December in cm.
+        """Mean water depth from October to December in cm.
 
         Logic is defined in cm, and data should be provided in cm.
         """
         self._logger.info("Running SI 4")
         si_4 = self.template.copy()
 
-        if self.v4_mean_water_depth_sept_dec is None:
+        if self.v4_mean_water_depth_oct_dec is None:
             self._logger.info(
                 "mean water depth from september to december data not provided. Setting index to 1."
             )
@@ -267,20 +267,20 @@ class CrawfishHSI:
         else:
             # condition 1
             mask_1 = (
-                self.v4_mean_water_depth_sept_dec <= 0.0
+                self.v4_mean_water_depth_oct_dec <= 0.0
             )  # RHS is in meters
             si_4[mask_1] = 1.0
 
             # condition 2 (AND)
-            mask_2 = (self.v4_mean_water_depth_sept_dec > 0.0) & (
-                self.v4_mean_water_depth_sept_dec <= 15
+            mask_2 = (self.v4_mean_water_depth_oct_dec > 0.0) & (
+                self.v4_mean_water_depth_oct_dec <= 15
             )
             si_4[mask_2] = 1.0 - (
-                0.06667 * self.v4_mean_water_depth_sept_dec[mask_2]
+                0.06667 * self.v4_mean_water_depth_oct_dec[mask_2]
             )
 
             # condition 3
-            mask_3 = self.v4_mean_water_depth_sept_dec > 15
+            mask_3 = self.v4_mean_water_depth_oct_dec > 15
             si_4[mask_3] = 0.0
 
             if np.any(np.isclose(si_4, 999.0, atol=1e-5)):

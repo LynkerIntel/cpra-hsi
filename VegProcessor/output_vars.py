@@ -1056,8 +1056,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_monthly_mean_sept_dec": [
-            hsi.water_depth_monthly_mean_sept_dec,
+        "water_depth_monthly_mean_oct_dec": [
+            hsi.water_depth_monthly_mean_oct_dec,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

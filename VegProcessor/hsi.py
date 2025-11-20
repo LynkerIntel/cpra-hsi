@@ -1,14 +1,11 @@
 import logging
 import yaml
-import subprocess
 import xarray as xr
 import numpy as np
-import geopandas as gpd
 import pandas as pd
-import shutil
 import pprint
 
-import glob
+
 import os
 from typing import Optional
 import rioxarray  # used for tif output
@@ -20,7 +17,6 @@ from scipy.ndimage import label
 
 # import veg_logic
 import hydro_logic
-import plotting
 import utils
 import validate
 
@@ -125,6 +121,7 @@ class HSI(vt.VegTransition):
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_monthly_mean_jan_aug = None
         self.water_depth_monthly_mean_sept_dec = None
+        self.water_depth_july_august = None
 
         # HSI models
         self.alligator = None
@@ -238,7 +235,7 @@ class HSI(vt.VegTransition):
         # self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
-        self.blackcrappie_max_salinity_gs = None
+        # self.blackcrappie_max_salinity_gs = None
 
         # catfish
         self.catfish_pct_pools_avg_summer_flow = None
@@ -366,12 +363,7 @@ class HSI(vt.VegTransition):
         )
         self.water_depth_monthly_mean_sept_dec = (
             self._get_daily_depth_filtered(
-                months=[
-                    9,
-                    10,
-                    11,
-                    12,
-                ],  # BUG: this includes months outside of the WY!
+                months=[9, 10, 11, 12],
             )
         )
         self.water_depth_spawning_season = self._get_daily_depth_filtered(
@@ -413,6 +405,7 @@ class HSI(vt.VegTransition):
             months=[5, 6, 7],
             method="max",
         )
+        self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -1115,6 +1108,12 @@ class HSI(vt.VegTransition):
 
             da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
             return da_coarse.to_numpy()
+
+    def _get_mean_high_salinity_gs(self):
+        """
+        Get mean high salinity during the growing season. Used
+        in SWAMP WVA SI_4.
+        """
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a

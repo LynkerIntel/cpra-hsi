@@ -134,7 +134,8 @@ class BlackCrappieHSI:
         return clipped
 
     def backwaters_mask(self, si_array: np.ndarray) -> np.ndarray:
-        """Ensure that areas outside of backwaters are excluded.
+        """DRAFT
+        Ensure that areas outside of backwaters are excluded.
 
         Also ensures areas outside the hydro domain remain NaN.
         """
@@ -145,7 +146,8 @@ class BlackCrappieHSI:
             self.water_depth_midsummer > 3
         )
         si_array[backwaters_mask] = np.nan
-        return si_array
+        # return si_array
+        return NotImplementedError
 
     def _setup_logger(self):
         """Set up the logger for the class."""

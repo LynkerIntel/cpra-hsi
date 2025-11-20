@@ -148,7 +148,7 @@ class HSI(vt.VegTransition):
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
         self.water_temperature_july_august = None
-        self.water_temperature_july_sep = None
+        self.water_temperature_july_sept = None
         self.water_temperature_may_july = None
         self.water_temperature_feb_march = None
 

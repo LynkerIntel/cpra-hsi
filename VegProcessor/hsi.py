@@ -236,16 +236,16 @@ class HSI(vt.VegTransition):
         self.catfish_pct_pools_avg_summer_flow = None
         self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None
-        self.catfish_avg_temp_in_midsummer_pools_bw = None
+        # self.catfish_avg_temp_in_midsummer_pools_bw = None
         self.catfish_grow_season_length_frost_free_days = None
         self.catfish_max_monthly_avg_summer_turbidity = None
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
-        self.catfish_max_summer_salinity = None
-        self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
-        self.catfish_max_salinity_spawning_embryo = None
-        self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
-        self.catfish_max_summer_salinity_fry_juvenile = None
-        self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
+        # self.catfish_max_summer_salinity = None
+        # self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
+        # self.catfish_max_salinity_spawning_embryo = None
+        # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
+        # self.catfish_max_summer_salinity_fry_juvenile = None
+        # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
         self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file()
@@ -374,14 +374,14 @@ class HSI(vt.VegTransition):
         self.water_temperature_july_august_mean = (
             self._get_water_temperature_subset(months=[7, 8])
         )
-        self.water_temperature_may_july_mean = self._get_water_temperature_subset(
-            months=[5, 6, 7]
+        self.water_temperature_may_july_mean = (
+            self._get_water_temperature_subset(months=[5, 6, 7])
         )
-        self.water_temperature_july_sept_mean = self._get_water_temperature_subset(
-            months=[7, 8, 9]
+        self.water_temperature_july_sept_mean = (
+            self._get_water_temperature_subset(months=[7, 8, 9])
         )
-        self.water_temperature_feb_march_mean = self._get_water_temperature_subset(
-            months=[2, 3]
+        self.water_temperature_feb_march_mean = (
+            self._get_water_temperature_subset(months=[2, 3])
         )
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
@@ -398,7 +398,7 @@ class HSI(vt.VegTransition):
             months=[5, 6, 7],
             method="max",
         )
-        self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+        # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()

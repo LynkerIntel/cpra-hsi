@@ -67,7 +67,7 @@ class CrawfishHSI:
         return cls(
             v1_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v2_mean_water_depth_jan_aug=safe_multiply(
-                hsi_instance.water_depth_monthly_mean_jan_aug
+                hsi_instance.water_depth_jan_aug_mean
             ),
             v3a_pct_cell_swamp_bottomland_hardwood=safe_divide(
                 hsi_instance.pct_swamp_bottom_hardwood
@@ -85,7 +85,7 @@ class CrawfishHSI:
             ),
             v3g_pct_cell_bare_ground=safe_divide(hsi_instance.pct_bare_ground),
             v4_mean_water_depth_oct_dec=safe_multiply(
-                hsi_instance.water_depth_monthly_mean_oct_dec
+                hsi_instance.water_depth_oct_dec_mean
             ),
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,

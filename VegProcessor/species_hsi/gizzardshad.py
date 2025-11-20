@@ -60,7 +60,7 @@ class GizzardShadHSI:
             v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
-            v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
+            v7b_water_depth_spawning_season=hsi_instance.water_depth_april_june_mean,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )

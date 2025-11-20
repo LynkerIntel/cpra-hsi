@@ -114,9 +114,9 @@ class HSI(vt.VegTransition):
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.water_depth_monthly_mean_jan_aug = None
-        self.water_depth_monthly_mean_sept_dec = None
-        self.water_depth_july_august = None
+        self.water_depth_jan_aug_mean = None
+        self.water_depth_oct_dec_mean = None
+        self.water_depth_july_august_mean = None
 
         # HSI models
         self.alligator = None
@@ -139,10 +139,10 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
-        self.water_temperature_july_august = None
-        self.water_temperature_july_sept = None
-        self.water_temperature_may_july = None
-        self.water_temperature_feb_march = None
+        self.water_temperature_july_august_mean = None
+        self.water_temperature_july_sept_mean = None
+        self.water_temperature_may_july_mean = None
+        self.water_temperature_feb_march_mean = None
 
         self.salinity = None  # the source xr.dataset
         self.salinity_annual_mean = None
@@ -183,7 +183,7 @@ class HSI(vt.VegTransition):
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
-        self.water_depth_spawning_season = None
+        self.water_depth_april_june_mean = None
 
         # tree mast
         self.pct_soft_mast = None
@@ -353,18 +353,16 @@ class HSI(vt.VegTransition):
         # water depth vars --------------------------------------
         self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
+        self.water_depth_jan_aug_mean = self._get_daily_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8],
         )
-        self.water_depth_monthly_mean_sept_dec = (
-            self._get_daily_depth_filtered(
-                months=[9, 10, 11, 12],
-            )
+        self.water_depth_oct_dec_mean = self._get_daily_depth_filtered(
+            months=[10, 11, 12],
         )
-        self.water_depth_spawning_season = self._get_daily_depth_filtered(
+        self.water_depth_april_june_mean = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
-        self.water_depth_july_august = self._get_daily_depth_filtered(
+        self.water_depth_july_august_mean = self._get_daily_depth_filtered(
             months=[7, 8],
         )
 
@@ -373,16 +371,16 @@ class HSI(vt.VegTransition):
         self.water_temperature_annual_mean = (
             self._get_water_temperature_subset()
         )
-        self.water_temperature_july_august = (
+        self.water_temperature_july_august_mean = (
             self._get_water_temperature_subset(months=[7, 8])
         )
-        self.water_temperature_may_july = self._get_water_temperature_subset(
+        self.water_temperature_may_july_mean = self._get_water_temperature_subset(
             months=[5, 6, 7]
         )
-        self.water_temperature_july_sept = self._get_water_temperature_subset(
+        self.water_temperature_july_sept_mean = self._get_water_temperature_subset(
             months=[7, 8, 9]
         )
-        self.water_temperature_feb_march = self._get_water_temperature_subset(
+        self.water_temperature_feb_march_mean = self._get_water_temperature_subset(
             months=[2, 3]
         )
         # salinity vars -------------------------------------------------

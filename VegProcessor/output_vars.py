@@ -1046,8 +1046,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_monthly_mean_jan_aug": [
-            hsi.water_depth_monthly_mean_jan_aug,
+        "water_depth_jan_aug_mean": [
+            hsi.water_depth_jan_aug_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1056,8 +1056,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_monthly_mean_oct_dec": [
-            hsi.water_depth_monthly_mean_oct_dec,
+        "water_depth_oct_dec_mean": [
+            hsi.water_depth_oct_dec_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1066,8 +1066,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_spawning_season": [
-            hsi.water_depth_spawning_season,
+        "water_depth_april_june_mean": [
+            hsi.water_depth_april_june_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

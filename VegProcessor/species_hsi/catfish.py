@@ -784,9 +784,9 @@ class RiverineCatfishHSI:
         else:
             # The data is available, use the standard WQ equation
             wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
-        self.wq = (
-            wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
-        ) / 7
+            self.wq = (
+                wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
+            ) / 7
 
         # water quality component conditions
         wq_mask = (

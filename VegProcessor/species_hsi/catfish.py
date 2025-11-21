@@ -70,16 +70,16 @@ class RiverineCatfishHSI:
             v1_pct_pools_avg_summer_flow=hsi_instance.catfish_pct_pools_avg_summer_flow,
             v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
-            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.catfish_avg_temp_in_midsummer_pools_bw,
+            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.water_temperature_july_august_mean,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
             v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
             v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
-            v9_max_summer_salinity=hsi_instance.catfish_max_summer_salinity,
-            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.catfish_avg_temp_in_spawning_embryo_pools_bw,
-            v11_max_salinity_spawning_embryo=hsi_instance.catfish_max_salinity_spawning_embryo,
-            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_fry,
-            v13_max_summer_salinity_fry_juvenile=hsi_instance.catfish_max_summer_salinity_fry_juvenile,
-            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_juvenile,
+            v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
+            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.water_temperature_may_july_mean,
+            v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
+            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean,
+            v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
+            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean,
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -784,6 +784,7 @@ class RiverineCatfishHSI:
         else:
             # The data is available, use the standard WQ equation
             wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
+
         self.wq = (
             wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
         ) / 7
@@ -800,16 +801,16 @@ class RiverineCatfishHSI:
         self.wq = np.where(
             wq_mask,
             np.minimum.reduce(
-                    [
-                        self.si_5,
-                        self.si_12,
-                        self.si_14,
-                        self.si_8,
-                        self.si_9,
-                        self.si_13,
-                        self.wq,
-                    ]
-                ),
+                [
+                    self.si_5,
+                    self.si_12,
+                    self.si_14,
+                    self.si_8,
+                    self.si_9,
+                    self.si_13,
+                    self.wq,
+                ]
+            ),
             self.wq,
         )
 

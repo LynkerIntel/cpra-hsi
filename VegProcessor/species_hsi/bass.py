@@ -36,8 +36,8 @@ class BassHSI:
     def from_hsi(cls, hsi_instance):
         """Create BassHSI instance from an HSI instance."""
         return cls(
-            v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
+            v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
+            v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -100,7 +100,9 @@ class BassHSI:
         else:
             # Setup ideal values for mean annual temperature (HEC-RAS)
             if self.v1b_mean_annual_temperature is None:
-                # self._logger.info("Mean annual temperature data not provided. Setting index to 1.")
+                self._logger.info(
+                    "Mean annual temperature data not provided. Setting index to 1."
+                )
                 # si_1 = np.ones(self._shape)
                 self._logger.info(
                     "Mean annual temperature data not provided. Using ideal conditions of 18 degrees C."

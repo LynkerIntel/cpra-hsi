@@ -307,7 +307,7 @@ class HSI(vt.VegTransition):
         self.output_base_dir = self.config["output"].get("output_base")
 
         # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        sim_length = self.water_year_end - self.water_year_start + 1
 
         self.file_params = {
             "model": self.metadata.get(

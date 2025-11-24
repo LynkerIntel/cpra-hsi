@@ -505,45 +505,50 @@ class HSI(vt.VegTransition):
 
         return da.to_numpy()
 
-    def _load_water_temp_general(self, water_year: int) -> xr.Dataset:
+    def _load_water_temp_general(self, water_year: int) -> xr.Dataset | None:
         """Load water temperature data from either Delft3D or MIKE 21 models."""
-        self._logger.info(
-            f"Loading water temperature data with universal daily method."
-        )
-        nc_path, analog_year = self._get_hydro_netcdf_path(
-            water_year, hydro_variable="WTEMP"
-        )
-        self._logger.info("Loading file: %s", nc_path)
+        if self.netcdf_water_temperature_path is not None:
+            self._logger.info(
+                f"Loading water temperature data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="WTEMP"
+            )
+            self._logger.info("Loading file: %s", nc_path)
 
-        ds = xr.open_dataset(
-            nc_path,
-            engine="h5netcdf",
-            chunks="auto",
-        )
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
 
-        ds = utils.analog_years_handler(analog_year, water_year, ds)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-        # # model specific var names: -----------------------------------------------
-        # if self.file_params["hydro_source_model"] == "D3D":
-        #     ds = ds.rename({"waterlevel": "height"})
-        # if self.file_params["hydro_source_model"] == "MIK":
-        #     ds = ds.rename({"water_level": "height"})
-        # # extract height var as da
-        # height_da = ds["sali"]
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
 
-        # handle varied CRS metadata locations between model files-----------------
-        try:
-            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
-            crs_wkt = ds["crs"].attrs.get("crs_wkt")
-            ds = ds.rio.write_crs(crs_wkt)
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
 
-        except Exception as exc:
-            raise ValueError(
-                "Unable to parse CRS from hydrologic input"
-            ) from exc
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
 
-        ds = self._reproject_match_to_dem(ds)
-        return ds
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("Water Temperature not provided.")
+            return None
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -1038,16 +1043,20 @@ class HSI(vt.VegTransition):
             water temperature, averaged over a list of months (or defaulting
             to one year) and then upscaled to 480m.
         """
-        if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+        if self.water_temperature is not None:
+            if not months:
+                months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-        filtered_ds = self.water_temperature.sel(
-            time=self.water_temperature["time"].dt.month.isin(months)
-        )
-        da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
+            filtered_ds = self.water_temperature.sel(
+                time=self.water_temperature["time"].dt.month.isin(months)
+            )
+            da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
 
-        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da_coarse.to_numpy()
+
+        else:
+            return None
 
     def _get_salinity_subset(
         self,

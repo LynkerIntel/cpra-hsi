@@ -388,7 +388,7 @@ class HSI(vt.VegTransition):
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
 
-        # only subset for modeled salinity, leave as None otherwise
+        # only subset for Dataset() salinity (i.e. modeled), leave as None otherwise
         if isinstance(self.salinity, xr.Dataset):
             self.salinity_annual_mean = self._get_salinity_subset()
             self.salinity_max_april_sept = self._get_salinity_subset(

@@ -388,7 +388,8 @@ class HSI(vt.VegTransition):
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
 
-        if self.salinity is not None:
+        # only subset for modeled salinity, leave as None otherwise
+        if type(self.salinity) == xr.Dataset:
             self.salinity_annual_mean = self._get_salinity_subset()
             self.salinity_max_april_sept = self._get_salinity_subset(
                 months=[4, 5, 6, 7, 8, 9],
@@ -1086,30 +1087,16 @@ class HSI(vt.VegTransition):
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
-        if self.netcdf_salinity_path is None:
-            self._logger.info(
-                "No salinity NetCDF path provided, using approximate"
-                "salinity based on veg type."
-            )
+        filtered_ds = self.salinity.sel(
+            time=self.salinity["time"].dt.month.isin(months)
+        )
+        if method == "mean":
+            da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
+        elif method == "max":
+            da = filtered_ds.max(dim="time", skipna=True)["salinity"]
 
-            salinity = hydro_logic.habitat_based_salinity(
-                self.veg_type,
-                domain=self.hydro_domain,
-                cell=True,
-            )
-            return salinity
-
-        else:
-            filtered_ds = self.salinity.sel(
-                time=self.salinity["time"].dt.month.isin(months)
-            )
-            if method == "mean":
-                da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
-            elif method == "max":
-                da = filtered_ds.max(dim="time", skipna=True)["salinity"]
-
-            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-            return da_coarse.to_numpy()
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
 
     def _get_mean_high_salinity_gs(self):
         """

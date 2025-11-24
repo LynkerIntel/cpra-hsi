@@ -292,6 +292,7 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
+
         self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
@@ -643,11 +644,21 @@ class VegTransition:
             ds = ds.where(self.hydro_domain)
             return ds
 
-    def _load_salinity_general(self, water_year: int) -> xr.Dataset:
-        """Load salinity data from either Delft3D or MIKE 21 models."""
+    def _load_salinity_general(
+        self, water_year: int
+    ) -> xr.Dataset | np.ndarray:
+        """Load salinity data from either Delft3D or MIKE 21 models, or generate
+        approximation.
+
+        water_year : the model timestep year, which is mapped to simulation
+            year and loaded from disk.
+
+        returns: an xr.Dataset of the data, or a np.ndarray with salinity
+            approximated from the vegetation type array.
+        """
         if self.netcdf_salinity_path is not None:
             self._logger.info(
-                f"Loading salinity data with universal daily method."
+                "Loading salinity data with universal daily method."
             )
             nc_path, analog_year = self._get_hydro_netcdf_path(
                 water_year, hydro_variable="SALINITY"
@@ -687,9 +698,16 @@ class VegTransition:
 
         else:
             self._logger.info(
-                "Salinity raster not provided, using habitat approximation."
+                "No salinity NetCDF path provided, using approximate"
+                "salinity based on veg type."
             )
-            return None
+
+            salinity = hydro_logic.habitat_based_salinity(
+                self.veg_type,
+                domain=self.hydro_domain,
+                cell=False,
+            )
+            return salinity
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
@@ -944,21 +962,21 @@ class VegTransition:
         """Load salinity raster data if available, otherwise
         use defaults based on the vegetation type.
         """
-        if self.netcdf_salinity_path:
-            salinity = self._load_salinity_general(water_year=self.wy)
+        salinity = self._load_salinity_general(water_year=self.wy)
+
+        if salinity is xr.Dataset:
+            # if a dataset is returned, netcdf data has been loaded
+            # and it must be resampled
             self.salinity_annual_avg = (
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
-            del salinity
+            del salinity  # del the dataset because this is the only salinity var
+
         else:
-            self._logger.warning(
-                "No salinity raster provided. Creating salinity defaults from veg type array."
-            )
-            self.salinity_annual_avg = hydro_logic.habitat_based_salinity(
-                veg_type=self.veg_type,
-                domain=self.hydro_domain,
-            )
+            # if salinity is a numpy array, it is the veg-based
+            # approximation, and it is already an "annual avg".
+            self.salinity_annual_avg = salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,

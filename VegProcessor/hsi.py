@@ -368,37 +368,41 @@ class HSI(vt.VegTransition):
 
         # temperature vars -------------------------------------------
         self.water_temperature = self._load_water_temp_general(self.wy)
-        self.water_temperature_annual_mean = (
-            self._get_water_temperature_subset()
-        )
-        self.water_temperature_july_august_mean = (
-            self._get_water_temperature_subset(months=[7, 8])
-        )
-        self.water_temperature_may_july_mean = (
-            self._get_water_temperature_subset(months=[5, 6, 7])
-        )
-        self.water_temperature_july_sept_mean = (
-            self._get_water_temperature_subset(months=[7, 8, 9])
-        )
-        self.water_temperature_feb_march_mean = (
-            self._get_water_temperature_subset(months=[2, 3])
-        )
+
+        if self.water_temperature is not None:
+            self.water_temperature_annual_mean = (
+                self._get_water_temperature_subset()
+            )
+            self.water_temperature_july_august_mean = (
+                self._get_water_temperature_subset(months=[7, 8])
+            )
+            self.water_temperature_may_july_mean = (
+                self._get_water_temperature_subset(months=[5, 6, 7])
+            )
+            self.water_temperature_july_sept_mean = (
+                self._get_water_temperature_subset(months=[7, 8, 9])
+            )
+            self.water_temperature_feb_march_mean = (
+                self._get_water_temperature_subset(months=[2, 3])
+            )
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
-        self.salinity_annual_mean = self._get_salinity_subset()
-        self.salinity_max_april_sept = self._get_salinity_subset(
-            months=[4, 5, 6, 7, 8, 9],
-            method="max",
-        )
-        self.salinity_max_july_sept = self._get_salinity_subset(
-            months=[7, 8, 9],
-            method="max",
-        )
-        self.salinity_max_may_july = self._get_salinity_subset(
-            months=[5, 6, 7],
-            method="max",
-        )
-        # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+
+        if self.salinity is not None:
+            self.salinity_annual_mean = self._get_salinity_subset()
+            self.salinity_max_april_sept = self._get_salinity_subset(
+                months=[4, 5, 6, 7, 8, 9],
+                method="max",
+            )
+            self.salinity_max_july_sept = self._get_salinity_subset(
+                months=[7, 8, 9],
+                method="max",
+            )
+            self.salinity_max_may_july = self._get_salinity_subset(
+                months=[5, 6, 7],
+                method="max",
+            )
+            # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
@@ -1043,20 +1047,16 @@ class HSI(vt.VegTransition):
             water temperature, averaged over a list of months (or defaulting
             to one year) and then upscaled to 480m.
         """
-        if self.water_temperature is not None:
-            if not months:
-                months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-            filtered_ds = self.water_temperature.sel(
-                time=self.water_temperature["time"].dt.month.isin(months)
-            )
-            da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
+        filtered_ds = self.water_temperature.sel(
+            time=self.water_temperature["time"].dt.month.isin(months)
+        )
+        da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
 
-            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-            return da_coarse.to_numpy()
-
-        else:
-            return None
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
 
     def _get_salinity_subset(
         self,

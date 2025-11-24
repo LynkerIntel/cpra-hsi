@@ -964,7 +964,7 @@ class VegTransition:
         """
         salinity = self._load_salinity_general(water_year=self.wy)
 
-        if salinity is xr.Dataset:
+        if isinstance(salinity, xr.Dataset):
             # if a dataset is returned, netcdf data has been loaded
             # and it must be resampled
             self.salinity_annual_avg = (

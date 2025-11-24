@@ -389,7 +389,7 @@ class HSI(vt.VegTransition):
         self.salinity = self._load_salinity_general(self.wy)
 
         # only subset for modeled salinity, leave as None otherwise
-        if type(self.salinity) == xr.Dataset:
+        if isinstance(self.salinity, xr.Dataset):
             self.salinity_annual_mean = self._get_salinity_subset()
             self.salinity_max_april_sept = self._get_salinity_subset(
                 months=[4, 5, 6, 7, 8, 9],

@@ -385,10 +385,18 @@ class HSI(vt.VegTransition):
             self.water_temperature_feb_march_mean = (
                 self._get_water_temperature_subset(months=[2, 3])
             )
+
+        # load VegTransition output ----------------------------------
+        self.veg_type = self._load_veg_type()
+        self.maturity = self._load_maturity()
+        self.maturity_480 = self._load_maturity(resample_cell=True)
+
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
 
-        # only subset for Dataset() salinity (i.e. modeled), leave as None otherwise
+        # only subset for Dataset() salinity (i.e. modeled)
+        # if the habitat approximation is used, salinity vars stay None,
+        # and are not run.
         if isinstance(self.salinity, xr.Dataset):
             self.salinity_annual_mean = self._get_salinity_subset()
             self.salinity_max_april_sept = self._get_salinity_subset(
@@ -404,11 +412,6 @@ class HSI(vt.VegTransition):
                 method="max",
             )
             # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
-
-        # load VegTransition output ----------------------------------
-        self.veg_type = self._load_veg_type()
-        self.maturity = self._load_maturity()
-        self.maturity_480 = self._load_maturity(resample_cell=True)
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()

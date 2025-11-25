@@ -393,7 +393,6 @@ class HSI(vt.VegTransition):
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy)
-
         # only subset for Dataset() salinity (i.e. modeled)
         # if the habitat approximation is used, salinity vars stay None,
         # and are not run.
@@ -412,6 +411,8 @@ class HSI(vt.VegTransition):
                 method="max",
             )
             # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+        else:
+            self.salinity_annual_mean = self.salinity
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()

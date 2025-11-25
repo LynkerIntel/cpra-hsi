@@ -181,7 +181,7 @@ class VegTransition:
         # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.salinity_annual_avg = None
+        self.salinity_annual_mean = None
 
         # initialize partial update arrays as None
         # self.veg_type_update_1 = None
@@ -335,35 +335,35 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
 
@@ -967,7 +967,7 @@ class VegTransition:
         if isinstance(salinity, xr.Dataset):
             # if a dataset is returned, netcdf data has been loaded
             # and it must be resampled
-            self.salinity_annual_avg = (
+            self.salinity_annual_mean = (
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
@@ -976,7 +976,7 @@ class VegTransition:
         else:
             # if salinity is a numpy array, it is the veg-based
             # approximation, and it is already an "annual avg".
-            self.salinity_annual_avg = salinity
+            self.salinity_annual_mean = salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,
@@ -1197,7 +1197,7 @@ class VegTransition:
             variables_to_append = [
                 "veg_type",
                 "maturity",
-                "salinity_annual_avg",
+                "salinity_annual_mean",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1345,7 +1345,7 @@ class VegTransition:
         """
         self._logger.info("Creating QA/QC arrays.")
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
-            self.salinity_annual_avg,
+            self.salinity_annual_mean,
         )
         self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
             self.water_depth

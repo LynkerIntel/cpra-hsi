@@ -1388,8 +1388,8 @@ def get_veg_variables(veg):
                 "long_name": "forested vegetation age",
             },
         ],
-        "salinity_annual_avg": [
-            veg.salinity_annual_avg,
+        "salinity_annual_mean": [
+            veg.salinity_annual_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

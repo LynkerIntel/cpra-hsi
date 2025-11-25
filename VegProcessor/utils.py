@@ -917,7 +917,7 @@ def qc_annual_inundation_depth(
     return mean_depth.to_numpy()
 
 
-def qc_annual_mean_salinity(salinity_annual_avg: np.ndarray) -> np.ndarray:
+def qc_annual_mean_salinity(salinity_annual_mean: np.ndarray) -> np.ndarray:
     """
     WARN: habitat-based salinity is equivalent to mean annual salinity
     as habitat only changes with yearly veg type update. Keeping this
@@ -926,7 +926,7 @@ def qc_annual_mean_salinity(salinity_annual_avg: np.ndarray) -> np.ndarray:
     Update: Only using salinity as an annual avg in VegTransition
     currently, if this remains the case, this func can be removed.
     """
-    return salinity_annual_avg
+    return salinity_annual_mean
 
 
 def dataset_attrs_to_df(ds: xr.Dataset, selected_attrs: list) -> pd.DataFrame:

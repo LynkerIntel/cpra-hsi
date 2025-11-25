@@ -38,10 +38,9 @@ class BlueCrabHSI:
     def from_hsi(cls, hsi_instance):
         """Create BlueCrabHSI instance from an HSI instance."""
         return cls(
-            v1a_mean_annual_salinity=hsi_instance.mean_annual_salinity,
-            v1b_mean_annual_temperature=hsi_instance.mean_annual_temperature,
+            v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
+            v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_vegetated,
-            # TODO implement these variables/inputs in hsi.py
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -80,17 +79,34 @@ class BlueCrabHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _create_template_array(self) -> np.ndarray:
-        """Create an array from a template all valid pixels are 999.0, and
-        NaN from the input are persisted.
+    def _create_template_array(self, *input_arrays) -> np.ndarray:
+        """Create an array from a template where valid pixels are 999.0, and
+        NaN values are propagated from hydro domain and optional input arrays.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        Returns
+        -------
+        np.ndarray
+            Template array with 999.0 for valid pixels and NaN elsewhere
         """
+        # Start with hydro domain mask
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         self._logger.info("Running SI 1")
-        si_1 = self.template.copy()
+        si_1 = self._create_template_array(self.v1a_mean_annual_salinity)
 
         # Setup ideal values for mean annual temperature (HEC-RAS)
         if self.v1b_mean_annual_temperature is None:

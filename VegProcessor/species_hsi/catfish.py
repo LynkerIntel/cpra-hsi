@@ -70,16 +70,16 @@ class RiverineCatfishHSI:
             v1_pct_pools_avg_summer_flow=hsi_instance.catfish_pct_pools_avg_summer_flow,
             v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
-            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.catfish_avg_temp_in_midsummer_pools_bw,
+            v5_avg_temp_in_midsummer_pools_bw=hsi_instance.water_temperature_july_august_mean,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
             v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
             v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
-            v9_max_summer_salinity=hsi_instance.catfish_max_summer_salinity,
-            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.catfish_avg_temp_in_spawning_embryo_pools_bw,
-            v11_max_salinity_spawning_embryo=hsi_instance.catfish_max_salinity_spawning_embryo,
-            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_fry,
-            v13_max_summer_salinity_fry_juvenile=hsi_instance.catfish_max_summer_salinity_fry_juvenile,
-            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.catfish_avg_midsummer_temp_in_pools_bw_juvenile,
+            v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
+            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.water_temperature_may_july_mean,
+            v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
+            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean,
+            v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
+            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean,
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -110,13 +110,28 @@ class RiverineCatfishHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self) -> np.ndarray:
-        """Create an array from a template all valid pixels are 999.0, and
-        NaN from the input are persisted.
+    def _create_template_array(self, *input_arrays) -> np.ndarray:
+        """Create an array from a template where valid pixels are 999.0, and
+        NaN values are propagated from hydro domain and optional input arrays.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        Returns
+        -------
+        np.ndarray
+            Template array with 999.0 for valid pixels and NaN elsewhere
         """
-        # Riverine Catfish has depth related vars, and is
-        # limited to hydrologic model domain
+        # Start with hydro domain mask
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def clip_array(self, result: np.ndarray) -> np.ndarray:
@@ -422,7 +437,7 @@ class RiverineCatfishHSI:
     def calculate_si_9(self) -> np.ndarray:
         """Maximum salinity during summer (Adult)"""
         self._logger.info("Running SI 9")
-        si_9 = self.template.copy()
+        si_9 = self._create_template_array(self.v9_max_summer_salinity)
 
         if self.v9_max_summer_salinity is None:
             self._logger.info(
@@ -432,7 +447,7 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1
-            mask_1 = (self.v9_max_summer_salinity > 0) & (
+            mask_1 = (self.v9_max_summer_salinity >= 0) & (
                 self.v9_max_summer_salinity <= 1.7
             )
             si_9[mask_1] = 1
@@ -511,7 +526,9 @@ class RiverineCatfishHSI:
     def calculate_si_11(self) -> np.ndarray:
         """Maximum salinity during spawning and embryo development (Embryo)"""
         self._logger.info("Running SI 11")
-        si_11 = self.template.copy()
+        si_11 = self._create_template_array(
+            self.v11_max_salinity_spawning_embryo
+        )
 
         if self.v11_max_salinity_spawning_embryo is None:
             self._logger.info(
@@ -606,7 +623,9 @@ class RiverineCatfishHSI:
     def calculate_si_13(self) -> np.ndarray:
         """Maximum salinity during summer (Fry, Juvenile)"""
         self._logger.info("Running SI 13")
-        si_13 = self.template.copy()
+        si_13 = self._create_template_array(
+            self.v13_max_summer_salinity_fry_juvenile
+        )
 
         if self.v13_max_summer_salinity_fry_juvenile is None:
             self._logger.info(
@@ -784,6 +803,7 @@ class RiverineCatfishHSI:
         else:
             # The data is available, use the standard WQ equation
             wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
+
         self.wq = (
             wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
         ) / 7
@@ -800,16 +820,16 @@ class RiverineCatfishHSI:
         self.wq = np.where(
             wq_mask,
             np.minimum.reduce(
-                    [
-                        self.si_5,
-                        self.si_12,
-                        self.si_14,
-                        self.si_8,
-                        self.si_9,
-                        self.si_13,
-                        self.wq,
-                    ]
-                ),
+                [
+                    self.si_5,
+                    self.si_12,
+                    self.si_14,
+                    self.si_8,
+                    self.si_9,
+                    self.si_13,
+                    self.wq,
+                ]
+            ),
             self.wq,
         )
 

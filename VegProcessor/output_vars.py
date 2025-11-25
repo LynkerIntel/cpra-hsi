@@ -364,7 +364,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (adult)",
+                "description": (
+                    "average midsummer temperature in pools backwater (adult)"
+                ),
             },
         ],
         "catfish_si_6": [
@@ -394,7 +396,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average minimum dissolved oxygen in midsummer pools backwater",
+                "description": (
+                    "average minimum dissolved oxygen in midsummer pools backwater"
+                ),
             },
         ],
         "catfish_si_9": [
@@ -414,7 +418,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average temperature in spawning embryo pools backwater (embryo)",
+                "description": (
+                    "average temperature in spawning embryo pools backwater (embryo)"
+                ),
             },
         ],
         "catfish_si_11": [
@@ -434,7 +440,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (fry)",
+                "description": (
+                    "average midsummer temperature in pools backwater (fry)"
+                ),
             },
         ],
         "catfish_si_13": [
@@ -454,7 +462,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average midsummer temperature in pools backwater (juvenile)",
+                "description": (
+                    "average midsummer temperature in pools backwater (juvenile)"
+                ),
             },
         ],
         "catfish_si_18": [
@@ -464,7 +474,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "average current velocity in cover areas during average summer flow",
+                "description": (
+                    "average current velocity in cover areas during average summer flow"
+                ),
             },
         ],
         "catfish_fc": [
@@ -764,8 +776,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "mean_annual_salinity": [
-            hsi.mean_annual_salinity,
+        "salinity_annual_mean": [
+            hsi.salinity_annual_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -774,8 +786,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "mean_annual_temperature": [
-            hsi.mean_annual_temperature,
+        "water_temperature_annual_mean": [
+            hsi.water_temperature_annual_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1034,8 +1046,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_monthly_mean_jan_aug": [
-            hsi.water_depth_monthly_mean_jan_aug,
+        "water_depth_jan_aug_mean": [
+            hsi.water_depth_jan_aug_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1044,8 +1056,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_monthly_mean_sept_dec": [
-            hsi.water_depth_monthly_mean_sept_dec,
+        "water_depth_oct_dec_mean": [
+            hsi.water_depth_oct_dec_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1054,8 +1066,8 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
-        "water_depth_spawning_season": [
-            hsi.water_depth_spawning_season,
+        "water_depth_april_june_mean": [
+            hsi.water_depth_april_june_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
@@ -1363,7 +1375,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",  # Link CRS variable
-                "units": "unitless",
+                "units": "",
                 "long_name": "veg type",
             },
         ],
@@ -1374,6 +1386,15 @@ def get_veg_variables(veg):
                 "grid_mapping": "spatial_ref",
                 "units": "years",
                 "long_name": "forested vegetation age",
+            },
+        ],
+        "salinity_annual_mean": [
+            veg.salinity_annual_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "water salinity",
             },
         ],
         # QC variables below
@@ -1400,7 +1421,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "%",
+                "units": "% time",
                 "long_name": "annual inundation duration",
                 "description": "Percentage of time flooded over the year",
             },
@@ -1422,7 +1443,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "%",
+                "units": "% time",
                 "long_name": "growing season inundation",
                 "description": (
                     "Percentage of time flooded during the period from April 1 through September 30"
@@ -1434,7 +1455,7 @@ def get_veg_variables(veg):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "unitless",
+                "units": "",
                 "long_name": "tree establishment (true or false)",
                 "description": "Areas where establishment condition is met",
             },

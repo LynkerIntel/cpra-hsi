@@ -16,6 +16,7 @@ class BlackCrappieHSI:
 
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
+    water_depth_midsummer: np.ndarray = None
 
     v1_max_monthly_avg_summer_turbidity: np.ndarray = None
     v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray = None
@@ -72,15 +73,16 @@ class BlackCrappieHSI:
             v4_avg_vel_summer_flow_pools_bw=hsi_instance.blackcrappie_avg_vel_summer_flow_pools_bw,
             v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.blackcrappie_pct_pools_bw_avg_spring_summer_flow,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
-            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult,
-            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile,
-            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.blackcrappie_avg_midsummer_temp_in_pools_bw_fry,
-            v11_avg_spawning_temp_in_bw_embryo=hsi_instance.blackcrappie_avg_spawning_temp_in_bw_embryo,
+            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean,
+            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean,
+            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean,
+            v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march_mean,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
             v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,
-            v14_max_salinity_gs=hsi_instance.blackcrappie_max_salinity_gs,
+            v14_max_salinity_gs=hsi_instance.salinity_max_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
+            water_depth_midsummer=hsi_instance.water_depth_july_august_mean,
         )
 
     def __post_init__(self):
@@ -109,13 +111,28 @@ class BlackCrappieHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self) -> np.ndarray:
-        """Create an array from a template all valid pixels are 999.0, and
-        NaN from the input are persisted.
+    def _create_template_array(self, *input_arrays) -> np.ndarray:
+        """Create an array from a template where valid pixels are 999.0, and
+        NaN values are propagated from hydro domain and optional input arrays.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        Returns
+        -------
+        np.ndarray
+            Template array with 999.0 for valid pixels and NaN elsewhere
         """
-        # Riverine Black Crappie has depth related vars, and is
-        # limited to hydrologic model domain
+        # Start with hydro domain mask
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def clip_array(self, result: np.ndarray) -> np.ndarray:
@@ -130,6 +147,22 @@ class BlackCrappieHSI:
                 "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
             )
         return clipped
+
+    def backwaters_mask(self, si_array: np.ndarray) -> np.ndarray:
+        """DRAFT
+        Ensure that areas outside of backwaters are excluded.
+
+        Also ensures areas outside the hydro domain remain NaN.
+        """
+        ## Apply hydro domain mask
+        # si_array = np.where(np.isnan(self.hydro_domain_480), np.nan, si_array)
+
+        backwaters_mask = (self.water_depth_midsummer <= 0) & (
+            self.water_depth_midsummer > 3
+        )
+        si_array[backwaters_mask] = np.nan
+        # return si_array
+        return NotImplementedError
 
     def _setup_logger(self):
         """Set up the logger for the class."""
@@ -427,6 +460,8 @@ class BlackCrappieHSI:
                 + 4.86
             )
 
+        # TODO: apply backwater mask here? (either set to NaN or set to 0?)
+
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -677,7 +712,7 @@ class BlackCrappieHSI:
     def calculate_si_14(self) -> np.ndarray:
         """Maximum salinity during growing season (Apr - Sept)"""
         self._logger.info("Running SI 14")
-        si_14 = self.template.copy()
+        si_14 = self._create_template_array(self.v14_max_salinity_gs)
 
         if self.v14_max_salinity_gs is None:
             self._logger.info(

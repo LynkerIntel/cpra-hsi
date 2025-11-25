@@ -392,7 +392,7 @@ class HSI(vt.VegTransition):
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
         # salinity vars -------------------------------------------------
-        self.salinity = self._load_salinity_general(self.wy)
+        self.salinity = self._load_salinity_general(self.wy, cell=True)
         # only subset for Dataset() salinity (i.e. modeled)
         if isinstance(self.salinity, xr.Dataset):
             self.salinity_annual_mean = self._get_salinity_subset()

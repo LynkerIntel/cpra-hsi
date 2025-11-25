@@ -645,13 +645,19 @@ class VegTransition:
             return ds
 
     def _load_salinity_general(
-        self, water_year: int
+        self,
+        water_year: int,
+        cell: bool = False,
     ) -> xr.Dataset | np.ndarray:
         """Load salinity data from either Delft3D or MIKE 21 models, or generate
         approximation.
 
         water_year : the model timestep year, which is mapped to simulation
             year and loaded from disk.
+
+        cell : True is the vegetation-based salinity defaults should
+            be coarsened to cell size. This ONLY applies to the defaults,
+            modeled salinity is always return at 60m by this function.
 
         returns: an xr.Dataset of the data, or a np.ndarray with salinity
             approximated from the vegetation type array.
@@ -705,7 +711,7 @@ class VegTransition:
             salinity = hydro_logic.habitat_based_salinity(
                 self.veg_type,
                 domain=self.hydro_domain,
-                cell=False,
+                cell=cell,
             )
             return salinity
 

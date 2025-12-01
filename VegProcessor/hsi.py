@@ -1,14 +1,11 @@
 import logging
 import yaml
-import subprocess
 import xarray as xr
 import numpy as np
-import geopandas as gpd
 import pandas as pd
-import shutil
 import pprint
 
-import glob
+
 import os
 from typing import Optional
 import rioxarray  # used for tif output
@@ -20,7 +17,6 @@ from scipy.ndimage import label
 
 # import veg_logic
 import hydro_logic
-import plotting
 import utils
 import validate
 
@@ -77,9 +73,7 @@ class HSI(vt.VegTransition):
         with open(config_file, "r", encoding="utf-8") as file:
             self.config = yaml.safe_load(file)
 
-        # Validate configuration before proceeding
         validate.validate_config(self.config, config_file)
-
         self._load_config_attributes()
 
         # Generate filename early so it's available for logger and metadata files
@@ -93,15 +87,12 @@ class HSI(vt.VegTransition):
         self._setup_logger(log_level)
         self.timestep_output_dir = None  # set in step() method
 
-        # Pretty-print the configuration
         config_pretty = yaml.dump(
             self.config,
             default_flow_style=False,
             sort_keys=False,
         )
         self.sequence_mapping = utils.load_sequence_csvs("./sequences/")
-
-        # Log the configuration
         self._logger.info("Loaded Configuration:\n%s", config_pretty)
 
         # Generate static variables
@@ -118,18 +109,14 @@ class HSI(vt.VegTransition):
         self.hydro_domain = self._load_hydro_domain_raster()
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
-        # Get pct cover for prevously defined static variables
-        # self._calculate_pct_cover_static()
-
-        # Dynamic Variables
-        # self.wse = None
+        # Dynamic Variables --------------------------------------------
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.water_depth_monthly_mean_jan_aug = None
-        self.water_depth_monthly_mean_sept_dec = None
-        # self.water_depth_monthly_mean_jan_aug_cm = None
+        self.water_depth_jan_aug_mean = None
+        self.water_depth_oct_dec_mean = None
+        self.water_depth_july_august_mean = None
 
         # HSI models
         self.alligator = None
@@ -150,8 +137,18 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        self.mean_annual_salinity = None
-        self.mean_annual_temperature = None
+        self.water_temperature = None  # the source xr.dataset
+        self.water_temperature_annual_mean = None
+        self.water_temperature_july_august_mean = None
+        self.water_temperature_july_sept_mean = None
+        self.water_temperature_may_july_mean = None
+        self.water_temperature_feb_march_mean = None
+
+        self.salinity = None  # the source xr.dataset
+        self.salinity_annual_mean = None
+        self.salinity_max_april_sept = None
+        self.salinity_max_july_sept = None
+        self.salinity_max_may_july = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -175,7 +172,7 @@ class HSI(vt.VegTransition):
         self.tds_summer_growing_season = None  # ideal always
         self.avg_num_frost_free_days_growing_season = None  # ideal always
         self.mean_weekly_summer_temp = (
-            None  # ideal (HEC-RAS?) SI3 = 25 degrees C
+            None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
@@ -186,7 +183,7 @@ class HSI(vt.VegTransition):
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
-        self.water_depth_spawning_season = None
+        self.water_depth_april_june_mean = None
 
         # tree mast
         self.pct_soft_mast = None
@@ -227,28 +224,28 @@ class HSI(vt.VegTransition):
         self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
         self.blackcrappie_ph_year = None  # set to ideal
-        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
-        self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
-        self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
+        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
+        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
+        # self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
+        # self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
-        self.blackcrappie_max_salinity_gs = None
+        # self.blackcrappie_max_salinity_gs = None
 
         # catfish
         self.catfish_pct_pools_avg_summer_flow = None
         self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None
-        self.catfish_avg_temp_in_midsummer_pools_bw = None
+        # self.catfish_avg_temp_in_midsummer_pools_bw = None
         self.catfish_grow_season_length_frost_free_days = None
         self.catfish_max_monthly_avg_summer_turbidity = None
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
-        self.catfish_max_summer_salinity = None
-        self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
-        self.catfish_max_salinity_spawning_embryo = None
-        self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
-        self.catfish_max_summer_salinity_fry_juvenile = None
-        self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
+        # self.catfish_max_summer_salinity = None
+        # self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
+        # self.catfish_max_salinity_spawning_embryo = None
+        # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
+        # self.catfish_max_summer_salinity_fry_juvenile = None
+        # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
         self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file()
@@ -285,6 +282,12 @@ class HSI(vt.VegTransition):
         self.netcdf_hydro_path = self.config["raster_data"].get(
             "netcdf_hydro_path"
         )
+        self.netcdf_salinity_path = self.config["raster_data"].get(
+            "netcdf_salinity_path"
+        )
+        self.netcdf_water_temperature_path = self.config["raster_data"].get(
+            "netcdf_water_temperature_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
@@ -304,7 +307,7 @@ class HSI(vt.VegTransition):
         self.output_base_dir = self.config["output"].get("output_base")
 
         # NetCDF data output
-        sim_length = self.water_year_end - self.water_year_start
+        sim_length = self.water_year_end - self.water_year_start + 1
 
         self.file_params = {
             "model": self.metadata.get(
@@ -347,35 +350,70 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # self._load_salinity()
-
         # water depth vars --------------------------------------
         self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
-        self.water_depth_monthly_mean_jan_aug = self._get_daily_depth_filtered(
+        self.water_depth_jan_aug_mean = self._get_daily_depth_filtered(
             months=[1, 2, 3, 4, 5, 6, 7, 8],
         )
-        self.water_depth_monthly_mean_sept_dec = (
-            self._get_daily_depth_filtered(
-                months=[9, 10, 11, 12],
-            )
+        self.water_depth_oct_dec_mean = self._get_daily_depth_filtered(
+            months=[10, 11, 12],
         )
-        self.water_depth_spawning_season = self._get_daily_depth_filtered(
+        self.water_depth_april_june_mean = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
+        self.water_depth_july_august_mean = self._get_daily_depth_filtered(
+            months=[7, 8],
+        )
+
+        # temperature vars -------------------------------------------
+        self.water_temperature = self._load_water_temp_general(self.wy)
+
+        if self.water_temperature is not None:
+            self.water_temperature_annual_mean = (
+                self._get_water_temperature_subset()
+            )
+            self.water_temperature_july_august_mean = (
+                self._get_water_temperature_subset(months=[7, 8])
+            )
+            self.water_temperature_may_july_mean = (
+                self._get_water_temperature_subset(months=[5, 6, 7])
+            )
+            self.water_temperature_july_sept_mean = (
+                self._get_water_temperature_subset(months=[7, 8, 9])
+            )
+            self.water_temperature_feb_march_mean = (
+                self._get_water_temperature_subset(months=[2, 3])
+            )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
+        # salinity vars -------------------------------------------------
+        self.salinity = self._load_salinity_general(self.wy, cell=True)
+        # only subset for Dataset() salinity (i.e. modeled)
+        if isinstance(self.salinity, xr.Dataset):
+            self.salinity_annual_mean = self._get_salinity_subset()
+            self.salinity_max_april_sept = self._get_salinity_subset(
+                months=[4, 5, 6, 7, 8, 9],
+                method="max",
+            )
+            self.salinity_max_july_sept = self._get_salinity_subset(
+                months=[7, 8, 9],
+                method="max",
+            )
+            self.salinity_max_may_july = self._get_salinity_subset(
+                months=[5, 6, 7],
+                method="max",
+            )
+            # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+        else:
+            self.salinity_annual_mean = self.salinity
+
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
-        self.mean_annual_salinity = hydro_logic.habitat_based_salinity(
-            self.veg_type,
-            domain=self.hydro_domain,
-            cell=True,
-        )
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
@@ -473,6 +511,51 @@ class HSI(vt.VegTransition):
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
         return da.to_numpy()
+
+    def _load_water_temp_general(self, water_year: int) -> xr.Dataset | None:
+        """Load water temperature data from either Delft3D or MIKE 21 models."""
+        if self.netcdf_water_temperature_path is not None:
+            self._logger.info(
+                f"Loading water temperature data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="WTEMP"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
+
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("Water Temperature not provided.")
+            return None
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
@@ -933,9 +1016,9 @@ class HSI(vt.VegTransition):
 
         Return
         ------
-        da_coarse : xr.DataArray
-            A water depth data, averaged over a list of months (if provided)
-            and then downscaled to 480m.
+        da_coarse : np.ndarray
+            A water depth data, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
@@ -947,6 +1030,81 @@ class HSI(vt.VegTransition):
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
+
+    def _get_water_temperature_subset(
+        self, months: None | list[int] = None
+    ) -> np.ndarray:
+        """
+        Reduce daily water temperature dataset to temporal mean, then
+        resample to 480m cell size.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to average water temp over. If a list is not
+            provided, the default is all months
+
+        Return
+        ------
+        da_coarse : np.ndarray
+            water temperature, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        filtered_ds = self.water_temperature.sel(
+            time=self.water_temperature["time"].dt.month.isin(months)
+        )
+        da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
+
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _get_salinity_subset(
+        self,
+        months: None | list[int] = None,
+        method: str = "mean",
+    ) -> np.ndarray:
+        """
+        If salinity raster is prodided: reduce salinity dataset to temporal mean or max, then
+        resample to 480m cell size. If no raster path is provided, create an
+        approximate salinity array based on the habitat type.
+
+        Parameters
+        ----------
+        months : list (optional)
+            List of months to reduce salinity over. If a list is not
+            provided, the default is all months
+
+        method : str (optional)
+            How to reduce. One of ["mean", "max"]. Defaults to mean.
+
+        Return
+        ------
+        da_coarse : np.ndarray
+            salinity, averaged over a list of months (or defaulting
+            to one year) and then upscaled to 480m.
+        """
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        filtered_ds = self.salinity.sel(
+            time=self.salinity["time"].dt.month.isin(months)
+        )
+        if method == "mean":
+            da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
+        elif method == "max":
+            da = filtered_ds.max(dim="time", skipna=True)["salinity"]
+
+        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
+
+    def _get_mean_high_salinity_gs(self):
+        """
+        Get mean high salinity during the growing season. Used
+        in SWAMP WVA SI_4.
+        """
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a

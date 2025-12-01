@@ -181,19 +181,19 @@ class VegTransition:
         # self.wse = None
         self.water_depth = None
         self.veg_ts_out = None  # xarray output for timestep
-        self.salinity = None
+        self.salinity_annual_mean = None
 
         # initialize partial update arrays as None
-        self.veg_type_update_1 = None
-        self.veg_type_update_2 = None
-        self.veg_type_update_3 = None
-        self.veg_type_update_4 = None
-        self.veg_type_update_5 = None
-        self.veg_type_update_6 = None
-        self.veg_type_update_7 = None
-        self.veg_type_update_8 = None
-        self.veg_type_update_9 = None
-        self.veg_type_update_10 = None
+        # self.veg_type_update_1 = None
+        # self.veg_type_update_2 = None
+        # self.veg_type_update_3 = None
+        # self.veg_type_update_4 = None
+        # self.veg_type_update_5 = None
+        # self.veg_type_update_6 = None
+        # self.veg_type_update_7 = None
+        # self.veg_type_update_8 = None
+        # self.veg_type_update_9 = None
+        # self.veg_type_update_10 = None
 
         # self.pct_mast_hard = template
         # self.pct_mast_soft = template
@@ -292,10 +292,11 @@ class VegTransition:
         # copy existing veg types
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
-        self._get_salinity()
+
+        self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
-        # important: mask areas outside of domain before calculting transition:
+        # important: mask areas outside of domain before calculating transition:
         self._logger.info("Masking veg type array to domain.")
         self.veg_type = np.where(self.hydro_domain, self.veg_type, np.nan)
 
@@ -334,35 +335,35 @@ class VegTransition:
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.intermediate_marsh = veg_logic.intermediate_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.brackish_marsh = veg_logic.brackish_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.saline_marsh = veg_logic.saline_marsh(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
         self.water = veg_logic.water(
             self.veg_type,
             self.water_depth,
             self.timestep_output_dir_figs,
-            self.salinity,
+            self.salinity_annual_mean,
             logger=self._logger,
         )
 
@@ -398,25 +399,6 @@ class VegTransition:
             self.veg_type = np.where(
                 np.isnan(self.veg_type), layer, self.veg_type
             )
-
-        # plotting.np_arr(
-        #     self.veg_type,
-        #     title=f"All Types Output {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-        #     out_path=self.timestep_output_dir_figs,
-        #     veg_palette=True,
-        # )
-        # plotting.sum_changes(
-        #     veg_type_in,
-        #     self.veg_type,
-        #     plot_title=f"Timestep Veg Changes {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-        #     out_path=self.timestep_output_dir_figs,
-        # )
-        # # save water depth plots
-        # plotting.water_depth(
-        #     self.water_depth,
-        #     out_path=self.timestep_output_dir_figs,
-        #     wpu_polygons_path=self.wpu_polygons,
-        # )
 
         self._calculate_maturity(veg_type_in)
 
@@ -497,221 +479,6 @@ class VegTransition:
 
         return da[0].to_numpy()
 
-    # def load_wse_wy(
-    #     self,
-    #     water_year: int,
-    #     variable_name: str = "WSE_MEAN",
-    #     date_format: str = "%Y_%m_%d",
-    #     analog_sequence: bool = True,
-    # ) -> xr.Dataset:
-    #     """DEPRECATED
-
-    #     Load .tif files corresponding to a specific water year into an xarray.Dataset. This method
-    #     uses lazy-loading via Dask.
-
-    #     Each .tif file should have a filename that includes a variable name (e.g., `WSE_MEAN`)
-    #     followed by a timestamp in the specified format (e.g., `2005_10_01`). The function will
-    #     automatically extract the timestamps and assign them to a 'time' dimension in the resulting
-    #     xarray.Dataset, but only for files within the specified water year.
-
-    #     NOTE: Input WSE data (as of 2024-12-13) uses NaN to designate 0 depth. If this is false,
-    #     because the input data has changed, or a different model with different NaN classification
-    #     is used, this function must be updated accordingly.
-
-    #     UNIT: Input raster is assumed to be feet, and returned in meters to match the DEM.
-
-    #     Parameters
-    #     ----------
-    #     folder_path : str
-    #         Path to the folder containing the .tif files.
-    #     water_year : int
-    #         The water year to filter files by. Files from October 1 of the previous year
-    #         to September 30 of this year will be loaded.
-    #     variable_name : str, optional
-    #         The name of the variable to use in the dataset (not the output var name).
-    #     date_format : str, optional
-    #         Format string for parsing dates from file names, default is "%Y_%m_%d".
-    #         Adjust based on your file naming convention.
-    #     analog_sequence : bool
-    #         DEPRECATED. This is only for use when loading 25-year analog years sequences, where the
-    #         filenames have been updated to represent analog years, but the file data
-    #         reamain unchanged (i.e. uses the actual model-year). This flag will reset
-    #         the MONTHLY time series to match the year given in the file name, in order
-    #         for the vegetation model to run as normal.
-
-    #     Returns
-    #     -------
-    #     xr.Dataset or None
-    #         An xarray.Dataset with the raster data from each .tif file within the water year,
-    #         stacked along a 'time' dimension, with the specified variable name.
-    #         Returns None if no files are found for the specified water year.
-    #     """
-    #     tif_files = sorted(
-    #         glob.glob(
-    #             os.path.join(self.wse_directory_path, "**/*.tif"),
-    #             recursive=True,
-    #         )
-    #     )
-
-    #     start_date = pd.to_datetime(f"{water_year - 1}-10-01")
-    #     end_date = pd.to_datetime(f"{water_year}-09-30")
-
-    #     selected_files = []
-    #     time_stamps = []
-
-    #     for f in tif_files:
-    #         date_str = "_".join(os.path.basename(f).split("_")[2:5]).replace(
-    #             ".tif", ""
-    #         )
-    #         file_date = pd.to_datetime(date_str, format=date_format)
-
-    #         if start_date <= file_date <= end_date:
-    #             selected_files.append(f)
-    #             time_stamps.append(file_date)
-
-    #     if not selected_files:
-    #         self._logger.error(
-    #             "No WSE files found for water year: %s", water_year
-    #         )
-    #         raise RuntimeError(
-    #             f"No WSE files found for water year: {water_year}"
-    #         )
-
-    #     if len(selected_files) < 12:
-    #         raise ValueError(f"month(s) missing from Water Year: {water_year}")
-
-    #     # Preprocess function to remove the 'band' dimension
-    #     def preprocess(da):
-    #         return da.squeeze(dim="band").expand_dims(
-    #             time=[time_stamps[selected_files.index(da.encoding["source"])]]
-    #         )
-
-    #     # Load selected files into a single Dataset with open_mfdataset
-    #     ds = xr.open_mfdataset(
-    #         selected_files,
-    #         concat_dim="time",
-    #         combine="nested",
-    #         parallel=True,
-    #         preprocess=preprocess,
-    #     )
-    #     # rename
-    #     ds = ds.rename({list(ds.data_vars.keys())[0]: variable_name})
-
-    #     ds[variable_name] *= 0.3048  # UNIT: feet to meters
-
-    #     if analog_sequence:
-    #         self._logger.info("Using sequence loading method.")
-    #         new_timesteps = pd.date_range(
-    #             f"{water_year-1}-10-01", f"{water_year}-09-01", freq="MS"
-    #         )
-
-    #         if not len(new_timesteps) == len(ds["time"]):
-    #             raise ValueError("Timestep must be monthly.")
-
-    #         # Replace the time coordinate with time from
-    #         ds = ds.assign_coords(time=("time", new_timesteps))
-    #         self._logger.info("Sequence timeseres updated to match filename.")
-
-    #     # rename for internal consistency
-    #     ds = ds.rename({"WSE_MEAN": "height"})
-    #     self._logger.info(
-    #         "Loaded HEC-RAS WSE Datset for water-year: %s", water_year
-    #     )
-    #     return ds
-
-    # def _load_stage_daily(self, water_year: int) -> xr.Dataset:
-    #     """DEPRECATED
-
-    #     An alternative method to `load_wse_wy()`, to load water elevation data. This
-    #     is designed to ingest stage data from HEC-RAS, as a daily NetCDF. Unlike
-    #     `load_wse_wy()` it does not need a 25 year sequence generated by
-    #     `utils.generate_combined_sequence()`, as it will load the correct analog year
-    #     based on the sequence mappings. This method also includes the logic from
-    #     `get_depth()` to correctly identify 0 depth and NaN, which are not distinguished
-    #     in the raw model output. Finally, this data uses the `rio` `reproject_match()` method
-    #     to ensure perfect overlap of the DEM and the hydro data.
-
-    #     UNIT: Input in feet is converted to meters
-
-    #     Parameters
-    #     -----------
-    #     water_year : int
-    #         model timestep (as water year) used to select and load the
-    #         corret analog year.
-
-    #     Returns
-    #     --------
-    #     ds : xr.Dataset
-    #         Dataset set of (time, x, y), with "height" var (i.e. depth)
-    #     """
-    #     self._logger.info(f"Loading hydro data with daily stage method.")
-    #     quintile = self.sequence_mapping[water_year]
-    #     analog_year = self.years_mapping[quintile]
-
-    #     # build a 365-day date range by dropping Feb 29
-    #     target_range = pd.date_range(
-    #         f"{water_year-1}-10-01", f"{water_year}-09-30"
-    #     )
-    #     target_range = target_range[
-    #         ~((target_range.month == 2) & (target_range.day == 29))
-    #     ]
-
-    #     nc_dir_path = os.path.join(
-    #         self.netcdf_hydro_path,
-    #         f"WY{analog_year}_{self.metadata['sea_level_condition']}_daily/netcdf4_**.nc",
-    #     )
-    #     self._logger.info("Loading files: %s", nc_dir_path)
-
-    #     ds = xr.open_mfdataset(
-    #         nc_dir_path,
-    #         concat_dim="time",
-    #         combine="nested",
-    #         parallel=True,
-    #         chunks={"time": 10},  # speedup (does not improve memory use)
-    #         engine="h5netcdf",
-    #     )
-
-    #     # if analog has 366 timesteps (is leap)
-    #     if ds.sizes["time"] == 366:
-    #         # use filepath to get actual year
-    #         match = re.search(r"WY(\d{4})", nc_dir_path)
-    #         if match:
-    #             actual_wy = int(match.group(1))
-    #             # print(f"Extracted water year: {actual_wy}")
-    #         else:
-    #             raise ValueError("Water year not found in path.")
-
-    #         # assign "actual" datetime to time dim, temporarily,
-    #         # in order to drop feb 29
-    #         full_range = pd.date_range(
-    #             f"{actual_wy-1}-10-01", f"{actual_wy}-09-30"
-    #         )
-    #         ds = ds.assign_coords(time=("time", full_range))
-    #         mask = ~((ds["time.month"] == 2) & (ds["time.day"] == 29))
-    #         ds = ds.isel(time=mask)
-
-    #     # lastly rename to match expected simulation dates, i.e. water year
-    #     ds = ds.assign_coords(time=("time", target_range))
-    #     ds = ds.rename({"Band1": "height"})
-
-    #     # make crs visible to xarray/rio
-    #     crs_obj = ds["transverse_mercator"].spatial_ref
-    #     ds = ds.rio.write_crs(crs_obj)
-    #     # reproject match to DEM
-    #     ds = self._reproject_match_to_dem(ds)
-
-    #     # fill zeros. This step is necessary to get 0 water depth from DEM and missing
-    #     # WSE pixels, where missing data indicates "no inundation"
-    #     ds = ds.fillna(0)
-    #     # after filling zeros for areas with no inundation, apply domain mask,
-    #     # so that areas outside of HECRAS domain are not classified as
-    #     # dry (na is 0-filled above) when in fact that are outside of the domain.
-    #     ds = ds.where(self.hydro_domain)
-
-    #     self._logger.warning("Converting daily hydro: feet to meters")
-    #     ds["height"] *= 0.3048  # UNIT: feet to meters
-    #     return ds
-
     def _get_hydro_netcdf_path(
         self, water_year: int, hydro_variable: str = "STAGE"
     ) -> tuple[str, int]:
@@ -740,6 +507,8 @@ class VegTransition:
             variable_base_path = self.netcdf_hydro_path
         elif hydro_variable == "SALINITY":
             variable_base_path = self.netcdf_salinity_path
+        elif hydro_variable == "WTEMP":
+            variable_base_path = self.netcdf_water_temperature_path
         else:
             raise ValueError("must be one of: STAGE, SALINITY")
 
@@ -808,6 +577,7 @@ class VegTransition:
         ds = xr.open_dataset(
             nc_path,
             engine="h5netcdf",
+            chunks="auto",
         )
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
@@ -838,6 +608,7 @@ class VegTransition:
                 ) from exc
 
         height_da = self._reproject_match_to_dem(height_da)
+        # height_da = height_da.chunk({"time": -1, "y": 1599, "x": 1276})
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
@@ -873,44 +644,76 @@ class VegTransition:
             ds = ds.where(self.hydro_domain)
             return ds
 
-    def _load_salinity_general(self, water_year: int) -> xr.Dataset:
-        """Load salinity data from either Delft3D or MIKE 21 models."""
-        self._logger.info(
-            f"Loading salinity data with universal daily method."
-        )
-        nc_path, analog_year = self._get_hydro_netcdf_path(
-            water_year, hydro_variable="SALINITY"
-        )
-        self._logger.info("Loading files: %s", nc_path)
+    def _load_salinity_general(
+        self,
+        water_year: int,
+        cell: bool = False,
+    ) -> xr.Dataset | np.ndarray:
+        """Load salinity data from either Delft3D or MIKE 21 models, or generate
+        approximation.
 
-        ds = xr.open_dataset(
-            nc_path,
-            engine="h5netcdf",
-        )
+        water_year : the model timestep year, which is mapped to simulation
+            year and loaded from disk.
 
-        ds = utils.analog_years_handler(analog_year, water_year, ds)
+        cell : True is the vegetation-based salinity defaults should
+            be coarsened to cell size. This ONLY applies to the defaults,
+            modeled salinity is always return at 60m by this function.
 
-        # # model specific var names: -----------------------------------------------
-        # if self.file_params["hydro_source_model"] == "D3D":
-        #     ds = ds.rename({"waterlevel": "height"})
-        # if self.file_params["hydro_source_model"] == "MIK":
-        #     ds = ds.rename({"water_level": "height"})
-        # # extract height var as da
-        # height_da = ds["sali"]
+        returns: an xr.Dataset of the data, or a np.ndarray with salinity
+            approximated from the vegetation type array.
+        """
+        if self.netcdf_salinity_path is not None:
+            self._logger.info(
+                "Loading salinity data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="SALINITY"
+            )
+            self._logger.info("Loading files: %s", nc_path)
 
-        # handle varied CRS metadata locations between model files-----------------
-        try:
-            # D3D & MIKE: CRS from crs variable's crs_wkt attribute
-            crs_wkt = ds["crs"].attrs.get("crs_wkt")
-            ds = ds.rio.write_crs(crs_wkt)
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
 
-        except Exception as exc:
-            raise ValueError(
-                "Unable to parse CRS from hydrologic input"
-            ) from exc
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-        ds = self._reproject_match_to_dem(ds)
-        return ds
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            # ds = ds.chunk({"time": -1, "y": 1599, "x": 1276})
+            return ds
+
+        else:
+            self._logger.info(
+                "No salinity NetCDF path provided, using approximate"
+                "salinity based on veg type."
+            )
+
+            salinity = hydro_logic.habitat_based_salinity(
+                self.veg_type,
+                domain=self.hydro_domain,
+                cell=cell,
+            )
+            return salinity
 
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
@@ -1161,20 +964,25 @@ class VegTransition:
         da = da.astype(bool)
         return da.to_numpy()
 
-    def _get_salinity(self):
+    def _get_annual_avg_salinity(self):
         """Load salinity raster data if available, otherwise
         use defaults based on the vegetation type.
         """
-        if self.netcdf_salinity_path:
-            self.salinity = self._load_salinity_general(water_year=self.wy)
+        salinity = self._load_salinity_general(water_year=self.wy)
+
+        if isinstance(salinity, xr.Dataset):
+            # if a dataset is returned, netcdf data has been loaded
+            # and it must be resampled
+            self.salinity_annual_mean = (
+                salinity["salinity"].mean(dim="time").compute().to_numpy()
+            )
+            salinity.close()
+            del salinity  # del the dataset because this is the only salinity var
+
         else:
-            self.salinity = hydro_logic.habitat_based_salinity(
-                veg_type=self.veg_type,
-                domain=self.hydro_domain,
-            )
-            self._logger.warning(
-                "No salinity raster provided. Creating salinity defaults from veg type array."
-            )
+            # if salinity is a numpy array, it is the veg-based
+            # approximation, and it is already an "annual avg".
+            self.salinity_annual_mean = salinity
 
     def _create_output_dirs(self):
         """Create an output location for state variables, model config,
@@ -1314,7 +1122,7 @@ class VegTransition:
 
         # add initial conditions to first timestep
         self._logger.info(
-            "Addining initial vegetation conditions to timestep zero."
+            "Adding initial vegetation conditions to timestep zero."
         )
         ds["veg_type"].loc[{"time": time_range[0]}] = (
             self.initial_veg_type.astype(np.float32)
@@ -1392,7 +1200,11 @@ class VegTransition:
 
         # Set default variables to append if not supplied, excluding all QC variables
         if variables_to_append is None:
-            variables_to_append = ["veg_type", "maturity"]
+            variables_to_append = [
+                "veg_type",
+                "maturity",
+                "salinity_annual_mean",
+            ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1539,7 +1351,7 @@ class VegTransition:
         """
         self._logger.info("Creating QA/QC arrays.")
         self.qc_annual_mean_salinity = utils.qc_annual_mean_salinity(
-            self.salinity,
+            self.salinity_annual_mean,
         )
         self.qc_annual_inundation_depth = utils.qc_annual_inundation_depth(
             self.water_depth

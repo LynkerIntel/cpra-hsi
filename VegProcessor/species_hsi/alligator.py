@@ -67,7 +67,7 @@ class AlligatorHSI:
                 hsi_instance.pct_brackish_marsh
             ),
             v4_edge=hsi_instance.edge,
-            v5_mean_annual_salinity=None,
+            v5_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -88,11 +88,28 @@ class AlligatorHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self) -> np.ndarray:
-        """Create an array from a template all valid pixels are 999.0, and
-        NaN from the input are persisted.
+    def _create_template_array(self, *input_arrays) -> np.ndarray:
+        """Create an array from a template where valid pixels are 999.0, and
+        NaN values are propagated from hydro domain and optional input arrays.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        Returns
+        -------
+        np.ndarray
+            Template array with 999.0 for valid pixels and NaN elsewhere
         """
+        # Start with hydro domain mask
         arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def _setup_logger(self):
@@ -250,7 +267,7 @@ class AlligatorHSI:
     def calculate_si_5(self) -> np.ndarray:
         """Mean annual salinity."""
         self._logger.info("Running SI 5")
-        si_5 = self.template.copy()
+        si_5 = self._create_template_array(self.v5_mean_annual_salinity)
 
         if self.v5_mean_annual_salinity is None:
             self._logger.info(

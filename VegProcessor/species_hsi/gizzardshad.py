@@ -60,7 +60,7 @@ class GizzardShadHSI:
             v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
-            v7b_water_depth_spawning_season=hsi_instance.water_depth_spawning_season,
+            v7b_water_depth_spawning_season=hsi_instance.water_depth_april_june_mean,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -109,9 +109,9 @@ class GizzardShadHSI:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
         """
-        arr = np.where(
-            np.isnan(self.v7b_water_depth_spawning_season), np.nan, 999.0
-        )
+        # Use intersection of valid DEM and hydro domain
+        valid_mask = ~np.isnan(self.hydro_domain_480) & ~np.isnan(self.dem_480)
+        arr = np.where(valid_mask, 999.0, np.nan)
         return arr
 
     def calculate_si_1(self) -> np.ndarray:

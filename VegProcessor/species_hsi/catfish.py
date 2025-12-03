@@ -14,23 +14,25 @@ class RiverineCatfishHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_480: np.ndarray = None
-    dem_480: np.ndarray = None
+    hydro_domain_480: np.ndarray | None = None
+    dem_480: np.ndarray | None = None
 
-    v1_pct_pools_avg_summer_flow: np.ndarray = None
-    v2_pct_cover_in_summer_pools_bw: np.ndarray = None
-    v4_fpp_substrate_avg_summer_flow: np.ndarray = None
-    v5_avg_temp_in_midsummer_pools_bw: np.ndarray = None
-    v6_grow_season_length_frost_free_days: np.ndarray = None
-    v7_max_monthly_avg_summer_turbidity: np.ndarray = None
-    v8_avg_min_do_in_midsummer_pools_bw: np.ndarray = None
-    v9_max_summer_salinity: np.ndarray = None
-    v10_avg_temp_in_spawning_embryo_pools_bw: np.ndarray = None
-    v11_max_salinity_spawning_embryo: np.ndarray = None
-    v12_avg_midsummer_temp_in_pools_bw_fry: np.ndarray = None
-    v13_max_summer_salinity_fry_juvenile: np.ndarray = None
-    v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray = None
-    v18_avg_vel_summer_flow: np.ndarray = None
+    v1_pct_pools_avg_summer_flow: np.ndarray | None = None
+    v2_pct_cover_in_summer_pools_bw: np.ndarray | None = None
+    v4_fpp_substrate_avg_summer_flow: np.ndarray | None = None
+    v5_avg_temp_in_midsummer_pools_bw: np.ndarray | None = None
+    v6_grow_season_length_frost_free_days: np.ndarray | None = None
+    v7_max_monthly_avg_summer_turbidity: np.ndarray | None = None
+    v8_avg_min_do_in_midsummer_pools_bw: np.ndarray | None = None
+    v9_max_summer_salinity: np.ndarray | None = None
+    v10_avg_temp_in_spawning_embryo_pools_bw: np.ndarray | None = None
+    v11_max_salinity_spawning_embryo: np.ndarray | None = None
+    v12_avg_midsummer_temp_in_pools_bw_fry: np.ndarray | None = None
+    v13_max_summer_salinity_fry_juvenile: np.ndarray | None = None
+    v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray | None = None
+    v18_avg_vel_summer_flow: np.ndarray | None = None
+
+    water_depth_midsummer: np.ndarray | None = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -83,6 +85,7 @@ class RiverineCatfishHSI:
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
+            water_depth_midsummer=
         )
 
     def __post_init__(self):
@@ -166,6 +169,15 @@ class RiverineCatfishHSI:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
+
+    # def get_pools_backwaters_60m(self):
+    #     """
+    #     From depth at current timestep, get pools and backwaters, and set excluded area
+    #     to species defaults
+
+    #     Return:
+    #         A 480m array where the value is an average of
+    #     """
 
     def calculate_si_1(self) -> np.ndarray:
         """Percent pools during average summer flow"""

@@ -17,7 +17,9 @@ class RiverineCatfishHSI:
     """
 
     hydro_domain_480: np.ndarray | None = None
+    hydro_domain_60: np.ndarray | None = None
     dem_480: np.ndarray | None = None
+    water_depth_midsummer_60m: np.ndarray | None = None
 
     v1_pct_pools_avg_summer_flow: np.ndarray | None = None
     v2_pct_cover_in_summer_pools_bw: np.ndarray | None = None
@@ -33,8 +35,6 @@ class RiverineCatfishHSI:
     v13_max_summer_salinity_fry_juvenile: np.ndarray | None = None
     v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray | None = None
     v18_avg_vel_summer_flow: np.ndarray | None = None
-
-    water_depth_midsummer_60m: np.ndarray | None = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -87,7 +87,8 @@ class RiverineCatfishHSI:
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            water_depth_midsummer_60m=hsi_instance.water_depth_july_sept_mean,
+            hydro_domain_60=hsi_instance.hydro_domain,
+            water_depth_midsummer_60=hsi_instance.water_depth_july_sept_mean_60m,
         )
 
     def __post_init__(self):
@@ -115,7 +116,9 @@ class RiverineCatfishHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self, *input_arrays) -> np.ndarray:
+    def _create_template_array(
+        self, *input_arrays, cell: bool = True
+    ) -> np.ndarray:
         """Create an array from a template where valid pixels are 999.0, and
         NaN values are propagated from hydro domain and optional input arrays.
 
@@ -124,15 +127,23 @@ class RiverineCatfishHSI:
         *input_arrays : np.ndarray, optional
             One or more input arrays from which NaN values will be propagated
 
+        cell : bool
+            True if template should be created at 480m size, False if
+            60m (high resolution). Defults to True (480m).
+
         Returns
         -------
         np.ndarray
             Template array with 999.0 for valid pixels and NaN elsewhere
         """
         # Start with hydro domain mask
-        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+        if cell is True:
+            arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+        else:
+            arr = np.where(np.isnan(self.hydro_domain_60), np.nan, 999.0)
 
         # Propagate NaN from any input arrays
+        # used only if SI var has a unique domain from water depth
         for input_arr in input_arrays:
             if input_arr is not None:
                 arr = np.where(np.isnan(input_arr), np.nan, arr)
@@ -172,7 +183,9 @@ class RiverineCatfishHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def mask_to_pools_backwaters(self, si_arr_60m: np.ndarray) -> np.ndarray:
+    def mask_to_pools_backwaters_coarsen(
+        self, si_arr_60m: np.ndarray
+    ) -> np.ndarray:
         """Masks SI index to the allowed depth ranges. Values outside of the depth
         range are replaced with defaults.
 
@@ -181,7 +194,7 @@ class RiverineCatfishHSI:
         calculate the final mean value.
 
         Returns:
-            A 480m array where the value is an average of
+            A 480m array where the value is an average of 60m SI results.
         """
         mask_low = self.water_depth_midsummer_60m < 0.5
         mask_high = self.water_depth_midsummer_60m > 3
@@ -303,7 +316,8 @@ class RiverineCatfishHSI:
     def calculate_si_5(self) -> np.ndarray:
         """Average midsummer (July to August) water temperature within pools, backwaters (Adult)"""
         self._logger.info("Running SI 5")
-        si_5 = self.template.copy()
+        # template needs to be 60m, to apply rules at 60m, then resample
+        si_5 = self._create_template_array(cell=False)
 
         if self.v5_avg_temp_in_midsummer is None:
             self._logger.info(
@@ -342,7 +356,7 @@ class RiverineCatfishHSI:
             mask_5 = self.v5_avg_temp_in_midsummer > 34
             si_5[mask_5] = 0
 
-        si_5 = self.mask_to_pools_backwaters(si_5)
+        si_5 = self.mask_to_pools_backwaters_coarsen(si_5)
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

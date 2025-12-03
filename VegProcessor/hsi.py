@@ -49,10 +49,19 @@ class HSI(vt.VegTransition):
 
     The HSI framework is designed to run with highly varying numbers of
     input variables. All variables are initialized as "None" and either
-    replace with actual data, or replaced with stand-in values during
+    replaced with actual data, or replaced with stand-in values during
     execution. The stand-in values are either "1" indicating an ideal
     SI (suitability index score), or an empirical value provided to the
-    S.I. function that results in a approximate scoring.
+    S.I. function that results in a approximate scoring. All other vars
+    are created from one of a range of hydrologic model outputs.
+
+    In general, the code structure favors creating HSI input variables as
+    numpy arrays, and adding them as `HSI` class attributes, which are
+    updated each timestep. This balances the tradeoff of memory use
+    (many arrays are created at each step) with observability; it is easier
+    to debug issues when all arrays can be accessed after a timestep. Future
+    revision to the codebase may want to favor more memory-efficient methods,
+    once the logic has been tested and verified.
     """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -117,6 +126,7 @@ class HSI(vt.VegTransition):
         self.water_depth_jan_aug_mean = None
         self.water_depth_oct_dec_mean = None
         self.water_depth_july_august_mean = None
+        self.water_depth_july_sept_mean = None
 
         # HSI models
         self.alligator = None
@@ -364,6 +374,9 @@ class HSI(vt.VegTransition):
         )
         self.water_depth_july_august_mean = self._get_daily_depth_filtered(
             months=[7, 8],
+        )
+        self.water_depth_july_sept_mean = self._get_daily_depth_filtered(
+            months=[7, 8, 9],
         )
 
         # temperature vars -------------------------------------------

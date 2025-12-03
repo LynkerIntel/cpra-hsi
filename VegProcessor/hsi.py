@@ -62,6 +62,10 @@ class HSI(vt.VegTransition):
     to debug issues when all arrays can be accessed after a timestep. Future
     revision to the codebase may want to favor more memory-efficient methods,
     once the logic has been tested and verified.
+
+    All *HSI variable* arrays in `HSI` are assumed to be at 480m (a.k.a "cell"
+    resolution) unless otherwise noted, typically with a "_60m" suffix
+    (a.k.a "pixel" resolution).
     """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -74,7 +78,7 @@ class HSI(vt.VegTransition):
         config_file : str
             Path to configuration YAML
         log_level : int
-            Level of vebosity for logging.
+            Level of vebosity for logging. Hardcoded for now.
         """
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file
@@ -126,7 +130,7 @@ class HSI(vt.VegTransition):
         self.water_depth_jan_aug_mean = None
         self.water_depth_oct_dec_mean = None
         self.water_depth_july_august_mean = None
-        self.water_depth_july_sept_mean = None
+        self.water_depth_july_sept_mean_60m = None
 
         # HSI models
         self.alligator = None
@@ -375,8 +379,8 @@ class HSI(vt.VegTransition):
         self.water_depth_july_august_mean = self._get_daily_depth_filtered(
             months=[7, 8],
         )
-        self.water_depth_july_sept_mean = self._get_daily_depth_filtered(
-            months=[7, 8, 9],
+        self.water_depth_july_sept_mean_60m = self._get_daily_depth_filtered(
+            months=[7, 8, 9], cell=False
         )
 
         # temperature vars -------------------------------------------
@@ -1015,7 +1019,9 @@ class HSI(vt.VegTransition):
     #     return da_coarse.to_numpy()
 
     def _get_daily_depth_filtered(
-        self, months: None | list[int] = None
+        self,
+        months: None | list[int] = None,
+        cell: bool = True,
     ) -> np.ndarray:
         """
         Reduce daily depth dataset to temporal mean, then resample to
@@ -1026,6 +1032,10 @@ class HSI(vt.VegTransition):
         months : list (optional)
             List of months to average water depth over. If a list is not
             provided, the default is all months
+
+        cell : bool (optional)
+            True if resampling input to 480m after temporal filter.
+            Defaults to True.
 
         Return
         ------
@@ -1041,7 +1051,9 @@ class HSI(vt.VegTransition):
         )
         da = filtered_ds.mean(dim="time", skipna=True)["height"]
 
-        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+        if cell is True:
+            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+
         return da_coarse.to_numpy()
 
     def _get_water_temperature_subset(

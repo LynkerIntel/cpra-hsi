@@ -176,8 +176,9 @@ class RiverineCatfishHSI:
         """Masks SI index to the allowed depth ranges. Values outside of the depth
         range are replaced with defaults.
 
-        Note: this function is unqiue amongst species modules, it requires a 60m
-        input array in order to correctly calculate the final mean value.
+        Note: this function is unqiue amongst species modules, which all operate
+        on 480m arrays. It requires a 60m input array in order to correctly
+        calculate the final mean value.
 
         Returns:
             A 480m array where the value is an average of

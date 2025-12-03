@@ -485,7 +485,7 @@ def fresh_shrub(
     mar_june = [3, 4, 5, 6]
     gs = [4, 5, 6, 7, 8, 9]
 
-    # Subset for veg type Zone II (value 18)
+    # Subset for veg type Fresh Shrub (value 19)
     type_mask = veg_type == 19
     # mask pixels without full timeseries non-null
     # valid_wse_mask = water_depth.notnull().all(dim="time")["height"].to_numpy()
@@ -883,12 +883,12 @@ def brackish_marsh(
     condition_1_pct = (filtered_1["height"] > 0).mean(dim="time")
     condition_1 = (condition_1_pct > 0.8).to_numpy()
 
-    # Condition_2: Average ANNUAL salinity >= 5ppt
+    # Condition_2: Average ANNUAL salinity >= 12 ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
     condition_2 = salinity >= 12
 
-    # Condition_3: Average ANNUAL salinity < 1ppt
+    # Condition_3: Average ANNUAL salinity < 4 ppt
     # TODO: when monthly inputs are available, this will need
     # to accept monthly values for defaults and model output
     condition_3 = salinity < 4

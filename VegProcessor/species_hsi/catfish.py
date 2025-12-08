@@ -314,7 +314,10 @@ class RiverineCatfishHSI:
         return self.clip_array(si_4)
 
     def calculate_si_5(self) -> np.ndarray:
-        """Average midsummer (July to August) water temperature within pools, backwaters (Adult)"""
+        """Average midsummer (July to August) water temperature within pools, backwaters (Adult)
+
+        This SI uses 60m arrays to create the final 480m SI result.
+        """
         self._logger.info("Running SI 5")
         # template needs to be 60m, to apply rules at 60m, then resample
         si_5 = self._create_template_array(cell=False)
@@ -441,9 +444,12 @@ class RiverineCatfishHSI:
         return self.clip_array(si_7)
 
     def calculate_si_8(self) -> np.ndarray:
-        """Average minimum dissolved oxygen levels within pools, backwaters, during midsummer"""
+        """Average minimum dissolved oxygen levels within pools, backwaters, during midsummer.
+
+        This SI uses 60m arrays to create the final 480m SI result.
+        """
         self._logger.info("Running SI 8")
-        si_8 = self.template.copy()
+        si_8 = self._create_template_array(cell=False)
 
         if self.v8_avg_min_do_in_midsummer_pools_bw is None:
             self._logger.info(
@@ -469,6 +475,8 @@ class RiverineCatfishHSI:
             # condition 3
             mask_3 = self.v8_avg_min_do_in_midsummer_pools_bw > 7
             si_8[mask_3] = 1
+
+        si_8 = self.mask_to_pools_backwaters_coarsen(si_8)
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

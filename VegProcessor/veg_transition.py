@@ -914,7 +914,9 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hydro_domain_raster(self, cell: bool = False) -> np.ndarray:
+    def _load_hydro_domain_raster(
+        self, cell: bool = False, as_float: bool = False
+    ) -> np.ndarray:
         """Load raster file specifying the boundary of the HECRAS domain.
 
         If a domain raster is not supplied, the DEM will be used as the
@@ -924,15 +926,18 @@ class VegTransition:
         Params
         -------
         cell : bool
-            True if array should be downscaled to 480m "cell" resolution. If True,
-            the array is returned as "data" with NaN. If False, data is returned as
-            boolean (the format expected by `VegTransition` methods).
+            True if array should be downscaled to 480m "cell" resolution.
+        as_float : bool
+            True if array should be returned as float with NaN (for HSI).
+            False if array should be returned as boolean (for VegTransition).
+            Ignored when cell=True (always returns float with NaN for 480m).
 
         Returns
         --------
         da : np.ndarray
-            A boolean numpy array at 60m, or a binary numpy array at 480m. This
-            accomdates the requirements of both `VegTransition` and `HSI`.
+            - If cell=True: float array at 480m with NaN outside domain
+            - If cell=False and as_float=True: float array at 60m with NaN outside domain
+            - If cell=False and as_float=False: boolean array at 60m
         """
         if self.hydro_domain_path is None:
             if self.metadata["hydro_source_model"] == "D3D":
@@ -960,6 +965,11 @@ class VegTransition:
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
             return da.to_numpy()
 
+        if as_float:
+            # return as float with NaN for HSI at 60m
+            return da.to_numpy()
+
+        # return as boolean for VegTransition at 60m
         da = da.fillna(0)  # fill 0 so that .astype(bool) does not fail
         da = da.astype(bool)
         return da.to_numpy()

@@ -1052,9 +1052,9 @@ class HSI(vt.VegTransition):
         da = filtered_ds.mean(dim="time", skipna=True)["height"]
 
         if cell is True:
-            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
-        return da_coarse.to_numpy()
+        return da.to_numpy()
 
     def _get_water_temperature_subset(
         self, months: None | list[int] = None

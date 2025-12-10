@@ -119,7 +119,7 @@ class HSI(vt.VegTransition):
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
         self.human_influence = None
-        self.hydro_domain = self._load_hydro_domain_raster()
+        self.hydro_domain = self._load_hydro_domain_raster(as_float=True)
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
         # Dynamic Variables --------------------------------------------

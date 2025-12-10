@@ -29,7 +29,7 @@ class RiverineCatfishHSI:
     v7_max_monthly_avg_summer_turbidity: np.ndarray
     v8_avg_min_do_in_midsummer_pools_bw: np.ndarray
     v9_max_summer_salinity: np.ndarray
-    v10_avg_temp_in_spawning_embryo_pools_bw: np.ndarray
+    v10_water_temp_may_july_mean: np.ndarray
     v11_max_salinity_spawning_embryo: np.ndarray
     v12_avg_midsummer_temp_in_pools_bw_fry: np.ndarray
     v13_max_summer_salinity_fry_juvenile: np.ndarray
@@ -74,12 +74,12 @@ class RiverineCatfishHSI:
             v1_pct_pools_avg_summer_flow=hsi_instance.catfish_pct_pools_avg_summer_flow,
             v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
-            v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean,
+            v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
             v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
             v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
-            v10_avg_temp_in_spawning_embryo_pools_bw=hsi_instance.water_temperature_may_july_mean,
+            v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
@@ -320,7 +320,9 @@ class RiverineCatfishHSI:
         """
         self._logger.info("Running SI 5")
         # template needs to be 60m, to apply rules at 60m, then resample
-        si_5 = self._create_template_array(cell=False)
+        si_5 = self._create_template_array(
+            self.v5_avg_temp_in_midsummer, cell=False
+        )
 
         if self.v5_avg_temp_in_midsummer is None:
             self._logger.info(
@@ -527,7 +529,7 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 10")
         si_10 = self.template.copy()
 
-        if self.v10_avg_temp_in_spawning_embryo_pools_bw is None:
+        if self.v10_water_temp_may_july_mean is None:
             self._logger.info(
                 "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)"
                 "is not provided. Setting index to 1."
@@ -536,35 +538,33 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1
-            mask_1 = self.v10_avg_temp_in_spawning_embryo_pools_bw <= 15.5
+            mask_1 = self.v10_water_temp_may_july_mean <= 15.5
             si_10[mask_1] = 0
 
             # condition 2
-            mask_2 = (self.v10_avg_temp_in_spawning_embryo_pools_bw > 15.5) & (
-                self.v10_avg_temp_in_spawning_embryo_pools_bw <= 26
+            mask_2 = (self.v10_water_temp_may_july_mean > 15.5) & (
+                self.v10_water_temp_may_july_mean <= 26
             )
             si_10[mask_2] = (
-                0.0928
-                * (self.v10_avg_temp_in_spawning_embryo_pools_bw[mask_2])
+                0.0928 * (self.v10_water_temp_may_july_mean[mask_2])
             ) - 1.4456
 
             # condition 3
-            mask_3 = (self.v10_avg_temp_in_spawning_embryo_pools_bw > 26) & (
-                self.v10_avg_temp_in_spawning_embryo_pools_bw <= 27.5
+            mask_3 = (self.v10_water_temp_may_july_mean > 26) & (
+                self.v10_water_temp_may_july_mean <= 27.5
             )
             si_10[mask_3] = 1
 
             # condition 4
-            mask_4 = (self.v10_avg_temp_in_spawning_embryo_pools_bw > 27.5) & (
-                self.v10_avg_temp_in_spawning_embryo_pools_bw <= 29.2
+            mask_4 = (self.v10_water_temp_may_july_mean > 27.5) & (
+                self.v10_water_temp_may_july_mean <= 29.2
             )
             si_10[mask_4] = (
-                -0.5882
-                * (self.v10_avg_temp_in_spawning_embryo_pools_bw[mask_4])
+                -0.5882 * (self.v10_water_temp_may_july_mean[mask_4])
             ) + 17.176
 
             # condition 5
-            mask_5 = self.v10_avg_temp_in_spawning_embryo_pools_bw > 29.2
+            mask_5 = self.v10_water_temp_may_july_mean > 29.2
             si_10[mask_5] = 0
 
         if np.any(np.isclose(si_10, 999.0, atol=1e-5)):
@@ -844,7 +844,7 @@ class RiverineCatfishHSI:
         self.cc = (self.si_1 * self.si_2 * self.si_18) ** (1 / 3)
 
         # water quality component (wq)
-        if self.v5_avg_temp_in_midsummer_pools_bw is None:
+        if self.v5_avg_temp_in_midsummer is None:
             self._logger.info(
                 "Temperature data unavailable. Using SI_6 for WQ calculation."
             )

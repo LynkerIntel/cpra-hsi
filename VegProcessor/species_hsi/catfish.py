@@ -614,6 +614,7 @@ class RiverineCatfishHSI:
     def calculate_si_11(self) -> np.ndarray:
         """Maximum salinity during spawning and embryo development (Embryo)"""
         self._logger.info("Running SI 11")
+        # supply salinity for template b/c MIKE has unique domain
         si_11 = self._create_template_array(
             self.v11_max_salinity_spawning_embryo
         )

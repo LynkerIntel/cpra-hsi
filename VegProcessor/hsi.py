@@ -151,6 +151,7 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
+        self.pct_pools = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
         self.water_temperature_july_august_mean = None
@@ -434,6 +435,7 @@ class HSI(vt.VegTransition):
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
+        self._calculate_pct_pools()
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
@@ -670,6 +672,29 @@ class HSI(vt.VegTransition):
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         self.pct_blh = ds_blh.to_numpy()
+
+    def _calculate_pct_pools(self, months, low=3, high=6):
+        """Get percentage of "pool" pixels in each cell.
+
+        Parameters
+        -----------
+        months : list
+            List of months to average depth over
+        low : float
+            The lower end of the pools definition, defaults to 3m.
+        high : float
+            The high end of the pools definition, defaults to 6m.
+        """
+        # subset water depth to time period
+        ds = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin(months)
+        )
+        da = ds.mean(dim="time", skipna=True)["height"]
+        # mask to within bounds
+        mask = (da >= low) & (da <= high)
+        mask_float = mask.astype(float)
+        pct_pools = mask_float.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        self.pct_pools = pct_pools
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.

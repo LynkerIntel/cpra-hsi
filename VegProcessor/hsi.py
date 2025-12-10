@@ -435,7 +435,7 @@ class HSI(vt.VegTransition):
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
-        self._calculate_pct_pools()
+        self._calculate_pct_pools(months=[7, 8, 9])
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()

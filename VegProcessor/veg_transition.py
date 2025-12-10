@@ -917,11 +917,7 @@ class VegTransition:
     def _load_hydro_domain_raster(
         self, cell: bool = False, as_float: bool = False
     ) -> np.ndarray:
-        """Load raster file specifying the boundary of the HECRAS domain.
-
-        If a domain raster is not supplied, the DEM will be used as the
-        domain raster. Masking with the DEM will generally not have an
-        effect, but keeps the code consistent between models.
+        """Load raster file specifying the boundary of the hydrologic domain.
 
         Params
         -------
@@ -939,27 +935,11 @@ class VegTransition:
             - If cell=False and as_float=True: float array at 60m with NaN outside domain
             - If cell=False and as_float=False: boolean array at 60m
         """
-        if self.hydro_domain_path is None:
-            if self.metadata["hydro_source_model"] == "D3D":
-                self._logger.info(
-                    "hydrologic domain not provided. Using DEM as domain."
-                )
-                # if no file: load DEM as dataarray to use as domain
-                da = xr.open_dataarray(self.dem_path)
-                da = da.squeeze(drop="band")
-                # all valid data to 1
-                da = xr.where(da.notnull(), 1, da)
-            else:
-                raise ValueError(
-                    "For HEC-RAS and MIKE21 hydro input, a domain raster must be supplied."
-                )
-
-        else:
-            self._logger.info("Loading hydro domain extent raster.")
-            da = xr.open_dataarray(self.hydro_domain_path)
-            da = da.squeeze(drop="band")
-            # reproject match to DEM
-            da = self._reproject_match_to_dem(da)
+        self._logger.info("Loading hydro domain extent raster.")
+        da = xr.open_dataarray(self.hydro_domain_path)
+        da = da.squeeze(drop="band")
+        # reproject match to DEM
+        da = self._reproject_match_to_dem(da)
 
         if cell:
             da = da.coarsen(y=8, x=8, boundary="pad").mean()

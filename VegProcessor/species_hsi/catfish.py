@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import logging
 
-from .. import utils
+import utils
 
 
 @dataclass
@@ -16,25 +16,25 @@ class RiverineCatfishHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_480: np.ndarray | None = None
-    hydro_domain_60: np.ndarray | None = None
-    dem_480: np.ndarray | None = None
-    water_depth_midsummer_60m: np.ndarray | None = None
+    hydro_domain_480: np.ndarray
+    hydro_domain_60: np.ndarray
+    dem_480: np.ndarray
+    water_depth_midsummer_60m: np.ndarray
 
-    v1_pct_pools_avg_summer_flow: np.ndarray | None = None
-    v2_pct_cover_in_summer_pools_bw: np.ndarray | None = None
-    v4_fpp_substrate_avg_summer_flow: np.ndarray | None = None
-    v5_avg_temp_in_midsummer: np.ndarray | None = None
-    v6_grow_season_length_frost_free_days: np.ndarray | None = None
-    v7_max_monthly_avg_summer_turbidity: np.ndarray | None = None
-    v8_avg_min_do_in_midsummer_pools_bw: np.ndarray | None = None
-    v9_max_summer_salinity: np.ndarray | None = None
-    v10_avg_temp_in_spawning_embryo_pools_bw: np.ndarray | None = None
-    v11_max_salinity_spawning_embryo: np.ndarray | None = None
-    v12_avg_midsummer_temp_in_pools_bw_fry: np.ndarray | None = None
-    v13_max_summer_salinity_fry_juvenile: np.ndarray | None = None
-    v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray | None = None
-    v18_avg_vel_summer_flow: np.ndarray | None = None
+    v1_pct_pools_avg_summer_flow: np.ndarray
+    v2_pct_cover_in_summer_pools_bw: np.ndarray
+    v4_fpp_substrate_avg_summer_flow: np.ndarray
+    v5_avg_temp_in_midsummer: np.ndarray
+    v6_grow_season_length_frost_free_days: np.ndarray
+    v7_max_monthly_avg_summer_turbidity: np.ndarray
+    v8_avg_min_do_in_midsummer_pools_bw: np.ndarray
+    v9_max_summer_salinity: np.ndarray
+    v10_avg_temp_in_spawning_embryo_pools_bw: np.ndarray
+    v11_max_salinity_spawning_embryo: np.ndarray
+    v12_avg_midsummer_temp_in_pools_bw_fry: np.ndarray
+    v13_max_summer_salinity_fry_juvenile: np.ndarray
+    v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray
+    v18_avg_vel_summer_flow: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)

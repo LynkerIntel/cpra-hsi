@@ -170,6 +170,8 @@ class HSI(vt.VegTransition):
         self.salinity_max_july_sept = None
         self.salinity_max_may_july = None
 
+        self.velocity = None
+
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
         self.pct_intermediate_marsh = None
@@ -431,6 +433,7 @@ class HSI(vt.VegTransition):
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
+        self.velocity = self._load_velocity_general(self.wy)
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -599,7 +602,7 @@ class HSI(vt.VegTransition):
             self._logger.info("Water Temperature not provided.")
             return None
 
-    def _load_velocity_general(self, water_year: int) -> xr.Dataset | None:
+    def _load_velocity_general(self, water_year: int) -> np.ndarray | None:
         """Load velocity data from either Delft3D or MIKE 21 models."""
         if self.netcdf_water_temperature_path is not None:
             self._logger.info(
@@ -638,7 +641,7 @@ class HSI(vt.VegTransition):
                 ) from exc
 
             ds = self._reproject_match_to_dem(ds)
-            return ds
+            return ds["velocity"].to_numpy()
 
         else:
             self._logger.info("Velocity not provided.")

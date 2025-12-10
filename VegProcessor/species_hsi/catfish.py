@@ -83,14 +83,14 @@ class RiverineCatfishHSI:
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
             v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean_60,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
-            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean,
+            v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean_60m,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
-            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean,
+            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60,
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
-            #
+            # depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
             water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
             water_depth_may_july_mean_60m=hsi_instance.water_depth_may_july_mean_60m,
@@ -381,12 +381,12 @@ class RiverineCatfishHSI:
             mask_5 = self.v5_avg_temp_in_midsummer > 34
             si_5[mask_5] = 0
 
-        si_5 = self.mask_to_pools_backwaters_coarsen(
-            si_arr_60m=si_5,
-            water_depth_subset=self.water_depth_july_august_mean_60m,
-            low=0.5,
-            high=6,
-        )
+            si_5 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_5,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -504,12 +504,12 @@ class RiverineCatfishHSI:
             mask_3 = self.v8_avg_min_do_in_midsummer > 7
             si_8[mask_3] = 1
 
-        si_8 = self.mask_to_pools_backwaters_coarsen(
-            si_arr_60m=si_8,
-            water_depth_subset=self.water_depth_july_sept_mean_60m,
-            low=0.5,
-            high=6,
-        )
+            si_8 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_8,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -599,12 +599,12 @@ class RiverineCatfishHSI:
             mask_5 = self.v10_water_temp_may_july_mean > 29.2
             si_10[mask_5] = 0
 
-        si_10 = self.mask_to_pools_backwaters_coarsen(
-            si_arr_60m=si_10,
-            water_depth_subset=self.water_depth_may_july_mean_60m,
-            low=0.5,
-            high=6,
-        )
+            si_10 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_10,
+                water_depth_subset=self.water_depth_may_july_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_10, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -662,7 +662,7 @@ class RiverineCatfishHSI:
     def calculate_si_12(self) -> np.ndarray:
         """Average midsummer water temperature within pools, backwaters (Fry)"""
         self._logger.info("Running SI 12")
-        si_12 = self.template.copy()
+        si_12 = self._create_template_array(cell=False)
 
         if self.v12_avg_midsummer_temp_in_pools_bw_fry is None:
             self._logger.info(
@@ -699,10 +699,16 @@ class RiverineCatfishHSI:
                 -0.1667 * self.v12_avg_midsummer_temp_in_pools_bw_fry[mask_4]
                 + 6
             )
-
             # condition 5
             mask_5 = self.v12_avg_midsummer_temp_in_pools_bw_fry >= 36
             si_12[mask_5] = 0
+
+            si_12 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_12,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_12, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -749,7 +755,7 @@ class RiverineCatfishHSI:
     def calculate_si_14(self) -> np.ndarray:
         """Average midsummer water temperature within pools, backwaters (Juvenile)"""
         self._logger.info("Running SI 14")
-        si_14 = self.template.copy()
+        si_14 = self._create_template_array(cell=False)
 
         if self.v14_avg_midsummer_temp_in_pools_bw_juvenile is None:
             self._logger.info(
@@ -764,7 +770,6 @@ class RiverineCatfishHSI:
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 10
             ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile <= 15)
             si_14[mask_1] = 0
-
             # condition 2
             mask_2 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 15
@@ -774,13 +779,11 @@ class RiverineCatfishHSI:
                 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_2])
                 - 1.1892
             )
-
             # condition 3
             mask_3 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 28
             ) & (self.v14_avg_midsummer_temp_in_pools_bw_juvenile <= 30)
             si_14[mask_3] = 1
-
             # condition 4
             mask_4 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 30
@@ -790,10 +793,16 @@ class RiverineCatfishHSI:
                 * (self.v14_avg_midsummer_temp_in_pools_bw_juvenile[mask_4])
                 + 5.6154
             )
-
             # condition 5
             mask_5 = self.v14_avg_midsummer_temp_in_pools_bw_juvenile >= 36.5
             si_14[mask_5] = 0
+
+            si_14 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_14,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_14, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

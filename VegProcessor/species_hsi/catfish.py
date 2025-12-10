@@ -19,7 +19,9 @@ class RiverineCatfishHSI:
     hydro_domain_480: np.ndarray
     hydro_domain_60: np.ndarray
     dem_480: np.ndarray
-    water_depth_midsummer_60m: np.ndarray
+    water_depth_july_august_mean_60m: np.ndarray
+    water_depth_july_sept_mean_60m: np.ndarray
+    water_depth_may_july_mean_60m: np.ndarray
 
     v1_pct_pools_avg_summer_flow: np.ndarray
     v2_pct_cover_in_summer_pools_bw: np.ndarray
@@ -79,7 +81,7 @@ class RiverineCatfishHSI:
             v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
             v8_avg_min_do_in_midsummer=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
-            v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean,
+            v10_water_temp_may_july_mean_60=hsi_instance.water_temperature_may_july_mean_60,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
@@ -88,7 +90,10 @@ class RiverineCatfishHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
-            water_depth_midsummer_60m=hsi_instance.water_depth_july_sept_mean_60m,
+            #
+            water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
+            water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
+            water_depth_may_july_mean_60m=hsi_instance.water_depth_may_july_mean_60m,
         )
 
     def __post_init__(self):
@@ -184,19 +189,24 @@ class RiverineCatfishHSI:
             self._logger.addHandler(ch)
 
     def mask_to_pools_backwaters_coarsen(
-        self, si_arr_60m: np.ndarray, low: float, high: float
+        self,
+        si_arr_60m: np.ndarray,
+        water_depth_subset: np.ndarray,
+        low: float,
+        high: float,
     ) -> np.ndarray:
         """Masks SI index to the allowed depth ranges. Values outside of the depth
         range are replaced with defaults. Input array NaNs are propogated.
 
-        Note: this function is unqiue amongst species modules, which all operate
-        on 480m arrays. It requires a 60m input array in order to correctly
+        Note: this function requires a 60m input array in order to correctly
         calculate the final mean value.
 
         Parameters
         ----------
         si_arr_60m : np.ndarray
             The input array, wich must be 60m.
+        water_depth_subset : np.ndarray
+            The water depth subset used to determine the depth thresholds.
         low : float
             The lower thresholed, i.e. 0.5m
         high : float
@@ -206,12 +216,8 @@ class RiverineCatfishHSI:
             A 480m array where the value is an average of 60m SI results.
         """
         # only apply masks where SI values are valid (not NaN)
-        mask_low = (self.water_depth_midsummer_60m < low) & (
-            ~np.isnan(si_arr_60m)
-        )
-        mask_high = (self.water_depth_midsummer_60m > high) & (
-            ~np.isnan(si_arr_60m)
-        )
+        mask_low = (water_depth_subset < low) & (~np.isnan(si_arr_60m))
+        mask_high = (water_depth_subset > high) & (~np.isnan(si_arr_60m))
 
         # assumes the inputs array already has SI values applied to all valid pixels
         si_arr_60m[mask_low] = 0
@@ -333,7 +339,7 @@ class RiverineCatfishHSI:
         This SI uses 60m arrays to create the final 480m SI result.
         """
         self._logger.info("Running SI 5")
-        # template needs to be 60m, to apply rules at 60m, then resample
+        # template needs to be 60m, to apply rules at 60m
         si_5 = self._create_template_array(
             self.v5_avg_temp_in_midsummer, cell=False
         )
@@ -376,7 +382,10 @@ class RiverineCatfishHSI:
             si_5[mask_5] = 0
 
         si_5 = self.mask_to_pools_backwaters_coarsen(
-            si_arr_60m=si_5, low=0.5, high=3
+            si_arr_60m=si_5,
+            water_depth_subset=self.water_depth_july_august_mean_60m,
+            low=0.5,
+            high=6,
         )
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
@@ -496,7 +505,10 @@ class RiverineCatfishHSI:
             si_8[mask_3] = 1
 
         si_8 = self.mask_to_pools_backwaters_coarsen(
-            si_arr_60m=si_8, low=0.5, high=3
+            si_arr_60m=si_8,
+            water_depth_subset=self.water_depth_july_sept_mean_60m,
+            low=0.5,
+            high=6,
         )
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
@@ -546,7 +558,8 @@ class RiverineCatfishHSI:
         """Average water temperatures (May to July) within pools, backwaters,
         during spawning and embryo development (Embryo)"""
         self._logger.info("Running SI 10")
-        si_10 = self.template.copy()
+        # 60m array required
+        si_10 = self._create_template_array(cell=False)
 
         if self.v10_water_temp_may_july_mean is None:
             self._logger.info(
@@ -585,6 +598,13 @@ class RiverineCatfishHSI:
             # condition 5
             mask_5 = self.v10_water_temp_may_july_mean > 29.2
             si_10[mask_5] = 0
+
+        si_10 = self.mask_to_pools_backwaters_coarsen(
+            si_arr_60m=si_10,
+            water_depth_subset=self.water_depth_may_july_mean_60m,
+            low=0.5,
+            high=6,
+        )
 
         if np.any(np.isclose(si_10, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

@@ -308,6 +308,9 @@ class HSI(vt.VegTransition):
         self.netcdf_water_temperature_path = self.config["raster_data"].get(
             "netcdf_water_temperature_path"
         )
+        self.netcdf_velocity_path = self.config["raster_data"].get(
+            "netcdf_velociy_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
@@ -594,6 +597,51 @@ class HSI(vt.VegTransition):
 
         else:
             self._logger.info("Water Temperature not provided.")
+            return None
+
+    def _load_velocity_general(self, water_year: int) -> xr.Dataset | None:
+        """Load velocity data from either Delft3D or MIKE 21 models."""
+        if self.netcdf_water_temperature_path is not None:
+            self._logger.info(
+                f"Loading velocity data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="VELOCITY"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
+
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("Velocity not provided.")
             return None
 
     def _calculate_pct_cover(self):

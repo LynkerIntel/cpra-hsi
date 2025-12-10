@@ -88,7 +88,7 @@ class RiverineCatfishHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
-            water_depth_midsummer_60=hsi_instance.water_depth_july_sept_mean_60m,
+            water_depth_midsummer_60m=hsi_instance.water_depth_july_sept_mean_60m,
         )
 
     def __post_init__(self):

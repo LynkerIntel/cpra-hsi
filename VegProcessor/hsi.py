@@ -393,6 +393,9 @@ class HSI(vt.VegTransition):
             self.water_temperature_july_august_mean = (
                 self._get_water_temperature_subset(months=[7, 8])
             )
+            self.water_temperature_july_august_mean_60m = (
+                self._get_water_temperature_subset(months=[7, 8], cell=False)
+            )
             self.water_temperature_may_july_mean = (
                 self._get_water_temperature_subset(months=[5, 6, 7])
             )
@@ -1057,7 +1060,7 @@ class HSI(vt.VegTransition):
         return da.to_numpy()
 
     def _get_water_temperature_subset(
-        self, months: None | list[int] = None
+        self, months: None | list[int] = None, cell: bool = True
     ) -> np.ndarray:
         """
         Reduce daily water temperature dataset to temporal mean, then
@@ -1069,11 +1072,15 @@ class HSI(vt.VegTransition):
             List of months to average water temp over. If a list is not
             provided, the default is all months
 
+        cell : bool (optional)
+            True if resampling input to 480m after temporal filter.
+            Defaults to True.
+
         Return
         ------
         da_coarse : np.ndarray
             water temperature, averaged over a list of months (or defaulting
-            to one year) and then upscaled to 480m.
+            to one year) and then upscaled to 480m (if cell=True) or kept at 60m (if cell=False).
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -1083,8 +1090,11 @@ class HSI(vt.VegTransition):
         )
         da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
 
-        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+        if cell is True:
+            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da_coarse.to_numpy()
+        else:
+            return da.to_numpy()
 
     def _get_salinity_subset(
         self,

@@ -187,7 +187,7 @@ class RiverineCatfishHSI:
         self, si_arr_60m: np.ndarray
     ) -> np.ndarray:
         """Masks SI index to the allowed depth ranges. Values outside of the depth
-        range are replaced with defaults.
+        range are replaced with defaults. Input array NaNs are propogated.
 
         Note: this function is unqiue amongst species modules, which all operate
         on 480m arrays. It requires a 60m input array in order to correctly
@@ -196,8 +196,13 @@ class RiverineCatfishHSI:
         Returns:
             A 480m array where the value is an average of 60m SI results.
         """
-        mask_low = self.water_depth_midsummer_60m < 0.5
-        mask_high = self.water_depth_midsummer_60m > 3
+        # only apply masks where SI values are valid (not NaN)
+        mask_low = (self.water_depth_midsummer_60m < 0.5) & (
+            ~np.isnan(si_arr_60m)
+        )
+        mask_high = (self.water_depth_midsummer_60m > 3) & (
+            ~np.isnan(si_arr_60m)
+        )
 
         # assumes the inputs array already has SI values applied to all valid pixels
         si_arr_60m[mask_low] = 0

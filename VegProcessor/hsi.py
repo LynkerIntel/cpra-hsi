@@ -161,6 +161,9 @@ class HSI(vt.VegTransition):
         self.water_temperature_may_july_mean = None
         self.water_temperature_feb_march_mean = None
 
+        self.water_temperature_july_sept_mean_60m = None
+        self.water_temperature_july_august_mean_60m = None
+
         self.salinity = None  # the source xr.dataset
         self.salinity_annual_mean = None
         self.salinity_max_april_sept = None
@@ -414,6 +417,11 @@ class HSI(vt.VegTransition):
             # 60m
             self.water_temperature_july_august_mean_60m = (
                 self._get_water_temperature_subset(months=[7, 8], cell=False)
+            )
+            self.water_temperature_july_sept_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[7, 8, 9], cell=False
+                )
             )
 
         # load VegTransition output ----------------------------------

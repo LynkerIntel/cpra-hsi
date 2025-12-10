@@ -184,7 +184,7 @@ class RiverineCatfishHSI:
             self._logger.addHandler(ch)
 
     def mask_to_pools_backwaters_coarsen(
-        self, si_arr_60m: np.ndarray
+        self, si_arr_60m: np.ndarray, low: float, high: float
     ) -> np.ndarray:
         """Masks SI index to the allowed depth ranges. Values outside of the depth
         range are replaced with defaults. Input array NaNs are propogated.
@@ -193,14 +193,23 @@ class RiverineCatfishHSI:
         on 480m arrays. It requires a 60m input array in order to correctly
         calculate the final mean value.
 
+        Parameters
+        ----------
+        si_arr_60m : np.ndarray
+            The input array, wich must be 60m.
+        low : float
+            The lower thresholed, i.e. 0.5m
+        high : float
+            The high threshold, i.e. 3m
+
         Returns:
             A 480m array where the value is an average of 60m SI results.
         """
         # only apply masks where SI values are valid (not NaN)
-        mask_low = (self.water_depth_midsummer_60m < 0.5) & (
+        mask_low = (self.water_depth_midsummer_60m < low) & (
             ~np.isnan(si_arr_60m)
         )
-        mask_high = (self.water_depth_midsummer_60m > 3) & (
+        mask_high = (self.water_depth_midsummer_60m > high) & (
             ~np.isnan(si_arr_60m)
         )
 
@@ -366,7 +375,9 @@ class RiverineCatfishHSI:
             mask_5 = self.v5_avg_temp_in_midsummer > 34
             si_5[mask_5] = 0
 
-        si_5 = self.mask_to_pools_backwaters_coarsen(si_5)
+        si_5 = self.mask_to_pools_backwaters_coarsen(
+            si_arr_60m=si_5, low=0.5, high=3
+        )
 
         if np.any(np.isclose(si_5, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -484,7 +495,9 @@ class RiverineCatfishHSI:
             mask_3 = self.v8_avg_min_do_in_midsummer > 7
             si_8[mask_3] = 1
 
-        si_8 = self.mask_to_pools_backwaters_coarsen(si_8)
+        si_8 = self.mask_to_pools_backwaters_coarsen(
+            si_arr_60m=si_8, low=0.5, high=3
+        )
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

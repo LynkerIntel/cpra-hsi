@@ -27,7 +27,7 @@ class RiverineCatfishHSI:
     v5_avg_temp_in_midsummer: np.ndarray
     v6_grow_season_length_frost_free_days: np.ndarray
     v7_max_monthly_avg_summer_turbidity: np.ndarray
-    v8_avg_min_do_in_midsummer_pools_bw: np.ndarray
+    v8_avg_min_do_in_midsummer: np.ndarray
     v9_max_summer_salinity: np.ndarray
     v10_water_temp_may_july_mean: np.ndarray
     v11_max_salinity_spawning_embryo: np.ndarray
@@ -77,7 +77,7 @@ class RiverineCatfishHSI:
             v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
             v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
-            v8_avg_min_do_in_midsummer_pools_bw=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
+            v8_avg_min_do_in_midsummer=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
             v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
@@ -451,9 +451,11 @@ class RiverineCatfishHSI:
         This SI uses 60m arrays to create the final 480m SI result.
         """
         self._logger.info("Running SI 8")
-        si_8 = self._create_template_array(cell=False)
+        si_8 = self._create_template_array(
+            self.v8_avg_min_do_in_midsummer, cell=False
+        )
 
-        if self.v8_avg_min_do_in_midsummer_pools_bw is None:
+        if self.v8_avg_min_do_in_midsummer is None:
             self._logger.info(
                 "Avg min DO levels within pools, backwaters, during midsummer"
                 "is not provided. Setting index to 1."
@@ -462,20 +464,19 @@ class RiverineCatfishHSI:
 
         else:
             # condition 1
-            mask_1 = self.v8_avg_min_do_in_midsummer_pools_bw < 1
+            mask_1 = self.v8_avg_min_do_in_midsummer < 1
             si_8[mask_1] = 0
 
             # condition 2
-            mask_2 = (self.v8_avg_min_do_in_midsummer_pools_bw >= 1) & (
-                self.v8_avg_min_do_in_midsummer_pools_bw <= 7
+            mask_2 = (self.v8_avg_min_do_in_midsummer >= 1) & (
+                self.v8_avg_min_do_in_midsummer <= 7
             )
             si_8[mask_2] = (
-                0.1667 * (self.v8_avg_min_do_in_midsummer_pools_bw[mask_2])
-                - 0.1667
+                0.1667 * (self.v8_avg_min_do_in_midsummer[mask_2]) - 0.1667
             )
 
             # condition 3
-            mask_3 = self.v8_avg_min_do_in_midsummer_pools_bw > 7
+            mask_3 = self.v8_avg_min_do_in_midsummer > 7
             si_8[mask_3] = 1
 
         si_8 = self.mask_to_pools_backwaters_coarsen(si_8)

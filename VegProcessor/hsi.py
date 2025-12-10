@@ -130,6 +130,8 @@ class HSI(vt.VegTransition):
         self.water_depth_jan_aug_mean = None
         self.water_depth_oct_dec_mean = None
         self.water_depth_july_august_mean = None
+
+        self.water_depth_july_august_mean_60m = None
         self.water_depth_july_sept_mean_60m = None
 
         # HSI models
@@ -380,8 +382,14 @@ class HSI(vt.VegTransition):
         self.water_depth_july_august_mean = self._get_daily_depth_filtered(
             months=[7, 8],
         )
+        # 60m water depth for pools and backwaters logic -------------------
+        self.water_depth_july_august_mean_60m = self._get_daily_depth_filtered(
+            months=[7, 8],
+            cell=False,
+        )
         self.water_depth_july_sept_mean_60m = self._get_daily_depth_filtered(
-            months=[7, 8, 9], cell=False
+            months=[7, 8, 9],
+            cell=False,
         )
 
         # temperature vars -------------------------------------------
@@ -394,9 +402,6 @@ class HSI(vt.VegTransition):
             self.water_temperature_july_august_mean = (
                 self._get_water_temperature_subset(months=[7, 8])
             )
-            self.water_temperature_july_august_mean_60m = (
-                self._get_water_temperature_subset(months=[7, 8], cell=False)
-            )
             self.water_temperature_may_july_mean = (
                 self._get_water_temperature_subset(months=[5, 6, 7])
             )
@@ -405,6 +410,10 @@ class HSI(vt.VegTransition):
             )
             self.water_temperature_feb_march_mean = (
                 self._get_water_temperature_subset(months=[2, 3])
+            )
+            # 60m
+            self.water_temperature_july_august_mean_60m = (
+                self._get_water_temperature_subset(months=[7, 8], cell=False)
             )
 
         # load VegTransition output ----------------------------------

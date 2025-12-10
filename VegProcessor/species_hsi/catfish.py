@@ -71,7 +71,7 @@ class RiverineCatfishHSI:
         """Create Riverine Catfish HSI instance from an HSI instance."""
 
         return cls(
-            v1_pct_pools_avg_summer_flow=hsi_instance.catfish_pct_pools_avg_summer_flow,
+            v1_pct_pools_avg_summer_flow=hsi_instance.pct_pools,
             v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
             v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,

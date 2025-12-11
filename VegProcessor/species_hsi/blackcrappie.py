@@ -148,21 +148,43 @@ class BlackCrappieHSI:
             )
         return clipped
 
-    def backwaters_mask(self, si_array: np.ndarray) -> np.ndarray:
-        """DRAFT
-        Ensure that areas outside of backwaters are excluded.
+    def mask_to_pools_backwaters_coarsen(
+        self,
+        si_arr_60m: np.ndarray,
+        water_depth_subset: np.ndarray,
+        low: float,
+        high: float,
+    ) -> np.ndarray:
+        """Masks SI index to the allowed depth ranges. Values outside of the depth
+        range are replaced with defaults. Input array NaNs are propogated.
 
-        Also ensures areas outside the hydro domain remain NaN.
+        Note: this function requires a 60m input array in order to correctly
+        calculate the final mean value.
+
+        Parameters
+        ----------
+        si_arr_60m : np.ndarray
+            The input array, wich must be 60m.
+        water_depth_subset : np.ndarray
+            The water depth subset used to determine the depth thresholds.
+        low : float
+            The lower thresholed, i.e. 0.5m
+        high : float
+            The high threshold, i.e. 3m
+
+        Returns:
+            A 480m array where the value is an average of 60m SI results.
         """
-        ## Apply hydro domain mask
-        # si_array = np.where(np.isnan(self.hydro_domain_480), np.nan, si_array)
+        # only apply masks where SI values are valid (not NaN)
+        mask_low = (water_depth_subset < low) & (~np.isnan(si_arr_60m))
+        mask_high = (water_depth_subset > high) & (~np.isnan(si_arr_60m))
 
-        backwaters_mask = (self.water_depth_midsummer <= 0) & (
-            self.water_depth_midsummer > 3
-        )
-        si_array[backwaters_mask] = np.nan
-        # return si_array
-        return NotImplementedError
+        # assumes the inputs array already has SI values applied to all valid pixels
+        si_arr_60m[mask_low] = 0
+        si_arr_60m[mask_high] = 0.1
+
+        # get mean SI
+        return utils.coarsen_array(si_arr_60m)
 
     def _setup_logger(self):
         """Set up the logger for the class."""

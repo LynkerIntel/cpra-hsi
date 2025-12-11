@@ -85,7 +85,7 @@ class RiverineCatfishHSI:
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean_60m,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
-            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60,
+            v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
             v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,

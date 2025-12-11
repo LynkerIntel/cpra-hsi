@@ -339,18 +339,21 @@ class RiverineCatfishHSI:
         This SI uses 60m arrays to create the final 480m SI result.
         """
         self._logger.info("Running SI 5")
-        # template needs to be 60m, to apply rules at 60m
-        si_5 = self._create_template_array(
-            self.v5_avg_temp_in_midsummer, cell=False
-        )
 
         if self.v5_avg_temp_in_midsummer is None:
             self._logger.info(
                 "Average midsummer water temperature within pools, backwaters is not provided. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_5 = self.template.copy()
             si_5[~np.isnan(si_5)] = 1
 
         else:
+            # create 60m template for data processing
+            si_5 = self._create_template_array(
+                self.v5_avg_temp_in_midsummer, cell=False
+            )
+
             # condition 1
             mask_1 = self.v5_avg_temp_in_midsummer < 17
             si_5[mask_1] = 0
@@ -476,18 +479,22 @@ class RiverineCatfishHSI:
         This SI uses 60m arrays to create the final 480m SI result.
         """
         self._logger.info("Running SI 8")
-        si_8 = self._create_template_array(
-            self.v8_avg_min_do_in_midsummer, cell=False
-        )
 
         if self.v8_avg_min_do_in_midsummer is None:
             self._logger.info(
                 "Avg min DO levels within pools, backwaters, during midsummer"
                 "is not provided. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_8 = self.template.copy()
             si_8[~np.isnan(si_8)] = 1
 
         else:
+            # create 60m template for data processing
+            si_8 = self._create_template_array(
+                self.v8_avg_min_do_in_midsummer, cell=False
+            )
+
             # condition 1
             mask_1 = self.v8_avg_min_do_in_midsummer < 1
             si_8[mask_1] = 0
@@ -558,17 +565,20 @@ class RiverineCatfishHSI:
         """Average water temperatures (May to July) within pools, backwaters,
         during spawning and embryo development (Embryo)"""
         self._logger.info("Running SI 10")
-        # 60m array required
-        si_10 = self._create_template_array(cell=False)
 
         if self.v10_water_temp_may_july_mean is None:
             self._logger.info(
                 "Avg water temp within pools, backwaters, during spawning and embryo development (Embryo)"
                 "is not provided. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_10 = self.template.copy()
             si_10[~np.isnan(si_10)] = 1
 
         else:
+            # create 60m template for data processing
+            si_10 = self._create_template_array(cell=False)
+
             # condition 1
             mask_1 = self.v10_water_temp_may_july_mean <= 15.5
             si_10[mask_1] = 0

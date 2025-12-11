@@ -258,8 +258,8 @@ class RiverineCatfishHSI:
                 -0.0125 * (self.v1_pct_pools_avg_summer_flow[mask_3])
             ) + 1.75
 
-            # # propogate nans from source array
-            si_1[np.isnan(self.v2_pct_cover_in_summer_pools_bw)] = np.nan
+            # propagate nans from source array
+            si_1[np.isnan(self.v1_pct_pools_avg_summer_flow)] = np.nan
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

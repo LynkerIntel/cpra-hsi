@@ -116,7 +116,9 @@ class BlackCrappieHSI:
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
 
-    def _create_template_array(self, *input_arrays) -> np.ndarray:
+    def _create_template_array(
+        self, *input_arrays, cell: bool = True
+    ) -> np.ndarray:
         """Create an array from a template where valid pixels are 999.0, and
         NaN values are propagated from hydro domain and optional input arrays.
 
@@ -125,15 +127,23 @@ class BlackCrappieHSI:
         *input_arrays : np.ndarray, optional
             One or more input arrays from which NaN values will be propagated
 
+        cell : bool
+            True if template should be created at 480m size, False if
+            60m (high resolution). Defaults to True (480m).
+
         Returns
         -------
         np.ndarray
             Template array with 999.0 for valid pixels and NaN elsewhere
         """
         # Start with hydro domain mask
-        arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+        if cell is True:
+            arr = np.where(np.isnan(self.hydro_domain_480), np.nan, 999.0)
+        else:
+            arr = np.where(np.isnan(self.hydro_domain_60), np.nan, 999.0)
 
         # Propagate NaN from any input arrays
+        # used only if SI var has a unique domain from water depth
         for input_arr in input_arrays:
             if input_arr is not None:
                 arr = np.where(np.isnan(input_arr), np.nan, arr)

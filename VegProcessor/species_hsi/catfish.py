@@ -290,6 +290,9 @@ class RiverineCatfishHSI:
             mask_2 = self.v2_pct_cover_in_summer_pools_bw >= 40
             si_2[mask_2] = 1
 
+            # propogate nans from source array
+            si_2[np.isnan(self.v2_pct_cover_in_summer_pools_bw)] = np.nan
+
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 

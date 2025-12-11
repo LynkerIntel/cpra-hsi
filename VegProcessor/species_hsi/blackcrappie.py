@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import numpy as np
 import logging
+import utils
 
 
 @dataclass
@@ -15,8 +16,10 @@ class BlackCrappieHSI:
     """
 
     hydro_domain_480: np.ndarray = None
+    hydro_domain_60: np.ndarray = None
     dem_480: np.ndarray = None
-    water_depth_midsummer: np.ndarray = None
+    water_depth_july_august_mean: np.ndarray = None
+    water_depth_july_august_mean_60m: np.ndarray = None
 
     v1_max_monthly_avg_summer_turbidity: np.ndarray = None
     v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray = None
@@ -82,7 +85,9 @@ class BlackCrappieHSI:
             v14_max_salinity_gs=hsi_instance.salinity_max_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            water_depth_midsummer=hsi_instance.water_depth_july_august_mean,
+            hydro_domain_60=hsi_instance.hydro_domain,
+            water_depth_july_august_mean=hsi_instance.water_depth_july_august_mean,
+            water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
         )
 
     def __post_init__(self):
@@ -249,19 +254,28 @@ class BlackCrappieHSI:
 
     def calculate_si_2(self) -> np.ndarray:
         """Percent cover (vegetation, brush, debris, standing timber, etc.)
-        during midsummer in pools, overflow areas, and backwaters"""
+        during July-August in pools, overflow areas, and backwaters
+
+        This SI uses 60m arrays to create the final 480m SI result.
+        """
         self._logger.info("Running SI 2")
-        si_2 = self.template.copy()
 
         # set to ideal
         if self.v2_pct_cover_in_midsummer_pools_overflow_bw is None:
             self._logger.info(
-                "Pct cover during midsummer in pools, overflow areas, and backwaters "
+                "Pct cover during July-August in pools, overflow areas, and backwaters "
                 "assumes ideal conditions. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_2 = self.template.copy()
             si_2[~np.isnan(si_2)] = 1
 
         else:
+            # create 60m template for data processing
+            si_2 = self._create_template_array(
+                self.v2_pct_cover_in_midsummer_pools_overflow_bw, cell=False
+            )
+
             # condition 1
             mask_1 = (
                 self.v2_pct_cover_in_midsummer_pools_overflow_bw >= 25
@@ -283,6 +297,14 @@ class BlackCrappieHSI:
                 -0.04
                 * (self.v2_pct_cover_in_midsummer_pools_overflow_bw[mask_3])
             ) + 4.37
+
+            # Apply pools/backwaters depth masking and coarsen to 480m
+            si_2 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_2,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=3.0,
+            )
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

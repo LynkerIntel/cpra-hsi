@@ -161,6 +161,8 @@ class HSI(vt.VegTransition):
         self.water_temperature_may_july_mean = None
         self.water_temperature_feb_march_mean = None
 
+        # 60m water temperature for pools and backwaters
+        self.water_temperature_may_july_mean_60m = None
         self.water_temperature_july_sept_mean_60m = None
         self.water_temperature_july_august_mean_60m = None
 
@@ -419,7 +421,12 @@ class HSI(vt.VegTransition):
             self.water_temperature_feb_march_mean = (
                 self._get_water_temperature_subset(months=[2, 3])
             )
-            # 60m
+            # 60m water temperature
+            self.water_temperature_may_july_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[5, 6, 7], cell=False
+                )
+            )
             self.water_temperature_july_august_mean_60m = (
                 self._get_water_temperature_subset(months=[7, 8], cell=False)
             )
@@ -604,7 +611,7 @@ class HSI(vt.VegTransition):
 
     def _load_velocity_general(self, water_year: int) -> np.ndarray | None:
         """Load velocity data from either Delft3D or MIKE 21 models."""
-        if self.netcdf_water_temperature_path is not None:
+        if self.netcdf_velocity_path is not None:
             self._logger.info(
                 f"Loading velocity data with universal daily method."
             )

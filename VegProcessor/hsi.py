@@ -133,6 +133,7 @@ class HSI(vt.VegTransition):
 
         self.water_depth_july_august_mean_60m = None
         self.water_depth_july_sept_mean_60m = None
+        self.water_depth_may_july_mean_60m = None
 
         # HSI models
         self.alligator = None
@@ -399,6 +400,10 @@ class HSI(vt.VegTransition):
         )
         self.water_depth_july_sept_mean_60m = self._get_daily_depth_filtered(
             months=[7, 8, 9],
+            cell=False,
+        )
+        self.water_depth_may_july_mean_60m = self._get_daily_depth_filtered(
+            months=[5, 6, 7],
             cell=False,
         )
 
@@ -769,7 +774,7 @@ class HSI(vt.VegTransition):
         mask = (da >= low) & (da <= high)
         mask_float = mask.astype(float)
         pct_pools = mask_float.coarsen(x=8, y=8, boundary="pad").mean() * 100
-        self.pct_pools = pct_pools
+        self.pct_pools = pct_pools.values
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.

@@ -86,7 +86,7 @@ class RiverineCatfishHSI:
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean_60m,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
             v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
-            v18_avg_vel_summer_flow=hsi_instance.catfish_avg_vel_summer_flow,
+            v18_avg_vel_summer_flow=hsi_instance.velocity,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
@@ -678,16 +678,17 @@ class RiverineCatfishHSI:
     def calculate_si_12(self) -> np.ndarray:
         """Average midsummer water temperature within pools, backwaters (Fry)"""
         self._logger.info("Running SI 12")
-        si_12 = self._create_template_array(cell=False)
 
         if self.v12_avg_midsummer_temp_in_pools_bw_fry is None:
             self._logger.info(
                 "Average midsummer water temperature within pools, backwaters (Fry)"
                 "is not provided. Setting index to 1."
             )
+            si_12 = self.template.copy()
             si_12[~np.isnan(si_12)] = 1
 
         else:
+            si_12 = self._create_template_array(cell=False)
             # condition 1
             mask_1 = self.v12_avg_midsummer_temp_in_pools_bw_fry <= 15
             si_12[mask_1] = 0
@@ -771,16 +772,17 @@ class RiverineCatfishHSI:
     def calculate_si_14(self) -> np.ndarray:
         """Average midsummer water temperature within pools, backwaters (Juvenile)"""
         self._logger.info("Running SI 14")
-        si_14 = self._create_template_array(cell=False)
 
         if self.v14_avg_midsummer_temp_in_pools_bw_juvenile is None:
             self._logger.info(
                 "Average midsummer water temperature within "
                 "pools, backwaters (Juvenile) is not provided. Setting index to 1."
             )
+            si_14 = self.template.copy()
             si_14[~np.isnan(si_14)] = 1
 
         else:
+            si_14 = self._create_template_array(cell=False)
             # condition 1
             mask_1 = (
                 self.v14_avg_midsummer_temp_in_pools_bw_juvenile > 10
@@ -840,9 +842,9 @@ class RiverineCatfishHSI:
     def calculate_si_18(self) -> np.ndarray:
         """Average current velocity in cover areas during average summer flow"""
         self._logger.info("Running SI 18")
-        si_18 = self.template.copy()
 
         if self.v18_avg_vel_summer_flow is None:
+            si_18 = self.template.copy()
             self._logger.info(
                 "Average current velocity in cover areas during average summer flow"
                 "is not provided. Setting index to 1."
@@ -850,6 +852,7 @@ class RiverineCatfishHSI:
             si_18[~np.isnan(si_18)] = 1
 
         else:
+            si_18 = self._create_template_array(cell=False)
             # condition 1
             mask_1 = self.v18_avg_vel_summer_flow <= 15
             si_18[mask_1] = 1
@@ -867,6 +870,13 @@ class RiverineCatfishHSI:
             # condition 3
             mask_3 = self.v18_avg_vel_summer_flow >= 38
             si_18[mask_3] = 0.1
+
+            si_18 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_18,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_18, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

@@ -270,7 +270,8 @@ class HSI(vt.VegTransition):
         # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
         self.catfish_avg_vel_summer_flow = None
 
-        self._create_output_file()
+        self._create_output_file(resolution=480)
+        self._create_output_file(resolution=60)
 
     def _load_config_attributes(self):
         """Load configuration attributes from the config dictionary."""
@@ -508,7 +509,8 @@ class HSI(vt.VegTransition):
                 if species in species_map:
                     setattr(self, species, species_map[species].from_hsi(self))
 
-            self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
+            self._append_480m_hsi_vars_to_netcdf(timestep=self.current_timestep)
+            self._append_60m_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -1460,31 +1462,45 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    def _create_output_file(self):
+    def _create_output_file(self, resolution: int = 480):
         """HSI: Create NetCDF file for data output.
+
+        Parameters
+        ----------
+        resolution : int
+            Resolution in meters (480 or 60). Defaults to 480.
 
         Returns
         -------
         None
         """
-
-        self.netcdf_filepath = os.path.join(
-            self.output_dir_path, f"{self.file_name}.nc"
-        )
+        # Set filepath based on resolution
+        if resolution == 480:
+            self.netcdf_filepath = os.path.join(
+                self.output_dir_path, f"{self.file_name}.nc"
+            )
+        elif resolution == 60:
+            self.netcdf_filepath_60m = os.path.join(
+                self.output_dir_path, f"{self.file_name}_60m.nc"
+            )
+        else:
+            raise ValueError(f"Resolution must be 480 or 60, got {resolution}")
 
         # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
         da = da.squeeze(drop="band")  # Drop 'band' dimension if it exists
         da = da.rio.write_crs("EPSG:6344")  # Assign CRS
 
-        # Resample to 480m resolution, using rioxarray, with preserved correct coords and
-        # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
-        # projected coords.
-        da = da.rio.reproject(
-            da.rio.crs, resolution=480, resampling=Resampling.average
-        )
+        # Resample to target resolution if needed
+        if resolution != 60:
+            # Resample using rioxarray, with preserved correct coords and
+            # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
+            # projected coords.
+            da = da.rio.reproject(
+                da.rio.crs, resolution=resolution, resampling=Resampling.average
+            )
 
-        # use new 480m coords
+        # use coordinates at target resolution
         x = da.coords["x"].values
         y = da.coords["y"].values
 
@@ -1532,19 +1548,20 @@ class HSI(vt.VegTransition):
                     },
                 ),
             },
-            attrs={"title": "HSI"},
+            attrs={"title": f"HSI {resolution}m" if resolution == 60 else "HSI"},
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save dataset to NetCDF with explicit encoding
-        ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
+        filepath = self.netcdf_filepath_60m if resolution == 60 else self.netcdf_filepath
+        ds.to_netcdf(filepath, encoding=encoding)
         self._logger.info(
-            "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
+            "Initialized %sm NetCDF file with CRS: %s", resolution, filepath
         )
 
-    def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """Append timestep data to the NetCDF file.
+    def _append_480m_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append timestep data to the 480m NetCDF file.
 
         TODO: add warning if arrays are skipped because they are None
         TODO: move dict of arrays attrs to YAML or similar. It is too long
@@ -1607,19 +1624,165 @@ class HSI(vt.VegTransition):
             encoding=encoding,
         )
         ds_loaded.close()
-        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+        self._logger.info("Appended timestep %s to 480m NetCDF file.", timestep_str)
+
+    def _append_60m_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append 60m QC variables to the 60m NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
+        """
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float64",
+            }
+        }
+
+        timestep_str = timestep.strftime("%Y-%m-%d")
+
+        # Define 60m QC variables to output
+        qc_60m_variables = {
+            "water_depth_july_august_mean": [
+                self.water_depth_july_august_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth July-August mean",
+                    "description": (
+                        "Mean water depth for July-August period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_5, "
+                        "blackcrappie SI_2, SI_4, SI_8."
+                    ),
+                },
+            ],
+            "water_depth_july_sept_mean": [
+                self.water_depth_july_sept_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth July-September mean",
+                    "description": (
+                        "Mean water depth for July-September period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_8, SI_12, "
+                        "SI_14, SI_18."
+                    ),
+                },
+            ],
+            "water_depth_may_july_mean": [
+                self.water_depth_may_july_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth May-July mean",
+                    "description": (
+                        "Mean water depth for May-July period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_10."
+                    ),
+                },
+            ],
+            "water_temperature_july_august_mean": [
+                self.water_temperature_july_august_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature July-August mean",
+                    "description": (
+                        "Mean water temperature for July-August period at 60m resolution. "
+                        "Used in catfish SI_5, blackcrappie SI_8, SI_9, SI_10."
+                    ),
+                },
+            ],
+            "water_temperature_july_sept_mean": [
+                self.water_temperature_july_sept_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature July-September mean",
+                    "description": (
+                        "Mean water temperature for July-September period at 60m resolution. "
+                        "Used in catfish SI_12, SI_14."
+                    ),
+                },
+            ],
+            "water_temperature_may_july_mean": [
+                self.water_temperature_may_july_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature May-July mean",
+                    "description": (
+                        "Mean water temperature for May-July period at 60m resolution. "
+                        "Used in catfish SI_10."
+                    ),
+                },
+            ],
+        }
+
+        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+            ds_loaded = ds.load()  # loads into memory and closes file
+
+        for var_name, (data, dtype, nc_attrs) in qc_60m_variables.items():
+            if data is not None:  # only write arrays that have data
+                netcdf_dtype = np.int8 if dtype == bool else dtype
+
+                # if the var exists in the dataset, if not, initialize it
+                if var_name not in ds_loaded:
+                    shape = (
+                        len(ds_loaded.time),
+                        len(ds_loaded.y),
+                        len(ds_loaded.x),
+                    )
+                    default_value = 0 if dtype == bool else np.nan
+                    ds_loaded[var_name] = (
+                        ["time", "y", "x"],
+                        np.full(shape, default_value, dtype=netcdf_dtype),
+                        nc_attrs,
+                    )
+
+                # boolean to int8 (0 and 1)
+                if dtype == bool:
+                    data = np.nan_to_num(data, nan=False).astype(np.int8)
+
+                ds_loaded[var_name].loc[{"time": timestep}] = data.astype(
+                    netcdf_dtype
+                )
+
+        # Save and close
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath_60m,
+            mode="a",
+            engine="h5netcdf",
+            encoding=encoding,
+        )
+        ds_loaded.close()
+        self._logger.info("Appended timestep %s to 60m NetCDF file.", timestep_str)
 
     def post_process(self):
         """HSI post process
 
-        (1) Opens file and then crops to hydro domain
-        (2) Create sidecar file with varibles in the NetCDF
+        (1) Opens files and then crops to hydro domain
+        (2) Create sidecar files with variables in the NetCDFs
         """
-        # -------- crop data --------
+        # -------- crop 480m data --------
+        self._logger.info("Post-processing 480m NetCDF file")
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
             # create sidecar info
-            attrs_df = utils.dataset_attrs_to_df(
+            attrs_df_480 = utils.dataset_attrs_to_df(
                 ds,
                 selected_attrs=[
                     "long_name",
@@ -1635,12 +1798,40 @@ class HSI(vt.VegTransition):
 
         ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
 
-        # -------- create sidecar file ---------
-        self._logger.info("Creating variable name text file")
+        # -------- create 480m sidecar file ---------
+        self._logger.info("Creating 480m variable name text file")
         outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_hsi_netcdf_variables.csv"
         )
-        attrs_df.to_csv(outpath, index=False)
+        attrs_df_480.to_csv(outpath, index=False)
+
+        # -------- crop 60m data --------
+        self._logger.info("Post-processing 60m NetCDF file")
+        with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+            ds_out_60m = ds.where(~np.isnan(self.hydro_domain)).copy(deep=True)
+            # create sidecar info
+            attrs_df_60 = utils.dataset_attrs_to_df(
+                ds,
+                selected_attrs=[
+                    "long_name",
+                    "description",
+                    "units",
+                ],
+            )
+
+            ds_out_60m = ds_out_60m.load()
+
+        if os.path.exists(self.netcdf_filepath_60m):
+            os.remove(self.netcdf_filepath_60m)
+
+        ds_out_60m.to_netcdf(self.netcdf_filepath_60m, mode="w", engine="h5netcdf")
+
+        # -------- create 60m sidecar file ---------
+        self._logger.info("Creating 60m variable name text file")
+        outpath_60m = os.path.join(
+            self.run_metadata_dir, f"{self.file_name}_hsi_60m_netcdf_variables.csv"
+        )
+        attrs_df_60.to_csv(outpath_60m, index=False)
 
         self._logger.info("Post-processing complete.")
 

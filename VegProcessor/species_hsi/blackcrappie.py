@@ -15,25 +15,24 @@ class BlackCrappieHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_480: np.ndarray = None
-    hydro_domain_60: np.ndarray = None
-    dem_480: np.ndarray = None
-    water_depth_july_august_mean: np.ndarray = None
-    water_depth_july_august_mean_60m: np.ndarray = None
+    hydro_domain_480: np.ndarray
+    hydro_domain_60: np.ndarray
+    water_depth_july_august_mean_60m: np.ndarray
+    water_depth_july_sept_mean_60m: np.ndarray
 
-    v1_max_monthly_avg_summer_turbidity: np.ndarray = None
-    v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray = None
-    v3_stream_gradient: np.ndarray = None
-    v4_avg_vel_summer_flow_pools_bw: np.ndarray = None
-    v5_pct_pools_bw_avg_spring_summer_flow: np.ndarray = None
-    v7_ph_year: np.ndarray = None
-    v8_most_suit_temp_in_midsummer_pools_bw_adult: np.ndarray = None
-    v9_most_suit_temp_in_midsummer_pools_bw_juvenile: np.ndarray = None
-    v10_avg_midsummer_temp_in_pools_bw_fry: np.ndarray = None
-    v11_avg_spawning_temp_in_bw_embryo: np.ndarray = None
-    v12_min_do_in_midsummer_temp_strata: np.ndarray = None
-    v13_min_do_in_spawning_bw: np.ndarray = None
-    v14_max_salinity_gs: np.ndarray = None
+    v1_max_monthly_avg_summer_turbidity: np.ndarray
+    v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray
+    v3_stream_gradient: np.ndarray
+    v4_avg_vel_summer_flow_pools_bw: np.ndarray
+    v5_pct_pools_bw_avg_spring_summer_flow: np.ndarray
+    v7_ph_year: np.ndarray
+    v8_most_suit_temp_in_midsummer_pools_bw_adult: np.ndarray
+    v9_most_suit_temp_in_midsummer_pools_bw_juvenile: np.ndarray
+    v10_avg_midsummer_temp_in_pools_bw_fry: np.ndarray
+    v11_avg_spawning_temp_in_bw_embryo: np.ndarray
+    v12_min_do_in_midsummer_temp_strata: np.ndarray
+    v13_min_do_in_spawning_bw: np.ndarray
+    v14_max_salinity_gs: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -74,7 +73,7 @@ class BlackCrappieHSI:
             v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
             v4_avg_vel_summer_flow_pools_bw=hsi_instance.blackcrappie_avg_vel_summer_flow_pools_bw,
-            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.blackcrappie_pct_pools_bw_avg_spring_summer_flow,
+            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_april_sept_mean,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
             v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean,
             v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean,
@@ -86,8 +85,9 @@ class BlackCrappieHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
-            water_depth_july_august_mean=hsi_instance.water_depth_july_august_mean,
+            # depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
+            water_depth_july_august_sept_60m=hsi_instance.water_depth_july_sept_mean_60m,
         )
 
     def __post_init__(self):
@@ -404,7 +404,7 @@ class BlackCrappieHSI:
             # Apply pools/backwaters depth masking and coarsen to 480m
             si_4 = self.mask_to_pools_backwaters_coarsen(
                 si_arr_60m=si_4,
-                water_depth_subset=self.water_depth_july_august_mean_60m,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
                 low=0.5,
                 high=3.0,
             )
@@ -486,18 +486,27 @@ class BlackCrappieHSI:
 
     def calculate_si_8(self) -> np.ndarray:
         """Most suitable water temperature in pools and backwaters
-        during midsummer (Jul - Aug) (adult)"""
+        during midsummer (Jul - Aug) (adult)
+
+        This SI uses 60m arrays to create the final 480m SI result.
+        """
         self._logger.info("Running SI 8")
-        si_8 = self.template.copy()
 
         if self.v8_most_suit_temp_in_midsummer_pools_bw_adult is None:
             self._logger.info(
                 "Most suitable water temperature in pools and backwaters during midsummer (adult)"
                 "is not provided. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_8 = self.template.copy()
             si_8[~np.isnan(si_8)] = 1
 
         else:
+            # create 60m template for data processing
+            si_8 = self._create_template_array(
+                self.v8_most_suit_temp_in_midsummer_pools_bw_adult, cell=False
+            )
+
             # condition 1
             mask_1 = (
                 self.v8_most_suit_temp_in_midsummer_pools_bw_adult <= 14
@@ -530,7 +539,13 @@ class BlackCrappieHSI:
                 + 4.86
             )
 
-        # TODO: apply backwater mask here? (either set to NaN or set to 0?)
+            # Apply pools/backwaters depth masking and coarsen to 480m
+            si_8 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_8,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=3.0,
+            )
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

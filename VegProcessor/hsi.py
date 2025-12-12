@@ -154,7 +154,6 @@ class HSI(vt.VegTransition):
 
         # HSI Variables
         self.pct_open_water = None
-        self.pct_pools = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
         self.water_temperature_july_august_mean = None
@@ -191,7 +190,8 @@ class HSI(vt.VegTransition):
         self.pct_blh = None
 
         self.pct_bare_ground = None
-        # self.pct_marsh = None # not currently in use
+        self.pct_pools_july_sept_mean = None
+        self.pct_pools_april_sept_mean = None
 
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
@@ -247,7 +247,6 @@ class HSI(vt.VegTransition):
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
         self.blackcrappie_avg_vel_summer_flow_pools_bw = None
-        self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
         self.blackcrappie_ph_year = None  # set to ideal
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
@@ -258,7 +257,6 @@ class HSI(vt.VegTransition):
         # self.blackcrappie_max_salinity_gs = None
 
         # catfish
-        self.catfish_pct_pools_avg_summer_flow = None
         self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None
         # self.catfish_avg_temp_in_midsummer_pools_bw = None
@@ -471,9 +469,19 @@ class HSI(vt.VegTransition):
         else:
             self.salinity_annual_mean = self.salinity
 
+        self.pct_pools_july_sept_mean = self._get_pct_pools(
+            months=[7, 8, 9],
+            low=3,
+            high=6,
+        )
+        self.pct_pools_april_sept_mean = self._get_pct_pools(
+            months=[4, 5, 6, 7, 8, 9],
+            low=0.5,
+            high=3,
+        )
+
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
-        self._calculate_pct_pools(months=[7, 8, 9])
         self._calculate_mast_percentage()
         self._calculate_near_forest(radius=4)
         self._calculate_story_assignment()
@@ -756,7 +764,12 @@ class HSI(vt.VegTransition):
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         self.pct_blh = ds_blh.to_numpy()
 
-    def _calculate_pct_pools(self, months, low=3, high=6):
+    def _get_pct_pools(
+        self,
+        months: list[int],
+        low: float = 3.0,
+        high: float = 6.0,
+    ):
         """Get percentage of "pool" pixels in each cell.
 
         Parameters
@@ -767,6 +780,11 @@ class HSI(vt.VegTransition):
             The lower end of the pools definition, defaults to 3m.
         high : float
             The high end of the pools definition, defaults to 6m.
+
+        Returns
+        -------
+        pct_pools : np.ndarray
+            480m numpy array of pct pools for given aggregation.
         """
         # subset water depth to time period
         ds = self.water_depth.sel(
@@ -777,7 +795,7 @@ class HSI(vt.VegTransition):
         mask = (da >= low) & (da <= high)
         mask_float = mask.astype(float)
         pct_pools = mask_float.coarsen(x=8, y=8, boundary="pad").mean() * 100
-        self.pct_pools = pct_pools.values
+        return pct_pools.values
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.

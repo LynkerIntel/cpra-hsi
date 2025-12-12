@@ -156,11 +156,9 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
-        self.water_temperature_july_sept_mean = None
-        self.water_temperature_may_july_mean = None
-        self.water_temperature_feb_march_mean = None
 
         # 60m water temperature for pools and backwaters
+        self.water_temperature_feb_march_mean_60m = None
         self.water_temperature_may_july_mean_60m = None
         self.water_temperature_july_sept_mean_60m = None
         self.water_temperature_july_august_mean_60m = None
@@ -412,19 +410,10 @@ class HSI(vt.VegTransition):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
-            # self.water_temperature_july_august_mean = (
-            #     self._get_water_temperature_subset(months=[7, 8])
-            # )
-            self.water_temperature_may_july_mean = (
-                self._get_water_temperature_subset(months=[5, 6, 7])
-            )
-            self.water_temperature_july_sept_mean = (
-                self._get_water_temperature_subset(months=[7, 8, 9])
-            )
-            self.water_temperature_feb_march_mean = (
-                self._get_water_temperature_subset(months=[2, 3])
-            )
             # 60m water temperature
+            self.water_temperature_feb_march_mean_60m = (
+                self._get_water_temperature_subset(months=[2, 3], cell=False)
+            )
             self.water_temperature_may_july_mean_60m = (
                 self._get_water_temperature_subset(
                     months=[5, 6, 7], cell=False
@@ -509,7 +498,9 @@ class HSI(vt.VegTransition):
                 if species in species_map:
                     setattr(self, species, species_map[species].from_hsi(self))
 
-            self._append_480m_hsi_vars_to_netcdf(timestep=self.current_timestep)
+            self._append_480m_hsi_vars_to_netcdf(
+                timestep=self.current_timestep
+            )
             self._append_60m_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", date)
@@ -1263,7 +1254,9 @@ class HSI(vt.VegTransition):
         elif method == "upper-pctile-mean":
             # 67th percentile (upper 33% is above this)
             threshold = filtered_ds.quantile(0.67)
-            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")["salinity"]
+            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")[
+                "salinity"
+            ]
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
@@ -1497,7 +1490,9 @@ class HSI(vt.VegTransition):
             # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
             # projected coords.
             da = da.rio.reproject(
-                da.rio.crs, resolution=resolution, resampling=Resampling.average
+                da.rio.crs,
+                resolution=resolution,
+                resampling=Resampling.average,
             )
 
         # use coordinates at target resolution
@@ -1548,13 +1543,19 @@ class HSI(vt.VegTransition):
                     },
                 ),
             },
-            attrs={"title": f"HSI {resolution}m" if resolution == 60 else "HSI"},
+            attrs={
+                "title": f"HSI {resolution}m" if resolution == 60 else "HSI"
+            },
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save dataset to NetCDF with explicit encoding
-        filepath = self.netcdf_filepath_60m if resolution == 60 else self.netcdf_filepath
+        filepath = (
+            self.netcdf_filepath_60m
+            if resolution == 60
+            else self.netcdf_filepath
+        )
         ds.to_netcdf(filepath, encoding=encoding)
         self._logger.info(
             "Initialized %sm NetCDF file with CRS: %s", resolution, filepath
@@ -1624,7 +1625,9 @@ class HSI(vt.VegTransition):
             encoding=encoding,
         )
         ds_loaded.close()
-        self._logger.info("Appended timestep %s to 480m NetCDF file.", timestep_str)
+        self._logger.info(
+            "Appended timestep %s to 480m NetCDF file.", timestep_str
+        )
 
     def _append_60m_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
         """Append 60m QC variables to the 60m NetCDF file.
@@ -1730,6 +1733,18 @@ class HSI(vt.VegTransition):
                     ),
                 },
             ],
+            "water_temperature_feb_march_mean": [
+                self.water_temperature_feb_march_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "Deg C",
+                    "long_name": "water temperature February-March mean",
+                    "description": (
+                        "Mean water temperature for February-March period at 480m resolution"
+                    ),
+                },
+            ],
         }
 
         with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
@@ -1769,7 +1784,9 @@ class HSI(vt.VegTransition):
             encoding=encoding,
         )
         ds_loaded.close()
-        self._logger.info("Appended timestep %s to 60m NetCDF file.", timestep_str)
+        self._logger.info(
+            "Appended timestep %s to 60m NetCDF file.", timestep_str
+        )
 
     def post_process(self):
         """HSI post process
@@ -1824,12 +1841,15 @@ class HSI(vt.VegTransition):
         if os.path.exists(self.netcdf_filepath_60m):
             os.remove(self.netcdf_filepath_60m)
 
-        ds_out_60m.to_netcdf(self.netcdf_filepath_60m, mode="w", engine="h5netcdf")
+        ds_out_60m.to_netcdf(
+            self.netcdf_filepath_60m, mode="w", engine="h5netcdf"
+        )
 
         # -------- create 60m sidecar file ---------
         self._logger.info("Creating 60m variable name text file")
         outpath_60m = os.path.join(
-            self.run_metadata_dir, f"{self.file_name}_hsi_60m_netcdf_variables.csv"
+            self.run_metadata_dir,
+            f"{self.file_name}_hsi_60m_netcdf_variables.csv",
         )
         attrs_df_60.to_csv(outpath_60m, index=False)
 

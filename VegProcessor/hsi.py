@@ -229,7 +229,7 @@ class HSI(vt.VegTransition):
         self.maturity_dbh = None  # always ideal
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
-        self.mean_high_salinity_gs = None  # TODO
+        self.mean_high_salinity_march_nov = None
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
@@ -464,7 +464,10 @@ class HSI(vt.VegTransition):
                 months=[5, 6, 7],
                 method="max",
             )
-            # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+            self.mean_high_salinity_march_nov = self._get_salinity_subset(
+                method="upper-pctile-mean",
+                months=[3, 4, 5, 6, 7, 8, 9, 10, 11],
+            )
         else:
             self.salinity_annual_mean = self.salinity
 
@@ -1218,7 +1221,9 @@ class HSI(vt.VegTransition):
             provided, the default is all months
 
         method : str (optional)
-            How to reduce. One of ["mean", "max"]. Defaults to mean.
+            How to reduce. One of ["mean", "max", "upper-pctile-mean"].
+            Defaults to mean. "upper-pctile-mean" is the mean of the
+            upper 33% of values.
 
         Return
         ------
@@ -1236,15 +1241,13 @@ class HSI(vt.VegTransition):
             da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
         elif method == "max":
             da = filtered_ds.max(dim="time", skipna=True)["salinity"]
+        elif method == "upper-pctile-mean":
+            # 67th percentile (upper 33% is above this)
+            threshold = filtered_ds.quantile(0.67)
+            da = filtered_ds.where(filtered_ds >= threshold).mean()
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
-
-    def _get_mean_high_salinity_gs(self):
-        """
-        Get mean high salinity during the growing season. Used
-        in SWAMP WVA SI_4.
-        """
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a

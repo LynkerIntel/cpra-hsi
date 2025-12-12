@@ -719,44 +719,6 @@ class VegTransition:
             )
             return salinity
 
-    def _get_daily_depth_filtered(
-        self,
-        months: None | list[int] = None,
-        cell: bool = True,
-    ) -> np.ndarray:
-        """
-        Reduce daily depth dataset to temporal mean, then resample to
-        480m cell size.
-
-        Parameters
-        ----------
-        months : list (optional)
-            List of months to average water depth over. If a list is not
-            provided, the default is all months
-
-        cell : bool (optional)
-            True if resampling input to 480m after temporal filter.
-            Defaults to True.
-
-        Return
-        ------
-        da_coarse : np.ndarray
-            A water depth data, averaged over a list of months (or defaulting
-            to one year) and then upscaled to 480m.
-        """
-        if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
-
-        filtered_ds = self.water_depth.sel(
-            time=self.water_depth["time"].dt.month.isin(months)
-        )
-        da = filtered_ds.mean(dim="time", skipna=True)["height"]
-
-        if cell is True:
-            da = da.coarsen(y=8, x=8, boundary="pad").mean()
-
-        return da.to_numpy()
-
     def _reproject_match_to_dem(
         self, ds: xr.Dataset | xr.DataArray
     ) -> xr.Dataset | xr.DataArray:
@@ -1407,20 +1369,6 @@ class VegTransition:
             self.qc_june_water_depth,
         ) = utils.qc_tree_establishment_info(self.water_depth)
 
-        # Water depth arrays for pools and backwaters masking (60m)
-        self.water_depth_july_august_mean = self._get_daily_depth_filtered(
-            months=[7, 8],
-            cell=False,
-        )
-        self.water_depth_july_sept_mean = self._get_daily_depth_filtered(
-            months=[7, 8, 9],
-            cell=False,
-        )
-        self.water_depth_may_july_mean = self._get_daily_depth_filtered(
-            months=[5, 6, 7],
-            cell=False,
-        )
-
         self._logger.info("Saving QC arrays to NetCDF.")
         self._append_veg_vars_to_netcdf(
             timestep=self.current_timestep,
@@ -1435,9 +1383,6 @@ class VegTransition:
                 "qc_april_water_depth",
                 "qc_may_water_depth",
                 "qc_june_water_depth",
-                "water_depth_july_august_mean",
-                "water_depth_july_sept_mean",
-                "water_depth_may_july_mean",
             ],
         )
         # Delete QC arrays after saving to reduce memory usage
@@ -1450,9 +1395,6 @@ class VegTransition:
         self.qc_april_water_depth = None
         self.qc_may_water_depth = None
         self.qc_june_water_depth = None
-        self.water_depth_july_august_mean = None
-        self.water_depth_july_sept_mean = None
-        self.water_depth_may_july_mean = None
         gc.collect()
 
 

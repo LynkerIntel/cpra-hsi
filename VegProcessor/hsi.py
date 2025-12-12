@@ -374,7 +374,7 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # water depth vars --------------------------------------
+        # water depth vars -----------------------------------------------
         self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_jan_aug_mean = self._get_daily_depth_filtered(
@@ -410,7 +410,7 @@ class HSI(vt.VegTransition):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
-            # 60m water temperature
+            # 60m water temperature ----------------------------------------
             self.water_temperature_feb_march_mean_60m = (
                 self._get_water_temperature_subset(months=[2, 3], cell=False)
             )
@@ -458,6 +458,7 @@ class HSI(vt.VegTransition):
         else:
             self.salinity_annual_mean = self.salinity
 
+        # pct pools --------------------------------------------------
         self.pct_pools_july_sept_mean = self._get_pct_pools(
             months=[7, 8, 9],
             low=3,

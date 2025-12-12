@@ -88,7 +88,7 @@ class BlackCrappieHSI:
             hydro_domain_60=hsi_instance.hydro_domain,
             # depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
-            water_depth_july_august_sept_60m=hsi_instance.water_depth_july_sept_mean_60m,
+            water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
         )
 
     def __post_init__(self):

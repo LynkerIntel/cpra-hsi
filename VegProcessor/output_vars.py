@@ -781,7 +781,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "ppt",
                 "long_name": "",
                 "description": "",
             },
@@ -791,7 +791,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "Deg C",
                 "long_name": "",
                 "description": "",
             },
@@ -1041,7 +1041,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1051,7 +1051,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1061,7 +1061,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1073,7 +1073,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "water depth April-June mean",
-                "description": "Mean water depth for April-June period at 480m resolution",
+                "description": (
+                    "Mean water depth for April-June period at 480m resolution"
+                ),
             },
         ],
         "water_depth_july_august_mean": [
@@ -1083,7 +1085,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "meters",
                 "long_name": "water depth July-August mean",
-                "description": "Mean water depth for July-August period at 480m resolution",
+                "description": (
+                    "Mean water depth for July-August period at 480m resolution"
+                ),
             },
         ],
         "water_temperature_feb_march_mean": [
@@ -1091,9 +1095,11 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "degrees_Celsius",
+                "units": "Deg C",
                 "long_name": "water temperature February-March mean",
-                "description": "Mean water temperature for February-March period at 480m resolution",
+                "description": (
+                    "Mean water temperature for February-March period at 480m resolution"
+                ),
             },
         ],
         "water_temperature_july_sept_mean": [
@@ -1101,9 +1107,11 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "degrees_Celsius",
+                "units": "Deg C",
                 "long_name": "water temperature July-September mean",
-                "description": "Mean water temperature for July-September period at 480m resolution",
+                "description": (
+                    "Mean water temperature for July-September period at 480m resolution"
+                ),
             },
         ],
         "water_temperature_may_july_mean": [
@@ -1111,9 +1119,11 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "degrees_Celsius",
+                "units": "Deg C",
                 "long_name": "water temperature May-July mean",
-                "description": "Mean water temperature for May-July period at 480m resolution",
+                "description": (
+                    "Mean water temperature for May-July period at 480m resolution"
+                ),
             },
         ],
         "salinity_max_april_sept": [
@@ -1123,7 +1133,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "salinity maximum April-September",
-                "description": "Maximum salinity for April-September period at 480m resolution",
+                "description": (
+                    "Maximum salinity for April-September period at 480m resolution"
+                ),
             },
         ],
         "salinity_max_july_sept": [
@@ -1133,7 +1145,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "salinity maximum July-September",
-                "description": "Maximum salinity for July-September period at 480m resolution",
+                "description": (
+                    "Maximum salinity for July-September period at 480m resolution"
+                ),
             },
         ],
         "salinity_max_may_july": [
@@ -1143,7 +1157,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "salinity maximum May-July",
-                "description": "Maximum salinity for May-July period at 480m resolution",
+                "description": (
+                    "Maximum salinity for May-July period at 480m resolution"
+                ),
             },
         ],
         "salinity_mean_high_march_nov": [
@@ -1153,7 +1169,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "salinity mean high March-November",
-                "description": "Mean of upper 67th percentile salinity values for March-November period at 480m resolution",
+                "description": (
+                    "Mean of upper 67th percentile salinity values for March-November period at 480m resolution"
+                ),
             },
         ],
         "pct_pools_july_sept_mean": [
@@ -1163,7 +1181,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "%",
                 "long_name": "percent pools July-September mean",
-                "description": "Percentage of pool pixels for July-September period",
+                "description": (
+                    "Percentage of pool pixels for July-September period"
+                ),
             },
         ],
         "pct_pools_april_sept_mean": [
@@ -1173,7 +1193,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "%",
                 "long_name": "percent pools April-September mean",
-                "description": "Percentage of pool pixels for April-September period",
+                "description": (
+                    "Percentage of pool pixels for April-September period"
+                ),
             },
         ],
         "pct_shrub_scrub": [
@@ -1203,7 +1225,9 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "%",
                 "long_name": "percent mast-producing vegetation",
-                "description": "Percentage of vegetation with mast production (soft + hard mast combined)",
+                "description": (
+                    "Percentage of vegetation with mast production (soft + hard mast combined)"
+                ),
             },
         ],
         "pct_crops": [

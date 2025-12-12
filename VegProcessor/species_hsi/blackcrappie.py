@@ -356,18 +356,26 @@ class BlackCrappieHSI:
         return self.clip_array(si_3)
 
     def calculate_si_4(self) -> np.ndarray:
-        """Average current velocity in pools and backwater areas during average summer flow (Jul - Sept)"""
+        """Average current velocity in pools and backwater areas during average summer flow (Jul - Sept)
+
+        This SI uses 60m arrays to create the final 480m SI result.
+        """
         self._logger.info("Running SI 4")
-        si_4 = self.template.copy()
 
         if self.v4_avg_vel_summer_flow_pools_bw is None:
             self._logger.info(
                 "Average current velocity in pools and backwater areas during average "
                 "summer flow not provided. Setting index to 1."
             )
+            # create 480m template for None condition
+            si_4 = self.template.copy()
             si_4[~np.isnan(si_4)] = 1
 
         else:
+            # create 60m template for data processing
+            si_4 = self._create_template_array(
+                self.v4_avg_vel_summer_flow_pools_bw, cell=False
+            )
 
             # condition 1
             mask_1 = self.v4_avg_vel_summer_flow_pools_bw < 10
@@ -392,6 +400,14 @@ class BlackCrappieHSI:
             # condition 4
             mask_4 = self.v4_avg_vel_summer_flow_pools_bw >= 60
             si_4[mask_4] = 0
+
+            # Apply pools/backwaters depth masking and coarsen to 480m
+            si_4 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_4,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=3.0,
+            )
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

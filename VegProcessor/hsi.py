@@ -228,7 +228,7 @@ class HSI(vt.VegTransition):
         self.maturity_dbh = None  # always ideal
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
-        self.mean_high_salinity_march_nov = None
+        self.salinity_mean_high_march_nov = None
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
@@ -462,7 +462,7 @@ class HSI(vt.VegTransition):
                 months=[5, 6, 7],
                 method="max",
             )
-            self.mean_high_salinity_march_nov = self._get_salinity_subset(
+            self.salinity_mean_high_march_nov = self._get_salinity_subset(
                 method="upper-pctile-mean",
                 months=[3, 4, 5, 6, 7, 8, 9, 10, 11],
             )

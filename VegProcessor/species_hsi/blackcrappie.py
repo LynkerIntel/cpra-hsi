@@ -16,6 +16,7 @@ class BlackCrappieHSI:
     """
 
     hydro_domain_480: np.ndarray
+    dem_480: np.ndarray
     hydro_domain_60: np.ndarray
     water_depth_july_august_mean_60m: np.ndarray
     water_depth_july_sept_mean_60m: np.ndarray
@@ -313,7 +314,7 @@ class BlackCrappieHSI:
                 si_arr_60m=si_2,
                 water_depth_subset=self.water_depth_july_august_mean_60m,
                 low=0.5,
-                high=3.0,
+                high=6.0,
             )
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
@@ -406,7 +407,7 @@ class BlackCrappieHSI:
                 si_arr_60m=si_4,
                 water_depth_subset=self.water_depth_july_sept_mean_60m,
                 low=0.5,
-                high=3.0,
+                high=6.0,
             )
 
         if np.any(np.isclose(si_4, 999.0, atol=1e-5)):
@@ -544,7 +545,7 @@ class BlackCrappieHSI:
                 si_arr_60m=si_8,
                 water_depth_subset=self.water_depth_july_august_mean_60m,
                 low=0.5,
-                high=3.0,
+                high=6.0,
             )
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
@@ -556,28 +557,31 @@ class BlackCrappieHSI:
         """Most suitable water temperature in pools and backwaters
         during midsummer (Jul - Aug) (juvenile)"""
         self._logger.info("Running SI 9")
-        si_9 = self.template.copy()
 
         if self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile is None:
             self._logger.info(
                 "Most suitable water temperature in pools and backwaters during midsummer (juvenile)"
                 "is not provided. Setting index to 1."
             )
+            si_9 = self.template.copy()
             si_9[~np.isnan(si_9)] = 1
 
         else:
+            # create 60m template for data processing
+            si_9 = self._create_template_array(
+                self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile,
+                cell=False,
+            )
             # condition 1
             mask_1 = (
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile <= 11
             ) | (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile >= 30)
             si_9[mask_1] = 0
-
             # condition 2
             mask_2 = (
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile > 22
             ) & (self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile <= 24)
             si_9[mask_2] = 1
-
             # condition 3
             mask_3 = (
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile > 11
@@ -591,7 +595,6 @@ class BlackCrappieHSI:
                 )
                 - 1
             )
-
             # condition 4
             mask_4 = (
                 self.v9_most_suit_temp_in_midsummer_pools_bw_juvenile > 24
@@ -605,6 +608,12 @@ class BlackCrappieHSI:
                 )
                 + 5
             )
+            si_9 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_9,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=6.0,
+            )
 
         if np.any(np.isclose(si_9, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -614,16 +623,20 @@ class BlackCrappieHSI:
     def calculate_si_10(self) -> np.ndarray:
         """Average water temperature in pools and backwaters during midsummer (fry)"""
         self._logger.info("Running SI 10")
-        si_10 = self.template.copy()
 
         if self.v10_avg_midsummer_temp_in_pools_bw_fry is None:
             self._logger.info(
                 "Avg water temp in pools and backwaters during midsummer (fry)"
                 "is not provided. Setting index to 1."
             )
+            si_10 = self.template.copy()
             si_10[~np.isnan(si_10)] = 1
 
         else:
+            si_10 = self._create_template_array(
+                self.v10_avg_midsummer_temp_in_pools_bw_fry,
+                cell=False,
+            )
             # condition 1
             mask_1 = (self.v10_avg_midsummer_temp_in_pools_bw_fry <= 12) | (
                 self.v10_avg_midsummer_temp_in_pools_bw_fry > 30
@@ -660,6 +673,13 @@ class BlackCrappieHSI:
                 -0.167 * (self.v10_avg_midsummer_temp_in_pools_bw_fry[mask_5])
             ) + 5
 
+            si_10 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_10,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=6.0,
+            )
+
         if np.any(np.isclose(si_10, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -668,16 +688,20 @@ class BlackCrappieHSI:
     def calculate_si_11(self) -> np.ndarray:
         """Average water temperature in backwaters during spawning (embryo) (Feb - Mar)"""
         self._logger.info("Running SI 11")
-        si_11 = self.template.copy()
 
         if self.v11_avg_spawning_temp_in_bw_embryo is None:
             self._logger.info(
                 "Average water temperature in backwaters during spawning (embryo) is not provided"
                 "Setting index to 1."
             )
+            si_11 = self.template.copy()
             si_11[~np.isnan(si_11)] = 1
 
         else:
+            si_11 = self._create_template_array(
+                self.v11_avg_spawning_temp_in_bw_embryo,
+                cell=False,
+            )
             # condition 1
             mask_1 = (self.v11_avg_spawning_temp_in_bw_embryo <= 12) | (
                 self.v11_avg_spawning_temp_in_bw_embryo >= 23
@@ -705,6 +729,13 @@ class BlackCrappieHSI:
             si_11[mask_4] = (
                 -0.33 * (self.v11_avg_spawning_temp_in_bw_embryo[mask_4])
             ) + 7.7
+
+            si_11 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_11,
+                water_depth_subset=self.water_depth_july_august_mean_60m,
+                low=0.5,
+                high=3.0,
+            )
 
         if np.any(np.isclose(si_11, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
@@ -839,7 +870,7 @@ class BlackCrappieHSI:
 
     def calculate_si_15(self) -> np.ndarray:
         """No logic exists for si_15."""
-        return NotImplementedError
+        return NotImplementedError()
 
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""

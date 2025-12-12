@@ -1263,7 +1263,7 @@ class HSI(vt.VegTransition):
         elif method == "upper-pctile-mean":
             # 67th percentile (upper 33% is above this)
             threshold = filtered_ds.quantile(0.67)
-            da = filtered_ds.where(filtered_ds >= threshold).mean()
+            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")["salinity"]
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()

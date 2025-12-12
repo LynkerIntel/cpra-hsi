@@ -156,7 +156,6 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
-        self.water_temperature_july_august_mean = None
         self.water_temperature_july_sept_mean = None
         self.water_temperature_may_july_mean = None
         self.water_temperature_feb_march_mean = None
@@ -412,9 +411,9 @@ class HSI(vt.VegTransition):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
-            self.water_temperature_july_august_mean = (
-                self._get_water_temperature_subset(months=[7, 8])
-            )
+            # self.water_temperature_july_august_mean = (
+            #     self._get_water_temperature_subset(months=[7, 8])
+            # )
             self.water_temperature_may_july_mean = (
                 self._get_water_temperature_subset(months=[5, 6, 7])
             )

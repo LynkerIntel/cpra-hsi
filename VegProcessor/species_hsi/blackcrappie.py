@@ -75,9 +75,9 @@ class BlackCrappieHSI:
             v4_avg_vel_summer_flow_pools_bw=hsi_instance.blackcrappie_avg_vel_summer_flow_pools_bw,
             v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_april_sept_mean,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
-            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean,
-            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean,
-            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean,
+            v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean_60,
+            v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean_60,
+            v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean_60,
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march_mean,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
             v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,

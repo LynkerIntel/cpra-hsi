@@ -1071,9 +1071,169 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
-                "long_name": "",
-                "description": "",
+                "units": "meters",
+                "long_name": "water depth April-June mean",
+                "description": "Mean water depth for April-June period at 480m resolution",
+            },
+        ],
+        "water_depth_july_august_mean": [
+            hsi.water_depth_july_august_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth July-August mean",
+                "description": "Mean water depth for July-August period at 480m resolution",
+            },
+        ],
+        "water_temperature_feb_march_mean": [
+            hsi.water_temperature_feb_march_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature February-March mean",
+                "description": "Mean water temperature for February-March period at 480m resolution",
+            },
+        ],
+        "water_temperature_july_sept_mean": [
+            hsi.water_temperature_july_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature July-September mean",
+                "description": "Mean water temperature for July-September period at 480m resolution",
+            },
+        ],
+        "water_temperature_may_july_mean": [
+            hsi.water_temperature_may_july_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature May-July mean",
+                "description": "Mean water temperature for May-July period at 480m resolution",
+            },
+        ],
+        "salinity_max_april_sept": [
+            hsi.salinity_max_april_sept,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum April-September",
+                "description": "Maximum salinity for April-September period at 480m resolution",
+            },
+        ],
+        "salinity_max_july_sept": [
+            hsi.salinity_max_july_sept,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum July-September",
+                "description": "Maximum salinity for July-September period at 480m resolution",
+            },
+        ],
+        "salinity_max_may_july": [
+            hsi.salinity_max_may_july,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum May-July",
+                "description": "Maximum salinity for May-July period at 480m resolution",
+            },
+        ],
+        "salinity_mean_high_march_nov": [
+            hsi.salinity_mean_high_march_nov,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity mean high March-November",
+                "description": "Mean of upper 67th percentile salinity values for March-November period at 480m resolution",
+            },
+        ],
+        "pct_pools_july_sept_mean": [
+            hsi.pct_pools_july_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent pools July-September mean",
+                "description": "Percentage of pool pixels for July-September period",
+            },
+        ],
+        "pct_pools_april_sept_mean": [
+            hsi.pct_pools_april_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent pools April-September mean",
+                "description": "Percentage of pool pixels for April-September period",
+            },
+        ],
+        "pct_shrub_scrub": [
+            hsi.pct_shrub_scrub,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent shrub/scrub cover",
+                "description": "Percentage of shrub/scrub vegetation cover",
+            },
+        ],
+        "edge": [
+            hsi.edge,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "edge pixels",
+                "description": "Percentage of water edge pixels (static)",
+            },
+        ],
+        "pct_has_mast": [
+            hsi.pct_has_mast,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent mast-producing vegetation",
+                "description": "Percentage of vegetation with mast production (soft + hard mast combined)",
+            },
+        ],
+        "pct_crops": [
+            hsi.pct_crops,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent crops",
+                "description": "Percentage of crop land cover (static)",
+            },
+        ],
+        "pct_developed": [
+            hsi.pct_developed,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent developed land",
+                "description": "Percentage of developed land cover (static)",
+            },
+        ],
+        "velocity": [
+            hsi.velocity,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "m/s",
+                "long_name": "water velocity",
+                "description": "Mean water velocity at 480m resolution",
             },
         ],
         "human_influence_bool": [

@@ -616,6 +616,13 @@ class VegTransition:
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
+        # Create domain mask that works for both boolean (VegTransition) and float (HSI)
+        if self.hydro_domain.dtype == bool:
+            domain_mask = self.hydro_domain
+        else:
+            # For float arrays, NaN indicates outside domain
+            domain_mask = ~np.isnan(self.hydro_domain)
+
         if self.file_params["hydro_source_model"] == "HEC":
             self._logger.info("Creating HEC-RAS hydro source...")
             # get depth (critical)
@@ -624,9 +631,9 @@ class VegTransition:
             # WSE pixels, where missing data indicates "no inundation"
             ds = ds.fillna(0)
             # after filling zeros for areas with no inundation, apply domain mask,
-            # so that areas outside of HECRAS domain are not classified as
+            # so that areas outside of hydro domain are not classified as
             # dry (na is 0-filled above) when in fact they are outside of the domain.
-            ds = ds.where(self.hydro_domain)
+            ds = ds.where(domain_mask)
 
             # self._logger.warning("Converting daily hydro: feet to meters")
             # ds["height"] *= 0.3048  # UNIT: feet to meters
@@ -637,7 +644,7 @@ class VegTransition:
             # Delft formatting opts:
             ds = ds - self.dem
             ds = ds.fillna(0)
-            ds = ds.where(self.hydro_domain)
+            ds = ds.where(domain_mask)
             return ds
 
         elif self.file_params["hydro_source_model"] == "MIK":
@@ -645,7 +652,7 @@ class VegTransition:
             # MIKE21 formatting opts:
             ds = ds - self.dem
             ds = ds.fillna(0)
-            ds = ds.where(self.hydro_domain)
+            ds = ds.where(domain_mask)
             return ds
 
     def _load_salinity_general(

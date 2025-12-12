@@ -1146,44 +1146,6 @@ class HSI(vt.VegTransition):
     #     da_coarse = ds.coarsen(y=8, x=8, boundary="pad").mean()
     #     return da_coarse.to_numpy()
 
-    def _get_daily_depth_filtered(
-        self,
-        months: None | list[int] = None,
-        cell: bool = True,
-    ) -> np.ndarray:
-        """
-        Reduce daily depth dataset to temporal mean, then resample to
-        480m cell size.
-
-        Parameters
-        ----------
-        months : list (optional)
-            List of months to average water depth over. If a list is not
-            provided, the default is all months
-
-        cell : bool (optional)
-            True if resampling input to 480m after temporal filter.
-            Defaults to True.
-
-        Return
-        ------
-        da_coarse : np.ndarray
-            A water depth data, averaged over a list of months (or defaulting
-            to one year) and then upscaled to 480m.
-        """
-        if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
-
-        filtered_ds = self.water_depth.sel(
-            time=self.water_depth["time"].dt.month.isin(months)
-        )
-        da = filtered_ds.mean(dim="time", skipna=True)["height"]
-
-        if cell is True:
-            da = da.coarsen(y=8, x=8, boundary="pad").mean()
-
-        return da.to_numpy()
-
     def _get_water_temperature_subset(
         self, months: None | list[int] = None, cell: bool = True
     ) -> np.ndarray:

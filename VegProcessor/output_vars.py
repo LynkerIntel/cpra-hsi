@@ -1501,4 +1501,45 @@ def get_veg_variables(veg):
                 "description": "Depth in m for the month of june.",
             },
         ],
+        "water_depth_july_august_mean": [
+            veg.water_depth_july_august_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth July-August mean",
+                "description": (
+                    "Mean water depth for July-August period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_5, "
+                    "blackcrappie SI_2, SI_4, SI_8."
+                ),
+            },
+        ],
+        "water_depth_july_sept_mean": [
+            veg.water_depth_july_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth July-September mean",
+                "description": (
+                    "Mean water depth for July-September period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_8, SI_12, "
+                    "SI_14, SI_18."
+                ),
+            },
+        ],
+        "water_depth_may_july_mean": [
+            veg.water_depth_may_july_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth May-July mean",
+                "description": (
+                    "Mean water depth for May-July period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_10."
+                ),
+            },
+        ],
     }

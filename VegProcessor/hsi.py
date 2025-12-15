@@ -309,7 +309,7 @@ class HSI(vt.VegTransition):
             "netcdf_water_temperature_path"
         )
         self.netcdf_velocity_path = self.config["raster_data"].get(
-            "netcdf_velociy_path"
+            "netcdf_velocity_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"

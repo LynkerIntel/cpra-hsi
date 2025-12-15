@@ -659,7 +659,8 @@ class HSI(vt.VegTransition):
                 ) from exc
 
             ds = self._reproject_match_to_dem(ds)
-            return ds["velocity"].to_numpy()
+            # for now, subset to first/only timestep, may refactor
+            return ds["velocity"][0].to_numpy()
 
         else:
             self._logger.info("Velocity not provided.")
@@ -1744,8 +1745,18 @@ class HSI(vt.VegTransition):
                     "units": "Deg C",
                     "long_name": "water temperature February-March mean",
                     "description": (
-                        "Mean water temperature for February-March period at 480m resolution"
+                        "Mean water temperature for February-March period at 60m resolution"
                     ),
+                },
+            ],
+            "velocity": [
+                self.velocity,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "m/s",
+                    "long_name": "water velocity",
+                    "description": "Mean water velocity at 60m resolution",
                 },
             ],
         }

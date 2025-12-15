@@ -1202,16 +1202,6 @@ def get_hsi_variables(hsi):
                 "description": "Percentage of developed land cover (static)",
             },
         ],
-        "velocity": [
-            hsi.velocity,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "m/s",
-                "long_name": "water velocity",
-                "description": "Mean water velocity at 480m resolution",
-            },
-        ],
         "human_influence_bool": [
             hsi.human_influence,
             np.float32,

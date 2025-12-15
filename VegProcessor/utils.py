@@ -1003,6 +1003,9 @@ def analog_years_handler(
     to the synthetic water-year used by `VegTransition` and
     `HSI`.
 
+    Handles both daily time series (365/366 days) and single-timestep
+    datasets (e.g., temporal averages like velocity).
+
     Parameters:
     -----------
     quintile : int
@@ -1014,6 +1017,14 @@ def analog_years_handler(
     ds : xr.Dataset
         The hydrologic model single WY NetCDF file
     """
+    # Check if dataset has no time dimension or single timestep
+    # (e.g., velocity which is already a temporal average)
+    if ds.sizes["time"] == 1:
+        # Single timestep, just update the timestamp to match water year
+        target_date = pd.Timestamp(f"{water_year-1}-10-01")
+        ds = ds.assign_coords(time=("time", [target_date]))
+        return ds
+
     # build a 365-day date range by dropping Feb 29
     target_range = pd.date_range(
         f"{water_year-1}-10-01", f"{water_year}-09-30"

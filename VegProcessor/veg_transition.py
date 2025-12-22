@@ -634,9 +634,8 @@ class VegTransition:
             # so that areas outside of hydro domain are not classified as
             # dry (na is 0-filled above) when in fact they are outside of the domain.
             ds = ds.where(domain_mask)
-
-            # self._logger.warning("Converting daily hydro: feet to meters")
-            # ds["height"] *= 0.3048  # UNIT: feet to meters
+            # negative depths clipped to 0
+            ds = ds.clip(min=0)
             return ds
 
         elif self.file_params["hydro_source_model"] == "D3D":
@@ -645,6 +644,7 @@ class VegTransition:
             ds = ds - self.dem
             ds = ds.fillna(0)
             ds = ds.where(domain_mask)
+            ds = ds.clip(min=0)
             return ds
 
         elif self.file_params["hydro_source_model"] == "MIK":
@@ -653,6 +653,7 @@ class VegTransition:
             ds = ds - self.dem
             ds = ds.fillna(0)
             ds = ds.where(domain_mask)
+            ds = ds.clip(min=0)
             return ds
 
     def _load_salinity_general(

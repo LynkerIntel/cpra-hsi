@@ -1649,7 +1649,7 @@ class HSI(vt.VegTransition):
             "time": {
                 "units": "days since 1850-01-01T00:00:00",
                 "calendar": "gregorian",
-                "dtype": "float64",
+                "dtype": "float32",
             }
         }
 

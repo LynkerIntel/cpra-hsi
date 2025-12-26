@@ -509,8 +509,12 @@ class VegTransition:
             variable_base_path = self.netcdf_salinity_path
         elif hydro_variable == "WTEMP":
             variable_base_path = self.netcdf_water_temperature_path
+        elif hydro_variable == "VELOCITY":
+            variable_base_path = self.netcdf_velocity_path
         else:
-            raise ValueError("must be one of: STAGE, SALINITY")
+            raise ValueError(
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY"
+            )
 
         quintile = self.sequence_mapping[water_year]
         analog_year_str = self.years_mapping[quintile]
@@ -612,6 +616,13 @@ class VegTransition:
         ds = xr.Dataset({"height": height_da})
 
         # handle formatting & domain differences between models----------------------------
+        # Create domain mask that works for both boolean (VegTransition) and float (HSI)
+        if self.hydro_domain.dtype == bool:
+            domain_mask = self.hydro_domain
+        else:
+            # For float arrays, NaN indicates outside domain
+            domain_mask = ~np.isnan(self.hydro_domain)
+
         if self.file_params["hydro_source_model"] == "HEC":
             self._logger.info("Creating HEC-RAS hydro source...")
             # get depth (critical)
@@ -620,12 +631,11 @@ class VegTransition:
             # WSE pixels, where missing data indicates "no inundation"
             ds = ds.fillna(0)
             # after filling zeros for areas with no inundation, apply domain mask,
-            # so that areas outside of HECRAS domain are not classified as
+            # so that areas outside of hydro domain are not classified as
             # dry (na is 0-filled above) when in fact they are outside of the domain.
-            ds = ds.where(self.hydro_domain)
-
-            # self._logger.warning("Converting daily hydro: feet to meters")
-            # ds["height"] *= 0.3048  # UNIT: feet to meters
+            ds = ds.where(domain_mask)
+            # negative depths clipped to 0
+            ds = ds.clip(min=0)
             return ds
 
         elif self.file_params["hydro_source_model"] == "D3D":
@@ -633,7 +643,8 @@ class VegTransition:
             # Delft formatting opts:
             ds = ds - self.dem
             ds = ds.fillna(0)
-            ds = ds.where(self.hydro_domain)
+            ds = ds.where(domain_mask)
+            ds = ds.clip(min=0)
             return ds
 
         elif self.file_params["hydro_source_model"] == "MIK":
@@ -641,7 +652,8 @@ class VegTransition:
             # MIKE21 formatting opts:
             ds = ds - self.dem
             ds = ds.fillna(0)
-            ds = ds.where(self.hydro_domain)
+            ds = ds.where(domain_mask)
+            ds = ds.clip(min=0)
             return ds
 
     def _load_salinity_general(
@@ -914,52 +926,42 @@ class VegTransition:
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
-    def _load_hydro_domain_raster(self, cell: bool = False) -> np.ndarray:
-        """Load raster file specifying the boundary of the HECRAS domain.
-
-        If a domain raster is not supplied, the DEM will be used as the
-        domain raster. Masking with the DEM will generally not have an
-        effect, but keeps the code consistent between models.
+    def _load_hydro_domain_raster(
+        self, cell: bool = False, as_float: bool = False
+    ) -> np.ndarray:
+        """Load raster file specifying the boundary of the hydrologic domain.
 
         Params
         -------
         cell : bool
-            True if array should be downscaled to 480m "cell" resolution. If True,
-            the array is returned as "data" with NaN. If False, data is returned as
-            boolean (the format expected by `VegTransition` methods).
+            True if array should be downscaled to 480m "cell" resolution.
+        as_float : bool
+            True if array should be returned as float with NaN (for HSI).
+            False if array should be returned as boolean (for VegTransition).
+            Ignored when cell=True (always returns float with NaN for 480m).
 
         Returns
         --------
         da : np.ndarray
-            A boolean numpy array at 60m, or a binary numpy array at 480m. This
-            accomdates the requirements of both `VegTransition` and `HSI`.
+            - If cell=True: float array at 480m with NaN outside domain
+            - If cell=False and as_float=True: float array at 60m with NaN outside domain
+            - If cell=False and as_float=False: boolean array at 60m
         """
-        if self.hydro_domain_path is None:
-            if self.metadata["hydro_source_model"] == "D3D":
-                self._logger.info(
-                    "hydrologic domain not provided. Using DEM as domain."
-                )
-                # if no file: load DEM as dataarray to use as domain
-                da = xr.open_dataarray(self.dem_path)
-                da = da.squeeze(drop="band")
-                # all valid data to 1
-                da = xr.where(da.notnull(), 1, da)
-            else:
-                raise ValueError(
-                    "For HEC-RAS and MIKE21 hydro input, a domain raster must be supplied."
-                )
-
-        else:
-            self._logger.info("Loading hydro domain extent raster.")
-            da = xr.open_dataarray(self.hydro_domain_path)
-            da = da.squeeze(drop="band")
-            # reproject match to DEM
-            da = self._reproject_match_to_dem(da)
+        self._logger.info("Loading hydro domain extent raster.")
+        da = xr.open_dataarray(self.hydro_domain_path)
+        da = da.squeeze(drop="band")
+        # reproject match to DEM
+        da = self._reproject_match_to_dem(da)
 
         if cell:
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
             return da.to_numpy()
 
+        if as_float:
+            # return as float with NaN for HSI at 60m
+            return da.to_numpy()
+
+        # return as boolean for VegTransition at 60m
         da = da.fillna(0)  # fill 0 so that .astype(bool) does not fail
         da = da.astype(bool)
         return da.to_numpy()

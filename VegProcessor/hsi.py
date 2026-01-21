@@ -49,10 +49,23 @@ class HSI(vt.VegTransition):
 
     The HSI framework is designed to run with highly varying numbers of
     input variables. All variables are initialized as "None" and either
-    replace with actual data, or replaced with stand-in values during
+    replaced with actual data, or replaced with stand-in values during
     execution. The stand-in values are either "1" indicating an ideal
     SI (suitability index score), or an empirical value provided to the
-    S.I. function that results in a approximate scoring.
+    S.I. function that results in a approximate scoring. All other vars
+    are created from one of a range of hydrologic model outputs.
+
+    In general, the code structure favors creating HSI input variables as
+    numpy arrays, and adding them as `HSI` class attributes, which are
+    updated each timestep. This balances the tradeoff of memory use
+    (many arrays are created at each step) with observability; it is easier
+    to debug issues when all arrays can be accessed after a timestep. Future
+    revision to the codebase may want to favor more memory-efficient methods,
+    once the logic has been tested and verified.
+
+    All *HSI variable* arrays in `HSI` are assumed to be at 480m (a.k.a "cell"
+    resolution) unless otherwise noted, typically with a "_60m" suffix
+    (a.k.a "pixel" resolution).
     """
 
     def __init__(self, config_file: str, log_level: int = logging.INFO):
@@ -65,7 +78,7 @@ class HSI(vt.VegTransition):
         config_file : str
             Path to configuration YAML
         log_level : int
-            Level of vebosity for logging.
+            Level of vebosity for logging. Hardcoded for now.
         """
         self.sim_start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.config_path = config_file
@@ -106,7 +119,7 @@ class HSI(vt.VegTransition):
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
         self.human_influence = None
-        self.hydro_domain = self._load_hydro_domain_raster()
+        self.hydro_domain = self._load_hydro_domain_raster(as_float=True)
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
         # Dynamic Variables --------------------------------------------
@@ -116,7 +129,10 @@ class HSI(vt.VegTransition):
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_jan_aug_mean = None
         self.water_depth_oct_dec_mean = None
-        self.water_depth_july_august_mean = None
+
+        self.water_depth_july_august_mean_60m = None
+        self.water_depth_july_sept_mean_60m = None
+        self.water_depth_may_july_mean_60m = None
 
         # HSI models
         self.alligator = None
@@ -139,16 +155,20 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
-        self.water_temperature_july_august_mean = None
-        self.water_temperature_july_sept_mean = None
-        self.water_temperature_may_july_mean = None
-        self.water_temperature_feb_march_mean = None
+
+        # 60m water temperature for pools and backwaters
+        self.water_temperature_feb_march_mean_60m = None
+        self.water_temperature_may_july_mean_60m = None
+        self.water_temperature_july_sept_mean_60m = None
+        self.water_temperature_july_august_mean_60m = None
 
         self.salinity = None  # the source xr.dataset
         self.salinity_annual_mean = None
         self.salinity_max_april_sept = None
         self.salinity_max_july_sept = None
         self.salinity_max_may_july = None
+
+        self.velocity = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -166,7 +186,8 @@ class HSI(vt.VegTransition):
         self.pct_blh = None
 
         self.pct_bare_ground = None
-        # self.pct_marsh = None # not currently in use
+        self.pct_pools_july_sept_mean = None
+        self.pct_pools_april_sept_mean = None
 
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
@@ -204,7 +225,7 @@ class HSI(vt.VegTransition):
         self.maturity_dbh = None  # always ideal
         self.flood_duration = None  # TODO
         self.flow_exchange = None  # TODO
-        self.mean_high_salinity_gs = None  # TODO
+        self.salinity_mean_high_march_nov = None
         self.suit_trav_surr_lu = None  # always ideal
         self.disturbance = None  # always ideal
 
@@ -222,7 +243,6 @@ class HSI(vt.VegTransition):
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
         self.blackcrappie_avg_vel_summer_flow_pools_bw = None
-        self.blackcrappie_pct_pools_bw_avg_spring_summer_flow = None
         self.blackcrappie_ph_year = None  # set to ideal
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
@@ -233,7 +253,6 @@ class HSI(vt.VegTransition):
         # self.blackcrappie_max_salinity_gs = None
 
         # catfish
-        self.catfish_pct_pools_avg_summer_flow = None
         self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None
         # self.catfish_avg_temp_in_midsummer_pools_bw = None
@@ -248,7 +267,8 @@ class HSI(vt.VegTransition):
         # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
         self.catfish_avg_vel_summer_flow = None
 
-        self._create_output_file()
+        self._create_output_file(resolution=480)
+        self._create_output_file(resolution=60)
 
     def _load_config_attributes(self):
         """Load configuration attributes from the config dictionary."""
@@ -287,6 +307,9 @@ class HSI(vt.VegTransition):
         )
         self.netcdf_water_temperature_path = self.config["raster_data"].get(
             "netcdf_water_temperature_path"
+        )
+        self.netcdf_velocity_path = self.config["raster_data"].get(
+            "netcdf_velocity_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -350,7 +373,7 @@ class HSI(vt.VegTransition):
         self._logger.info("starting timestep: %s", date)
         self._create_timestep_dir(date)
 
-        # water depth vars --------------------------------------
+        # water depth vars -----------------------------------------------
         self.water_depth = self._load_depth_general(self.wy)
         self.water_depth_annual_mean = self._get_daily_depth_filtered()
         self.water_depth_jan_aug_mean = self._get_daily_depth_filtered(
@@ -362,8 +385,18 @@ class HSI(vt.VegTransition):
         self.water_depth_april_june_mean = self._get_daily_depth_filtered(
             months=[4, 5, 6],
         )
-        self.water_depth_july_august_mean = self._get_daily_depth_filtered(
+        # 60m water depth for pools and backwaters logic -------------------
+        self.water_depth_july_august_mean_60m = self._get_daily_depth_filtered(
             months=[7, 8],
+            cell=False,
+        )
+        self.water_depth_july_sept_mean_60m = self._get_daily_depth_filtered(
+            months=[7, 8, 9],
+            cell=False,
+        )
+        self.water_depth_may_july_mean_60m = self._get_daily_depth_filtered(
+            months=[5, 6, 7],
+            cell=False,
         )
 
         # temperature vars -------------------------------------------
@@ -373,23 +406,35 @@ class HSI(vt.VegTransition):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
-            self.water_temperature_july_august_mean = (
-                self._get_water_temperature_subset(months=[7, 8])
+            # 60m water temperature ----------------------------------------
+            self.water_temperature_feb_march_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[2, 3],
+                    cell=False,
+                )
             )
-            self.water_temperature_may_july_mean = (
-                self._get_water_temperature_subset(months=[5, 6, 7])
+            self.water_temperature_may_july_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[5, 6, 7], cell=False
+                )
             )
-            self.water_temperature_july_sept_mean = (
-                self._get_water_temperature_subset(months=[7, 8, 9])
+            self.water_temperature_july_august_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[7, 8],
+                    cell=False,
+                )
             )
-            self.water_temperature_feb_march_mean = (
-                self._get_water_temperature_subset(months=[2, 3])
+            self.water_temperature_july_sept_mean_60m = (
+                self._get_water_temperature_subset(
+                    months=[7, 8, 9], cell=False
+                )
             )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
+        self.velocity = self._load_velocity_general(self.wy)
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -408,9 +453,24 @@ class HSI(vt.VegTransition):
                 months=[5, 6, 7],
                 method="max",
             )
-            # self.mean_high_salinity_gs = self._get_mean_high_salinity_gs()
+            self.salinity_mean_high_march_nov = self._get_salinity_subset(
+                method="upper-pctile-mean",
+                months=[3, 4, 5, 6, 7, 8, 9, 10, 11],
+            )
         else:
             self.salinity_annual_mean = self.salinity
+
+        # pct pools --------------------------------------------------
+        self.pct_pools_july_sept_mean = self._get_pct_pools(
+            months=[7, 8, 9],
+            low=3,
+            high=6,
+        )
+        self.pct_pools_april_sept_mean = self._get_pct_pools(
+            months=[4, 5, 6, 7, 8, 9],
+            low=0.5,
+            high=3,
+        )
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -441,7 +501,10 @@ class HSI(vt.VegTransition):
                 if species in species_map:
                     setattr(self, species, species_map[species].from_hsi(self))
 
-            self._append_hsi_vars_to_netcdf(timestep=self.current_timestep)
+            self._append_480m_hsi_vars_to_netcdf(
+                timestep=self.current_timestep
+            )
+            self._append_60m_hsi_vars_to_netcdf(timestep=self.current_timestep)
 
         self._logger.info("completed timestep: %s", date)
         self.current_timestep = None
@@ -557,6 +620,52 @@ class HSI(vt.VegTransition):
             self._logger.info("Water Temperature not provided.")
             return None
 
+    def _load_velocity_general(self, water_year: int) -> np.ndarray | None:
+        """Load velocity data from either Delft3D or MIKE 21 models."""
+        if self.netcdf_velocity_path is not None:
+            self._logger.info(
+                f"Loading velocity data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="VELOCITY"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+
+            ds = xr.open_dataset(
+                nc_path,
+                engine="h5netcdf",
+                chunks="auto",
+            )
+
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # # model specific var names: -----------------------------------------------
+            # if self.file_params["hydro_source_model"] == "D3D":
+            #     ds = ds.rename({"waterlevel": "height"})
+            # if self.file_params["hydro_source_model"] == "MIK":
+            #     ds = ds.rename({"water_level": "height"})
+            # # extract height var as da
+            # height_da = ds["sali"]
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            # for now, subset to first/only timestep, may refactor
+            return ds["velocity"][0].to_numpy()
+
+        else:
+            self._logger.info("Velocity not provided.")
+            return None
+
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This
         function is called for every HSI timestep.
@@ -650,6 +759,39 @@ class HSI(vt.VegTransition):
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         self.pct_blh = ds_blh.to_numpy()
+
+    def _get_pct_pools(
+        self,
+        months: list[int],
+        low: float = 3.0,
+        high: float = 6.0,
+    ):
+        """Get percentage of "pool" pixels in each cell.
+
+        Parameters
+        -----------
+        months : list
+            List of months to average depth over
+        low : float
+            The lower end of the pools definition, defaults to 3m.
+        high : float
+            The high end of the pools definition, defaults to 6m.
+
+        Returns
+        -------
+        pct_pools : np.ndarray
+            480m numpy array of pct pools for given aggregation.
+        """
+        # subset water depth to time period
+        ds = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin(months)
+        )
+        da = ds.mean(dim="time", skipna=True)["height"]
+        # mask to within bounds
+        mask = (da >= low) & (da <= high)
+        mask_float = mask.astype(float)
+        pct_pools = mask_float.coarsen(x=8, y=8, boundary="pad").mean() * 100
+        return pct_pools.values
 
     def _calculate_static_vars(self):
         """Get percent coverage variables for each 480m cell, based on 60m veg type pixels.
@@ -1002,7 +1144,9 @@ class HSI(vt.VegTransition):
     #     return da_coarse.to_numpy()
 
     def _get_daily_depth_filtered(
-        self, months: None | list[int] = None
+        self,
+        months: None | list[int] = None,
+        cell: bool = True,
     ) -> np.ndarray:
         """
         Reduce daily depth dataset to temporal mean, then resample to
@@ -1013,6 +1157,10 @@ class HSI(vt.VegTransition):
         months : list (optional)
             List of months to average water depth over. If a list is not
             provided, the default is all months
+
+        cell : bool (optional)
+            True if resampling input to 480m after temporal filter.
+            Defaults to True.
 
         Return
         ------
@@ -1028,11 +1176,13 @@ class HSI(vt.VegTransition):
         )
         da = filtered_ds.mean(dim="time", skipna=True)["height"]
 
-        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+        if cell is True:
+            da = da.coarsen(y=8, x=8, boundary="pad").mean()
+
+        return da.to_numpy()
 
     def _get_water_temperature_subset(
-        self, months: None | list[int] = None
+        self, months: None | list[int] = None, cell: bool = True
     ) -> np.ndarray:
         """
         Reduce daily water temperature dataset to temporal mean, then
@@ -1044,11 +1194,15 @@ class HSI(vt.VegTransition):
             List of months to average water temp over. If a list is not
             provided, the default is all months
 
+        cell : bool (optional)
+            True if resampling input to 480m after temporal filter.
+            Defaults to True.
+
         Return
         ------
         da_coarse : np.ndarray
             water temperature, averaged over a list of months (or defaulting
-            to one year) and then upscaled to 480m.
+            to one year) and then upscaled to 480m (if cell=True) or kept at 60m (if cell=False).
         """
         if not months:
             months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -1058,8 +1212,11 @@ class HSI(vt.VegTransition):
         )
         da = filtered_ds.mean(dim="time", skipna=True)["temperature"]
 
-        da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
-        return da_coarse.to_numpy()
+        if cell is True:
+            da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
+            return da_coarse.to_numpy()
+        else:
+            return da.to_numpy()
 
     def _get_salinity_subset(
         self,
@@ -1078,7 +1235,9 @@ class HSI(vt.VegTransition):
             provided, the default is all months
 
         method : str (optional)
-            How to reduce. One of ["mean", "max"]. Defaults to mean.
+            How to reduce. One of ["mean", "max", "upper-pctile-mean"].
+            Defaults to mean. "upper-pctile-mean" is the mean of the
+            upper 33% of values.
 
         Return
         ------
@@ -1096,15 +1255,15 @@ class HSI(vt.VegTransition):
             da = filtered_ds.mean(dim="time", skipna=True)["salinity"]
         elif method == "max":
             da = filtered_ds.max(dim="time", skipna=True)["salinity"]
+        elif method == "upper-pctile-mean":
+            # 67th percentile (upper 33% is above this)
+            threshold = filtered_ds.quantile(0.67)
+            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")[
+                "salinity"
+            ]
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
-
-    def _get_mean_high_salinity_gs(self):
-        """
-        Get mean high salinity during the growing season. Used
-        in SWAMP WVA SI_4.
-        """
 
     def _calculate_mast_percentage(self):
         """Calculate percetange of canopy cover for mast classifications, as a
@@ -1300,31 +1459,47 @@ class HSI(vt.VegTransition):
         """
         self.blue_crab_lookup_table = pd.read_csv(self.blue_crab_lookup_path)
 
-    def _create_output_file(self):
+    def _create_output_file(self, resolution: int = 480):
         """HSI: Create NetCDF file for data output.
+
+        Parameters
+        ----------
+        resolution : int
+            Resolution in meters (480 or 60). Defaults to 480.
 
         Returns
         -------
         None
         """
-
-        self.netcdf_filepath = os.path.join(
-            self.output_dir_path, f"{self.file_name}.nc"
-        )
+        # Set filepath based on resolution
+        if resolution == 480:
+            self.netcdf_filepath = os.path.join(
+                self.output_dir_path, f"{self.file_name}.nc"
+            )
+        elif resolution == 60:
+            self.netcdf_filepath_60m = os.path.join(
+                self.output_dir_path, f"{self.file_name}_60m.nc"
+            )
+        else:
+            raise ValueError(f"Resolution must be 480 or 60, got {resolution}")
 
         # Load DEM as a template for coordinates
         da = xr.open_dataarray(self.dem_path)
         da = da.squeeze(drop="band")  # Drop 'band' dimension if it exists
         da = da.rio.write_crs("EPSG:6344")  # Assign CRS
 
-        # Resample to 480m resolution, using rioxarray, with preserved correct coords and
-        # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
-        # projected coords.
-        da = da.rio.reproject(
-            da.rio.crs, resolution=480, resampling=Resampling.average
-        )
+        # Resample to target resolution if needed
+        if resolution != 60:
+            # Resample using rioxarray, with preserved correct coords and
+            # assigns GeoTransform to spatial_ref. xr.coarsen() does not produce correct
+            # projected coords.
+            da = da.rio.reproject(
+                da.rio.crs,
+                resolution=resolution,
+                resampling=Resampling.average,
+            )
 
-        # use new 480m coords
+        # use coordinates at target resolution
         x = da.coords["x"].values
         y = da.coords["y"].values
 
@@ -1372,19 +1547,26 @@ class HSI(vt.VegTransition):
                     },
                 ),
             },
-            attrs={"title": "HSI"},
+            attrs={
+                "title": f"HSI {resolution}m" if resolution == 60 else "HSI"
+            },
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
 
         # Save dataset to NetCDF with explicit encoding
-        ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
+        filepath = (
+            self.netcdf_filepath_60m
+            if resolution == 60
+            else self.netcdf_filepath
+        )
+        ds.to_netcdf(filepath, encoding=encoding)
         self._logger.info(
-            "Initialized NetCDF file with CRS: %s", self.netcdf_filepath
+            "Initialized %sm NetCDF file with CRS: %s", resolution, filepath
         )
 
-    def _append_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
-        """Append timestep data to the NetCDF file.
+    def _append_480m_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append timestep data to the 480m NetCDF file.
 
         TODO: add warning if arrays are skipped because they are None
         TODO: move dict of arrays attrs to YAML or similar. It is too long
@@ -1447,19 +1629,191 @@ class HSI(vt.VegTransition):
             encoding=encoding,
         )
         ds_loaded.close()
-        self._logger.info("Appended timestep %s to NetCDF file.", timestep_str)
+        self._logger.info(
+            "Appended timestep %s to 480m NetCDF file.", timestep_str
+        )
+
+    def _append_60m_hsi_vars_to_netcdf(self, timestep: pd.DatetimeTZDtype):
+        """Append 60m QC variables to the 60m NetCDF file.
+
+        Parameters
+        ----------
+        timestep : pd.DatetimeTZDtype
+            Pandas datetime object of current timestep.
+
+        Returns
+        -------
+        None
+        """
+        encoding = {
+            "time": {
+                "units": "days since 1850-01-01T00:00:00",
+                "calendar": "gregorian",
+                "dtype": "float32",
+            }
+        }
+
+        timestep_str = timestep.strftime("%Y-%m-%d")
+
+        # Define 60m QC variables to output
+        qc_60m_variables = {
+            "water_depth_july_august_mean": [
+                self.water_depth_july_august_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth July-August mean",
+                    "description": (
+                        "Mean water depth for July-August period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_5, "
+                        "blackcrappie SI_2, SI_4, SI_8."
+                    ),
+                },
+            ],
+            "water_depth_july_sept_mean": [
+                self.water_depth_july_sept_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth July-September mean",
+                    "description": (
+                        "Mean water depth for July-September period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_8, SI_12, "
+                        "SI_14, SI_18."
+                    ),
+                },
+            ],
+            "water_depth_may_july_mean": [
+                self.water_depth_may_july_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "meters",
+                    "long_name": "water depth May-July mean",
+                    "description": (
+                        "Mean water depth for May-July period at 60m resolution. "
+                        "Used for pools/backwaters masking in catfish SI_10."
+                    ),
+                },
+            ],
+            "water_temperature_july_august_mean": [
+                self.water_temperature_july_august_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature July-August mean",
+                    "description": (
+                        "Mean water temperature for July-August period at 60m resolution. "
+                        "Used in catfish SI_5, blackcrappie SI_8, SI_9, SI_10."
+                    ),
+                },
+            ],
+            "water_temperature_july_sept_mean": [
+                self.water_temperature_july_sept_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature July-September mean",
+                    "description": (
+                        "Mean water temperature for July-September period at 60m resolution. "
+                        "Used in catfish SI_12, SI_14."
+                    ),
+                },
+            ],
+            "water_temperature_may_july_mean": [
+                self.water_temperature_may_july_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "degrees_Celsius",
+                    "long_name": "water temperature May-July mean",
+                    "description": (
+                        "Mean water temperature for May-July period at 60m resolution. "
+                        "Used in catfish SI_10."
+                    ),
+                },
+            ],
+            "water_temperature_feb_march_mean": [
+                self.water_temperature_feb_march_mean_60m,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "Deg C",
+                    "long_name": "water temperature February-March mean",
+                    "description": (
+                        "Mean water temperature for February-March period at 60m resolution"
+                    ),
+                },
+            ],
+            "velocity": [
+                self.velocity,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "m/s",
+                    "long_name": "water velocity",
+                    "description": "Mean water velocity at 60m resolution",
+                },
+            ],
+        }
+
+        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+            ds_loaded = ds.load()  # loads into memory and closes file
+
+        for var_name, (data, dtype, nc_attrs) in qc_60m_variables.items():
+            if data is not None:  # only write arrays that have data
+                netcdf_dtype = np.int8 if dtype == bool else dtype
+
+                # if the var exists in the dataset, if not, initialize it
+                if var_name not in ds_loaded:
+                    shape = (
+                        len(ds_loaded.time),
+                        len(ds_loaded.y),
+                        len(ds_loaded.x),
+                    )
+                    default_value = 0 if dtype == bool else np.nan
+                    ds_loaded[var_name] = (
+                        ["time", "y", "x"],
+                        np.full(shape, default_value, dtype=netcdf_dtype),
+                        nc_attrs,
+                    )
+
+                # boolean to int8 (0 and 1)
+                if dtype == bool:
+                    data = np.nan_to_num(data, nan=False).astype(np.int8)
+
+                ds_loaded[var_name].loc[{"time": timestep}] = data.astype(
+                    netcdf_dtype
+                )
+
+        # Save and close
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath_60m,
+            mode="a",
+            engine="h5netcdf",
+            encoding=encoding,
+        )
+        ds_loaded.close()
+        self._logger.info(
+            "Appended timestep %s to 60m NetCDF file.", timestep_str
+        )
 
     def post_process(self):
         """HSI post process
 
-        (1) Opens file and then crops to hydro domain
-        (2) Create sidecar file with varibles in the NetCDF
+        (1) Opens files and then crops to hydro domain
+        (2) Create sidecar files with variables in the NetCDFs
         """
-        # -------- crop data --------
+        # -------- crop 480m data --------
+        self._logger.info("Post-processing 480m NetCDF file")
         with xr.open_dataset(self.netcdf_filepath) as ds:
             ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
             # create sidecar info
-            attrs_df = utils.dataset_attrs_to_df(
+            attrs_df_480 = utils.dataset_attrs_to_df(
                 ds,
                 selected_attrs=[
                     "long_name",
@@ -1475,12 +1829,43 @@ class HSI(vt.VegTransition):
 
         ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
 
-        # -------- create sidecar file ---------
-        self._logger.info("Creating variable name text file")
+        # -------- create 480m sidecar file ---------
+        self._logger.info("Creating 480m variable name text file")
         outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_hsi_netcdf_variables.csv"
         )
-        attrs_df.to_csv(outpath, index=False)
+        attrs_df_480.to_csv(outpath, index=False)
+
+        # -------- crop 60m data --------
+        self._logger.info("Post-processing 60m NetCDF file")
+        with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+            ds_out_60m = ds.where(~np.isnan(self.hydro_domain)).copy(deep=True)
+            # create sidecar info
+            attrs_df_60 = utils.dataset_attrs_to_df(
+                ds,
+                selected_attrs=[
+                    "long_name",
+                    "description",
+                    "units",
+                ],
+            )
+
+            ds_out_60m = ds_out_60m.load()
+
+        if os.path.exists(self.netcdf_filepath_60m):
+            os.remove(self.netcdf_filepath_60m)
+
+        ds_out_60m.to_netcdf(
+            self.netcdf_filepath_60m, mode="w", engine="h5netcdf"
+        )
+
+        # -------- create 60m sidecar file ---------
+        self._logger.info("Creating 60m variable name text file")
+        outpath_60m = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_hsi_60m_netcdf_variables.csv",
+        )
+        attrs_df_60.to_csv(outpath_60m, index=False)
 
         self._logger.info("Post-processing complete.")
 

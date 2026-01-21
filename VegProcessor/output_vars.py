@@ -781,7 +781,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "ppt",
                 "long_name": "",
                 "description": "",
             },
@@ -791,7 +791,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "Deg C",
                 "long_name": "",
                 "description": "",
             },
@@ -1041,7 +1041,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1051,7 +1051,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1061,7 +1061,7 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
+                "units": "meters",
                 "long_name": "",
                 "description": "",
             },
@@ -1071,9 +1071,135 @@ def get_hsi_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "",
-                "long_name": "",
-                "description": "",
+                "units": "meters",
+                "long_name": "water depth April-June mean",
+                "description": (
+                    "Mean water depth for April-June period at 480m resolution"
+                ),
+            },
+        ],
+        "salinity_max_april_sept": [
+            hsi.salinity_max_april_sept,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum April-September",
+                "description": (
+                    "Maximum salinity for April-September period at 480m resolution"
+                ),
+            },
+        ],
+        "salinity_max_july_sept": [
+            hsi.salinity_max_july_sept,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum July-September",
+                "description": (
+                    "Maximum salinity for July-September period at 480m resolution"
+                ),
+            },
+        ],
+        "salinity_max_may_july": [
+            hsi.salinity_max_may_july,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity maximum May-July",
+                "description": (
+                    "Maximum salinity for May-July period at 480m resolution"
+                ),
+            },
+        ],
+        "salinity_mean_high_march_nov": [
+            hsi.salinity_mean_high_march_nov,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "ppt",
+                "long_name": "salinity mean high March-November",
+                "description": (
+                    "Mean of upper 67th percentile salinity values for March-November period at 480m resolution"
+                ),
+            },
+        ],
+        "pct_pools_july_sept_mean": [
+            hsi.pct_pools_july_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent pools July-September mean",
+                "description": (
+                    "Percentage of pool pixels for July-September period"
+                ),
+            },
+        ],
+        "pct_pools_april_sept_mean": [
+            hsi.pct_pools_april_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent pools April-September mean",
+                "description": (
+                    "Percentage of pool pixels for April-September period"
+                ),
+            },
+        ],
+        "pct_shrub_scrub": [
+            hsi.pct_shrub_scrub,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent shrub/scrub cover",
+                "description": "Percentage of shrub/scrub vegetation cover",
+            },
+        ],
+        "edge": [
+            hsi.edge,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "edge pixels",
+                "description": "Percentage of water edge pixels (static)",
+            },
+        ],
+        "pct_has_mast": [
+            hsi.pct_has_mast,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent mast-producing vegetation",
+                "description": (
+                    "Percentage of vegetation with mast production (soft + hard mast combined)"
+                ),
+            },
+        ],
+        "pct_crops": [
+            hsi.pct_crops,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent crops",
+                "description": "Percentage of crop land cover (static)",
+            },
+        ],
+        "pct_developed": [
+            hsi.pct_developed,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent developed land",
+                "description": "Percentage of developed land cover (static)",
             },
         ],
         "human_influence_bool": [

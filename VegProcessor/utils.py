@@ -754,6 +754,44 @@ def reduce_arr_by_mode(categorical_array: np.ndarray):
     return coarse_da
 
 
+def coarsen_array(arr, factor_x=8, factor_y=8, method="mean"):
+    """
+    coarsen a 2D numpy array using xarray's coarsen method
+
+    parameters:
+    -----------
+    arr : numpy array
+        2D array to coarsen
+    factor_x : int
+        coarsening factor for x dimension (columns), defaults to 8
+    factor_y : int
+        coarsening factor for y dimension (rows), deaults to 8
+    method : str, optional
+        aggregation method ('mean', 'max', 'min', 'sum', 'median')
+        default is 'mean'
+
+    returns:
+    --------
+    numpy array
+        coarsened array
+    """
+    da = xr.DataArray(arr, dims=["y", "x"])
+    coarsened = da.coarsen(x=factor_x, y=factor_y, boundary="pad")
+
+    if method == "mean":
+        result = coarsened.mean()
+    elif method == "max":
+        result = coarsened.max()
+    elif method == "min":
+        result = coarsened.min()
+    elif method == "median":
+        result = coarsened.median()
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+    return result.values
+
+
 # def generate_filename(params: dict, parameter: str, base_path: str = None) -> Path:
 #     """
 #     Generate a filename based on the Atchafalaya Master Plan (AMP) file naming convention.
@@ -965,6 +1003,9 @@ def analog_years_handler(
     to the synthetic water-year used by `VegTransition` and
     `HSI`.
 
+    Handles both daily time series (365/366 days) and single-timestep
+    datasets (e.g., temporal averages like velocity).
+
     Parameters:
     -----------
     quintile : int
@@ -976,6 +1017,14 @@ def analog_years_handler(
     ds : xr.Dataset
         The hydrologic model single WY NetCDF file
     """
+    # Check if dataset has no time dimension or single timestep
+    # (e.g., velocity which is already a temporal average)
+    if ds.sizes["time"] == 1:
+        # Single timestep, just update the timestamp to match water year
+        target_date = pd.Timestamp(f"{water_year-1}-10-01")
+        ds = ds.assign_coords(time=("time", [target_date]))
+        return ds
+
     # build a 365-day date range by dropping Feb 29
     target_range = pd.date_range(
         f"{water_year-1}-10-01", f"{water_year}-09-30"

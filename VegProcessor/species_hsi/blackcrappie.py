@@ -20,6 +20,7 @@ class BlackCrappieHSI:
     hydro_domain_60: np.ndarray
     water_depth_july_august_mean_60m: np.ndarray
     water_depth_july_sept_mean_60m: np.ndarray
+    water_depth_feb_march_mean_60m: np.ndarray
 
     v1_max_monthly_avg_summer_turbidity: np.ndarray
     v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray
@@ -89,6 +90,7 @@ class BlackCrappieHSI:
             # depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
             water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
+            water_depth_feb_march_mean_60m=hsi_instance.water_depth_feb_march_mean_60m,
         )
 
     def __post_init__(self):
@@ -732,7 +734,7 @@ class BlackCrappieHSI:
 
             si_11 = self.mask_to_pools_backwaters_coarsen(
                 si_arr_60m=si_11,
-                water_depth_subset=self.water_depth_july_august_mean_60m,
+                water_depth_subset=self.water_depth_feb_march_mean_60m,
                 low=0.5,
                 high=3.0,
             )

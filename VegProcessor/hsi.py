@@ -398,6 +398,10 @@ class HSI(vt.VegTransition):
             months=[5, 6, 7],
             cell=False,
         )
+        self.water_depth_feb_march_mean_60m = self._get_daily_depth_filtered(
+            months=[2, 3],
+            cell=False,
+        )
 
         # temperature vars -------------------------------------------
         self.water_temperature = self._load_water_temp_general(self.wy)

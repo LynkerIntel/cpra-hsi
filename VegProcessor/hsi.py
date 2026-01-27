@@ -740,6 +740,16 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
 
+        ds_emergent_veg = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[
+                v for v in range(15, 24)
+            ],  # these are marshes, fresh shrubs, blh and swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+
         self.pct_shrub_scrub = ds["pct_cover_12"].to_numpy()
         self.pct_bare_ground = ds["pct_cover_14"].to_numpy()
         self.pct_zone_v = ds["pct_cover_15"].to_numpy()
@@ -756,6 +766,9 @@ class HSI(vt.VegTransition):
 
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
+
+        # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
+        self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
 
         # Marsh 20-23
         # self.pct_marsh = ds_marsh.to_numpy() # not currently in use

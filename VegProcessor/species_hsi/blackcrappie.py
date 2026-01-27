@@ -782,6 +782,13 @@ class BlackCrappieHSI:
                 1.59 * self.v12_min_do_in_midsummer_temp_strata[mask_4] - 6.9
             )
 
+            si_12 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_12,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6.0,
+            )
+
         if np.any(np.isclose(si_12, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 

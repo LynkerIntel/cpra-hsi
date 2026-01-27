@@ -20,6 +20,7 @@ class BlackCrappieHSI:
     hydro_domain_60: np.ndarray
     water_depth_july_august_mean_60m: np.ndarray
     water_depth_july_sept_mean_60m: np.ndarray
+    water_depth_feb_march_mean_60m: np.ndarray
 
     v1_max_monthly_avg_summer_turbidity: np.ndarray
     v2_pct_cover_in_midsummer_pools_overflow_bw: np.ndarray
@@ -81,7 +82,7 @@ class BlackCrappieHSI:
             v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean_60m,
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march_mean_60m,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
-            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,
+            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw, #set to ideal
             v14_max_salinity_gs=hsi_instance.salinity_max_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -89,6 +90,7 @@ class BlackCrappieHSI:
             # depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
             water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
+            water_depth_feb_march_mean_60m=hsi_instance.water_depth_feb_march_mean_60m,
         )
 
     def __post_init__(self):
@@ -732,7 +734,7 @@ class BlackCrappieHSI:
 
             si_11 = self.mask_to_pools_backwaters_coarsen(
                 si_arr_60m=si_11,
-                water_depth_subset=self.water_depth_july_august_mean_60m,
+                water_depth_subset=self.water_depth_feb_march_mean_60m,
                 low=0.5,
                 high=3.0,
             )
@@ -744,7 +746,7 @@ class BlackCrappieHSI:
 
     def calculate_si_12(self) -> np.ndarray:
         """Minimum dissolved oxygen levels within temperature strata selected above
-        (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Aug)
+        (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Sept)
         """
         self._logger.info("Running SI 12")
         si_12 = self.template.copy()
@@ -782,6 +784,13 @@ class BlackCrappieHSI:
                 1.59 * self.v12_min_do_in_midsummer_temp_strata[mask_4] - 6.9
             )
 
+            si_12 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_12,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6.0,
+            )
+
         if np.any(np.isclose(si_12, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")
 
@@ -792,10 +801,11 @@ class BlackCrappieHSI:
         self._logger.info("Running SI 13")
         si_13 = self.template.copy()
 
+        # set to ideal
         if self.v13_min_do_in_spawning_bw is None:
             self._logger.info(
                 "Minimum dissolved oxygen levels within backwaters during spawning (embryo, fry) "
-                "is not provided. Setting index to 1."
+                "assumes ideal conditions. Setting index to 1."
             )
             si_13[~np.isnan(si_13)] = 1
 
@@ -879,6 +889,7 @@ class BlackCrappieHSI:
         for si_name, si_array in [
             ("SI 1", self.si_1),
             ("SI 2", self.si_2),
+            ("SI 3", self.si_3),
             ("SI 4", self.si_4),
             ("SI 5", self.si_5),
             ("SI 7", self.si_7),

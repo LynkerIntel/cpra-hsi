@@ -744,7 +744,7 @@ class BlackCrappieHSI:
 
     def calculate_si_12(self) -> np.ndarray:
         """Minimum dissolved oxygen levels within temperature strata selected above
-        (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Aug)
+        (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Sept)
         """
         self._logger.info("Running SI 12")
         si_12 = self.template.copy()

@@ -81,7 +81,7 @@ class BlackCrappieHSI:
             v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean_60m,
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march_mean_60m,
             v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
-            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,
+            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw, #set to ideal
             v14_max_salinity_gs=hsi_instance.salinity_max_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -792,10 +792,11 @@ class BlackCrappieHSI:
         self._logger.info("Running SI 13")
         si_13 = self.template.copy()
 
+        # set to ideal
         if self.v13_min_do_in_spawning_bw is None:
             self._logger.info(
                 "Minimum dissolved oxygen levels within backwaters during spawning (embryo, fry) "
-                "is not provided. Setting index to 1."
+                "assumes ideal conditions. Setting index to 1."
             )
             si_13[~np.isnan(si_13)] = 1
 

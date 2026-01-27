@@ -880,6 +880,7 @@ class BlackCrappieHSI:
         for si_name, si_array in [
             ("SI 1", self.si_1),
             ("SI 2", self.si_2),
+            ("SI 3", self.si_3),
             ("SI 4", self.si_4),
             ("SI 5", self.si_5),
             ("SI 7", self.si_7),

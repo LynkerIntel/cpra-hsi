@@ -1402,6 +1402,16 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "blackcrappie_si_14": [
+            _safe_get_attr(hsi.blackcrappie, "si_14"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
         "blackcrappie_fc": [
             _safe_get_attr(hsi.blackcrappie, "fc"),
             np.float32,
@@ -1409,7 +1419,7 @@ def get_hsi_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "black crappie food components",
+                "description": "black crappie food component",
             },
         ],
         "blackcrappie_wq_tcr": [

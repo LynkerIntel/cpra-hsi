@@ -58,7 +58,7 @@ class BlackBearHSI:
             return array * multiplier if array is not None else None
 
         return cls(
-            v1_pct_area_wetland_cover=hsi_instance.pct_vegetated,
+            v1_pct_area_wetland_cover=hsi_instance.pct_emergent_vegetation,
             v2_pct_canopy_cover_s_mast_species=hsi_instance.pct_soft_mast,
             v3_soft_mast_prod_species_above1pct_canopy=hsi_instance.num_soft_mast_species,  # set to ideal
             v4_basal_area_mast_prod_species_above_30yr=hsi_instance.basal_area_hard_mast,  # set to ideal

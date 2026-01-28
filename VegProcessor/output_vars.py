@@ -936,6 +936,16 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_emergent_vegetation": [
+            hsi.pct_emergent_vegetation,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "",
+            },
+        ],
         "pct_vegetated": [
             hsi.pct_vegetated,
             np.float32,

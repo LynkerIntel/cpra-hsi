@@ -241,7 +241,7 @@ class HSI(vt.VegTransition):
             None  # set to ideal
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
-        self.blackcrappie_avg_vel_summer_flow_pools_bw = None
+        # self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_ph_year = None  # set to ideal
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None

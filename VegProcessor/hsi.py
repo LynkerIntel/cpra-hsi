@@ -168,7 +168,7 @@ class HSI(vt.VegTransition):
         self.salinity_max_july_sept = None
         self.salinity_max_may_july = None
 
-        self.velocity = None
+        self.velocity_july_sept_mean = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -437,7 +437,7 @@ class HSI(vt.VegTransition):
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
-        self.velocity = self._load_velocity_general(self.wy)
+        self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -1765,8 +1765,8 @@ class HSI(vt.VegTransition):
                     ),
                 },
             ],
-            "velocity": [
-                self.velocity,
+            "velocity_july_sept_mean": [
+                self.velocity_july_sept_mean,
                 np.float32,
                 {
                     "grid_mapping": "spatial_ref",

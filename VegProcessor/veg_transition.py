@@ -922,7 +922,7 @@ class VegTransition:
         """Load initial conditions for vegetation maturity."""
         self._logger.info("Loading initial maturity raster.")
         da = xr.open_dataarray(self.initial_maturity_path)
-        da = da["band" == 0]
+        da = da.isel(band=0)
         da = self._reproject_match_to_dem(da)
         return da.to_numpy()
 
@@ -1041,7 +1041,7 @@ class VegTransition:
 
         # load DEM, use coords
         da = xr.open_dataarray(self.dem_path)
-        da = da["band" == 0]
+        da = da.isel(band=0)
         x = da.coords["x"].values
         y = da.coords["y"].values
 
@@ -1301,7 +1301,7 @@ class VegTransition:
         """
         logging.info("Running post-processing routine.")
         wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
-        wpu = wpu["band" == 0]
+        wpu = wpu.isel(band=0)
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)
 

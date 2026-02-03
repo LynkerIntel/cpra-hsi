@@ -1119,7 +1119,7 @@ class HSI(vt.VegTransition):
             "Creating flotant marsh from initial veg and flotant marsh arrays."
         )
         da = xr.open_dataarray(self.flotant_marsh_path)
-        da = da["band" == 0]
+        da = da.isel(band=0)
         # reproject to match hsi grid
         da = self._reproject_match_to_dem(da)
 

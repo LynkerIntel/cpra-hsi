@@ -1,4 +1,5 @@
 import logging
+import time
 import yaml
 import subprocess
 import xarray as xr
@@ -736,7 +737,33 @@ class VegTransition:
         """
         ds_dem = xr.open_dataset(self.dem_path)
         da_dem = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+
+        crs_match = ds.rio.crs == da_dem.rio.crs
+        bounds_match = ds.rio.bounds() == da_dem.rio.bounds()
+        res_match = tuple(abs(r) for r in ds.rio.resolution()) == tuple(abs(r) for r in da_dem.rio.resolution())
+        self._logger.info(
+            "reproject_match check — CRS match: %s, bounds match: %s, resolution match: %s",
+            crs_match, bounds_match, res_match,
+        )
+        self._logger.info(
+            "input  — CRS: %s, bounds: %s, resolution: %s",
+            ds.rio.crs, ds.rio.bounds(), ds.rio.resolution(),
+        )
+        self._logger.info(
+            "DEM    — CRS: %s, bounds: %s, resolution: %s",
+            da_dem.rio.crs, da_dem.rio.bounds(), da_dem.rio.resolution(),
+        )
+
+        if crs_match and bounds_match and res_match:
+            self._logger.info("reproject_match skipped: already matches DEM")
+            ds_dem.close()
+            da_dem.close()
+            return ds
+
+        start = time.perf_counter()
         ds_reprojected = ds.rio.reproject_match(da_dem)
+        elapsed = time.perf_counter() - start
+        self._logger.info("reproject_match completed in %.2f seconds", elapsed)
         ds_dem.close()
         da_dem.close()
         return ds_reprojected

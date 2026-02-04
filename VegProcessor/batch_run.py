@@ -9,20 +9,20 @@ import utils
 
 veg_config_files = [
     # D3D
-    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_d3d_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_base_wet.yaml",
     # HEC
-    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_hec_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_hec_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_base_wet.yaml",
     # MIKE
-    "/Users/dillonragar/data/cpra/configs/veg_mik_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_mik_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_mik_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/veg_mik_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_base_wet.yaml",
 ]
 
 

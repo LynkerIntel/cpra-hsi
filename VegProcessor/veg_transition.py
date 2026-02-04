@@ -530,7 +530,7 @@ class VegTransition:
             f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
-            f"{self.file_params['hydro_source_model_version']}.nc",
+            f"{self.file_params['hydro_source_model_version']}.zarr",
         )
 
         return nc_path, analog_year
@@ -579,11 +579,7 @@ class VegTransition:
         )
         self._logger.info("Loading files: %s", nc_path)
 
-        ds = xr.open_dataset(
-            nc_path,
-            engine="h5netcdf",
-            chunks="auto",
-        )
+        ds = xr.open_zarr(nc_path)
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
 
@@ -684,21 +680,9 @@ class VegTransition:
             )
             self._logger.info("Loading files: %s", nc_path)
 
-            ds = xr.open_dataset(
-                nc_path,
-                engine="h5netcdf",
-                chunks="auto",
-            )
+            ds = xr.open_zarr(nc_path)
 
             ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            # # model specific var names: -----------------------------------------------
-            # if self.file_params["hydro_source_model"] == "D3D":
-            #     ds = ds.rename({"waterlevel": "height"})
-            # if self.file_params["hydro_source_model"] == "MIK":
-            #     ds = ds.rename({"water_level": "height"})
-            # # extract height var as da
-            # height_da = ds["sali"]
 
             # handle varied CRS metadata locations between model files-----------------
             try:
@@ -712,7 +696,6 @@ class VegTransition:
                 ) from exc
 
             ds = self._reproject_match_to_dem(ds)
-            # ds = ds.chunk({"time": -1, "y": 1599, "x": 1276})
             return ds
 
         else:

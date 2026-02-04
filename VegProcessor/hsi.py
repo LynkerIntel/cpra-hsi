@@ -589,21 +589,9 @@ class HSI(vt.VegTransition):
             )
             self._logger.info("Loading file: %s", nc_path)
 
-            ds = xr.open_dataset(
-                nc_path,
-                engine="h5netcdf",
-                chunks="auto",
-            )
+            ds = xr.open_zarr(nc_path)
 
             ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            # # model specific var names: -----------------------------------------------
-            # if self.file_params["hydro_source_model"] == "D3D":
-            #     ds = ds.rename({"waterlevel": "height"})
-            # if self.file_params["hydro_source_model"] == "MIK":
-            #     ds = ds.rename({"water_level": "height"})
-            # # extract height var as da
-            # height_da = ds["sali"]
 
             # handle varied CRS metadata locations between model files-----------------
             try:
@@ -634,21 +622,9 @@ class HSI(vt.VegTransition):
             )
             self._logger.info("Loading file: %s", nc_path)
 
-            ds = xr.open_dataset(
-                nc_path,
-                engine="h5netcdf",
-                chunks="auto",
-            )
+            ds = xr.open_zarr(nc_path)
 
             ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            # # model specific var names: -----------------------------------------------
-            # if self.file_params["hydro_source_model"] == "D3D":
-            #     ds = ds.rename({"waterlevel": "height"})
-            # if self.file_params["hydro_source_model"] == "MIK":
-            #     ds = ds.rename({"water_level": "height"})
-            # # extract height var as da
-            # height_da = ds["sali"]
 
             # handle varied CRS metadata locations between model files-----------------
             try:

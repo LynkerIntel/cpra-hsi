@@ -46,6 +46,17 @@ def convert_file(
     """
     print(f"  Opening {nc_path.name}...")
     ds = xr.open_dataset(nc_path, engine="h5netcdf", chunks="auto")
+    # handle varied CRS metadata locations between model files-----------------
+    try:
+        # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+        crs_wkt = ds["crs"].attrs.get("crs_wkt")
+        ds = ds.rio.write_crs(crs_wkt)
+
+    except Exception:
+        # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
+        crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+        ds = ds.rio.write_crs(crs_wkt)
+
     ds = ds.chunk({"time": time_chunks})
 
     if match_raster is not None:
@@ -60,9 +71,8 @@ def convert_file(
 
 def _reproject_match(ds: xr.Dataset, match_raster: Path) -> xr.Dataset:
     """Reproject *ds* to match the grid of *match_raster*."""
-    # da_match = xr.open_dataarray(match_raster, engine="rasterio")
-    ds_dem = xr.open_dataset(match_raster)
-    da_match = ds_dem.squeeze(drop="band_data").to_dataarray(dim="band")
+    ds_match = xr.open_dataset(match_raster)
+    da_match = ds_match.squeeze(drop="band_data").to_dataarray(dim="band")
 
     crs_match = ds.rio.crs == da_match.rio.crs
     bounds_match = ds.rio.bounds() == da_match.rio.bounds()

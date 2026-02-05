@@ -29,20 +29,20 @@ veg_config_files = [
 # list of config files for each HSI run
 hsi_config_files = [
     # D3D
-    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_1-08ft_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_1-08ft_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_d3d_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_1-08ft_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_1-08ft_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_base_wet.yaml",
     # HEC
-    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_hec_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_base_wet.yaml",
     # MIK
-    "/Users/dillonragar/data/cpra/configs/hsi_mik_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_mik_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_mik_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/hsi_mik_config_base_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_1-08ft_slr_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_1-08ft_slr_wet.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_base_dry.yaml",
+    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_base_wet.yaml",
 ]
 
 

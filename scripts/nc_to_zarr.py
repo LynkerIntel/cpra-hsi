@@ -15,7 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import rioxarray  # noqa: F401 — activates .rio accessor
+import rioxarray  # dont remove
 import xarray as xr
 
 

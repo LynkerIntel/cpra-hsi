@@ -57,6 +57,13 @@ def convert_file(
         crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
         ds = ds.rio.write_crs(crs_wkt)
 
+    # Normalize spatial dimension names to y/x
+    _DIM_RENAME = {"Northings": "y", "Eastings": "x"}
+    rename = {k: v for k, v in _DIM_RENAME.items() if k in ds.dims}
+    if rename:
+        print(f"  Renaming dimensions: {rename}")
+        ds = ds.rename(rename)
+
     ds = ds.chunk({"time": time_chunks})
 
     if match_raster is not None:

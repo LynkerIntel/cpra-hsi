@@ -264,7 +264,7 @@ class HSI(vt.VegTransition):
         # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
         # self.catfish_max_summer_salinity_fry_juvenile = None
         # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
-        self.catfish_avg_vel_summer_flow = None
+        # self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)

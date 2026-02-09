@@ -723,7 +723,7 @@ class VegTransition:
 
         crs_match = ds.rio.crs == da_dem.rio.crs
         bounds_match = ds.rio.bounds() == da_dem.rio.bounds()
-        res_match = tuple(abs(r) for r in ds.rio.resolution()) == tuple(abs(r) for r in da_dem.rio.resolution())
+        res_match = ds.rio.resolution() == da_dem.rio.resolution()
         self._logger.info(
             "reproject_match check — CRS match: %s, bounds match: %s, resolution match: %s",
             crs_match, bounds_match, res_match,

@@ -83,9 +83,7 @@ def _reproject_match(ds: xr.Dataset, match_raster: Path) -> xr.Dataset:
 
     crs_match = ds.rio.crs == da_match.rio.crs
     bounds_match = ds.rio.bounds() == da_match.rio.bounds()
-    res_match = tuple(abs(r) for r in ds.rio.resolution()) == tuple(
-        abs(r) for r in da_match.rio.resolution()
-    )
+    res_match = ds.rio.resolution() == da_match.rio.resolution()
 
     print(
         f"  reproject_match — CRS match: {crs_match}, "

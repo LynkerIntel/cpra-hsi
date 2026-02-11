@@ -726,15 +726,21 @@ class VegTransition:
         res_match = ds.rio.resolution() == da_dem.rio.resolution()
         self._logger.info(
             "reproject_match check — CRS match: %s, bounds match: %s, resolution match: %s",
-            crs_match, bounds_match, res_match,
+            crs_match,
+            bounds_match,
+            res_match,
         )
         self._logger.info(
             "input  — CRS: %s, bounds: %s, resolution: %s",
-            ds.rio.crs, ds.rio.bounds(), ds.rio.resolution(),
+            ds.rio.crs,
+            ds.rio.bounds(),
+            ds.rio.resolution(),
         )
         self._logger.info(
             "DEM    — CRS: %s, bounds: %s, resolution: %s",
-            da_dem.rio.crs, da_dem.rio.bounds(), da_dem.rio.resolution(),
+            da_dem.rio.crs,
+            da_dem.rio.bounds(),
+            da_dem.rio.resolution(),
         )
 
         if crs_match and bounds_match and res_match:
@@ -1315,16 +1321,9 @@ class VegTransition:
         # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
         wpu = xr.where(wpu != 0, wpu, np.nan)
 
-        ds = xr.open_dataset(self.netcdf_filepath)
-        # ds = utils.open_veg_multifile(self.output_dir_path)
-
         logging.info("Calculating WPU veg type sums.")
+        ds = xr.open_dataset(self.netcdf_filepath)
         df = utils.wpu_sums(ds_veg=ds, zones=wpu)
-
-        # rename cols from int to type name
-        # types_dict = dict(self.veg_keys[["Value", "Class"]].values)
-        # df.rename(columns=types_dict, inplace=True)
-
         outpath = os.path.join(
             self.run_metadata_dir,
             f"{self.file_name}_wpu_vegtype_timeseries.csv",
@@ -1332,7 +1331,6 @@ class VegTransition:
         df.to_csv(outpath)
 
         logging.info("Calculating full-domain veg type sums.")
-
         df_full_domain = utils.pixel_sums_full_domain(ds=ds)
         outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_vegtype_timeseries.csv"
@@ -1353,7 +1351,6 @@ class VegTransition:
         )
         attrs_df.to_csv(outpath, index=False)
 
-        # -------- convert NetCDF to COGs --------
         logging.info("Converting NetCDF output to COGs.")
         cog_output_dir = os.path.join(self.output_dir_path, "cogs")
         utils.process_netcdf_folder(

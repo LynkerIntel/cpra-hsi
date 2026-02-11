@@ -1,3 +1,5 @@
+import argparse
+import glob
 import os
 import yaml
 import xarray as xr
@@ -7,43 +9,13 @@ from veg_transition import VegTransition
 from hsi import HSI
 import utils
 
-veg_config_files = [
-    # D3D
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_d3d_config_base_wet.yaml",
-    # HEC
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_hec_config_base_wet.yaml",
-    # MIKE
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/veg_mik_config_base_wet.yaml",
-]
 
-
-# list of config files for each HSI run
-hsi_config_files = [
-    # D3D
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_1-08ft_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_1-08ft_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_d3d_config_base_wet.yaml",
-    # HEC
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_hec_config_base_wet.yaml",
-    # MIK
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_1-08ft_slr_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_1-08ft_slr_wet.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_base_dry.yaml",
-    "/Users/dillonragar/data/cpra/configs/padded_dem/hsi_mik_config_base_wet.yaml",
-]
+def discover_configs(config_dir: str) -> tuple[list[str], list[str]]:
+    """Find all veg and hsi yaml config files in the given directory."""
+    all_yamls = sorted(glob.glob(os.path.join(config_dir, "*.yaml")))
+    veg_configs = [f for f in all_yamls if os.path.basename(f).startswith("veg_")]
+    hsi_configs = [f for f in all_yamls if os.path.basename(f).startswith("hsi_")]
+    return veg_configs, hsi_configs
 
 
 def get_last_log_entries(
@@ -288,6 +260,23 @@ def print_results_summary(veg_results: dict, hsi_results: dict):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Batch run VegTransition and HSI models from a config directory."
+    )
+    parser.add_argument(
+        "config_dir",
+        help="Directory containing veg_*.yaml and hsi_*.yaml config files.",
+    )
+    args = parser.parse_args()
+
+    config_dir = os.path.abspath(args.config_dir)
+    if not os.path.isdir(config_dir):
+        print(f"ERROR: {config_dir} is not a valid directory.")
+        return
+
+    veg_config_files, hsi_config_files = discover_configs(config_dir)
+    print(f"Found {len(veg_config_files)} veg configs and {len(hsi_config_files)} hsi configs in {config_dir}")
+
     run_veg = (
         input("Do you want to run Veg models? (y/n): ").lower().strip() == "y"
     )

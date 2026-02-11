@@ -86,7 +86,7 @@ class RiverineCatfishHSI:
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean_60m,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
             v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
-            v18_avg_vel_summer_flow=hsi_instance.velocity,
+            v18_avg_vel_summer_flow=hsi_instance.velocity_july_sept_mean,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,

@@ -168,7 +168,7 @@ class HSI(vt.VegTransition):
         self.salinity_max_july_sept = None
         self.salinity_max_may_july = None
 
-        self.velocity = None
+        self.velocity_july_sept_mean = None
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -241,7 +241,7 @@ class HSI(vt.VegTransition):
             None  # set to ideal
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
-        self.blackcrappie_avg_vel_summer_flow_pools_bw = None
+        # self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_ph_year = None  # set to ideal
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
         # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
@@ -264,7 +264,7 @@ class HSI(vt.VegTransition):
         # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
         # self.catfish_max_summer_salinity_fry_juvenile = None
         # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
-        self.catfish_avg_vel_summer_flow = None
+        # self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)
@@ -437,7 +437,7 @@ class HSI(vt.VegTransition):
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
-        self.velocity = self._load_velocity_general(self.wy)
+        self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -589,21 +589,9 @@ class HSI(vt.VegTransition):
             )
             self._logger.info("Loading file: %s", nc_path)
 
-            ds = xr.open_dataset(
-                nc_path,
-                engine="h5netcdf",
-                chunks="auto",
-            )
+            ds = xr.open_zarr(nc_path)
 
             ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            # # model specific var names: -----------------------------------------------
-            # if self.file_params["hydro_source_model"] == "D3D":
-            #     ds = ds.rename({"waterlevel": "height"})
-            # if self.file_params["hydro_source_model"] == "MIK":
-            #     ds = ds.rename({"water_level": "height"})
-            # # extract height var as da
-            # height_da = ds["sali"]
 
             # handle varied CRS metadata locations between model files-----------------
             try:
@@ -634,21 +622,9 @@ class HSI(vt.VegTransition):
             )
             self._logger.info("Loading file: %s", nc_path)
 
-            ds = xr.open_dataset(
-                nc_path,
-                engine="h5netcdf",
-                chunks="auto",
-            )
+            ds = xr.open_zarr(nc_path)
 
             ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            # # model specific var names: -----------------------------------------------
-            # if self.file_params["hydro_source_model"] == "D3D":
-            #     ds = ds.rename({"waterlevel": "height"})
-            # if self.file_params["hydro_source_model"] == "MIK":
-            #     ds = ds.rename({"water_level": "height"})
-            # # extract height var as da
-            # height_da = ds["sali"]
 
             # handle varied CRS metadata locations between model files-----------------
             try:
@@ -1119,7 +1095,7 @@ class HSI(vt.VegTransition):
             "Creating flotant marsh from initial veg and flotant marsh arrays."
         )
         da = xr.open_dataarray(self.flotant_marsh_path)
-        da = da["band" == 0]
+        da = da.isel(band=0)
         # reproject to match hsi grid
         da = self._reproject_match_to_dem(da)
 
@@ -1765,8 +1741,8 @@ class HSI(vt.VegTransition):
                     ),
                 },
             ],
-            "velocity": [
-                self.velocity,
+            "velocity_july_sept_mean": [
+                self.velocity_july_sept_mean,
                 np.float32,
                 {
                     "grid_mapping": "spatial_ref",
@@ -1882,6 +1858,15 @@ class HSI(vt.VegTransition):
             f"{self.file_name}_hsi_60m_netcdf_variables.csv",
         )
         attrs_df_60.to_csv(outpath_60m, index=False)
+
+        # -------- convert NetCDFs to COGs --------
+        self._logger.info("Converting NetCDF output to COGs.")
+        cog_output_dir = os.path.join(self.output_dir_path, "cogs")
+        utils.process_netcdf_folder(
+            input_folder=self.output_dir_path,
+            output_base_dir=cog_output_dir,
+            overwrite=True,
+        )
 
         self._logger.info("Post-processing complete.")
 

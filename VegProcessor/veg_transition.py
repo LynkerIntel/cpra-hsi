@@ -1353,6 +1353,15 @@ class VegTransition:
         )
         attrs_df.to_csv(outpath, index=False)
 
+        # -------- convert NetCDF to COGs --------
+        logging.info("Converting NetCDF output to COGs.")
+        cog_output_dir = os.path.join(self.output_dir_path, "cogs")
+        utils.process_netcdf_folder(
+            input_folder=self.output_dir_path,
+            output_base_dir=cog_output_dir,
+            overwrite=True,
+        )
+
         logging.info("Post-processing complete.")
 
     def create_qc_arrays(self):

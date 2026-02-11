@@ -1859,6 +1859,15 @@ class HSI(vt.VegTransition):
         )
         attrs_df_60.to_csv(outpath_60m, index=False)
 
+        # -------- convert NetCDFs to COGs --------
+        self._logger.info("Converting NetCDF output to COGs.")
+        cog_output_dir = os.path.join(self.output_dir_path, "cogs")
+        utils.process_netcdf_folder(
+            input_folder=self.output_dir_path,
+            output_base_dir=cog_output_dir,
+            overwrite=True,
+        )
+
         self._logger.info("Post-processing complete.")
 
     def log_data_attribute_types(self):

@@ -20,6 +20,7 @@ from typing import Callable, List, Tuple
 import logging
 import re
 from pathlib import Path
+import rioxarray  # noqa: F401 - registers .rio accessor on xarray objects
 
 # Configure the logger in VegTransition
 logger = logging.getLogger("VegTransition")
@@ -1258,3 +1259,215 @@ def create_binary_max_domain(
 #         variable_defs[varname] = [array_ref, dtype, attrs]
 
 #     return variable_defs
+
+
+def save_variables_as_cogs(
+    ds: xr.Dataset,
+    output_dir: str,
+    crs: str = "EPSG:32615",
+    overwrite: bool = False,
+    water_year: int = None,
+):
+    """
+    Save each variable and timestep in an xarray.Dataset as a Cloud Optimized
+    GeoTIFF using odc.geo.xr.write_cog.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to export.
+    output_dir : str
+        Path to output directory.
+    crs : str
+        Coordinate reference system (e.g., "EPSG:32615").
+    overwrite : bool
+        Whether to overwrite existing files.
+    water_year : int, optional
+        Water year for daily data (e.g., 2006). If not provided, will attempt
+        to extract from output_dir.
+    """
+    from odc.geo.xr import write_cog
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"reprojecting to web mercator")
+    ds = ds.rio.reproject("EPSG:3857")
+    print(f"starting export of {len(ds.data_vars)} variables to {output_dir}")
+
+    # determine if this is daily data (365 timesteps) or annual data
+    num_timesteps = len(ds.time.values)
+    is_daily_data = num_timesteps == 365
+
+    # extract water year from output_dir if not provided (for daily data)
+    if is_daily_data and water_year is None:
+        wy_match = re.search(r"WY(\d+)", output_dir)
+        if wy_match:
+            wy = int(wy_match.group(1))
+            water_year = 2000 + wy if wy < 50 else 1900 + wy
+            print(f"extracted water year from path: {water_year}")
+        else:
+            print(
+                "warning: could not extract water year from path, using default 2020"
+            )
+            water_year = 2020
+
+    for var_name in ds.data_vars:
+        var = ds[var_name]
+        var_dir = os.path.join(output_dir, var_name)
+        os.makedirs(var_dir, exist_ok=True)
+        print(f"\nprocessing variable: {var_name}")
+
+        if is_daily_data:
+            print(
+                f"  detected daily data ({num_timesteps} timesteps) - using WY{water_year} DOY labels"
+            )
+        else:
+            print(
+                f"  detected annual data ({num_timesteps} timesteps) - using year labels"
+            )
+
+        # determine starting year based on number of timesteps (for annual data)
+        start_year = 0 if num_timesteps == 11 else 1
+
+        for t_idx, t_val in enumerate(ds.time.values):
+            if is_daily_data:
+                doy = t_idx + 1
+                file_label = f"WY{water_year}_DOY_{doy:03d}"
+            else:
+                time_label = start_year + t_idx
+                file_label = str(time_label)
+
+            da_slice = var.isel(time=t_idx)
+            da_slice = da_slice.squeeze(drop=True)
+
+            min_value = float(da_slice.min().values)
+            max_value = float(da_slice.max().values)
+            units = da_slice.attrs.get("units", "")
+
+            output_path = os.path.join(
+                var_dir, f"{var_name}_{file_label}.tif"
+            )
+            if not overwrite and os.path.exists(output_path):
+                print(f"  skipping existing file: {output_path}")
+                continue
+            print(
+                f"  writing: {output_path} (min: {min_value:.3f}, max: {max_value:.3f})"
+            )
+            write_cog(
+                da_slice,
+                fname=output_path,
+                overwrite=overwrite,
+                blocksize=512,
+                compress="deflate",
+                tags={
+                    "MIN_VALUE": min_value,
+                    "MAX_VALUE": max_value,
+                    "UNIT": units,
+                },
+            )
+    print("done exporting all variables.")
+
+
+def process_netcdf_folder(
+    input_folder: str,
+    output_base_dir: str = "./data/",
+    overwrite: bool = False,
+    pattern: str = "*.nc",
+    match: xr.Dataset = None,
+    mask: xr.Dataset = None,
+):
+    """
+    Process all NetCDF files in a folder and convert them to COGs.
+
+    Parameters
+    ----------
+    input_folder : str
+        Path to folder containing NetCDF files.
+    output_base_dir : str
+        Base directory for COG output (default: "./data/").
+    overwrite : bool
+        Whether to overwrite existing files.
+    pattern : str
+        File pattern to match (default: "*.nc").
+    match : xr.Dataset, optional
+        Dataset to match using rio.reproject_match.
+    mask : xr.Dataset, optional
+        Dataset to use as mask.
+    """
+    input_path = Path(input_folder)
+    if not input_path.exists():
+        raise ValueError(f"Input folder does not exist: {input_folder}")
+
+    nc_files = list(input_path.glob(pattern))
+
+    if not nc_files:
+        print(
+            f"No NetCDF files found matching pattern '{pattern}' in {input_folder}"
+        )
+        return
+
+    print(f"Found {len(nc_files)} NetCDF files to process")
+
+    for nc_file in nc_files:
+        print(f"\n{'='*60}")
+        print(f"Processing: {nc_file.name}")
+        print(f"{'='*60}")
+
+        try:
+            ds = xr.open_dataset(nc_file)
+            ds = ds.rio.write_crs("EPSG:6344")
+
+            # convert any boolean variables to integer before reprojection
+            for var_name in ds.data_vars:
+                if ds[var_name].dtype == bool or str(
+                    ds[var_name].dtype
+                ).startswith("bool"):
+                    print(
+                        f"converting boolean variable {var_name} to uint8"
+                    )
+                    ds[var_name] = ds[var_name].astype("uint8")
+
+            # ensure each data variable has the CRS
+            for var in ds.data_vars:
+                ds[var] = ds[var].rio.write_crs("EPSG:6344")
+
+            # create output directory based on NetCDF filename
+            output_dir_name = nc_file.stem
+            # strip "_60m" suffix from output folder name if present
+            if output_dir_name.endswith("_60m"):
+                output_dir_name = output_dir_name[:-4]
+            output_dir = os.path.join(output_base_dir, output_dir_name)
+
+            if match is not None:
+                print("Running rio.reproject_match")
+                ds = ds.rio.reproject_match(match)
+                ds = ds.rio.write_crs(match.rio.crs)
+                for var in ds.data_vars:
+                    ds[var] = ds[var].rio.write_crs(match.rio.crs)
+
+            if mask is not None:
+                if match is None:
+                    raise ValueError(
+                        "must reproject-match hydro domain if using mask!"
+                    )
+                print("Masking data to provided domain")
+                ds = ds.where(~np.isnan(mask).values[0])
+
+            save_variables_as_cogs(
+                ds=ds,
+                output_dir=output_dir,
+                crs="EPSG:3857",
+                overwrite=overwrite,
+            )
+
+            ds.close()
+
+            print(f"Successfully processed: {nc_file.name}")
+
+        except Exception as e:
+            print(f"Error processing {nc_file.name}: {str(e)}")
+            continue
+
+    print(f"\n{'='*60}")
+    print(f"Batch processing complete!")
+    print(f"{'='*60}")

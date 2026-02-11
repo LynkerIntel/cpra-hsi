@@ -15,6 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import pandas as pd
 import rioxarray  # dont remove
 import xarray as xr
 
@@ -46,6 +47,19 @@ def convert_file(
     """
     print(f"  Opening {nc_path.name}...")
     ds = xr.open_dataset(nc_path, engine="h5netcdf", chunks="auto")
+
+    # Trim to water year bounds (Oct 1 – Sep 30) ---------------------------------
+    if "time" in ds.dims and ds.sizes["time"] > 1:
+        times = pd.DatetimeIndex(ds.time.values)
+        first = times[0]
+        wy = first.year + 1 if first.month >= 10 else first.year
+        wy_start = pd.Timestamp(f"{wy - 1}-10-01")
+        wy_end = pd.Timestamp(f"{wy}-09-30")
+        before = ds.sizes["time"]
+        ds = ds.sel(time=slice(wy_start, wy_end))
+        after = ds.sizes["time"]
+        if before != after:
+            print(f"  Trimmed time from {before} to {after} steps (WY{wy}: {wy_start.date()} – {wy_end.date()})")
     # handle varied CRS metadata locations between model files-----------------
     try:
         # D3D & MIKE: CRS from crs variable's crs_wkt attribute

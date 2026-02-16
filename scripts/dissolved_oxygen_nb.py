@@ -13,7 +13,8 @@ def _():
 
     import os
     from xgboost import XGBRegressor
-    from sklearn.model_selection import ShuffleSplit, cross_validate
+    import numpy as np
+    from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve
 
 
     return ShuffleSplit, XGBRegressor, cross_validate, os, pd
@@ -33,7 +34,6 @@ def _(os):
 
     output_folder = "./ml_out"
     os.makedirs(output_folder, exist_ok=True)
-
     return (train_file,)
 
 
@@ -49,7 +49,6 @@ def _():
         'Month',
         'DayOfYear'
     ]
-
     return (features,)
 
 
@@ -88,7 +87,6 @@ def _(features, pd, train_file):
 
     X_train = df_train[features]
     y_train = df_train['Dissolved_Oxygen']
-
     return X_train, y_train
 
 
@@ -112,7 +110,8 @@ def _(ShuffleSplit, XGBRegressor, X_train, cross_validate, y_train):
     cv_results = cross_validate(
         xgb, X_train, y_train,
         cv=cv,
-        scoring={'r2': 'r2', 'rmse': 'neg_root_mean_squared_error'}
+        scoring={'r2': 'r2', 'rmse': 'neg_root_mean_squared_error'},
+        return_train_score=True
     )
 
     xgb.fit(X_train, y_train)

@@ -60,6 +60,12 @@ def convert_file(
         after = ds.sizes["time"]
         if before != after:
             print(f"  Trimmed time from {before} to {after} steps (WY{wy}: {wy_start.date()} – {wy_end.date()})")
+
+    # Sediment flux is cumulative – keep only the last timestep -----------------
+    if "cumulative_sediment_erosion_deposition" in ds.data_vars and "time" in ds.dims:
+        print(f"  cumulative_sediment_erosion_deposition detected — keeping only last timestep ({ds.time.values[-1]})")
+        ds = ds.isel(time=[-1])
+
     # handle varied CRS metadata locations between model files-----------------
     try:
         # D3D & MIKE: CRS from crs variable's crs_wkt attribute

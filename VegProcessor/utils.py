@@ -1267,6 +1267,7 @@ def save_variables_as_cogs(
     crs: str = "EPSG:32615",
     overwrite: bool = False,
     water_year: int = None,
+    start_year: int = 0,
 ):
     """
     Save each variable and timestep in an xarray.Dataset as a Cloud Optimized
@@ -1285,6 +1286,9 @@ def save_variables_as_cogs(
     water_year : int, optional
         Water year for daily data (e.g., 2006). If not provided, will attempt
         to extract from output_dir.
+    start_year : int
+        Starting label for annual timesteps (default: 0). Use 0 for VEG
+        output (includes initial conditions), 1 for HSI output (no IC).
     """
     from odc.geo.xr import write_cog
 
@@ -1326,8 +1330,7 @@ def save_variables_as_cogs(
                 f"  detected annual data ({num_timesteps} timesteps) - using year labels"
             )
 
-        # determine starting year based on number of timesteps (for annual data)
-        start_year = 0 if num_timesteps == 11 else 1
+        # start_year is passed as a parameter (default 0 for VEG with IC, 1 for HSI)
 
         for t_idx, t_val in enumerate(ds.time.values):
             if is_daily_data:
@@ -1375,6 +1378,7 @@ def process_netcdf_folder(
     pattern: str = "*.nc",
     match: xr.Dataset = None,
     mask: xr.Dataset = None,
+    start_year: int = 0,
 ):
     """
     Process all NetCDF files in a folder and convert them to COGs.
@@ -1393,6 +1397,9 @@ def process_netcdf_folder(
         Dataset to match using rio.reproject_match.
     mask : xr.Dataset, optional
         Dataset to use as mask.
+    start_year : int
+        Starting output timestep label for annual timesteps (default: 0). Use 0 for VEG
+        output (includes initial conditions), 1 for HSI output (no IC).
     """
     input_path = Path(input_folder)
     if not input_path.exists():
@@ -1458,6 +1465,7 @@ def process_netcdf_folder(
                 output_dir=output_dir,
                 crs="EPSG:3857",
                 overwrite=overwrite,
+                start_year=start_year,
             )
 
             ds.close()

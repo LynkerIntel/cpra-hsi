@@ -1866,6 +1866,7 @@ class HSI(vt.VegTransition):
             input_folder=self.output_dir_path,
             output_base_dir=cog_output_dir,
             overwrite=True,
+            start_year=1,
         )
 
         self._logger.info("Post-processing complete.")

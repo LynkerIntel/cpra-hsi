@@ -7,6 +7,8 @@ requires-python = ">=3.14"
 dependencies = [
     "cartopy>=0.25.0",
     "dask>=2026.1.2",
+    "datacube>=1.9.14",
+    "gdal>=3.12.2",
     "geocube>=0.7.1",
     "geopandas>=1.1.2",
     "h5netcdf>=1.8.1",

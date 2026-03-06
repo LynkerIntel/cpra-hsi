@@ -310,6 +310,9 @@ class HSI(vt.VegTransition):
         self.netcdf_velocity_path = self.config["raster_data"].get(
             "netcdf_velocity_path"
         )
+        self.netcdf_flowexch_path = self.config["raster_data"].get(
+            "netcdf_flowexch_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
@@ -644,6 +647,64 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("Velocity not provided.")
             return None
+
+    def _load_flowexchange_general(
+        self,
+        water_year: int,
+        cell: bool = False,
+    ) -> xr.Dataset:
+        """
+        Load flow exchange data
+        """
+        if self.netcdf_flowexch_path is not None:
+            self._logger.info(
+                "Loading flow exchange data with universal daily method."
+            )
+            if self.file_params["hydro_source_model"] == "D3D":
+                self._logger.info("Loading D3D flow exchange.")
+                nc_path, analog_year = self._get_hydro_netcdf_path(
+                    water_year, hydro_variable="FLOWEXCH"
+                )
+                self._logger.info("Loading files: %s", nc_path)
+                # don't decode times for D3D, due to erroneous time epoch definition in source files
+                # the analog years handler replaces all dates, so the model is not impacted
+                ds = xr.open_zarr(nc_path, decode_times=False)
+                ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            else:
+                nc_path, analog_year = self._get_hydro_netcdf_path(
+                    water_year, hydro_variable="FLOWEXCH"
+                )
+                self._logger.info("Loading files: %s", nc_path)
+                ds = xr.open_zarr(nc_path)
+                ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info(
+                "No salinity NetCDF path provided, using approximate"
+                "salinity based on veg type."
+            )
+
+            salinity = hydro_logic.habitat_based_salinity(
+                self.veg_type,
+                domain=self.hydro_domain,
+                cell=cell,
+            )
+            return salinity
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This

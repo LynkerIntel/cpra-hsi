@@ -51,19 +51,28 @@ def convert_file(
     # Trim to water year bounds (Oct 1 – Sep 30) ---------------------------------
     if "time" in ds.dims and ds.sizes["time"] > 1:
         times = pd.DatetimeIndex(ds.time.values)
-        first = times[0]
-        wy = first.year + 1 if first.month >= 10 else first.year
+        # Use the median timestamp to determine water year, avoiding
+        # edge effects when the first timestep falls just outside the WY.
+        mid = times[len(times) // 2]
+        wy = mid.year + 1 if mid.month >= 10 else mid.year
         wy_start = pd.Timestamp(f"{wy - 1}-10-01")
         wy_end = pd.Timestamp(f"{wy}-09-30")
         before = ds.sizes["time"]
         ds = ds.sel(time=slice(wy_start, wy_end))
         after = ds.sizes["time"]
         if before != after:
-            print(f"  Trimmed time from {before} to {after} steps (WY{wy}: {wy_start.date()} – {wy_end.date()})")
+            print(
+                f"  Trimmed time from {before} to {after} steps (WY{wy}: {wy_start.date()} – {wy_end.date()})"
+            )
 
     # Sediment flux is cumulative – keep only the last timestep -----------------
-    if "cumulative_sediment_erosion_deposition" in ds.data_vars and "time" in ds.dims:
-        print(f"  cumulative_sediment_erosion_deposition detected — keeping only last timestep ({ds.time.values[-1]})")
+    if (
+        "cumulative_sediment_erosion_deposition" in ds.data_vars
+        and "time" in ds.dims
+    ):
+        print(
+            f"  cumulative_sediment_erosion_deposition detected — keeping only last timestep ({ds.time.values[-1]})"
+        )
         ds = ds.isel(time=[-1])
 
     # handle varied CRS metadata locations between model files-----------------

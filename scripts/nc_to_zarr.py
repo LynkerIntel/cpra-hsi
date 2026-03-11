@@ -15,9 +15,46 @@ import argparse
 import sys
 from pathlib import Path
 
+import cftime
 import pandas as pd
 import rioxarray  # dont remove
 import xarray as xr
+
+
+def _open_dataset_with_time_fix(nc_path: Path, **kwargs) -> xr.Dataset:
+    """Open a NetCDF dataset, fixing the off-by-two error for epoch 0001-01-01.
+
+    Files with time units like "days since 0001-01-01" are misdecoded by
+    xarray's default CF decoding because the "standard" calendar switches
+    from Julian to Gregorian in 1582, introducing a 2-day offset for that
+    epoch.  Forcing ``proleptic_gregorian`` fixes this.
+
+    Files with other epochs are decoded normally via ``xr.decode_cf``.
+    """
+    ds = xr.open_dataset(nc_path, decode_times=False, **kwargs)
+
+    if "time" in ds and "units" in ds["time"].attrs:
+        units = ds["time"].attrs["units"]
+        if "0001-01-01" in units or "0001-1-1" in units:
+            calendar = "proleptic_gregorian"
+            print(f"  Epoch 0001-01-01 detected — decoding with {calendar} calendar")
+            time_vals = ds["time"].values
+            dates = cftime.num2date(time_vals, units, calendar=calendar)
+            timestamps = pd.DatetimeIndex(
+                [
+                    pd.Timestamp(d.year, d.month, d.day, d.hour, d.minute, d.second)
+                    for d in dates
+                ]
+            )
+            ds["time"] = ("time", timestamps)
+            # Clean up encoding attrs so downstream decode_cf doesn't re-decode
+            for attr in ("units", "calendar"):
+                ds["time"].attrs.pop(attr, None)
+                ds["time"].encoding.pop(attr, None)
+            return ds
+
+    # Normal epoch — let xarray decode as usual
+    return xr.decode_cf(ds)
 
 
 def convert_file(
@@ -46,7 +83,7 @@ def convert_file(
         Path to the created Zarr store.
     """
     print(f"  Opening {nc_path.name}...")
-    ds = xr.open_dataset(nc_path, engine="h5netcdf", chunks="auto")
+    ds = _open_dataset_with_time_fix(nc_path, engine="h5netcdf", chunks="auto")
 
     # Trim to water year bounds (Oct 1 – Sep 30) ---------------------------------
     if "time" in ds.dims and ds.sizes["time"] > 1:

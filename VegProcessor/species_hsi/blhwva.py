@@ -49,7 +49,7 @@ class BottomlandHardwoodHSI:
             v2_stand_maturity=hsi_instance.maturity_480,
             v3a_pct_understory=hsi_instance.pct_understory,
             v3b_pct_midstory=hsi_instance.pct_midstory,
-            v4a_flood_duration=hsi_instance.flood_duration,
+            v4a_flood_duration=hsi_instance.flood_duration_blh,
             v4b_flow_exchange=hsi_instance.flow_exchange_cat,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             dem_480=hsi_instance.dem_480,

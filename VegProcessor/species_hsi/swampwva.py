@@ -55,7 +55,7 @@ class SwampHSI:
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
             v2_maturity_dbh=hsi_instance.maturity_dbh,  # set to ideal
-            v3a_flood_duration=hsi_instance.flood_duration,
+            v3a_flood_duration=hsi_instance.flood_duration_swamp,
             v3b_flow_exchange=hsi_instance.flow_exchange_cat,
             v4_mean_high_salinity_gs=hsi_instance.salinity_mean_high_march_nov,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,

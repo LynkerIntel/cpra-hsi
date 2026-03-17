@@ -513,7 +513,7 @@ class VegTransition:
         elif hydro_variable == "VELOCITY":
             variable_base_path = self.netcdf_velocity_path
         elif hydro_variable == "FLOWEXCH":
-            variable_base_path = self.netcdf_flowexchange_path
+            variable_base_path = self.netcdf_flow_exchange_path
         else:
             raise ValueError(
                 "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH"

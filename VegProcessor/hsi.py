@@ -224,7 +224,7 @@ class HSI(vt.VegTransition):
         self.pct_understory = None
         self.maturity_dbh = None  # always ideal
         self.flood_duration = None  # TODO
-        self.flow_exchange = None  # TODO
+        self.flow_exchange = None
         self.salinity_mean_high_march_nov = None
         self.disturbance = None  # always ideal
 
@@ -310,8 +310,8 @@ class HSI(vt.VegTransition):
         self.netcdf_velocity_path = self.config["raster_data"].get(
             "netcdf_velocity_path"
         )
-        self.netcdf_flowexch_path = self.config["raster_data"].get(
-            "netcdf_flowexch_path"
+        self.netcdf_flow_exchange_path = self.config["raster_data"].get(
+            "netcdf_flow_exchange_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -440,7 +440,9 @@ class HSI(vt.VegTransition):
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
+
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
+        self.flow_exchange = self._load_flowexchange_general(self.wy)
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -624,9 +626,7 @@ class HSI(vt.VegTransition):
                 water_year, hydro_variable="VELOCITY"
             )
             self._logger.info("Loading file: %s", nc_path)
-
             ds = xr.open_zarr(nc_path)
-
             ds = utils.analog_years_handler(analog_year, water_year, ds)
 
             # handle varied CRS metadata locations between model files-----------------
@@ -656,28 +656,16 @@ class HSI(vt.VegTransition):
         """
         Load flow exchange data
         """
-        if self.netcdf_flowexch_path is not None:
+        if self.netcdf_flow_exchange_path is not None:
             self._logger.info(
                 "Loading flow exchange data with universal daily method."
             )
-            if self.file_params["hydro_source_model"] == "D3D":
-                self._logger.info("Loading D3D flow exchange.")
-                nc_path, analog_year = self._get_hydro_netcdf_path(
-                    water_year, hydro_variable="FLOWEXCH"
-                )
-                self._logger.info("Loading files: %s", nc_path)
-                # don't decode times for D3D, due to erroneous time epoch definition in source files
-                # the analog years handler replaces all dates, so the model is not impacted
-                ds = xr.open_zarr(nc_path, decode_times=False)
-                ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-            else:
-                nc_path, analog_year = self._get_hydro_netcdf_path(
-                    water_year, hydro_variable="FLOWEXCH"
-                )
-                self._logger.info("Loading files: %s", nc_path)
-                ds = xr.open_zarr(nc_path)
-                ds = utils.analog_years_handler(analog_year, water_year, ds)
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="FLOWEXCH"
+            )
+            self._logger.info("Loading files: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
 
             # handle varied CRS metadata locations between model files-----------------
             try:
@@ -694,17 +682,8 @@ class HSI(vt.VegTransition):
             return ds
 
         else:
-            self._logger.info(
-                "No salinity NetCDF path provided, using approximate"
-                "salinity based on veg type."
-            )
-
-            salinity = hydro_logic.habitat_based_salinity(
-                self.veg_type,
-                domain=self.hydro_domain,
-                cell=cell,
-            )
-            return salinity
+            self._logger.info("No flow exchange file provided.")
+            return None
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This

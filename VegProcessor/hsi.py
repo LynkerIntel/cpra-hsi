@@ -223,8 +223,9 @@ class HSI(vt.VegTransition):
         self.pct_midstory = None
         self.pct_understory = None
         self.maturity_dbh = None  # always ideal
-        self.flood_duration = None  # TODO
+        self.flood_duration = None
         self.flow_exchange = None
+        self.flow_exchange_cat = None
         self.salinity_mean_high_march_nov = None
         self.disturbance = None  # always ideal
 
@@ -443,6 +444,8 @@ class HSI(vt.VegTransition):
 
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
+        self.flow_exchange_cat = self._calculate_flow_exchange()
+        self.flood_duration = self._calculate_flood_duration()
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -684,6 +687,111 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No flow exchange file provided.")
             return None
+
+    def _calculate_flood_duration(self) -> np.ndarray:
+        """Classify flood duration per 480m cell based on annual wet day count.
+
+        Uses daily depth data (self.water_depth) to count days with depth > 0,
+        then classifies into integer categories per CSRS methodology.
+
+        Integer encoding:
+            0 = No Flooding  (< 5 wet days)
+            1 = Temporary    (5–41 wet days)
+            2 = Seasonal     (42–83 wet days)
+            3 = Semi-Permanent (84–364 wet days)
+            4 = Permanent    (365 wet days, i.e. wet every day)
+
+        Returns
+        -------
+        np.ndarray
+            480m integer array of flood duration categories.
+        """
+        if self.water_depth is None:
+            self._logger.info("No water depth data; cannot compute flood duration.")
+            return None
+
+        depth = self.water_depth["height"]
+        n_days = depth.sizes["time"]
+        wet_days = (depth > 0).sum(dim="time")
+
+        # coarsen to 480m — average wet day count across 8x8 block
+        wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
+        wet_days_np = wet_days_480.to_numpy()
+
+        # classify: 0=No Flooding, 1=Temporary, 2=Seasonal, 3=Semi-Permanent, 4=Permanent
+        flood_duration = np.zeros(wet_days_np.shape, dtype=np.int8)
+        flood_duration[wet_days_np >= 5] = 1
+        flood_duration[wet_days_np >= 42] = 2
+        flood_duration[wet_days_np >= 84] = 3
+        flood_duration[wet_days_np >= n_days] = 4
+
+        self._logger.info("Flood duration classification complete.")
+        return flood_duration
+
+    def _calculate_flow_exchange(self) -> np.ndarray:
+        """Classify flow exchange per 480m cell using CSRS flow ratio method.
+
+        Flow Ratio = Annual Total Inflow / Total Volume
+        where:
+            Annual Total Inflow = sum(flow_exchange_m3s * 86400) over year  [m³]
+            Total Volume = mean_depth * pct_wet * cell_area                 [m³]
+
+        Integer encoding:
+            0 = None (flow ratio <= 0.1)
+            1 = Low
+            2 = Moderate
+            3 = High (flow ratio > 0.1)
+
+        Note: Currently only "High" (3) and "None" (0) are assigned, as the
+        CSRS methodology could not distinguish between moderate and low flow.
+        Intermediate categories reserved for future refinement.
+
+        Requires self.flow_exchange (xr.Dataset from Delft3D, m³/s)
+        and self.water_depth (xr.Dataset with 'height' variable).
+
+        Returns
+        -------
+        np.ndarray
+            480m integer array of flow exchange categories.
+        """
+        if self.flow_exchange is None:
+            self._logger.info("No flow exchange data provided.")
+            return None
+        if self.water_depth is None:
+            self._logger.info("No water depth data; cannot compute flow ratio.")
+            return None
+
+        # get the flow exchange data variable (first non-coord variable)
+        flow_vars = [v for v in self.flow_exchange.data_vars if v != "crs"]
+        if not flow_vars:
+            self._logger.warning("No data variables found in flow exchange dataset.")
+            return None
+        flow_exch = self.flow_exchange[flow_vars[0]]
+
+        depth = self.water_depth["height"]
+
+        # annual total inflow: sum of (m³/s * 86400 s/day) over all days -> m³
+        total_inflow = (flow_exch * 86400).sum(dim="time")
+
+        # total volume: mean_depth * fraction_wet * cell_area (60m)
+        mean_depth = depth.mean(dim="time")
+        pct_wet = (depth > 0).mean(dim="time")
+        cell_area = 60.0 * 60.0  # m²
+        total_volume = mean_depth * pct_wet * cell_area
+
+        # flow ratio (dimensionless) — avoid division by zero
+        flow_ratio = total_inflow / total_volume.where(total_volume > 0)
+
+        # coarsen to 480m — mean flow ratio across 8x8 block
+        flow_ratio_480 = flow_ratio.coarsen(y=8, x=8, boundary="pad").mean()
+        flow_ratio_np = flow_ratio_480.to_numpy()
+
+        # classify: 0=None, 1=Low, 2=Moderate, 3=High
+        flow_exchange_cat = np.zeros(flow_ratio_np.shape, dtype=np.int8)
+        flow_exchange_cat[flow_ratio_np > 0.1] = 3  # High
+
+        self._logger.info("Flow exchange classification complete.")
+        return flow_exchange_cat
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This

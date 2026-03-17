@@ -445,9 +445,11 @@ class HSI(vt.VegTransition):
 
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
-        self.flow_exchange_cat = self._calculate_flow_exchange()
+        self.flow_exchange_cat = self._classify_flow_exchange()
         self.flood_duration_blh = self._calculate_flood_duration(habitat="blh")
-        self.flood_duration_swamp = self._calculate_flood_duration(habitat="swamp")
+        self.flood_duration_swamp = self._calculate_flood_duration(
+            habitat="swamp"
+        )
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -737,26 +739,19 @@ class HSI(vt.VegTransition):
         else:
             raise ValueError(f"Unknown habitat type: {habitat}")
 
-        self._logger.info("Flood duration (%s) classification complete.", habitat)
+        self._logger.info(
+            "Flood duration (%s) classification complete.", habitat
+        )
         return flood_duration
 
-    def _calculate_flow_exchange(self) -> np.ndarray:
-        """Classify flow exchange per 480m cell using CSRS flow ratio method.
+    def _classify_flow_exchange(self) -> np.ndarray:
+        """Classify flow exchange per 480m cell based on mean flow exchange (m³/s).
 
-        Flow Ratio = Annual Total Inflow / Total Volume
-        where:
-            Annual Total Inflow = sum(flow_exchange_m3s * 86400) over year  [m³]
-            Total Volume = mean_depth * pct_wet * cell_area                 [m³]
-
-        Integer encoding:
-            1 = None (flow ratio <= 0.1)
-            2 = Low
-            3 = Moderate
-            4 = High (flow ratio > 0.1)
-
-        Note: Currently only "High" (3) and "None" (0) are assigned, as the
-        CSRS methodology could not distinguish between moderate and low flow.
-        Intermediate categories reserved for future refinement.
+        Thresholds (m³/s):
+            1 = None     (<= 0.01)
+            2 = Low      (0.01 - 2.2)
+            3 = Moderate (2.2 - 10.2)
+            4 = High     (>= 10.2)
 
         Returns
         -------
@@ -766,42 +761,26 @@ class HSI(vt.VegTransition):
         if self.flow_exchange is None:
             self._logger.info("No flow exchange data provided.")
             return None
-        if self.water_depth is None:
-            self._logger.info(
-                "No water depth data; cannot compute flow ratio."
-            )
-            return None
 
-        # get the flow exchange data variable (first non-coord variable)
-        flow_vars = [v for v in self.flow_exchange.data_vars if v != "crs"]
-        if not flow_vars:
-            self._logger.warning(
-                "No data variables found in flow exchange dataset."
-            )
-            return None
-        flow_exch = self.flow_exchange[flow_vars[0]]
+        flow_exch = self.flow_exchange["flow_exchange"]
 
-        depth = self.water_depth["height"]
+        # subset to growing season (April–September)
+        gs = self.flow_exchange["flow_exchange"].sel(
+            time=flow_exch.time.dt.month.isin([4, 5, 6, 7, 8, 9])
+        )
 
-        # annual total inflow: sum of (m³/s * 86400 s/day) over all days -> m³
-        total_inflow = (flow_exch * 86400).sum(dim="time")
+        # mean flow exchange over growing season (m³/s)
+        mean_flow = gs.mean(dim="time")
 
-        # total volume: mean_depth * fraction_wet * cell_area (60m)
-        mean_depth = depth.mean(dim="time")
-        pct_wet = (depth > 0).mean(dim="time")
-        cell_area = 60.0 * 60.0  # m²
-        total_volume = mean_depth * pct_wet * cell_area
-
-        # flow ratio (dimensionless) — avoid division by zero
-        flow_ratio = total_inflow / total_volume.where(total_volume > 0)
-
-        # coarsen to 480m — mean flow ratio across 8x8 block
-        flow_ratio_480 = flow_ratio.coarsen(y=8, x=8, boundary="pad").mean()
-        flow_ratio_np = flow_ratio_480.to_numpy()
+        # coarsen to 480m
+        mean_flow_480 = mean_flow.coarsen(y=8, x=8, boundary="pad").mean()
+        mean_flow_np = mean_flow_480.to_numpy()
 
         # classify: 1=None, 2=Low, 3=Moderate, 4=High
-        flow_exchange_cat = np.ones(flow_ratio_np.shape, dtype=np.int8)
-        flow_exchange_cat[flow_ratio_np > 0.1] = 4  # High
+        flow_exchange_cat = np.ones(mean_flow_np.shape, dtype=np.int8)
+        flow_exchange_cat[mean_flow_np > 0.01] = 2  # Low
+        flow_exchange_cat[mean_flow_np >= 2.2] = 3  # Moderate
+        flow_exchange_cat[mean_flow_np >= 10.2] = 4  # High
 
         self._logger.info("Flow exchange classification complete.")
         return flow_exchange_cat

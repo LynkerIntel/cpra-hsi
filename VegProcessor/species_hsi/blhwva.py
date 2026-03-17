@@ -146,7 +146,7 @@ class BottomlandHardwoodHSI:
             si_array[blh_mask] = np.nan
 
         else:
-            raise ValueError("precent bottomland hardwood is required.")
+            raise ValueError("percent bottomland hardwood is required.")
 
         return si_array
 

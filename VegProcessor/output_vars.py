@@ -1494,6 +1494,45 @@ def get_hsi_variables(hsi):
                 "description": "black crappie other component",
             },
         ],
+        "flood_duration_blh": [
+            hsi.flood_duration_blh,
+            np.int8,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "flood duration category (BLH)",
+                "description": (
+                    "Flood duration classification for bottomland hardwood. "
+                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                ),
+            },
+        ],
+        "flood_duration_swamp": [
+            hsi.flood_duration_swamp,
+            np.int8,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "flood duration category (Swamp)",
+                "description": (
+                    "Flood duration classification for swamp. "
+                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                ),
+            },
+        ],
+        "flow_exchange_cat": [
+            hsi.flow_exchange_cat,
+            np.int8,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "flow exchange category",
+                "description": (
+                    "Flow exchange classification. "
+                    "1=None, 2=Low, 3=Moderate, 4=High."
+                ),
+            },
+        ],
     }
 
     return all_variables

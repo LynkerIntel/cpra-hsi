@@ -270,7 +270,7 @@ class SwampHSI:
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
-        """Hydrology"""
+        """Water Regime"""
         self._logger.info("Running SI 3")
         si_3 = self.template.copy()
 
@@ -280,31 +280,29 @@ class SwampHSI:
             )
             si_3[~np.isnan(si_3)] = 1
 
-        else:
-            # Flood duration: 0=No Flooding, 1=Temporary, 2=Seasonal,
-            #                 3=Semi-Permanent, 4=Permanent
-            # Flow exchange:  0=None, 1=Low, 2=Moderate, 3=High
+        else:            
+            # scoring for 16 flood duration and flow exchange combinations 
+            # dictionary keys: (flood_dur, flow_exch)
+            # flood dur mapping: 1=Temp/None, 2=Seasonal, 3=Semi-Perm, 4=Permanent
+            # flow exch mapping: 4=High, 3=Moderate, 2=Low, 1=None
+
             si3_score = {
-                (0, 3): 0.9,
-                (1, 3): 0.9,
-                (2, 3): 1.00,
-                (3, 3): 0.75,
-                (4, 3): 0.65,
-                (0, 2): 0.75,
-                (1, 2): 0.75,
-                (2, 2): 0.85,
-                (3, 2): 0.65,
-                (4, 2): 0.45,
-                (0, 1): 0.65,
-                (1, 1): 0.65,
-                (2, 1): 0.7,
-                (3, 1): 0.45,
-                (4, 1): 0.3,
-                (0, 0): 0.4,
-                (1, 0): 0.4,
-                (2, 0): 0.5,
-                (3, 0): 0.25,
-                (4, 0): 0.1,
+                (1, 4): 0.9, # Temp/None, High
+                (2, 4): 1.00, # Seasonal, High
+                (3, 4): 0.75, # Sem-Perm, High
+                (4, 4): 0.65, # Permanent, High
+                (1, 3): 0.75, # Temp/None, Moderate
+                (2, 3): 0.85, # Seasonal, Moderate
+                (3, 3): 0.65, # Sem-Perm, Moderate
+                (4, 3): 0.45, # Permanent, Moderate
+                (1, 2): 0.65, # Temp/None, Low
+                (2, 2): 0.7, # Seasonal, Low
+                (3, 2): 0.45, # Sem-Perm, Low
+                (4, 2): 0.3, # Permanent, Low
+                (1, 1): 0.4, # Temp/None, None
+                (2, 1): 0.5, # Seasonal, None
+                (3, 1): 0.25, # Sem-Perm, None
+                (4, 1): 0.1, # Permanent, None
             }
 
             # define conditions and scores

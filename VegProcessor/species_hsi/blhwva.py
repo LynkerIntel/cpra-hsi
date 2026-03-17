@@ -146,7 +146,7 @@ class BottomlandHardwoodHSI:
             si_array[blh_mask] = np.nan
 
         else:
-            raise ValueError("precent bottomland hardwood is required.")
+            raise ValueError("percent bottomland hardwood is required.")
 
         return si_array
 
@@ -363,34 +363,42 @@ class BottomlandHardwoodHSI:
             )
             si_4[~np.isnan(si_4)] = 1
 
-        else:
-            # Flood duration: 0=No Flooding, 1=Temporary, 2=Seasonal,
-            #                 3=Semi-Permanent, 4=Permanent
-            # Flow exchange:  0=None, 1=Low, 2=Moderate, 3=High
-            si_4[
-                (self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 3)
-            ] = 1.0
-            si_4[
-                (self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 3)
-            ] = 0.85
-            si_4[
-                (self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 3)
-            ] = 0.75
-            si_4[
-                (self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 3)
-            ] = 0.65
-            si_4[
-                (self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 0)
-            ] = 0.5
-            si_4[
-                (self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 0)
-            ] = 0.4
-            si_4[
-                (self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 0)
-            ] = 0.25
-            si_4[
-                (self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 0)
-            ] = 0.1
+        else: 
+            # scoring for 16 flood duration and flow exchange combinations 
+            # dictionary keys: (flood_dur, flow_exch)
+            # flood dur mapping: 1=Temp/None, 2=Seasonal, 3=Semi-Perm, 4=Permanent
+            # flow exch mapping: 4=High, 3=Moderate, 2=Low, 1=None
+            si4_score = {
+                (1, 4): 1.00, # Temp/None, High
+                (2, 4): 0.85, # Seasonal, High
+                (3, 4): 0.75, # Sem-Perm, High
+                (4, 4): 0.65, # Permanent, High
+                (1, 3): 0.85, # Temp/None, Moderate
+                (2, 3): 0.75, # Seasonal, Moderate
+                (3, 3): 0.65, # Sem-Perm, Moderate
+                (4, 3): 0.45, # Permanent, Moderate
+                (1, 2): 0.7, # Temp/None, Low
+                (2, 2): 0.65, # Seasonal, Low
+                (3, 2): 0.45, # Sem-Perm, Low
+                (4, 2): 0.3, # Permanent, Low
+                (1, 1): 0.5, # Temp/None, None
+                (2, 1): 0.4, # Seasonal, None
+                (3, 1): 0.25, # Sem-Perm, None
+                (4, 1): 0.1, # Permanent, None
+            }
+
+            # define conditions and scores
+            conds = []
+            scoring = []
+
+            for (flood_dur, flow_exch), score in si4_score.items():
+                mask = (self.v4a_flood_duration == flood_dur) & (
+                    self.v4b_flow_exchange == flow_exch
+                )
+                conds.append(mask)
+                scoring.append(score)
+            
+            si_4 = np.select(conds, scoring, default=si_4)
 
         si_4 = self.blh_cover_mask(si_4)
 

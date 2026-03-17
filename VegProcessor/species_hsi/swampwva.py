@@ -271,7 +271,7 @@ class SwampHSI:
         return self.clip_array(si_2)
 
     def calculate_si_3(self) -> np.ndarray:
-        """Hydrology"""
+        """Water Regime"""
         self._logger.info("Running SI 3")
         si_3 = self.template.copy()
 
@@ -282,26 +282,22 @@ class SwampHSI:
             si_3[~np.isnan(si_3)] = 1
 
         else:
-            # scoring for 20 flood duration and
+            # scoring for 16 flood duration and
             # flow exchange combinations of
             # conditions
             si3_score = {
-                ("None", "High"): 0.9,
                 ("Temporary", "High"): 0.9,
                 ("Seasonal", "High"): 1.00,
                 ("Semi-Permanent", "High"): 0.75,
                 ("Permanent", "High"): 0.65,
-                ("None", "Moderate"): 0.75,
                 ("Temporary", "Moderate"): 0.75,
                 ("Seasonal", "Moderate"): 0.85,
                 ("Semi-Permanent", "Moderate"): 0.65,
                 ("Permanent", "Moderate"): 0.45,
-                ("None", "Low"): 0.65,
                 ("Temporary", "Low"): 0.65,
                 ("Seasonal", "Low"): 0.7,
                 ("Semi-Permanent", "Low"): 0.45,
                 ("Permanent", "Low"): 0.3,
-                ("None", "None"): 0.4,
                 ("Temporary", "None"): 0.4,
                 ("Seasonal", "None"): 0.5,
                 ("Semi-Permanent", "None"): 0.25,

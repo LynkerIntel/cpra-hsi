@@ -367,14 +367,30 @@ class BottomlandHardwoodHSI:
             # Flood duration: 0=No Flooding, 1=Temporary, 2=Seasonal,
             #                 3=Semi-Permanent, 4=Permanent
             # Flow exchange:  0=None, 1=Low, 2=Moderate, 3=High
-            si_4[(self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 3)] = 1.0
-            si_4[(self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 3)] = 0.85
-            si_4[(self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 3)] = 0.75
-            si_4[(self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 3)] = 0.65
-            si_4[(self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 0)] = 0.5
-            si_4[(self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 0)] = 0.4
-            si_4[(self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 0)] = 0.25
-            si_4[(self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 0)] = 0.1
+            si_4[
+                (self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 3)
+            ] = 1.0
+            si_4[
+                (self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 3)
+            ] = 0.85
+            si_4[
+                (self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 3)
+            ] = 0.75
+            si_4[
+                (self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 3)
+            ] = 0.65
+            si_4[
+                (self.v4a_flood_duration == 1) & (self.v4b_flow_exchange == 0)
+            ] = 0.5
+            si_4[
+                (self.v4a_flood_duration == 2) & (self.v4b_flow_exchange == 0)
+            ] = 0.4
+            si_4[
+                (self.v4a_flood_duration == 3) & (self.v4b_flow_exchange == 0)
+            ] = 0.25
+            si_4[
+                (self.v4a_flood_duration == 0) & (self.v4b_flow_exchange == 0)
+            ] = 0.1
 
         si_4 = self.blh_cover_mask(si_4)
 

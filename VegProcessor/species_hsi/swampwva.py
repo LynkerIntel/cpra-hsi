@@ -180,7 +180,6 @@ class SwampHSI:
             si_1[~np.isnan(si_1)] = 1
 
         else:
-
             # assign intermediate masks with "or equal to"
             # default condition is greater than, which
             # can be inverted with "~"

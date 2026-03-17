@@ -707,7 +707,9 @@ class HSI(vt.VegTransition):
             480m integer array of flood duration categories.
         """
         if self.water_depth is None:
-            self._logger.info("No water depth data; cannot compute flood duration.")
+            self._logger.info(
+                "No water depth data; cannot compute flood duration."
+            )
             return None
 
         depth = self.water_depth["height"]
@@ -746,9 +748,6 @@ class HSI(vt.VegTransition):
         CSRS methodology could not distinguish between moderate and low flow.
         Intermediate categories reserved for future refinement.
 
-        Requires self.flow_exchange (xr.Dataset from Delft3D, m³/s)
-        and self.water_depth (xr.Dataset with 'height' variable).
-
         Returns
         -------
         np.ndarray
@@ -758,13 +757,17 @@ class HSI(vt.VegTransition):
             self._logger.info("No flow exchange data provided.")
             return None
         if self.water_depth is None:
-            self._logger.info("No water depth data; cannot compute flow ratio.")
+            self._logger.info(
+                "No water depth data; cannot compute flow ratio."
+            )
             return None
 
         # get the flow exchange data variable (first non-coord variable)
         flow_vars = [v for v in self.flow_exchange.data_vars if v != "crs"]
         if not flow_vars:
-            self._logger.warning("No data variables found in flow exchange dataset.")
+            self._logger.warning(
+                "No data variables found in flow exchange dataset."
+            )
             return None
         flow_exch = self.flow_exchange[flow_vars[0]]
 

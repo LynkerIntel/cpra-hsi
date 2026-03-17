@@ -223,7 +223,8 @@ class HSI(vt.VegTransition):
         self.pct_midstory = None
         self.pct_understory = None
         self.maturity_dbh = None  # always ideal
-        self.flood_duration = None
+        self.flood_duration_blh = None
+        self.flood_duration_swamp = None
         self.flow_exchange = None
         self.flow_exchange_cat = None
         self.salinity_mean_high_march_nov = None
@@ -445,7 +446,8 @@ class HSI(vt.VegTransition):
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._calculate_flow_exchange()
-        self.flood_duration = self._calculate_flood_duration()
+        self.flood_duration_blh = self._calculate_flood_duration(habitat="blh")
+        self.flood_duration_swamp = self._calculate_flood_duration(habitat="swamp")
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -688,17 +690,19 @@ class HSI(vt.VegTransition):
             self._logger.info("No flow exchange file provided.")
             return None
 
-    def _calculate_flood_duration(self) -> np.ndarray:
+    def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
         """Classify flood duration per 480m cell based on annual wet day count.
 
         Uses daily depth data (self.water_depth) to count days with depth > 0,
-        then classifies into integer categories per CSRS methodology.
+        then classifies into integer categories. Breakpoints differ by habitat:
 
-        Integer encoding:
-            1 = Temporary/None (< 42 wet days)
-            2 = Seasonal     (42–83 wet days)
-            3 = Semi-Permanent (84–364 wet days)
-            4 = Permanent    (365 wet days, i.e. wet every day)
+        BLH:   1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+        Swamp: 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+
+        Parameters
+        ----------
+        habitat : str
+            "blh" or "swamp"
 
         Returns
         -------
@@ -712,20 +716,28 @@ class HSI(vt.VegTransition):
             return None
 
         depth = self.water_depth["height"]
-        n_days = depth.sizes["time"]
         wet_days = (depth > 0).sum(dim="time")
 
         # coarsen to 480m — average wet day count across 8x8 block
         wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
         wet_days_np = wet_days_480.to_numpy()
 
-        # classify: 1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent
-        flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
-        flood_duration[wet_days_np >= 42] = 2
-        flood_duration[wet_days_np >= 84] = 3
-        flood_duration[wet_days_np >= n_days] = 4
+        if habitat == "blh":
+            # 1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            flood_duration[wet_days_np >= 42] = 2
+            flood_duration[wet_days_np >= 84] = 3
+            flood_duration[wet_days_np >= 179] = 4
+        elif habitat == "swamp":
+            # 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            flood_duration[wet_days_np >= 148] = 2
+            flood_duration[wet_days_np >= 166] = 3
+            flood_duration[wet_days_np >= 179] = 4
+        else:
+            raise ValueError(f"Unknown habitat type: {habitat}")
 
-        self._logger.info("Flood duration classification complete.")
+        self._logger.info("Flood duration (%s) classification complete.", habitat)
         return flood_duration
 
     def _calculate_flow_exchange(self) -> np.ndarray:

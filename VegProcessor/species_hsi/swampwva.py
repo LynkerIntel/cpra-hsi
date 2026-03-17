@@ -56,7 +56,7 @@ class SwampHSI:
             v1c_pct_understory=hsi_instance.pct_understory,
             v2_maturity_dbh=hsi_instance.maturity_dbh,  # set to ideal
             v3a_flood_duration=hsi_instance.flood_duration,
-            v3b_flow_exchange=hsi_instance.flow_exchange,
+            v3b_flow_exchange=hsi_instance.flow_exchange_cat,
             v4_mean_high_salinity_gs=hsi_instance.salinity_mean_high_march_nov,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             v6a_pct_forested_half_mi=hsi_instance.pct_forested_half_mi,
@@ -282,30 +282,30 @@ class SwampHSI:
             si_3[~np.isnan(si_3)] = 1
 
         else:
-            # scoring for 20 flood duration and
-            # flow exchange combinations of
-            # conditions
+            # Flood duration: 0=No Flooding, 1=Temporary, 2=Seasonal,
+            #                 3=Semi-Permanent, 4=Permanent
+            # Flow exchange:  0=None, 1=Low, 2=Moderate, 3=High
             si3_score = {
-                ("None", "High"): 0.9,
-                ("Temporary", "High"): 0.9,
-                ("Seasonal", "High"): 1.00,
-                ("Semi-Permanent", "High"): 0.75,
-                ("Permanent", "High"): 0.65,
-                ("None", "Moderate"): 0.75,
-                ("Temporary", "Moderate"): 0.75,
-                ("Seasonal", "Moderate"): 0.85,
-                ("Semi-Permanent", "Moderate"): 0.65,
-                ("Permanent", "Moderate"): 0.45,
-                ("None", "Low"): 0.65,
-                ("Temporary", "Low"): 0.65,
-                ("Seasonal", "Low"): 0.7,
-                ("Semi-Permanent", "Low"): 0.45,
-                ("Permanent", "Low"): 0.3,
-                ("None", "None"): 0.4,
-                ("Temporary", "None"): 0.4,
-                ("Seasonal", "None"): 0.5,
-                ("Semi-Permanent", "None"): 0.25,
-                ("Permanent", "None"): 0.1,
+                (0, 3): 0.9,
+                (1, 3): 0.9,
+                (2, 3): 1.00,
+                (3, 3): 0.75,
+                (4, 3): 0.65,
+                (0, 2): 0.75,
+                (1, 2): 0.75,
+                (2, 2): 0.85,
+                (3, 2): 0.65,
+                (4, 2): 0.45,
+                (0, 1): 0.65,
+                (1, 1): 0.65,
+                (2, 1): 0.7,
+                (3, 1): 0.45,
+                (4, 1): 0.3,
+                (0, 0): 0.4,
+                (1, 0): 0.4,
+                (2, 0): 0.5,
+                (3, 0): 0.25,
+                (4, 0): 0.1,
             }
 
             # define conditions and scores

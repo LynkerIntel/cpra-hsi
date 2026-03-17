@@ -695,8 +695,7 @@ class HSI(vt.VegTransition):
         then classifies into integer categories per CSRS methodology.
 
         Integer encoding:
-            0 = No Flooding  (< 5 wet days)
-            1 = Temporary    (5–41 wet days)
+            1 = Temporary/None (< 42 wet days)
             2 = Seasonal     (42–83 wet days)
             3 = Semi-Permanent (84–364 wet days)
             4 = Permanent    (365 wet days, i.e. wet every day)
@@ -720,9 +719,8 @@ class HSI(vt.VegTransition):
         wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
         wet_days_np = wet_days_480.to_numpy()
 
-        # classify: 0=No Flooding, 1=Temporary, 2=Seasonal, 3=Semi-Permanent, 4=Permanent
-        flood_duration = np.zeros(wet_days_np.shape, dtype=np.int8)
-        flood_duration[wet_days_np >= 5] = 1
+        # classify: 1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent
+        flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
         flood_duration[wet_days_np >= 42] = 2
         flood_duration[wet_days_np >= 84] = 3
         flood_duration[wet_days_np >= n_days] = 4
@@ -739,10 +737,10 @@ class HSI(vt.VegTransition):
             Total Volume = mean_depth * pct_wet * cell_area                 [m³]
 
         Integer encoding:
-            0 = None (flow ratio <= 0.1)
-            1 = Low
-            2 = Moderate
-            3 = High (flow ratio > 0.1)
+            1 = None (flow ratio <= 0.1)
+            2 = Low
+            3 = Moderate
+            4 = High (flow ratio > 0.1)
 
         Note: Currently only "High" (3) and "None" (0) are assigned, as the
         CSRS methodology could not distinguish between moderate and low flow.
@@ -789,9 +787,9 @@ class HSI(vt.VegTransition):
         flow_ratio_480 = flow_ratio.coarsen(y=8, x=8, boundary="pad").mean()
         flow_ratio_np = flow_ratio_480.to_numpy()
 
-        # classify: 0=None, 1=Low, 2=Moderate, 3=High
-        flow_exchange_cat = np.zeros(flow_ratio_np.shape, dtype=np.int8)
-        flow_exchange_cat[flow_ratio_np > 0.1] = 3  # High
+        # classify: 1=None, 2=Low, 3=Moderate, 4=High
+        flow_exchange_cat = np.ones(flow_ratio_np.shape, dtype=np.int8)
+        flow_exchange_cat[flow_ratio_np > 0.1] = 4  # High
 
         self._logger.info("Flow exchange classification complete.")
         return flow_exchange_cat

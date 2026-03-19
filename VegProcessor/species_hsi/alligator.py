@@ -55,7 +55,7 @@ class AlligatorHSI:
 
         return cls(
             v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),
-            v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
+            v2_water_depth_annual_mean=hsi_instance.water_depth_rel_marsh_annual_mean,
             v3a_pct_swamp_bottom_hardwood=safe_divide(
                 hsi_instance.pct_swamp_bottom_hardwood
             ),
@@ -204,6 +204,13 @@ class AlligatorHSI:
             si_2[mask_3] = (
                 -2.25 * self.v2_water_depth_annual_mean[mask_3]
             ) + 0.6625
+
+            # All-water cells have NaN input (no marsh surface) but are
+            # within the hydro domain. Set SI to 0 (unsuitable habitat).
+            mask_no_marsh = np.isnan(
+                self.v2_water_depth_annual_mean
+            ) & ~np.isnan(self.hydro_domain_480)
+            si_2[mask_no_marsh] = 0.1
 
             # Check for unhandled condition with tolerance
             # Allow NaN values to remain (they represent areas outside domain)

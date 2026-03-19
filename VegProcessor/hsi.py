@@ -126,6 +126,7 @@ class HSI(vt.VegTransition):
         self.maturity = None  # 60m, used by HSI
         self.maturity_480 = None  # 480m, passed directly to `blhwva.py`
         self.water_depth_annual_mean = None
+        self.water_depth_rel_marsh_annual_mean = None
         self.veg_ts_out = None  # xarray output for timestep
         self.water_depth_jan_aug_mean = None
         self.water_depth_oct_dec_mean = None
@@ -485,6 +486,11 @@ class HSI(vt.VegTransition):
             months=[4, 5, 6, 7, 8, 9],
             low=0.5,
             high=3,
+        )
+
+        # water depth relative to marsh surface (for alligator HSI) ----
+        self.water_depth_rel_marsh_annual_mean = (
+            self._get_water_depth_relative_to_marsh()
         )
 
         # veg based vars ----------------------------------------------
@@ -1312,6 +1318,74 @@ class HSI(vt.VegTransition):
             da = da.coarsen(y=8, x=8, boundary="pad").mean()
 
         return da.to_numpy()
+
+    def _get_water_depth_relative_to_marsh(self) -> np.ndarray:
+        """
+        Compute mean annual water depth relative to the marsh surface.
+
+        Mean annual WSE is reconstructed at 60m as ``depth + DEM``, then
+        coarsened to 480m. Marsh surface elevation is the mean DEM of
+        vegetated pixels (veg_type != 26) within each 480m cell.
+        The result is ``mean_WSE_480 - marsh_surface_480``.
+
+        Because the hydro models (HEC-RAS, Delft3D, MIKE21) are surface
+        water models and do not simulate groundwater, sub-surface water
+        levels are not available. Depth is clipped to 0 in
+        ``_load_depth_general``, so non-inundated pixels have WSE = DEM.
+        For cells containing both vegetated and open water pixels, the
+        topographic difference between lower-elevation open water pixels
+        and higher-elevation vegetated pixels produces negative values,
+        serving as a proxy for "water below marsh surface." Cells that
+        are 100% vegetated with no inundation yield a result of 0 from
+        the calculation (both means are identical) and are overridden
+        to -0.55 (unsuitable/dry).
+
+        Returns
+        -------
+        np.ndarray
+            Mean annual water depth relative to marsh surface at 480m.
+            Positive values indicate water above the marsh surface;
+            negative values indicate water below the marsh surface.
+        """
+        months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+
+        # Mean annual depth at 60m
+        filtered_ds = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin(months)
+        )
+        mean_depth_60m = filtered_ds.mean(dim="time", skipna=True)["height"]
+
+        # Reconstruct mean annual WSE at 60m (depth + DEM)
+        mean_wse_60m = mean_depth_60m + self.dem
+
+        # Coarsen mean WSE to 480m
+        mean_wse_480 = mean_wse_60m.coarsen(y=8, x=8, boundary="pad").mean()
+
+        # Marsh surface: mean DEM of vegetated pixels (non-open water) at 480m
+        veg_type_np = self.veg_type.to_numpy()
+        dem_vegetated = np.where(veg_type_np != 26, self.dem, np.nan)
+        dem_veg_da = xr.DataArray(
+            dem_vegetated,
+            dims=mean_depth_60m.dims,
+            coords=mean_depth_60m.coords,
+        )
+        marsh_surface_480 = dem_veg_da.coarsen(
+            y=8, x=8, boundary="pad"
+        ).mean()
+
+        result = (mean_wse_480 - marsh_surface_480).to_numpy()
+
+        # Cells that are 100% vegetated with no inundation produce a result
+        # of 0 (WSE = DEM everywhere). Set these to -0.55 (dry/unsuitable).
+        mean_depth_480 = mean_depth_60m.coarsen(
+            y=8, x=8, boundary="pad"
+        ).mean().to_numpy()
+        dry_all_veg = np.isclose(mean_depth_480, 0, atol=1e-6) & np.isclose(
+            result, 0, atol=1e-6
+        )
+        result[dry_all_veg] = -0.55
+
+        return result
 
     def _get_water_temperature_subset(
         self, months: None | list[int] = None, cell: bool = True

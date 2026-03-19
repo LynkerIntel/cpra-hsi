@@ -1338,7 +1338,7 @@ class HSI(vt.VegTransition):
         serving as a proxy for "water below marsh surface." Cells that
         are 100% vegetated with no inundation yield a result of 0 from
         the calculation (both means are identical) and are overridden
-        to -0.55 (unsuitable/dry).
+        to -0.55 (unsuitable/dry), which results in a SI score of 0.1.
 
         Returns
         -------
@@ -1369,17 +1369,15 @@ class HSI(vt.VegTransition):
             dims=mean_depth_60m.dims,
             coords=mean_depth_60m.coords,
         )
-        marsh_surface_480 = dem_veg_da.coarsen(
-            y=8, x=8, boundary="pad"
-        ).mean()
+        marsh_surface_480 = dem_veg_da.coarsen(y=8, x=8, boundary="pad").mean()
 
         result = (mean_wse_480 - marsh_surface_480).to_numpy()
 
         # Cells that are 100% vegetated with no inundation produce a result
         # of 0 (WSE = DEM everywhere). Set these to -0.55 (dry/unsuitable).
-        mean_depth_480 = mean_depth_60m.coarsen(
-            y=8, x=8, boundary="pad"
-        ).mean().to_numpy()
+        mean_depth_480 = (
+            mean_depth_60m.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
+        )
         dry_all_veg = np.isclose(mean_depth_480, 0, atol=1e-6) & np.isclose(
             result, 0, atol=1e-6
         )

@@ -121,6 +121,14 @@ def _(ShuffleSplit, XGBRegressor, X_train, cross_validate, y_train):
         f"R² = {cv_results['test_r2'].mean():.3f}, "
         f"RMSE = {-cv_results['test_rmse'].mean():.3f} mg/L"
     )
+    return (xgb,)
+
+
+@app.cell
+def _(os, xgb):
+    model_path = os.path.join("ml_out", "xgb_dissolved_oxygen.json")
+    xgb.save_model(model_path)
+    print(f"Model saved to {model_path}")
     return
 
 

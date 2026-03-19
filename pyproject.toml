@@ -6,13 +6,17 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "cartopy>=0.25.0",
+    "cftime>=1.6.5",
     "dask>=2026.1.2",
+    "datacube>=1.9.14",
+    "gdal>=3.12.2",
     "geocube>=0.7.1",
     "geopandas>=1.1.2",
     "h5netcdf>=1.8.1",
     "h5py>=3.15.1",
     "marimo>=0.19.11",
     "matplotlib>=3.10.8",
+    "netcdf4>=1.7.4",
     "openpyxl>=3.1.5",
     "plotly>=6.5.2",
     "rioxarray>=0.19.0",

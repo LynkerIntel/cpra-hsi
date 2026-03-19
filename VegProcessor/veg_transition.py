@@ -512,9 +512,11 @@ class VegTransition:
             variable_base_path = self.netcdf_water_temperature_path
         elif hydro_variable == "VELOCITY":
             variable_base_path = self.netcdf_velocity_path
+        elif hydro_variable == "FLOWEXCH":
+            variable_base_path = self.netcdf_flow_exchange_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH"
             )
 
         quintile = self.sequence_mapping[water_year]
@@ -995,7 +997,9 @@ class VegTransition:
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
-            del salinity  # del the dataset because this is the only salinity var
+            del (
+                salinity
+            )  # del the dataset because this is the only salinity var
 
         else:
             # if salinity is a numpy array, it is the veg-based

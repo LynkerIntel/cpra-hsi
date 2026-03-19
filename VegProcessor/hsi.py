@@ -223,8 +223,10 @@ class HSI(vt.VegTransition):
         self.pct_midstory = None
         self.pct_understory = None
         self.maturity_dbh = None  # always ideal
-        self.flood_duration = None  # TODO
-        self.flow_exchange = None  # TODO
+        self.flood_duration_blh = None
+        self.flood_duration_swamp = None
+        self.flow_exchange = None
+        self.flow_exchange_cat = None
         self.salinity_mean_high_march_nov = None
         self.disturbance = None  # always ideal
 
@@ -309,6 +311,9 @@ class HSI(vt.VegTransition):
         )
         self.netcdf_velocity_path = self.config["raster_data"].get(
             "netcdf_velocity_path"
+        )
+        self.netcdf_flow_exchange_path = self.config["raster_data"].get(
+            "netcdf_flow_exchange_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -437,7 +442,14 @@ class HSI(vt.VegTransition):
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
+
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
+        self.flow_exchange = self._load_flowexchange_general(self.wy)
+        self.flow_exchange_cat = self._classify_flow_exchange()
+        self.flood_duration_blh = self._calculate_flood_duration(habitat="blh")
+        self.flood_duration_swamp = self._calculate_flood_duration(
+            habitat="swamp"
+        )
 
         # salinity vars -------------------------------------------------
         self.salinity = self._load_salinity_general(self.wy, cell=True)
@@ -621,9 +633,7 @@ class HSI(vt.VegTransition):
                 water_year, hydro_variable="VELOCITY"
             )
             self._logger.info("Loading file: %s", nc_path)
-
             ds = xr.open_zarr(nc_path)
-
             ds = utils.analog_years_handler(analog_year, water_year, ds)
 
             # handle varied CRS metadata locations between model files-----------------
@@ -644,6 +654,136 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("Velocity not provided.")
             return None
+
+    def _load_flowexchange_general(
+        self,
+        water_year: int,
+        cell: bool = False,
+    ) -> xr.Dataset:
+        """
+        Load flow exchange data
+        """
+        if self.netcdf_flow_exchange_path is not None:
+            self._logger.info(
+                "Loading flow exchange data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="FLOWEXCH"
+            )
+            self._logger.info("Loading files: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No flow exchange file provided.")
+            return None
+
+    def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
+        """Classify flood duration per 480m cell based on annual wet day count.
+
+        Uses daily depth data (self.water_depth) to count days with depth > 0,
+        then classifies into integer categories. Breakpoints differ by habitat:
+
+        BLH:   1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+        Swamp: 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+
+        Parameters
+        ----------
+        habitat : str
+            "blh" or "swamp"
+
+        Returns
+        -------
+        np.ndarray
+            480m integer array of flood duration categories.
+        """
+        if self.water_depth is None:
+            self._logger.info(
+                "No water depth data; cannot compute flood duration."
+            )
+            return None
+
+        depth = self.water_depth["height"]
+        wet_days = (depth > 0).sum(dim="time")
+
+        # coarsen to 480m — average wet day count across 8x8 block
+        wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
+        wet_days_np = wet_days_480.to_numpy()
+
+        if habitat == "blh":
+            # 1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            flood_duration[wet_days_np >= 42] = 2
+            flood_duration[wet_days_np >= 84] = 3
+            flood_duration[wet_days_np >= 179] = 4
+        elif habitat == "swamp":
+            # 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            flood_duration[wet_days_np >= 148] = 2
+            flood_duration[wet_days_np >= 166] = 3
+            flood_duration[wet_days_np >= 179] = 4
+        else:
+            raise ValueError(f"Unknown habitat type: {habitat}")
+
+        self._logger.info(
+            "Flood duration (%s) classification complete.", habitat
+        )
+        return flood_duration
+
+    def _classify_flow_exchange(self) -> np.ndarray:
+        """Classify flow exchange per 480m cell based on mean flow exchange (m³/s).
+
+        Thresholds (m³/s):
+            1 = None     (<= 0.01)
+            2 = Low      (0.01 - 2.2)
+            3 = Moderate (2.2 - 10.2)
+            4 = High     (>= 10.2)
+
+        Returns
+        -------
+        np.ndarray
+            480m integer array of flow exchange categories.
+        """
+        if self.flow_exchange is None:
+            self._logger.info("No flow exchange data provided.")
+            return None
+
+        flow_exch = self.flow_exchange["flow_exchange"]
+
+        # subset to growing season (April–September)
+        gs = self.flow_exchange["flow_exchange"].sel(
+            time=flow_exch.time.dt.month.isin([4, 5, 6, 7, 8, 9])
+        )
+
+        # mean flow exchange over growing season (m³/s)
+        mean_flow = gs.mean(dim="time")
+
+        # coarsen to 480m
+        mean_flow_480 = mean_flow.coarsen(y=8, x=8, boundary="pad").mean()
+        mean_flow_np = mean_flow_480.to_numpy()
+
+        # classify: 1=None, 2=Low, 3=Moderate, 4=High
+        flow_exchange_cat = np.ones(mean_flow_np.shape, dtype=np.int8)
+        flow_exchange_cat[mean_flow_np > 0.01] = 2  # Low
+        flow_exchange_cat[mean_flow_np >= 2.2] = 3  # Moderate
+        flow_exchange_cat[mean_flow_np >= 10.2] = 4  # High
+
+        self._logger.info("Flow exchange classification complete.")
+        return flow_exchange_cat
 
     def _calculate_pct_cover(self):
         """Get percent coverage for each 480m cell, based on 60m veg type pixels. This

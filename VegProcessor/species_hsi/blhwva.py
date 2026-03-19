@@ -49,8 +49,8 @@ class BottomlandHardwoodHSI:
             v2_stand_maturity=hsi_instance.maturity_480,
             v3a_pct_understory=hsi_instance.pct_understory,
             v3b_pct_midstory=hsi_instance.pct_midstory,
-            v4a_flood_duration=hsi_instance.flood_duration,
-            v4b_flow_exchange=hsi_instance.flow_exchange,
+            v4a_flood_duration=hsi_instance.flood_duration_blh,
+            v4b_flow_exchange=hsi_instance.flow_exchange_cat,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -363,28 +363,28 @@ class BottomlandHardwoodHSI:
             )
             si_4[~np.isnan(si_4)] = 1
 
-        else: 
-            # scoring for 16 flood duration and flow exchange combinations 
+        else:
+            # scoring for 16 flood duration and flow exchange combinations
             # dictionary keys: (flood_dur, flow_exch)
             # flood dur mapping: 1=Temp/None, 2=Seasonal, 3=Semi-Perm, 4=Permanent
             # flow exch mapping: 4=High, 3=Moderate, 2=Low, 1=None
             si4_score = {
-                (1, 4): 1.00, # Temp/None, High
-                (2, 4): 0.85, # Seasonal, High
-                (3, 4): 0.75, # Sem-Perm, High
-                (4, 4): 0.65, # Permanent, High
-                (1, 3): 0.85, # Temp/None, Moderate
-                (2, 3): 0.75, # Seasonal, Moderate
-                (3, 3): 0.65, # Sem-Perm, Moderate
-                (4, 3): 0.45, # Permanent, Moderate
-                (1, 2): 0.7, # Temp/None, Low
-                (2, 2): 0.65, # Seasonal, Low
-                (3, 2): 0.45, # Sem-Perm, Low
-                (4, 2): 0.3, # Permanent, Low
-                (1, 1): 0.5, # Temp/None, None
-                (2, 1): 0.4, # Seasonal, None
-                (3, 1): 0.25, # Sem-Perm, None
-                (4, 1): 0.1, # Permanent, None
+                (1, 4): 1.00,  # Temp/None, High
+                (2, 4): 0.85,  # Seasonal, High
+                (3, 4): 0.75,  # Sem-Perm, High
+                (4, 4): 0.65,  # Permanent, High
+                (1, 3): 0.85,  # Temp/None, Moderate
+                (2, 3): 0.75,  # Seasonal, Moderate
+                (3, 3): 0.65,  # Sem-Perm, Moderate
+                (4, 3): 0.45,  # Permanent, Moderate
+                (1, 2): 0.7,  # Temp/None, Low
+                (2, 2): 0.65,  # Seasonal, Low
+                (3, 2): 0.45,  # Sem-Perm, Low
+                (4, 2): 0.3,  # Permanent, Low
+                (1, 1): 0.5,  # Temp/None, None
+                (2, 1): 0.4,  # Seasonal, None
+                (3, 1): 0.25,  # Sem-Perm, None
+                (4, 1): 0.1,  # Permanent, None
             }
 
             # define conditions and scores
@@ -397,7 +397,7 @@ class BottomlandHardwoodHSI:
                 )
                 conds.append(mask)
                 scoring.append(score)
-            
+
             si_4 = np.select(conds, scoring, default=si_4)
 
         si_4 = self.blh_cover_mask(si_4)

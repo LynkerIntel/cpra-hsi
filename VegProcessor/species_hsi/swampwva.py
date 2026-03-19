@@ -55,8 +55,8 @@ class SwampHSI:
             v1b_pct_midstory=hsi_instance.pct_midstory,
             v1c_pct_understory=hsi_instance.pct_understory,
             v2_maturity_dbh=hsi_instance.maturity_dbh,  # set to ideal
-            v3a_flood_duration=hsi_instance.flood_duration,
-            v3b_flow_exchange=hsi_instance.flow_exchange,
+            v3a_flood_duration=hsi_instance.flood_duration_swamp,
+            v3b_flow_exchange=hsi_instance.flow_exchange_cat,
             v4_mean_high_salinity_gs=hsi_instance.salinity_mean_high_march_nov,
             v5_forested_connectivity_cat=hsi_instance.forested_connectivity_cat,
             v6a_pct_forested_half_mi=hsi_instance.pct_forested_half_mi,
@@ -180,7 +180,6 @@ class SwampHSI:
             si_1[~np.isnan(si_1)] = 1
 
         else:
-
             # assign intermediate masks with "or equal to"
             # default condition is greater than, which
             # can be inverted with "~"
@@ -281,29 +280,29 @@ class SwampHSI:
             )
             si_3[~np.isnan(si_3)] = 1
 
-        else:            
-            # scoring for 16 flood duration and flow exchange combinations 
+        else:
+            # scoring for 16 flood duration and flow exchange combinations
             # dictionary keys: (flood_dur, flow_exch)
             # flood dur mapping: 1=Temp/None, 2=Seasonal, 3=Semi-Perm, 4=Permanent
             # flow exch mapping: 4=High, 3=Moderate, 2=Low, 1=None
 
             si3_score = {
-                (1, 4): 0.9, # Temp/None, High
-                (2, 4): 1.00, # Seasonal, High
-                (3, 4): 0.75, # Sem-Perm, High
-                (4, 4): 0.65, # Permanent, High
-                (1, 3): 0.75, # Temp/None, Moderate
-                (2, 3): 0.85, # Seasonal, Moderate
-                (3, 3): 0.65, # Sem-Perm, Moderate
-                (4, 3): 0.45, # Permanent, Moderate
-                (1, 2): 0.65, # Temp/None, Low
-                (2, 2): 0.7, # Seasonal, Low
-                (3, 2): 0.45, # Sem-Perm, Low
-                (4, 2): 0.3, # Permanent, Low
-                (1, 1): 0.4, # Temp/None, None
-                (2, 1): 0.5, # Seasonal, None
-                (3, 1): 0.25, # Sem-Perm, None
-                (4, 1): 0.1, # Permanent, None
+                (1, 4): 0.9,  # Temp/None, High
+                (2, 4): 1.00,  # Seasonal, High
+                (3, 4): 0.75,  # Sem-Perm, High
+                (4, 4): 0.65,  # Permanent, High
+                (1, 3): 0.75,  # Temp/None, Moderate
+                (2, 3): 0.85,  # Seasonal, Moderate
+                (3, 3): 0.65,  # Sem-Perm, Moderate
+                (4, 3): 0.45,  # Permanent, Moderate
+                (1, 2): 0.65,  # Temp/None, Low
+                (2, 2): 0.7,  # Seasonal, Low
+                (3, 2): 0.45,  # Sem-Perm, Low
+                (4, 2): 0.3,  # Permanent, Low
+                (1, 1): 0.4,  # Temp/None, None
+                (2, 1): 0.5,  # Seasonal, None
+                (3, 1): 0.25,  # Sem-Perm, None
+                (4, 1): 0.1,  # Permanent, None
             }
 
             # define conditions and scores

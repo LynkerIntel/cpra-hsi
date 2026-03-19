@@ -1966,6 +1966,19 @@ class HSI(vt.VegTransition):
                     "description": "Mean water velocity at 60m resolution",
                 },
             ],
+            "dissolved_oxygen_annual_mean": [
+                self.dissolved_oxygen_annual_mean,
+                np.float32,
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "mg/L",
+                    "long_name": "dissolved oxygen annual mean",
+                    "description": (
+                        "Annual mean dissolved oxygen predicted by XGBoost model "
+                        "at 60m resolution."
+                    ),
+                },
+            ],
         }
 
         with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:

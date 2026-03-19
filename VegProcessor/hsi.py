@@ -198,6 +198,8 @@ class HSI(vt.VegTransition):
             None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
         self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
+        self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
@@ -1645,6 +1647,15 @@ class HSI(vt.VegTransition):
             month,
             doy,
             output_dtypes=[np.float32],
+        )
+
+        # annual mean for output files
+        do_annual_mean = self.dissolved_oxygen.mean(dim="time")
+        self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
+        self.dissolved_oxygen_annual_mean_480 = (
+            do_annual_mean.coarsen(y=8, x=8, boundary="pad")
+            .mean()
+            .to_numpy()
         )
 
         self._logger.info("Daily dissolved oxygen prediction complete.")

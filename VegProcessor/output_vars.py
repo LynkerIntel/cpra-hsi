@@ -1533,6 +1533,19 @@ def get_hsi_variables(hsi):
                 ),
             },
         ],
+        "dissolved_oxygen_annual_mean": [
+            hsi.dissolved_oxygen_annual_mean_480,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen annual mean",
+                "description": (
+                    "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "at 480m resolution."
+                ),
+            },
+        ],
     }
 
     return all_variables

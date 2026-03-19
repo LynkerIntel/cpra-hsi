@@ -14,6 +14,7 @@ from rasterio.enums import Resampling
 from scipy.ndimage import binary_dilation
 from skimage.morphology import disk
 from scipy.ndimage import label
+from xgboost import XGBRegressor
 
 # import veg_logic
 import hydro_logic
@@ -150,6 +151,7 @@ class HSI(vt.VegTransition):
         # datasets
         self.pct_cover_veg = None
         self._load_blue_crab_lookup()
+        self._load_do_model()
 
         # HSI Variables
         self.pct_open_water = None
@@ -195,6 +197,7 @@ class HSI(vt.VegTransition):
         self.mean_weekly_summer_temp = (
             None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
+        self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
@@ -318,6 +321,7 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
+        self.do_model_path = self.config["simulation"].get("do_model_path")
         self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
         self.hsi_run_species = self.config["simulation"].get(
@@ -486,6 +490,9 @@ class HSI(vt.VegTransition):
             low=0.5,
             high=3,
         )
+
+        # dissolved oxygen prediction -----------------------------------
+        self._calculate_dissolved_oxygen()
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -1584,6 +1591,63 @@ class HSI(vt.VegTransition):
         ) * 100  # UNIT: index to percent
 
         self.pct_near_forest = near_forest_mask_da.to_numpy()
+
+    def _load_do_model(self):
+        """Load the XGBoost dissolved oxygen model from config path."""
+        if self.do_model_path is not None:
+            self.do_model = XGBRegressor()
+            self.do_model.load_model(self.do_model_path)
+            self._logger.info("Loaded DO model from %s", self.do_model_path)
+        else:
+            self.do_model = None
+            self._logger.info("No DO model path provided; DO will be ideal.")
+
+    def _calculate_dissolved_oxygen(self):
+        """Predict daily dissolved oxygen (mg/L) at 60m using XGBoost.
+
+        Model features: Temp_C, Depth_m, Velocity_ms, Month, DayOfYear.
+        Result is stored as self.dissolved_oxygen, an xr.DataArray with
+        dims (time, y, x) at 60m resolution.
+        """
+        if self.do_model is None:
+            self._logger.info("No DO model loaded; skipping DO prediction.")
+            return
+
+        if self.water_temperature is None or self.water_depth is None:
+            self._logger.info("Missing temp or depth for DO model; skipping.")
+            return
+
+        temp = self.water_temperature["temperature"]  # (time, y, x)
+        depth = self.water_depth["height"]             # (time, y, x)
+
+        # velocity is a single 60m 2D array — broadcast across time
+        if self.velocity_july_sept_mean is not None:
+            vel = xr.DataArray(
+                self.velocity_july_sept_mean, dims=["y", "x"]
+            ).broadcast_like(temp)
+        else:
+            vel = xr.zeros_like(temp)
+
+        month = temp.time.dt.month.broadcast_like(temp)
+        doy = temp.time.dt.dayofyear.broadcast_like(temp)
+
+        def _predict_do(temp, depth, velocity, month, doy):
+            features = np.stack([temp, depth, velocity, month, doy], axis=-1)
+            shape = features.shape[:-1]
+            pred = self.do_model.predict(features.reshape(-1, 5))
+            return pred.reshape(shape)
+
+        self.dissolved_oxygen = xr.apply_ufunc(
+            _predict_do,
+            temp,
+            depth,
+            vel,
+            month,
+            doy,
+            output_dtypes=[np.float32],
+        )
+
+        self._logger.info("Daily dissolved oxygen prediction complete.")
 
     def _load_blue_crab_lookup(self):
         """

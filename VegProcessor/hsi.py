@@ -289,7 +289,7 @@ class HSI(vt.VegTransition):
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"
         )
-        self.wpu_grid = self.config["raster_data"].get("wpu_grid")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
@@ -2005,7 +2005,7 @@ class HSI(vt.VegTransition):
         if 'year' in ds_out.dims:
             ds_out = ds_out.rename({'year': 'time'})
 
-        wpu_grid = xr.open_dataarray(self.wpu_grid, engine="rasterio").isel(band=0)
+        wpu_grid = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
 
         df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
         hsi_wpu_outpath = os.path.join(

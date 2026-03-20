@@ -289,6 +289,7 @@ class HSI(vt.VegTransition):
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"
         )
+        self.wpu_path = self.config["raster_data"].get("wpu_grid")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation

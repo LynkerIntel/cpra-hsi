@@ -289,6 +289,7 @@ class HSI(vt.VegTransition):
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"
         )
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
@@ -1998,6 +1999,20 @@ class HSI(vt.VegTransition):
             f"{self.file_name}_hsi_60m_netcdf_variables.csv",
         )
         attrs_df_60.to_csv(outpath_60m, index=False)
+
+        # -------- WPU HSI CSV Summaries --------
+        self._logger.info("Calculating WPU HSI/SI mean scores.")
+        if 'year' in ds_out.dims:
+            ds_out = ds_out.rename({'year': 'time'})
+
+        wpu_grid = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+
+        df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
+        hsi_wpu_outpath = os.path.join(
+            self.run_metadata_dir, 
+            f"{self.file_name}_wpu_hsi_means.csv"
+        )
+        df_hsi_wpu.to_csv(hsi_wpu_outpath, index=False)
 
         # -------- convert NetCDFs to COGs --------
         self._logger.info("Converting NetCDF output to COGs.")

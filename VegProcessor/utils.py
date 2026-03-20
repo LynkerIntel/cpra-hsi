@@ -599,6 +599,34 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
     return df_out
 
+def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
+    """Computes annual mean scores for HSI/SI variables grouped by WPU."""
+
+    hsi_vars = [
+        var for var in ds_hsi.data_vars if '_hsi' in var.lower() or '_si_' in var.lower()]
+    
+    if not hsi_vars:
+        return pd.DataFrame()
+
+    # Downsamples the 60m WPU grid to the 480m HSI grid
+    zonal_ids = wpu_grid.rio.reproject_match(ds_hsi).compute()
+    zonal_ids.name = "wpu" 
+    
+    zonal_ids = xr.where(zonal_ids > 0, zonal_ids, np.nan)
+
+    ds_zonal_means = ds_hsi[hsi_vars].groupby(zonal_ids).mean()
+    df_timeseries = ds_zonal_means.to_dataframe().reset_index()
+    
+    if 'time' in df_timeseries.columns:
+        df_timeseries.rename(columns={'time': 'timestep'}, inplace=True)
+    
+    df_timeseries = df_timeseries.dropna(subset=['wpu'])
+    df_timeseries['wpu'] = df_timeseries['wpu'].astype(int)
+    
+    cols = ['timestep', 'wpu'] + [c for c in df_timeseries.columns if c not in ['timestep', 'wpu']]
+    
+    return df_timeseries[cols].sort_values(['timestep', 'wpu']).reset_index(drop=True)
+
 
 def generate_filename(
     params: dict,

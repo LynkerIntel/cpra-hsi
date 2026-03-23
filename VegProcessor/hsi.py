@@ -1599,69 +1599,69 @@ class HSI(vt.VegTransition):
 
         self.pct_near_forest = near_forest_mask_da.to_numpy()
 
-    def _load_do_model(self):
-        """Load the XGBoost dissolved oxygen model from config path."""
-        if self.do_model_path is not None:
-            self.do_model = XGBRegressor()
-            self.do_model.load_model(self.do_model_path)
-            self._logger.info("Loaded DO model from %s", self.do_model_path)
-        else:
-            self.do_model = None
-            self._logger.info("No DO model path provided; DO will be ideal.")
+    # def _load_do_model(self):
+    #     """Load the XGBoost dissolved oxygen model from config path."""
+    #     if self.do_model_path is not None:
+    #         self.do_model = XGBRegressor()
+    #         self.do_model.load_model(self.do_model_path)
+    #         self._logger.info("Loaded DO model from %s", self.do_model_path)
+    #     else:
+    #         self.do_model = None
+    #         self._logger.info("No DO model path provided; DO will be ideal.")
 
-    def _calculate_dissolved_oxygen(self):
-        """Predict daily dissolved oxygen (mg/L) at 60m using XGBoost.
+    # def _calculate_dissolved_oxygen(self):
+    #     """Predict daily dissolved oxygen (mg/L) at 60m using XGBoost.
 
-        Model features: Temp_C, Depth_m, Velocity_ms, Month, DayOfYear.
-        Result is stored as self.dissolved_oxygen, an xr.DataArray with
-        dims (time, y, x) at 60m resolution.
-        """
-        if self.do_model is None:
-            self._logger.info("No DO model loaded; skipping DO prediction.")
-            return
+    #     Model features: Temp_C, Depth_m, Velocity_ms, Month, DayOfYear.
+    #     Result is stored as self.dissolved_oxygen, an xr.DataArray with
+    #     dims (time, y, x) at 60m resolution.
+    #     """
+    #     if self.do_model is None:
+    #         self._logger.info("No DO model loaded; skipping DO prediction.")
+    #         return
 
-        if self.water_temperature is None or self.water_depth is None:
-            self._logger.info("Missing temp or depth for DO model; skipping.")
-            return
+    #     if self.water_temperature is None or self.water_depth is None:
+    #         self._logger.info("Missing temp or depth for DO model; skipping.")
+    #         return
 
-        temp = self.water_temperature["temperature"]  # (time, y, x)
-        depth = self.water_depth["height"]  # (time, y, x)
+    #     temp = self.water_temperature["temperature"]  # (time, y, x)
+    #     depth = self.water_depth["height"]  # (time, y, x)
 
-        # velocity is a single 60m 2D array — broadcast across time
-        if self.velocity_july_sept_mean is not None:
-            vel = xr.DataArray(
-                self.velocity_july_sept_mean, dims=["y", "x"]
-            ).broadcast_like(temp)
-        else:
-            vel = xr.zeros_like(temp)
+    #     # velocity is a single 60m 2D array — broadcast across time
+    #     if self.velocity_july_sept_mean is not None:
+    #         vel = xr.DataArray(
+    #             self.velocity_july_sept_mean, dims=["y", "x"]
+    #         ).broadcast_like(temp)
+    #     else:
+    #         vel = xr.zeros_like(temp)
 
-        month = temp.time.dt.month.broadcast_like(temp)
-        doy = temp.time.dt.dayofyear.broadcast_like(temp)
+    #     month = temp.time.dt.month.broadcast_like(temp)
+    #     doy = temp.time.dt.dayofyear.broadcast_like(temp)
 
-        def _predict_do(temp, depth, velocity, month, doy):
-            features = np.stack([temp, depth, velocity, month, doy], axis=-1)
-            shape = features.shape[:-1]
-            pred = self.do_model.predict(features.reshape(-1, 5))
-            return pred.reshape(shape)
+    #     def _predict_do(temp, depth, velocity, month, doy):
+    #         features = np.stack([temp, depth, velocity, month, doy], axis=-1)
+    #         shape = features.shape[:-1]
+    #         pred = self.do_model.predict(features.reshape(-1, 5))
+    #         return pred.reshape(shape)
 
-        self.dissolved_oxygen = xr.apply_ufunc(
-            _predict_do,
-            temp,
-            depth,
-            vel,
-            month,
-            doy,
-            output_dtypes=[np.float32],
-        )
+    #     self.dissolved_oxygen = xr.apply_ufunc(
+    #         _predict_do,
+    #         temp,
+    #         depth,
+    #         vel,
+    #         month,
+    #         doy,
+    #         output_dtypes=[np.float32],
+    #     )
 
-        # annual mean for output files
-        do_annual_mean = self.dissolved_oxygen.mean(dim="time")
-        self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
-        self.dissolved_oxygen_annual_mean_480 = (
-            do_annual_mean.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
-        )
+    #     # annual mean for output files
+    #     do_annual_mean = self.dissolved_oxygen.mean(dim="time")
+    #     self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
+    #     self.dissolved_oxygen_annual_mean_480 = (
+    #         do_annual_mean.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
+    #     )
 
-        self._logger.info("Daily dissolved oxygen prediction complete.")
+    #     self._logger.info("Daily dissolved oxygen prediction complete.")
 
     def _load_blue_crab_lookup(self):
         """

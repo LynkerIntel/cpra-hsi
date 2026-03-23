@@ -416,7 +416,7 @@ class HSI(vt.VegTransition):
         # temperature vars -------------------------------------------
         self.water_temperature = self._load_water_temp_general(self.wy)
 
-        if self.water_temperature is not None:
+        if isinstance(self.water_temperature, xr.Dataset):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
@@ -1620,7 +1620,7 @@ class HSI(vt.VegTransition):
             return
 
         temp = self.water_temperature["temperature"]  # (time, y, x)
-        depth = self.water_depth["height"]             # (time, y, x)
+        depth = self.water_depth["height"]  # (time, y, x)
 
         # velocity is a single 60m 2D array — broadcast across time
         if self.velocity_july_sept_mean is not None:
@@ -1653,9 +1653,7 @@ class HSI(vt.VegTransition):
         do_annual_mean = self.dissolved_oxygen.mean(dim="time")
         self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
         self.dissolved_oxygen_annual_mean_480 = (
-            do_annual_mean.coarsen(y=8, x=8, boundary="pad")
-            .mean()
-            .to_numpy()
+            do_annual_mean.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
         )
 
         self._logger.info("Daily dissolved oxygen prediction complete.")

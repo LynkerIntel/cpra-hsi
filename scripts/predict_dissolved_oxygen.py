@@ -30,14 +30,14 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
-MODEL_PATH = "ml_out/xgb_dissolved_oxygen.json"
-OUTPUT_NC_PATH = "do_daily_WY22.nc"
-OUTPUT_COG_DIR = "do_daily_WY22_cogs"
+MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
+OUTPUT_NC_PATH = "do_daily_WY06.nc"
+OUTPUT_COG_DIR = "do_daily_WY06_cogs"
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -107,11 +107,8 @@ def save_daily_cogs(
         os.makedirs(var_dir, exist_ok=True)
         print(f"\nProcessing variable: {var_name}")
 
-        for t_idx, t_val in enumerate(ds.time.values):
-            if is_daily_data:
-                file_label = f"WY{water_year}_DOY_{t_idx + 1:03d}"
-            else:
-                file_label = str(t_idx)
+        for t_idx in range(len(ds.time.values)):
+            file_label = str(t_idx)
 
             da_slice = var.isel(time=t_idx).squeeze(drop=True)
             min_value = float(da_slice.min().values)

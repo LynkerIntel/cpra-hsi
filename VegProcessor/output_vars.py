@@ -6,7 +6,7 @@ def _safe_get_attr(obj, attr):
     return getattr(obj, attr) if obj is not None else None
 
 
-def get_hsi_variables(hsi):
+def get_hsi_480m_variables(hsi):
     """
     returns a dictionary where each key is a string representing a variable name (str),
     and each value is a list with the following structure:
@@ -1543,9 +1543,159 @@ def get_hsi_variables(hsi):
                 ),
             },
         ],
+        "dissolved_oxygen_annual_mean": [
+            hsi.dissolved_oxygen_annual_mean_480,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen annual mean",
+                "description": (
+                    "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "at 480m resolution."
+                ),
+            },
+        ],
     }
 
     return all_variables
+
+
+def get_hsi_60m_variables(hsi):
+    """
+    returns a dictionary where each key is a string representing a variable name (str),
+    and each value is a list with the following structure:
+
+    - data (numpy.ndarray or a similar object, typically retrieved as an attribute
+        from the hsi model instance)
+    - dtype (numpy data type, e.g., np.float32) used when writing the variable to a
+        NetCDF file
+    - metadata (dict[str, str]) containing NetCDF attribute metadata, including keys such as:
+        - "grid_mapping": typically set to "spatial_ref"
+        - "units": string representing the measurement units (e.g., "meters", "%", or an
+            empty string if unitless)
+        - "long_name": human-readable name of the variable
+        - "description": optional extended description of the variable
+
+    60m QC variables for the HSI model.
+    """
+    return {
+        "water_depth_july_august_mean": [
+            hsi.water_depth_july_august_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth July-August mean",
+                "description": (
+                    "Mean water depth for July-August period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_5, "
+                    "blackcrappie SI_2, SI_4, SI_8."
+                ),
+            },
+        ],
+        "water_depth_july_sept_mean": [
+            hsi.water_depth_july_sept_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth July-September mean",
+                "description": (
+                    "Mean water depth for July-September period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_8, SI_12, "
+                    "SI_14, SI_18."
+                ),
+            },
+        ],
+        "water_depth_may_july_mean": [
+            hsi.water_depth_may_july_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth May-July mean",
+                "description": (
+                    "Mean water depth for May-July period at 60m resolution. "
+                    "Used for pools/backwaters masking in catfish SI_10."
+                ),
+            },
+        ],
+        "water_temperature_july_august_mean": [
+            hsi.water_temperature_july_august_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature July-August mean",
+                "description": (
+                    "Mean water temperature for July-August period at 60m resolution. "
+                    "Used in catfish SI_5, blackcrappie SI_8, SI_9, SI_10."
+                ),
+            },
+        ],
+        "water_temperature_july_sept_mean": [
+            hsi.water_temperature_july_sept_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature July-September mean",
+                "description": (
+                    "Mean water temperature for July-September period at 60m resolution. "
+                    "Used in catfish SI_12, SI_14."
+                ),
+            },
+        ],
+        "water_temperature_may_july_mean": [
+            hsi.water_temperature_may_july_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "degrees_Celsius",
+                "long_name": "water temperature May-July mean",
+                "description": (
+                    "Mean water temperature for May-July period at 60m resolution. "
+                    "Used in catfish SI_10."
+                ),
+            },
+        ],
+        "water_temperature_feb_march_mean": [
+            hsi.water_temperature_feb_march_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "Deg C",
+                "long_name": "water temperature February-March mean",
+                "description": (
+                    "Mean water temperature for February-March period at 60m resolution"
+                ),
+            },
+        ],
+        "velocity_july_sept_mean": [
+            hsi.velocity_july_sept_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "m/s",
+                "long_name": "water velocity",
+                "description": "Mean water velocity at 60m resolution",
+            },
+        ],
+        "dissolved_oxygen_annual_mean": [
+            hsi.dissolved_oxygen_annual_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen annual mean",
+                "description": (
+                    "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "at 60m resolution."
+                ),
+            },
+        ],
+    }
 
 
 def get_veg_variables(veg):

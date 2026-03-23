@@ -14,6 +14,7 @@ from rasterio.enums import Resampling
 from scipy.ndimage import binary_dilation
 from skimage.morphology import disk
 from scipy.ndimage import label
+from xgboost import XGBRegressor
 
 # import veg_logic
 import hydro_logic
@@ -21,7 +22,7 @@ import utils
 import validate
 
 import veg_transition as vt
-from output_vars import get_hsi_variables
+from output_vars import get_hsi_480m_variables, get_hsi_60m_variables
 
 from species_hsi import (
     alligator,
@@ -196,6 +197,9 @@ class HSI(vt.VegTransition):
         self.mean_weekly_summer_temp = (
             None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
+        self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
+        self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
@@ -227,7 +231,7 @@ class HSI(vt.VegTransition):
         self.flood_duration_blh = None
         self.flood_duration_swamp = None
         self.flow_exchange = None
-        self.flow_exchange_cat = None
+        self.flow_exchange_cat = None  # categorical
         self.salinity_mean_high_march_nov = None
         self.disturbance = None  # always ideal
 
@@ -412,7 +416,7 @@ class HSI(vt.VegTransition):
         # temperature vars -------------------------------------------
         self.water_temperature = self._load_water_temp_general(self.wy)
 
-        if self.water_temperature is not None:
+        if isinstance(self.water_temperature, xr.Dataset):
             self.water_temperature_annual_mean = (
                 self._get_water_temperature_subset()
             )
@@ -445,6 +449,7 @@ class HSI(vt.VegTransition):
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
+        # self._load_dissolved_oxygen() # TODO: add dissolved xoygen loader here
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._classify_flow_exchange()
@@ -654,8 +659,13 @@ class HSI(vt.VegTransition):
                     "Unable to parse CRS from hydrologic input"
                 ) from exc
 
+            if ds["velocity"].sizes.get("time", 1) > 1:
+                raise ValueError(
+                    "Velocity file contains more than 1 timestep. "
+                    "Only an annual velocity should be supplied to the model."
+                )
+
             ds = self._reproject_match_to_dem(ds)
-            # for now, subset to first/only timestep, may refactor
             return ds["velocity"][0].to_numpy()
 
         else:
@@ -1668,6 +1678,70 @@ class HSI(vt.VegTransition):
 
         self.pct_near_forest = near_forest_mask_da.to_numpy()
 
+    # def _load_do_model(self):
+    #     """Load the XGBoost dissolved oxygen model from config path."""
+    #     if self.do_model_path is not None:
+    #         self.do_model = XGBRegressor()
+    #         self.do_model.load_model(self.do_model_path)
+    #         self._logger.info("Loaded DO model from %s", self.do_model_path)
+    #     else:
+    #         self.do_model = None
+    #         self._logger.info("No DO model path provided; DO will be ideal.")
+
+    # def _calculate_dissolved_oxygen(self):
+    #     """Predict daily dissolved oxygen (mg/L) at 60m using XGBoost.
+
+    #     Model features: Temp_C, Depth_m, Velocity_ms, Month, DayOfYear.
+    #     Result is stored as self.dissolved_oxygen, an xr.DataArray with
+    #     dims (time, y, x) at 60m resolution.
+    #     """
+    #     if self.do_model is None:
+    #         self._logger.info("No DO model loaded; skipping DO prediction.")
+    #         return
+
+    #     if self.water_temperature is None or self.water_depth is None:
+    #         self._logger.info("Missing temp or depth for DO model; skipping.")
+    #         return
+
+    #     temp = self.water_temperature["temperature"]  # (time, y, x)
+    #     depth = self.water_depth["height"]  # (time, y, x)
+
+    #     # velocity is a single 60m 2D array — broadcast across time
+    #     if self.velocity_july_sept_mean is not None:
+    #         vel = xr.DataArray(
+    #             self.velocity_july_sept_mean, dims=["y", "x"]
+    #         ).broadcast_like(temp)
+    #     else:
+    #         vel = xr.zeros_like(temp)
+
+    #     month = temp.time.dt.month.broadcast_like(temp)
+    #     doy = temp.time.dt.dayofyear.broadcast_like(temp)
+
+    #     def _predict_do(temp, depth, velocity, month, doy):
+    #         features = np.stack([temp, depth, velocity, month, doy], axis=-1)
+    #         shape = features.shape[:-1]
+    #         pred = self.do_model.predict(features.reshape(-1, 5))
+    #         return pred.reshape(shape)
+
+    #     self.dissolved_oxygen = xr.apply_ufunc(
+    #         _predict_do,
+    #         temp,
+    #         depth,
+    #         vel,
+    #         month,
+    #         doy,
+    #         output_dtypes=[np.float32],
+    #     )
+
+    #     # annual mean for output files
+    #     do_annual_mean = self.dissolved_oxygen.mean(dim="time")
+    #     self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
+    #     self.dissolved_oxygen_annual_mean_480 = (
+    #         do_annual_mean.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
+    #     )
+
+    #     self._logger.info("Daily dissolved oxygen prediction complete.")
+
     def _load_blue_crab_lookup(self):
         """
         Read blue crab lookup table
@@ -1805,7 +1879,7 @@ class HSI(vt.VegTransition):
         }
 
         timestep_str = timestep.strftime("%Y-%m-%d")
-        hsi_variables = get_hsi_variables(self)
+        hsi_variables = get_hsi_480m_variables(self)
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1829,7 +1903,7 @@ class HSI(vt.VegTransition):
                     )
 
                 # boolean to int8 (0 and 1)
-                if dtype == bool:
+                if dtype is bool:
                     data = np.nan_to_num(data, nan=False).astype(np.int8)
 
                 ds_loaded[var_name].loc[{"time": timestep}] = data.astype(
@@ -1869,112 +1943,7 @@ class HSI(vt.VegTransition):
         }
 
         timestep_str = timestep.strftime("%Y-%m-%d")
-
-        # Define 60m QC variables to output
-        qc_60m_variables = {
-            "water_depth_july_august_mean": [
-                self.water_depth_july_august_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth July-August mean",
-                    "description": (
-                        "Mean water depth for July-August period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_5, "
-                        "blackcrappie SI_2, SI_4, SI_8."
-                    ),
-                },
-            ],
-            "water_depth_july_sept_mean": [
-                self.water_depth_july_sept_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth July-September mean",
-                    "description": (
-                        "Mean water depth for July-September period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_8, SI_12, "
-                        "SI_14, SI_18."
-                    ),
-                },
-            ],
-            "water_depth_may_july_mean": [
-                self.water_depth_may_july_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth May-July mean",
-                    "description": (
-                        "Mean water depth for May-July period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_july_august_mean": [
-                self.water_temperature_july_august_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature July-August mean",
-                    "description": (
-                        "Mean water temperature for July-August period at 60m resolution. "
-                        "Used in catfish SI_5, blackcrappie SI_8, SI_9, SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_july_sept_mean": [
-                self.water_temperature_july_sept_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature July-September mean",
-                    "description": (
-                        "Mean water temperature for July-September period at 60m resolution. "
-                        "Used in catfish SI_12, SI_14."
-                    ),
-                },
-            ],
-            "water_temperature_may_july_mean": [
-                self.water_temperature_may_july_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature May-July mean",
-                    "description": (
-                        "Mean water temperature for May-July period at 60m resolution. "
-                        "Used in catfish SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_feb_march_mean": [
-                self.water_temperature_feb_march_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "Deg C",
-                    "long_name": "water temperature February-March mean",
-                    "description": (
-                        "Mean water temperature for February-March period at 60m resolution"
-                    ),
-                },
-            ],
-            "velocity_july_sept_mean": [
-                self.velocity_july_sept_mean,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "m/s",
-                    "long_name": "water velocity",
-                    "description": "Mean water velocity at 60m resolution",
-                },
-            ],
-        }
+        qc_60m_variables = get_hsi_60m_variables(self)
 
         with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1998,7 +1967,7 @@ class HSI(vt.VegTransition):
                     )
 
                 # boolean to int8 (0 and 1)
-                if dtype == bool:
+                if dtype is bool:
                     data = np.nan_to_num(data, nan=False).astype(np.int8)
 
                 ds_loaded[var_name].loc[{"time": timestep}] = data.astype(

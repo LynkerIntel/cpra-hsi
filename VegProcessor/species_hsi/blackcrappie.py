@@ -68,13 +68,28 @@ class BlackCrappieHSI:
 
     @classmethod
     def from_hsi(cls, hsi_instance):
-        """Create Riverine Black Crappie HSI instance from an HSI instance."""
+        """Create Riverine Black Crappie HSI instance from an HSI instance.
+
+        Note: This is where unit conversion should take place. So the HSI Class attrs
+        stay in the native data source unit, while HSI functions receive data in the
+        correct unit.
+        """
+
+        def safe_multiply(
+            array: np.ndarray, multiplier: int = 100
+        ) -> np.ndarray:
+            """Helper function to multiply arrays when cm values are required
+            by the SI logic. In the case of None (no array) it is preserved and
+            passed to SI methods."""
+            return array * multiplier if array is not None else None
 
         return cls(
             v1_max_monthly_avg_summer_turbidity=hsi_instance.blackcrappie_max_monthly_avg_summer_turbidity,
             v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
-            v4_avg_vel_summer_flow_pools_bw=hsi_instance.velocity_july_sept_mean,
+            v4_avg_vel_summer_flow_pools_bw=safe_multiply(
+                hsi_instance.velocity_july_sept_mean
+            ),  # UNIT: m/s to cm/s
             v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_april_sept_mean,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
             v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean_60m,
@@ -429,11 +444,10 @@ class BlackCrappieHSI:
             si_5[~np.isnan(si_5)] = 1
 
         else:
-
             # condition 1
             mask_1 = self.v5_pct_pools_bw_avg_spring_summer_flow <= 50
-            si_5[mask_1] = 0.02 * (
-                self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1]
+            si_5[mask_1] = (
+                0.02 * (self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1])
             )
 
             # condition 2

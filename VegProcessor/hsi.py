@@ -656,8 +656,13 @@ class HSI(vt.VegTransition):
                     "Unable to parse CRS from hydrologic input"
                 ) from exc
 
+            if ds["velocity"].sizes.get("time", 1) > 1:
+                raise ValueError(
+                    "Velocity file contains more than 1 timestep. "
+                    "Only an annual velocity should be supplied to the model."
+                )
+
             ds = self._reproject_match_to_dem(ds)
-            # for now, subset to first/only timestep, may refactor
             return ds["velocity"][0].to_numpy()
 
         else:

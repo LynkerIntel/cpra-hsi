@@ -1339,6 +1339,10 @@ class HSI(vt.VegTransition):
         are 100% vegetated with no inundation yield a result of 0 from
         the calculation (both means are identical) and are overridden
         to -0.55 (unsuitable/dry), which results in a SI score of 0.1.
+        Cells that are 100% open water have no vegetated pixels, so
+        marsh surface elevation is undefined and the result would be NaN.
+        These are overridden to 0.25 (too deep), which also results in
+        a SI score of 0.1.
 
         Returns
         -------
@@ -1382,6 +1386,12 @@ class HSI(vt.VegTransition):
             result, 0, atol=1e-6
         )
         result[dry_all_veg] = -0.55
+
+        # Cells that are 100% open water have no vegetated pixels, so
+        # marsh_surface_480 is NaN, producing NaN in result. These are
+        # within the hydro domain but unsuitable. Set to 0.25 (too deep).
+        all_water = np.isnan(result) & ~np.isnan(self.hydro_domain_480)
+        result[all_water] = 0.25
 
         return result
 

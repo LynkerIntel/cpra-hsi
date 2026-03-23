@@ -231,7 +231,7 @@ class HSI(vt.VegTransition):
         self.flood_duration_blh = None
         self.flood_duration_swamp = None
         self.flow_exchange = None
-        self.flow_exchange_cat = None
+        self.flow_exchange_cat = None  # categorical
         self.salinity_mean_high_march_nov = None
         self.disturbance = None  # always ideal
 

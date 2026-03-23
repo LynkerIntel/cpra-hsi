@@ -449,6 +449,7 @@ class HSI(vt.VegTransition):
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
+        # self._load_dissolved_oxygen() # TODO: add dissolved xoygen loader here
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._classify_flow_exchange()
@@ -492,9 +493,6 @@ class HSI(vt.VegTransition):
             low=0.5,
             high=3,
         )
-
-        # dissolved oxygen prediction -----------------------------------
-        self._calculate_dissolved_oxygen()
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()

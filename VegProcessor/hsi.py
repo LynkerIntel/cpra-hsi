@@ -22,7 +22,7 @@ import utils
 import validate
 
 import veg_transition as vt
-from output_vars import get_hsi_variables
+from output_vars import get_hsi_480m_variables, get_hsi_60m_variables
 
 from species_hsi import (
     alligator,
@@ -1800,7 +1800,7 @@ class HSI(vt.VegTransition):
         }
 
         timestep_str = timestep.strftime("%Y-%m-%d")
-        hsi_variables = get_hsi_variables(self)
+        hsi_variables = get_hsi_480m_variables(self)
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
@@ -1864,125 +1864,7 @@ class HSI(vt.VegTransition):
         }
 
         timestep_str = timestep.strftime("%Y-%m-%d")
-
-        # Define 60m QC variables to output
-        qc_60m_variables = {
-            "water_depth_july_august_mean": [
-                self.water_depth_july_august_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth July-August mean",
-                    "description": (
-                        "Mean water depth for July-August period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_5, "
-                        "blackcrappie SI_2, SI_4, SI_8."
-                    ),
-                },
-            ],
-            "water_depth_july_sept_mean": [
-                self.water_depth_july_sept_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth July-September mean",
-                    "description": (
-                        "Mean water depth for July-September period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_8, SI_12, "
-                        "SI_14, SI_18."
-                    ),
-                },
-            ],
-            "water_depth_may_july_mean": [
-                self.water_depth_may_july_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "meters",
-                    "long_name": "water depth May-July mean",
-                    "description": (
-                        "Mean water depth for May-July period at 60m resolution. "
-                        "Used for pools/backwaters masking in catfish SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_july_august_mean": [
-                self.water_temperature_july_august_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature July-August mean",
-                    "description": (
-                        "Mean water temperature for July-August period at 60m resolution. "
-                        "Used in catfish SI_5, blackcrappie SI_8, SI_9, SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_july_sept_mean": [
-                self.water_temperature_july_sept_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature July-September mean",
-                    "description": (
-                        "Mean water temperature for July-September period at 60m resolution. "
-                        "Used in catfish SI_12, SI_14."
-                    ),
-                },
-            ],
-            "water_temperature_may_july_mean": [
-                self.water_temperature_may_july_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "degrees_Celsius",
-                    "long_name": "water temperature May-July mean",
-                    "description": (
-                        "Mean water temperature for May-July period at 60m resolution. "
-                        "Used in catfish SI_10."
-                    ),
-                },
-            ],
-            "water_temperature_feb_march_mean": [
-                self.water_temperature_feb_march_mean_60m,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "Deg C",
-                    "long_name": "water temperature February-March mean",
-                    "description": (
-                        "Mean water temperature for February-March period at 60m resolution"
-                    ),
-                },
-            ],
-            "velocity_july_sept_mean": [
-                self.velocity_july_sept_mean,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "m/s",
-                    "long_name": "water velocity",
-                    "description": "Mean water velocity at 60m resolution",
-                },
-            ],
-            "dissolved_oxygen_annual_mean": [
-                self.dissolved_oxygen_annual_mean,
-                np.float32,
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "mg/L",
-                    "long_name": "dissolved oxygen annual mean",
-                    "description": (
-                        "Annual mean dissolved oxygen predicted by XGBoost model "
-                        "at 60m resolution."
-                    ),
-                },
-            ],
-        }
+        qc_60m_variables = get_hsi_60m_variables(self)
 
         with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file

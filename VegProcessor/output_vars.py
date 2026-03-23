@@ -1056,6 +1056,16 @@ def get_hsi_variables(hsi):
                 "description": "",
             },
         ],
+        "water_depth_rel_marsh_annual_mean": [
+            hsi.water_depth_rel_marsh_annual_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "Mean annual water depth relative to marsh surface",
+                "description": "Mean annual WSE minus mean elevation of vegetated pixels per cell",
+            },
+        ],
         "water_depth_jan_aug_mean": [
             hsi.water_depth_jan_aug_mean,
             np.float32,

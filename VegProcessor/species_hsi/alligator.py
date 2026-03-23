@@ -55,7 +55,7 @@ class AlligatorHSI:
 
         return cls(
             v1_pct_open_water=safe_divide(hsi_instance.pct_open_water),
-            v2_water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
+            v2_water_depth_annual_mean=hsi_instance.water_depth_rel_marsh_annual_mean,
             v3a_pct_swamp_bottom_hardwood=safe_divide(
                 hsi_instance.pct_swamp_bottom_hardwood
             ),

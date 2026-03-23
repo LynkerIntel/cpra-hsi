@@ -1824,7 +1824,7 @@ class HSI(vt.VegTransition):
                     )
 
                 # boolean to int8 (0 and 1)
-                if dtype == bool:
+                if dtype is bool:
                     data = np.nan_to_num(data, nan=False).astype(np.int8)
 
                 ds_loaded[var_name].loc[{"time": timestep}] = data.astype(

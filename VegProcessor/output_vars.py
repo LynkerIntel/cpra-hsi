@@ -1546,34 +1546,6 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
-        "flood_duration_blh": [
-            hsi.flood_duration_blh,
-            np.int8,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "",
-                "long_name": "flood duration BLH",
-                "description": (
-                    "Flood duration classification for bottomland hardwood. "
-                    "1=Temp/None (<42 days), 2=Seasonal (42-83), "
-                    "3=Semi-Perm (84-178), 4=Permanent (179+)."
-                ),
-            },
-        ],
-        "flood_duration_swamp": [
-            hsi.flood_duration_swamp,
-            np.int8,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "",
-                "long_name": "flood duration swamp",
-                "description": (
-                    "Flood duration classification for swamp. "
-                    "1=Temp/None (<148 days), 2=Seasonal (148-165), "
-                    "3=Semi-Perm (166-178), 4=Permanent (179+)."
-                ),
-            },
-        ],
     }
 
     return all_variables

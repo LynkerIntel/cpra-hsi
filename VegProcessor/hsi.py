@@ -151,7 +151,6 @@ class HSI(vt.VegTransition):
         # datasets
         self.pct_cover_veg = None
         self._load_blue_crab_lookup()
-        self._load_do_model()
 
         # HSI Variables
         self.pct_open_water = None
@@ -323,7 +322,6 @@ class HSI(vt.VegTransition):
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
-        self.do_model_path = self.config["simulation"].get("do_model_path")
         self.years_mapping = self.config["simulation"].get("years_mapping")
         self.testing_radius = self.config["simulation"].get("testing_radius")
         self.hsi_run_species = self.config["simulation"].get(

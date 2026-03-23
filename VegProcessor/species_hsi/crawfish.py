@@ -46,7 +46,7 @@ class CrawfishHSI:
     def from_hsi(cls, hsi_instance):
         """Create CrawfishHSI instance from an HSI instance.
 
-        All HSI depth vars in provided in m. Necessary conversions take here,
+        All HSI depth vars in provided in m. Necessary conversions take place here,
         with care to maintain None vars.
         """
 

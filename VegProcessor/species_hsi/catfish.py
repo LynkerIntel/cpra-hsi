@@ -70,7 +70,20 @@ class RiverineCatfishHSI:
 
     @classmethod
     def from_hsi(cls, hsi_instance):
-        """Create Riverine Catfish HSI instance from an HSI instance."""
+        """Create Riverine Catfish HSI instance from an HSI instance.
+
+        Note: This is where unit conversion should take place. So the HSI Class attrs
+        stay in the native data source unit, while HSI functions receive data in the
+        correct unit.
+        """
+
+        def safe_multiply(
+            array: np.ndarray, multiplier: int = 100
+        ) -> np.ndarray:
+            """Helper function to multiply arrays when cm values are required
+            by the SI logic. In the case of None (no array) it is preserved and
+            passed to SI methods."""
+            return array * multiplier if array is not None else None
 
         return cls(
             v1_pct_pools_avg_summer_flow=hsi_instance.pct_pools_july_sept_mean,
@@ -86,7 +99,9 @@ class RiverineCatfishHSI:
             v12_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_sept_mean_60m,
             v13_max_summer_salinity_fry_juvenile=hsi_instance.salinity_max_july_sept,
             v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
-            v18_avg_vel_summer_flow=hsi_instance.velocity_july_sept_mean,
+            v18_avg_vel_summer_flow=safe_multiply(
+                hsi_instance.velocity_july_sept_mean
+            ),  # UNIT: m/s to cm/s
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
@@ -976,9 +991,9 @@ class RiverineCatfishHSI:
         )
 
         # Combine individual suitability indices
-        initial_hsi = (
-            self.fc * self.cc * (self.wq**2) * (self.rc**2)
-        ) ** (1 / 6)
+        initial_hsi = (self.fc * self.cc * (self.wq**2) * (self.rc**2)) ** (
+            1 / 6
+        )
 
         # If wq or rc <= 0.4, select min(wq, rc, initial_hsi)
         mask_hsi = (self.wq <= 0.4) | (self.rc <= 0.4)

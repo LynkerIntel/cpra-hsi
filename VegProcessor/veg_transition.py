@@ -93,7 +93,7 @@ class VegTransition:
         )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         self.initial_maturity_path = self.config["raster_data"].get(
             "initial_maturity"
         )

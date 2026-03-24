@@ -208,6 +208,7 @@ class VegTransition:
             f"{self.__class__.__name__}_{id(self)}"
         )
         self._logger.setLevel(log_level)
+        self._logger.propagate = False
 
         # always remove old handlers (critical in Jupyter notebooks)
         if self._logger.hasHandlers():
@@ -246,6 +247,7 @@ class VegTransition:
         # add the veg transition logger
         utils_logger = logging.getLogger("VegTransition")
         utils_logger.setLevel(log_level)
+        utils_logger.propagate = False
 
         utils_logger.addHandler(ch)
         utils_logger.addHandler(fh)

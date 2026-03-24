@@ -9,7 +9,7 @@ raster_data:
   netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
-  wpu_grid: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
+  wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   salinity_raster: # Optional: path to salinity raster
   initial_maturity: # AMP_Tree_Age.tif - Initial forest maturity/age raster
 

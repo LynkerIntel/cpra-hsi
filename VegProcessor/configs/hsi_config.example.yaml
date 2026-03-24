@@ -11,7 +11,7 @@ raster_data:
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
   salinity_raster: # Optional: path to salinity raster
   veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
-  wpu_grid: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
+  wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
 
 simulation:

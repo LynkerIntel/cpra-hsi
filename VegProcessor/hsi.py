@@ -319,7 +319,7 @@ class HSI(vt.VegTransition):
             "netcdf_velocity_path"
         )
         self.netcdf_flow_exchange_path = self.config["raster_data"].get(
-            "netcdf_flow_exchange_path"
+            "netcdf_flowexchange_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"

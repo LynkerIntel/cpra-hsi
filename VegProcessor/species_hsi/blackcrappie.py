@@ -84,7 +84,7 @@ class BlackCrappieHSI:
             return array * multiplier if array is not None else None
 
         return cls(
-            v1_max_monthly_avg_summer_turbidity=hsi_instance.blackcrappie_max_monthly_avg_summer_turbidity,
+            v1_max_monthly_avg_summer_turbidity=hsi_instance.ssc_july_sept_max_mean,
             v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
             v4_avg_vel_summer_flow_pools_bw=safe_multiply(

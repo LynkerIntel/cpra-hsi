@@ -242,7 +242,7 @@ class HSI(vt.VegTransition):
         self.pct_active_ag_water_half_mi = None
         self.pct_nonhabitat_half_mi = None
 
-        self.ssc_july_september_max_mean = None
+        self.ssc_july_sept_max_mean = None
 
         # black-crappie
         # self.blackcrappie_max_monthly_avg_summer_turbidity = None

@@ -1362,7 +1362,7 @@ class HSI(vt.VegTransition):
             Positive values indicate water above the marsh surface;
             negative values indicate water below the marsh surface.
         """
-        months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+        months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         # Mean annual depth at 60m
         filtered_ds = self.water_depth.sel(
@@ -2053,15 +2053,16 @@ class HSI(vt.VegTransition):
 
         # -------- WPU HSI CSV Summaries --------
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        if 'year' in ds_out.dims:
-            ds_out = ds_out.rename({'year': 'time'})
+        if "year" in ds_out.dims:
+            ds_out = ds_out.rename({"year": "time"})
 
-        wpu_grid = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+        wpu_grid = xr.open_dataarray(
+            self.wpu_grid_path, engine="rasterio"
+        ).isel(band=0)
 
         df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
         hsi_wpu_outpath = os.path.join(
-            self.run_metadata_dir, 
-            f"{self.file_name}_wpu_hsi_means.csv"
+            self.run_metadata_dir, f"{self.file_name}_wpu_hsi_means.csv"
         )
         df_hsi_wpu.to_csv(hsi_wpu_outpath, index=False)
 

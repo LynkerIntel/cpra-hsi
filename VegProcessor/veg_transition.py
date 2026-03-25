@@ -516,9 +516,11 @@ class VegTransition:
             variable_base_path = self.netcdf_velocity_path
         elif hydro_variable == "FLOWEXCH":
             variable_base_path = self.netcdf_flow_exchange_path
+        elif hydro_variable == "SSC":
+            variable_base_path = self.netcdf_suspended_sediment_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC"
             )
 
         quintile = self.sequence_mapping[water_year]

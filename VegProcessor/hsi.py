@@ -260,9 +260,9 @@ class HSI(vt.VegTransition):
 
         # catfish
         self.catfish_pct_cover_in_summer_pools_bw = None
-        self.catfish_fpp_substrate_avg_summer_flow = None
+        self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         # self.catfish_avg_temp_in_midsummer_pools_bw = None
-        self.catfish_grow_season_length_frost_free_days = None
+        self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_max_monthly_avg_summer_turbidity = None
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
         # self.catfish_max_summer_salinity = None
@@ -320,6 +320,9 @@ class HSI(vt.VegTransition):
         )
         self.netcdf_flow_exchange_path = self.config["raster_data"].get(
             "netcdf_flowexchange_path"
+        )
+        self.netcdf_suspended_sediment_path = self.config["raster_data"].get(
+            "netcdf_suspended_sediment_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -707,6 +710,39 @@ class HSI(vt.VegTransition):
 
         else:
             self._logger.info("No flow exchange file provided.")
+            return None
+
+    def _load_suspended_sediment_general(
+        self, water_year: int
+    ) -> xr.Dataset | None:
+        """Load suspended sediment data from either Delft3D or MIKE 21 models."""
+        if self.netcdf_suspended_sediment_path is not None:
+            self._logger.info(
+                "Loading suspended sediment data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="SSC"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No suspended sediment file provided.")
             return None
 
     def _calculate_flood_duration(self, habitat: str) -> np.ndarray:

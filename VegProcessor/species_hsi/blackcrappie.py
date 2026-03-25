@@ -272,7 +272,7 @@ class BlackCrappieHSI:
             ) + 0.95
 
             # condition 4
-            mask_4 = self.v1_max_monthly_avg_summer_turbidity > 190
+            mask_4 = self.v1_max_monthly_avg_summer_turbidity >= 190
             si_1[mask_4] = 0
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
@@ -461,7 +461,7 @@ class BlackCrappieHSI:
 
     def calculate_si_6(self) -> np.ndarray:
         """No logic exists for si_6."""
-        return NotImplementedError
+        raise NotImplementedError()
 
     def calculate_si_7(self) -> np.ndarray:
         """pH levels during the year"""

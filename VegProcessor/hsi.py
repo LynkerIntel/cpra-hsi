@@ -774,7 +774,11 @@ class HSI(vt.VegTransition):
             months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered = self.ssc.sel(time=self.ssc["time"].dt.month.isin(months))
-        monthly_mean = filtered["ssc"].resample(time="1ME").mean()
+        monthly_mean = (
+            filtered["suspended_sediment_concentration"]
+            .resample(time="1ME")
+            .mean()
+        )
         max_monthly_mean = monthly_mean.max(dim="time")
 
         da_coarse = max_monthly_mean.coarsen(y=8, x=8, boundary="pad").mean()

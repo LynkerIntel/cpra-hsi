@@ -242,8 +242,10 @@ class HSI(vt.VegTransition):
         self.pct_active_ag_water_half_mi = None
         self.pct_nonhabitat_half_mi = None
 
+        self.ssc_july_september_max_mean = None
+
         # black-crappie
-        self.blackcrappie_max_monthly_avg_summer_turbidity = None
+        # self.blackcrappie_max_monthly_avg_summer_turbidity = None
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
             None  # set to ideal
         )
@@ -263,7 +265,7 @@ class HSI(vt.VegTransition):
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         # self.catfish_avg_temp_in_midsummer_pools_bw = None
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
-        self.catfish_max_monthly_avg_summer_turbidity = None
+        # self.catfish_max_monthly_avg_summer_turbidity = None
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
         # self.catfish_max_summer_salinity = None
         # self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
@@ -502,6 +504,10 @@ class HSI(vt.VegTransition):
             self._get_water_depth_relative_to_marsh()
         )
 
+        # suspended sediment vars ----------------------------------------
+        self.ssc = self._load_suspended_sediment_general(self.wy)
+        self.ssc_july_sept_max_mean = self._get_ssc_subset(months=[7, 8, 9])
+
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self._calculate_mast_percentage()
@@ -715,7 +721,7 @@ class HSI(vt.VegTransition):
     def _load_suspended_sediment_general(
         self, water_year: int
     ) -> xr.Dataset | None:
-        """Load suspended sediment data from either Delft3D or MIKE 21 models."""
+        """Load suspended sediment (SSC) data from Delft3D or MIKE 21 models."""
         if self.netcdf_suspended_sediment_path is not None:
             self._logger.info(
                 "Loading suspended sediment data with universal daily method."
@@ -744,6 +750,35 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No suspended sediment file provided.")
             return None
+
+    def _get_ssc_subset(
+        self,
+        months: list[int] | None = None,
+    ) -> np.ndarray | None:
+        """Max of monthly-mean SSC for the given months, resampled to 480m.
+
+        Parameters
+        ----------
+        months : list[int], optional
+            Months to include. Defaults to all months.
+
+        Returns
+        -------
+        np.ndarray or None
+            480m array of the maximum monthly-mean SSC.
+        """
+        if self.ssc is None:
+            return None
+
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        filtered = self.ssc.sel(time=self.ssc["time"].dt.month.isin(months))
+        monthly_mean = filtered["ssc"].resample(time="1ME").mean()
+        max_monthly_mean = monthly_mean.max(dim="time")
+
+        da_coarse = max_monthly_mean.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
 
     def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
         """Classify flood duration per 480m cell based on annual wet day count.

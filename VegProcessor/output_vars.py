@@ -1146,6 +1146,19 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
+        "ssc_july_sept_max_mean": [
+            hsi.ssc_july_sept_max_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "suspended sediment max monthly mean July-September",
+                "description": (
+                    "Maximum of monthly-mean suspended sediment concentration "
+                    "for July-September period at 480m resolution"
+                ),
+            },
+        ],
         "pct_pools_july_sept_mean": [
             hsi.pct_pools_july_sept_mean,
             np.float32,

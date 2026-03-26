@@ -1556,19 +1556,6 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
-        "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annual_mean_480,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "mg/L",
-                "long_name": "dissolved oxygen annual mean",
-                "description": (
-                    "Annual mean dissolved oxygen predicted by XGBoost model "
-                    "at 480m resolution."
-                ),
-            },
-        ],
         "dissolved_oxygen_july_sept_max": [
             hsi.dissolved_oxygen_july_sept_max,
             np.float32,
@@ -1706,19 +1693,6 @@ def get_hsi_60m_variables(hsi):
                 "units": "m/s",
                 "long_name": "water velocity",
                 "description": "Mean water velocity at 60m resolution",
-            },
-        ],
-        "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annual_mean,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "mg/L",
-                "long_name": "dissolved oxygen annual mean",
-                "description": (
-                    "Annual mean dissolved oxygen predicted by XGBoost model "
-                    "at 60m resolution."
-                ),
             },
         ],
         "dissolved_oxygen_july_sept_min": [

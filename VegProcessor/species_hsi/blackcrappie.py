@@ -120,7 +120,7 @@ class BlackCrappieHSI:
         self.si_3 = self.calculate_si_3()
         self.si_4 = self.calculate_si_4()
         self.si_5 = self.calculate_si_5()
-        self.si_6 = self.calculate_si_6()
+        # self.si_6 = self.calculate_si_6()
         self.si_7 = self.calculate_si_7()
         self.si_8 = self.calculate_si_8()
         self.si_9 = self.calculate_si_9()
@@ -242,15 +242,18 @@ class BlackCrappieHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Maximum monthly average turbidity during summer (July - September)"""
         self._logger.info("Running SI 1")
-        si_1 = self.template.copy()
 
         if self.v1_max_monthly_avg_summer_turbidity is None:
+            si_1 = self.template.copy()
             self._logger.info(
                 "Maximum monthly average turbidity during summer is not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
         else:
+            si_1 = self._create_template_array(
+                self.v1_max_monthly_avg_summer_turbidity
+            )
             # condition 1
             mask_1 = self.v1_max_monthly_avg_summer_turbidity <= 50
             si_1[mask_1] = 1

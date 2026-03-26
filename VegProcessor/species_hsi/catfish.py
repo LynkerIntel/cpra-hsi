@@ -462,9 +462,9 @@ class RiverineCatfishHSI:
     def calculate_si_7(self) -> np.ndarray:
         """Maximum monthly average turbidity during summer"""
         self._logger.info("Running SI 7")
-        si_7 = self.template.copy()
 
         if self.v7_max_monthly_avg_summer_turbidity is None:
+            si_7 = self.template.copy()
             self._logger.info(
                 "Maximum monthly average turbidity during summer"
                 "is not provided. Setting index to 1."
@@ -472,6 +472,9 @@ class RiverineCatfishHSI:
             si_7[~np.isnan(si_7)] = 1
 
         else:
+            si_7 = self._create_template_array(
+                self.v7_max_monthly_avg_summer_turbidity
+            )
             # condition 1
             mask_1 = self.v7_max_monthly_avg_summer_turbidity <= 110
             si_7[mask_1] = 1

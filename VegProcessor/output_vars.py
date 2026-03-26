@@ -1569,6 +1569,19 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
+        "dissolved_oxygen_july_sept_max": [
+            hsi.dissolved_oxygen_july_sept_max,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen July-September max",
+                "description": (
+                    "Maximum monthly dissolved oxygen (July-September) "
+                    "at 480m resolution."
+                ),
+            },
+        ],
     }
 
     return all_variables
@@ -1704,6 +1717,19 @@ def get_hsi_60m_variables(hsi):
                 "long_name": "dissolved oxygen annual mean",
                 "description": (
                     "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "at 60m resolution."
+                ),
+            },
+        ],
+        "dissolved_oxygen_july_sept_min": [
+            hsi.dissolved_oxygen_july_sept_min_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen July-September min",
+                "description": (
+                    "Minimum monthly dissolved oxygen (July-September) "
                     "at 60m resolution."
                 ),
             },

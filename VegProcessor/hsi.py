@@ -157,6 +157,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
+        self.water_temperature_april_june_mean = None
 
         # 60m water temperature for pools and backwaters
         self.water_temperature_feb_march_mean_60m = None
@@ -433,6 +434,11 @@ class HSI(vt.VegTransition):
             self.water_temperature_july_sept_mean_60m = (
                 self._get_water_temperature_subset(
                     months=[7, 8, 9], cell=False
+                )
+            )
+            self.water_temperature_april_june_mean = (
+                self._get_water_temperature_subset(
+                    months=[4, 5, 6],
                 )
             )
 

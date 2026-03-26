@@ -58,7 +58,7 @@ class GizzardShadHSI:
             v4_max_do_summer=hsi_instance.dissolved_oxygen_july_sept_max,
             v5a_water_lvl_change=hsi_instance.water_lvl_change,
             v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
-            v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
+            v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.water_temperature_april_june_mean,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_april_june_mean,
             dem_480=hsi_instance.dem_480,

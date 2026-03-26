@@ -314,6 +314,9 @@ class HSI(vt.VegTransition):
         self.netcdf_suspended_sediment_path = self.config["raster_data"].get(
             "netcdf_suspended_sediment_path"
         )
+        self.netcdf_dissolved_oxygen_path = self.config["raster_data"].get(
+            "netcdf_dissolved_oxygen_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )

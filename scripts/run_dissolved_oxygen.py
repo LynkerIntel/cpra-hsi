@@ -247,7 +247,11 @@ def predict_do():
     do_ds.to_netcdf(
         OUTPUT_NC_PATH,
         encoding={
-            "dissolved_oxygen": {"dtype": "float32"},
+            "dissolved_oxygen": {
+                "dtype": "float32",
+                "zlib": True,
+                "complevel": 4,
+            },
             "time": {
                 "units": "days since 1850-01-01T00:00:00",
                 "calendar": "gregorian",

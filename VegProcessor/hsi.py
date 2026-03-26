@@ -198,9 +198,13 @@ class HSI(vt.VegTransition):
             None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
         self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
-        self.dissolved_oxygen_annual_mean = None  # 60m annual mean
-        self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
-        self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+        self.dissolved_oxygen_july_sept_min_60m = None
+        self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
+        self.dissolved_oxygen_july_sept_max = None
+
+        # self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        # self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
+        # self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
 
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
@@ -437,7 +441,6 @@ class HSI(vt.VegTransition):
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
-        # self._load_dissolved_oxygen() # TODO: add dissolved xoygen loader here
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._classify_flow_exchange()
@@ -490,6 +493,18 @@ class HSI(vt.VegTransition):
         # suspended sediment vars ----------------------------------------
         self.ssc = self._load_suspended_sediment_general(self.wy)
         self.ssc_july_sept_max_mean = self._get_ssc_subset(months=[7, 8, 9])
+
+        # dissolved oxygen vars ---------------------------------------
+        self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
+        self.dissolved_oxygen_july_sept_min_60m = self._get_d_o_subset(
+            months=[7, 8, 9],
+            agg="min",
+        )
+        self.dissolved_oxygen_july_sept_max = self._get_d_o_subset(
+            months=[7, 8, 9],
+            cell=True,
+            agg="max",
+        )
 
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -735,6 +750,53 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No dissolved oxygen file provided.")
             return None
+
+    def _get_d_o_subset(
+        self,
+        months: list[int] | None = None,
+        agg: str = "min",
+        cell: bool = True,
+    ) -> np.ndarray | None:
+        """Aggregated monthly dissolved oxygen for the given months.
+
+        Parameters
+        ----------
+        months : list[int], optional
+            Months to include. Defaults to all months.
+        agg : str, optional
+            Aggregation method for the monthly resample: "min", "max", or "mean".
+            Defaults to "min".
+        cell : bool, optional
+            If True, coarsen from 60m to 480m. If False, return native 60m resolution.
+            Defaults to True.
+
+        Returns
+        -------
+        np.ndarray or None
+            Array of the aggregated monthly dissolved oxygen.
+        """
+        if self.dissolved_oxygen is None:
+            return None
+
+        if agg not in ("min", "max", "mean"):
+            raise ValueError(
+                f"agg must be 'min', 'max', or 'mean', got {agg!r}"
+            )
+
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        filtered = self.dissolved_oxygen.sel(
+            time=self.dissolved_oxygen["time"].dt.month.isin(months)
+        )
+        resampled = getattr(
+            filtered["dissolved_oxygen"].resample(time="1ME"), agg
+        )()
+
+        if cell:
+            resampled = resampled.coarsen(y=8, x=8, boundary="pad").mean()
+
+        return resampled.to_numpy()
 
     def _load_suspended_sediment_general(
         self, water_year: int

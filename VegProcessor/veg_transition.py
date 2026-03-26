@@ -518,9 +518,11 @@ class VegTransition:
             variable_base_path = self.netcdf_flow_exchange_path
         elif hydro_variable == "SSC":
             variable_base_path = self.netcdf_suspended_sediment_path
+        elif hydro_variable == "DO":
+            variable_base_path = self.netcdf_dissolved_oxygen_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO"
             )
 
         quintile = self.sequence_mapping[water_year]
@@ -531,9 +533,10 @@ class VegTransition:
         # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
+        model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
         nc_path = os.path.join(
             variable_base_path,
-            f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
+            f"AMP_{model}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
             f"{self.file_params['hydro_source_model_version']}.zarr",

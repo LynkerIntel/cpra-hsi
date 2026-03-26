@@ -667,7 +667,6 @@ class HSI(vt.VegTransition):
     def _load_flowexchange_general(
         self,
         water_year: int,
-        cell: bool = False,
     ) -> xr.Dataset:
         """
         Load flow exchange data
@@ -699,6 +698,42 @@ class HSI(vt.VegTransition):
 
         else:
             self._logger.info("No flow exchange file provided.")
+            return None
+
+    def _load_dissolved_oxygen_general(
+        self,
+        water_year: int,
+    ) -> xr.Dataset:
+        """
+        Load dissolved oxygen output from XGBoost model.
+        """
+        if self.netcdf_dissolved_oxygen_path is not None:
+            self._logger.info(
+                "Loading dissolved oxygen data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="DO"
+            )
+            self._logger.info("Loading files: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No dissolved oxygen file provided.")
             return None
 
     def _load_suspended_sediment_general(

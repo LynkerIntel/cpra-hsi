@@ -55,7 +55,7 @@ class GizzardShadHSI:
             v1_tds_summer_growing_season=hsi_instance.tds_summer_growing_season,
             v2_avg_num_frost_free_days_growing_season=hsi_instance.avg_num_frost_free_days_growing_season,
             v3_mean_weekly_summer_temp=hsi_instance.mean_weekly_summer_temp,
-            v4_max_do_summer=hsi_instance.max_do_summer,
+            v4_max_do_summer=hsi_instance.dissolved_oxygen_july_sept_max,
             v5a_water_lvl_change=hsi_instance.water_lvl_change,
             v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
             v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,

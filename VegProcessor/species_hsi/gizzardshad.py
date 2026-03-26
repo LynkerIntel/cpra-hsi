@@ -16,20 +16,20 @@ class GizzardShadHSI:
 
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
-    hydro_domain_480: np.ndarray = None
-    dem_480: np.ndarray = None
+    hydro_domain_480: np.ndarray
+    dem_480: np.ndarray
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
-    v1_tds_summer_growing_season: np.ndarray = None  # ideal
-    v2_avg_num_frost_free_days_growing_season: np.ndarray = None  # ideal
-    v3_mean_weekly_summer_temp: np.ndarray = None  # ideal
-    v4_max_do_summer: np.ndarray = None  # ideal
-    v5a_water_lvl_change: np.ndarray = None  # ideal
-    v5b_is_veg_inundated: np.ndarray = None  # ideal
-    v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None  # ideal
-    v7a_pct_vegetated: np.ndarray = None
-    v7b_water_depth_spawning_season: np.ndarray = None
+    v1_tds_summer_growing_season: np.ndarray  # ideal
+    v2_avg_num_frost_free_days_growing_season: np.ndarray  # ideal
+    v3_mean_weekly_summer_temp: np.ndarray  # ideal
+    v4_max_do_summer: np.ndarray  # ideal
+    v5a_water_lvl_change: np.ndarray  # ideal
+    v5b_is_veg_inundated: np.ndarray  # ideal
+    v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray  # ideal
+    v7a_pct_vegetated: np.ndarray
+    v7b_water_depth_spawning_season: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)

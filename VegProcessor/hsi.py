@@ -201,10 +201,10 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_annual_mean = None  # 60m annual mean
         self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
         self.is_veg_inundated = None  # ideal
-        # ideal HEC-RAS SI6 = 20 degrees
         self.mean_weekly_temp_reservoir_spawning_season = None
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
@@ -245,35 +245,18 @@ class HSI(vt.VegTransition):
         self.ssc_july_sept_max_mean = None
 
         # black-crappie
-        # self.blackcrappie_max_monthly_avg_summer_turbidity = None
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
             None  # set to ideal
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
-        # self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_ph_year = None  # set to ideal
-        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
-        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        # self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
-        # self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
-        # self.blackcrappie_max_salinity_gs = None
-
         # catfish
         self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
-        # self.catfish_avg_temp_in_midsummer_pools_bw = None
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
-        # self.catfish_max_monthly_avg_summer_turbidity = None
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
-        # self.catfish_max_summer_salinity = None
-        # self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
-        # self.catfish_max_salinity_spawning_embryo = None
-        # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
-        # self.catfish_max_summer_salinity_fry_juvenile = None
-        # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
-        # self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)

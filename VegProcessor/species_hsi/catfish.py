@@ -92,7 +92,7 @@ class RiverineCatfishHSI:
             v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
             v7_max_monthly_avg_summer_turbidity=hsi_instance.ssc_july_sept_max_mean,
-            v8_avg_min_do_in_midsummer=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
+            v8_avg_min_do_in_midsummer=hsi_instance.dissolved_oxygen_july_sept_60m,
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
             v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean_60m,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,

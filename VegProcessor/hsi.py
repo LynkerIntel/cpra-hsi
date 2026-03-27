@@ -747,11 +747,20 @@ class HSI(vt.VegTransition):
                 # D3D & MIKE: CRS from crs variable's crs_wkt attribute
                 crs_wkt = ds["crs"].attrs.get("crs_wkt")
                 ds = ds.rio.write_crs(crs_wkt)
-
-            except Exception as exc:
-                raise ValueError(
-                    "Unable to parse CRS from hydrologic input"
-                ) from exc
+            except Exception:
+                try:
+                    # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
+                    crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+                    ds = ds.rio.write_crs(crs_wkt)
+                except Exception:
+                    try:
+                        # XGB: CRS from spatial_ref variable
+                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+                        ds = ds.rio.write_crs(crs_wkt)
+                    except Exception as exc:
+                        raise ValueError(
+                            "Unable to parse CRS from dissolved oxygen input"
+                        ) from exc
 
             ds = self._reproject_match_to_dem(ds)
             return ds

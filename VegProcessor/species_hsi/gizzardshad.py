@@ -105,13 +105,28 @@ class GizzardShadHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _create_template_array(self) -> np.ndarray:
+    def _create_template_array(self, *input_arrays, cell: bool = True) -> np.ndarray:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        cell : bool
+            True if template should be created at 480m size, False if
+            60m (high resolution). Defaults to True (480m).
         """
         # Use intersection of valid DEM and hydro domain
         valid_mask = ~np.isnan(self.hydro_domain_480) & ~np.isnan(self.dem_480)
         arr = np.where(valid_mask, 999.0, np.nan)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def calculate_si_1(self) -> np.ndarray:
@@ -354,15 +369,19 @@ class GizzardShadHSI:
     def calculate_si_6(self) -> np.ndarray:
         """MEAN WEEKLY TEMPERATURE IN TRIBUTARIES OR UPPER END OF LAKE OR RESERVOIR DURING SPAWNING SEASON (APR - JUN)."""
         self._logger.info("Running SI 6")
-        si_6 = self.template.copy()
 
         if self.v6_mean_weekly_temp_reservoir_spawning_season is None:
+            si_6 = self.template.copy()
             self._logger.info(
                 "Mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
             )
             si_6[~np.isnan(si_6)] = 1
 
         else:
+            si_6 = self._create_template_array(
+                self.v6_mean_weekly_temp_reservoir_spawning_season
+            )
+
             # condition 1
             mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
             si_6[mask_1] = 0

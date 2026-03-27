@@ -766,9 +766,9 @@ class BlackCrappieHSI:
         (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Sept)
         """
         self._logger.info("Running SI 12")
-        si_12 = self.template.copy()
 
         if self.v12_min_do_in_midsummer_temp_strata is None:
+            si_12 = self.template.copy()
             self._logger.info(
                 "Minimum dissolved oxygen levels within temperature strata during midsummer"
                 "(adult, juvenile, fry) is not provided. Setting index to 1."
@@ -776,6 +776,11 @@ class BlackCrappieHSI:
             si_12[~np.isnan(si_12)] = 1
 
         else:
+            # create 60m template for data processing
+            si_12 = self._create_template_array(
+                self.v12_min_do_in_midsummer_temp_strata, cell=False
+            )
+
             # condition 1
             mask_1 = self.v12_min_do_in_midsummer_temp_strata <= 1.5
             si_12[mask_1] = 0

@@ -807,14 +807,23 @@ class HSI(vt.VegTransition):
         filtered = self.dissolved_oxygen.sel(
             time=self.dissolved_oxygen["time"].dt.month.isin(months)
         )
-        resampled = getattr(
-            filtered["dissolved_oxygen"].resample(time="1ME"), agg
-        )()
+        da = filtered["dissolved_oxygen"]
+        if agg == "min":
+            # average of the monthly minimums
+            monthly = da.resample(time="1ME").min()
+            reduced = monthly.mean(dim="time", skipna=True)
+        elif agg == "max":
+            # maximum of the monthly averages
+            monthly = da.resample(time="1ME").mean()
+            reduced = monthly.max(dim="time", skipna=True)
+        else:
+            # mean: simple temporal mean
+            reduced = da.mean(dim="time", skipna=True)
 
         if cell:
-            resampled = resampled.coarsen(y=8, x=8, boundary="pad").mean()
+            reduced = reduced.coarsen(y=8, x=8, boundary="pad").mean()
 
-        return resampled.to_numpy()
+        return reduced.to_numpy()
 
     def _load_suspended_sediment_general(
         self, water_year: int

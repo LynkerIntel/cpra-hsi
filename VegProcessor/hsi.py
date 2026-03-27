@@ -508,6 +508,7 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_july_sept_min_60m = self._get_d_o_subset(
             months=[7, 8, 9],
             agg="min",
+            cell=False,
         )
         self.dissolved_oxygen_july_sept_max = self._get_d_o_subset(
             months=[7, 8, 9],

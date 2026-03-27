@@ -119,9 +119,14 @@ def convert_file(
         ds = ds.rio.write_crs(crs_wkt)
 
     except Exception:
-        # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
-        crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
-        ds = ds.rio.write_crs(crs_wkt)
+        try:
+            # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
+            crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+            ds = ds.rio.write_crs(crs_wkt)
+        except Exception:
+            # XGB / other: CRS from spatial_ref variable's crs_wkt attribute
+            crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+            ds = ds.rio.write_crs(crs_wkt)
 
     # Normalize spatial dimension names to y/x
     _DIM_RENAME = {"Northings": "y", "Eastings": "x"}

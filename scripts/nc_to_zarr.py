@@ -135,6 +135,13 @@ def convert_file(
         print(f"  Renaming dimensions: {rename}")
         ds = ds.rename(rename)
 
+    # Normalize variable names
+    _VAR_RENAME = {"wtemp": "temperature"}
+    var_rename = {k: v for k, v in _VAR_RENAME.items() if k in ds.data_vars}
+    if var_rename:
+        print(f"  Renaming variables: {var_rename}")
+        ds = ds.rename(var_rename)
+
     ds = ds.chunk({"time": time_chunks})
 
     if match_raster is not None:

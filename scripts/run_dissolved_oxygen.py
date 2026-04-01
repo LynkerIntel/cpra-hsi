@@ -59,7 +59,7 @@ def reproject_match(ds, dem: xr.DataArray):
 def compute_depth(stage_ds: xr.Dataset, dem: xr.DataArray) -> xr.DataArray:
     """Convert stage (WSE) to water depth by subtracting DEM."""
     stage_var = None
-    for name in ["Band1", "waterlevel", "water_level"]:
+    for name in ["Band1", "waterlevel", "water_level", "stage"]:
         if name in stage_ds:
             stage_var = name
             break

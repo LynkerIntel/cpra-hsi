@@ -596,7 +596,10 @@ class VegTransition:
         if self.file_params["hydro_source_model"] == "HEC":
             ds = ds.rename({"Band1": "height"})
         if self.file_params["hydro_source_model"] == "D3D":
-            ds = ds.rename({"waterlevel": "height"})
+            if "waterlevel" in ds.data_vars:
+                ds = ds.rename({"waterlevel": "height"})
+            elif "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
         if self.file_params["hydro_source_model"] == "MIK":
             ds = ds.rename({"water_level": "height"})
         # extract height var as da

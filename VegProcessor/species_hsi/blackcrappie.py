@@ -77,14 +77,22 @@ class BlackCrappieHSI:
 
         def safe_multiply(
             array: np.ndarray, multiplier: int = 100
-        ) -> np.ndarray:
+        ) -> np.ndarray | None:
             """Helper function to multiply arrays when cm values are required
             by the SI logic. In the case of None (no array) it is preserved and
             passed to SI methods."""
             return array * multiplier if array is not None else None
 
+        def ssc_to_ntu(array: np.ndarray) -> np.ndarray | None:
+            """Convert suspended sediment from mg/L (native unit) to NTU, with
+            no data (None) handling.
+            """
+            return 0.2242 * array + 12.597 if array is not None else None
+
         return cls(
-            v1_max_monthly_avg_summer_turbidity=hsi_instance.ssc_july_sept_max_mean,
+            v1_max_monthly_avg_summer_turbidity=ssc_to_ntu(
+                hsi_instance.ssc_july_sept_max_mean
+            ),
             v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
             v4_avg_vel_summer_flow_pools_bw=safe_multiply(

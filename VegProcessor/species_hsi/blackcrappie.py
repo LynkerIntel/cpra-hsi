@@ -77,14 +77,22 @@ class BlackCrappieHSI:
 
         def safe_multiply(
             array: np.ndarray, multiplier: int = 100
-        ) -> np.ndarray:
+        ) -> np.ndarray | None:
             """Helper function to multiply arrays when cm values are required
             by the SI logic. In the case of None (no array) it is preserved and
             passed to SI methods."""
             return array * multiplier if array is not None else None
 
+        def ssc_to_ntu(array: np.ndarray) -> np.ndarray | None:
+            """Convert suspended sediment from mg/L (native unit) to NTU, with
+            no data (None) handling.
+            """
+            return 0.2242 * array + 12.597 if array is not None else None
+
         return cls(
-            v1_max_monthly_avg_summer_turbidity=hsi_instance.blackcrappie_max_monthly_avg_summer_turbidity,
+            v1_max_monthly_avg_summer_turbidity=ssc_to_ntu(
+                hsi_instance.ssc_july_sept_max_mean
+            ),
             v2_pct_cover_in_midsummer_pools_overflow_bw=hsi_instance.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw,  # set to ideal
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
             v4_avg_vel_summer_flow_pools_bw=safe_multiply(
@@ -96,8 +104,8 @@ class BlackCrappieHSI:
             v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean_60m,
             v10_avg_midsummer_temp_in_pools_bw_fry=hsi_instance.water_temperature_july_august_mean_60m,
             v11_avg_spawning_temp_in_bw_embryo=hsi_instance.water_temperature_feb_march_mean_60m,
-            v12_min_do_in_midsummer_temp_strata=hsi_instance.blackcrappie_min_do_in_midsummer_temp_strata,
-            v13_min_do_in_spawning_bw=hsi_instance.blackcrappie_min_do_in_spawning_bw,  # set to ideal
+            v12_min_do_in_midsummer_temp_strata=hsi_instance.dissolved_oxygen_july_sept_min_60m,
+            v13_min_do_in_spawning_bw=hsi_instance.dissolved_oxygen_feb_march_min_60m,  # always set to ideal
             v14_max_salinity_gs=hsi_instance.salinity_max_april_sept,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
@@ -120,7 +128,7 @@ class BlackCrappieHSI:
         self.si_3 = self.calculate_si_3()
         self.si_4 = self.calculate_si_4()
         self.si_5 = self.calculate_si_5()
-        self.si_6 = self.calculate_si_6()
+        # self.si_6 = self.calculate_si_6()
         self.si_7 = self.calculate_si_7()
         self.si_8 = self.calculate_si_8()
         self.si_9 = self.calculate_si_9()
@@ -242,15 +250,18 @@ class BlackCrappieHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Maximum monthly average turbidity during summer (July - September)"""
         self._logger.info("Running SI 1")
-        si_1 = self.template.copy()
 
         if self.v1_max_monthly_avg_summer_turbidity is None:
+            si_1 = self.template.copy()
             self._logger.info(
                 "Maximum monthly average turbidity during summer is not provided. Setting index to 1."
             )
             si_1[~np.isnan(si_1)] = 1
 
         else:
+            si_1 = self._create_template_array(
+                self.v1_max_monthly_avg_summer_turbidity
+            )
             # condition 1
             mask_1 = self.v1_max_monthly_avg_summer_turbidity <= 50
             si_1[mask_1] = 1
@@ -272,7 +283,7 @@ class BlackCrappieHSI:
             ) + 0.95
 
             # condition 4
-            mask_4 = self.v1_max_monthly_avg_summer_turbidity > 190
+            mask_4 = self.v1_max_monthly_avg_summer_turbidity >= 190
             si_1[mask_4] = 0
 
         if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
@@ -461,7 +472,7 @@ class BlackCrappieHSI:
 
     def calculate_si_6(self) -> np.ndarray:
         """No logic exists for si_6."""
-        return NotImplementedError
+        raise NotImplementedError()
 
     def calculate_si_7(self) -> np.ndarray:
         """pH levels during the year"""
@@ -763,9 +774,9 @@ class BlackCrappieHSI:
         (V8, V9, and V10) during midsummer (adult, juvenile, fry) (Jul - Sept)
         """
         self._logger.info("Running SI 12")
-        si_12 = self.template.copy()
 
         if self.v12_min_do_in_midsummer_temp_strata is None:
+            si_12 = self.template.copy()
             self._logger.info(
                 "Minimum dissolved oxygen levels within temperature strata during midsummer"
                 "(adult, juvenile, fry) is not provided. Setting index to 1."
@@ -773,6 +784,11 @@ class BlackCrappieHSI:
             si_12[~np.isnan(si_12)] = 1
 
         else:
+            # create 60m template for data processing
+            si_12 = self._create_template_array(
+                self.v12_min_do_in_midsummer_temp_strata, cell=False
+            )
+
             # condition 1
             mask_1 = self.v12_min_do_in_midsummer_temp_strata <= 1.5
             si_12[mask_1] = 0

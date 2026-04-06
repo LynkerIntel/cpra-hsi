@@ -1146,6 +1146,19 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
+        "ssc_july_sept_max_mean": [
+            hsi.ssc_july_sept_max_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "suspended sediment max monthly mean July-September",
+                "description": (
+                    "Maximum of monthly-mean suspended sediment concentration "
+                    "for July-September period at 480m resolution"
+                ),
+            },
+        ],
         "pct_pools_july_sept_mean": [
             hsi.pct_pools_july_sept_mean,
             np.float32,
@@ -1543,15 +1556,15 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
-        "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annual_mean_480,
+        "dissolved_oxygen_july_sept_max": [
+            hsi.dissolved_oxygen_july_sept_max,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "mg/L",
-                "long_name": "dissolved oxygen annual mean",
+                "long_name": "dissolved oxygen July-September max",
                 "description": (
-                    "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "Maximum monthly dissolved oxygen (July-September) "
                     "at 480m resolution."
                 ),
             },
@@ -1682,15 +1695,15 @@ def get_hsi_60m_variables(hsi):
                 "description": "Mean water velocity at 60m resolution",
             },
         ],
-        "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annual_mean,
+        "dissolved_oxygen_july_sept_min": [
+            hsi.dissolved_oxygen_july_sept_min_60m,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "mg/L",
-                "long_name": "dissolved oxygen annual mean",
+                "long_name": "dissolved oxygen July-September min",
                 "description": (
-                    "Annual mean dissolved oxygen predicted by XGBoost model "
+                    "Minimum monthly dissolved oxygen (July-September) "
                     "at 60m resolution."
                 ),
             },

@@ -30,14 +30,15 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
-OUTPUT_NC_PATH = "do_daily_WY06.nc"
-OUTPUT_COG_DIR = "do_daily_WY06_cogs"
+OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_328.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_328_cogs"
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -58,7 +59,7 @@ def reproject_match(ds, dem: xr.DataArray):
 def compute_depth(stage_ds: xr.Dataset, dem: xr.DataArray) -> xr.DataArray:
     """Convert stage (WSE) to water depth by subtracting DEM."""
     stage_var = None
-    for name in ["Band1", "waterlevel", "water_level"]:
+    for name in ["Band1", "waterlevel", "water_level", "stage"]:
         if name in stage_ds:
             stage_var = name
             break
@@ -163,6 +164,8 @@ def predict_do():
     # Load temperature eagerly (avoid dask scheduler overhead)
     print(f"Loading temperature from {TEMPERATURE_PATH}...")
     temp_ds = load_zarr_with_crs(TEMPERATURE_PATH)
+    if "wtemp" in temp_ds.data_vars:
+        temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
     temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
@@ -247,7 +250,11 @@ def predict_do():
     do_ds.to_netcdf(
         OUTPUT_NC_PATH,
         encoding={
-            "dissolved_oxygen": {"dtype": "float32"},
+            "dissolved_oxygen": {
+                "dtype": "float32",
+                "zlib": True,
+                "complevel": 4,
+            },
             "time": {
                 "units": "days since 1850-01-01T00:00:00",
                 "calendar": "gregorian",

@@ -93,7 +93,7 @@ class VegTransition:
         )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         self.initial_maturity_path = self.config["raster_data"].get(
             "initial_maturity"
         )
@@ -208,6 +208,7 @@ class VegTransition:
             f"{self.__class__.__name__}_{id(self)}"
         )
         self._logger.setLevel(log_level)
+        self._logger.propagate = False
 
         # always remove old handlers (critical in Jupyter notebooks)
         if self._logger.hasHandlers():
@@ -246,6 +247,7 @@ class VegTransition:
         # add the veg transition logger
         utils_logger = logging.getLogger("VegTransition")
         utils_logger.setLevel(log_level)
+        utils_logger.propagate = False
 
         utils_logger.addHandler(ch)
         utils_logger.addHandler(fh)
@@ -514,9 +516,13 @@ class VegTransition:
             variable_base_path = self.netcdf_velocity_path
         elif hydro_variable == "FLOWEXCH":
             variable_base_path = self.netcdf_flow_exchange_path
+        elif hydro_variable == "SSC":
+            variable_base_path = self.netcdf_suspended_sediment_path
+        elif hydro_variable == "DO":
+            variable_base_path = self.netcdf_dissolved_oxygen_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO"
             )
 
         quintile = self.sequence_mapping[water_year]
@@ -527,9 +533,10 @@ class VegTransition:
         # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
+        model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
         nc_path = os.path.join(
             variable_base_path,
-            f"AMP_{self.file_params['hydro_source_model']}_WY{analog_year_str}_"
+            f"AMP_{model}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
             f"{self.file_params['hydro_source_model_version']}.zarr",
@@ -589,7 +596,10 @@ class VegTransition:
         if self.file_params["hydro_source_model"] == "HEC":
             ds = ds.rename({"Band1": "height"})
         if self.file_params["hydro_source_model"] == "D3D":
-            ds = ds.rename({"waterlevel": "height"})
+            if "waterlevel" in ds.data_vars:
+                ds = ds.rename({"waterlevel": "height"})
+            elif "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
         if self.file_params["hydro_source_model"] == "MIK":
             ds = ds.rename({"water_level": "height"})
         # extract height var as da

@@ -91,8 +91,8 @@ class RiverineCatfishHSI:
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
             v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
-            v7_max_monthly_avg_summer_turbidity=hsi_instance.catfish_max_monthly_avg_summer_turbidity,
-            v8_avg_min_do_in_midsummer=hsi_instance.catfish_avg_min_do_in_midsummer_pools_bw,
+            v7_max_monthly_avg_summer_turbidity=hsi_instance.ssc_july_sept_max_mean,
+            v8_avg_min_do_in_midsummer=hsi_instance.dissolved_oxygen_july_sept_min_60m,
             v9_max_summer_salinity=hsi_instance.salinity_max_july_sept,
             v10_water_temp_may_july_mean=hsi_instance.water_temperature_may_july_mean_60m,
             v11_max_salinity_spawning_embryo=hsi_instance.salinity_max_may_july,
@@ -462,9 +462,9 @@ class RiverineCatfishHSI:
     def calculate_si_7(self) -> np.ndarray:
         """Maximum monthly average turbidity during summer"""
         self._logger.info("Running SI 7")
-        si_7 = self.template.copy()
 
         if self.v7_max_monthly_avg_summer_turbidity is None:
+            si_7 = self.template.copy()
             self._logger.info(
                 "Maximum monthly average turbidity during summer"
                 "is not provided. Setting index to 1."
@@ -472,6 +472,9 @@ class RiverineCatfishHSI:
             si_7[~np.isnan(si_7)] = 1
 
         else:
+            si_7 = self._create_template_array(
+                self.v7_max_monthly_avg_summer_turbidity
+            )
             # condition 1
             mask_1 = self.v7_max_monthly_avg_summer_turbidity <= 110
             si_7[mask_1] = 1

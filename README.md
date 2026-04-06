@@ -61,23 +61,27 @@ cd cpra-hsi
 
 ---
 
-#### **2. Create and Activate a Conda Environment**
+#### **2. Set Up the Environment with uv**
 
-An environment file, `environment_multiplatform.yml`, is provided. Create the Conda environment using:
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Dependencies are defined in `pyproject.toml` and locked in `uv.lock`.
+
+Install uv if you don't have it:
 
 ```bash
-conda env create -f environment/environment_multiplatform.yml
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Create the virtual environment and install dependencies:
+
+```bash
+uv sync
 ```
 
 Activate the environment:
 
 ```bash
-conda activate cpra_env
+source .venv/bin/activate
 ```
-
-This installs the necessary dependencies.
-
-The environment is currently not defined with pinned versions, in order to maximize capatibility. Conda will install the latest version of packages that does not create conflicts. This will change to pinned versions.
 
 
 ---
@@ -315,16 +319,10 @@ This ensures HSI models have access to the required VegTransition outputs.
 
 ## Cleaning Up
 
-To deactivate the Conda environment:
+To deactivate the virtual environment:
 
 ```bash
-conda deactivate
-```
-
-To remove the environment completely:
-
-```bash
-conda remove --name cpra_env --all -y
+deactivate
 ```
 ___
 #### VegTransition

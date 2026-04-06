@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -85,22 +86,30 @@ def convert_file(
     print(f"  Opening {nc_path.name}...")
     ds = _open_dataset_with_time_fix(nc_path, engine="h5netcdf", chunks="auto")
 
-    # Trim to water year bounds (Oct 1 – Sep 30) ---------------------------------
+    # Force time coordinates to match the water year from the filename -------------
     if "time" in ds.dims and ds.sizes["time"] > 1:
-        times = pd.DatetimeIndex(ds.time.values)
-        # Use the median timestamp to determine water year, avoiding
-        # edge effects when the first timestep falls just outside the WY.
-        mid = times[len(times) // 2]
-        wy = mid.year + 1 if mid.month >= 10 else mid.year
-        wy_start = pd.Timestamp(f"{wy - 1}-10-01")
-        wy_end = pd.Timestamp(f"{wy}-09-30")
-        before = ds.sizes["time"]
-        ds = ds.sel(time=slice(wy_start, wy_end))
-        after = ds.sizes["time"]
-        if before != after:
-            print(
-                f"  Trimmed time from {before} to {after} steps (WY{wy}: {wy_start.date()} – {wy_end.date()})"
+        wy_match = re.search(r"_WY(\d{2})_", nc_path.name)
+        if wy_match is None:
+            raise ValueError(
+                f"Cannot parse water year from filename: {nc_path.name}"
             )
+        wy = int(f"20{wy_match.group(1)}")
+        wy_start = pd.Timestamp(f"{wy - 1}-10-01")
+
+        n = ds.sizes["time"]
+        times = pd.DatetimeIndex(ds.time.values)
+        print(f"  Time range in file: {times[0]} to {times[-1]} ({n} steps)")
+
+        # Build a 365-day water year starting Oct 1, dropping Feb 29 if leap
+        expected = pd.date_range(wy_start, periods=n, freq="D")
+        expected = expected[~((expected.month == 2) & (expected.day == 29))]
+        # If the source had more steps than 365 (leap), trim data to match
+        ds = ds.isel(time=slice(0, len(expected)))
+        ds = ds.assign_coords(time=("time", expected))
+        print(
+            f"  Forced time to WY{wy}: {expected[0].date()} – {expected[-1].date()} "
+            f"({len(expected)} steps)"
+        )
 
     # Sediment flux is cumulative – keep only the last timestep -----------------
     if (
@@ -119,9 +128,14 @@ def convert_file(
         ds = ds.rio.write_crs(crs_wkt)
 
     except Exception:
-        # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
-        crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
-        ds = ds.rio.write_crs(crs_wkt)
+        try:
+            # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
+            crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+            ds = ds.rio.write_crs(crs_wkt)
+        except Exception:
+            # XGB / other: CRS from spatial_ref variable's crs_wkt attribute
+            crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+            ds = ds.rio.write_crs(crs_wkt)
 
     # Normalize spatial dimension names to y/x
     _DIM_RENAME = {"Northings": "y", "Eastings": "x"}
@@ -129,6 +143,13 @@ def convert_file(
     if rename:
         print(f"  Renaming dimensions: {rename}")
         ds = ds.rename(rename)
+
+    # Normalize variable names
+    _VAR_RENAME = {"wtemp": "temperature", "waterlevel": "stage", "water_level": "stage"}
+    var_rename = {k: v for k, v in _VAR_RENAME.items() if k in ds.data_vars}
+    if var_rename:
+        print(f"  Renaming variables: {var_rename}")
+        ds = ds.rename(var_rename)
 
     ds = ds.chunk({"time": time_chunks})
 

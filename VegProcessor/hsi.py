@@ -157,6 +157,7 @@ class HSI(vt.VegTransition):
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
         self.water_temperature_annual_mean = None
+        self.water_temperature_april_june_mean = None
 
         # 60m water temperature for pools and backwaters
         self.water_temperature_feb_march_mean_60m = None
@@ -198,13 +199,17 @@ class HSI(vt.VegTransition):
             None  # ideal always (HEC-RAS?) SI3 = 25 degrees C
         )
         self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
-        self.dissolved_oxygen_annual_mean = None  # 60m annual mean
-        self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
-        self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+        self.dissolved_oxygen_july_sept_min_60m = None
+        self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
+        self.dissolved_oxygen_july_sept_max = None
+
+        # self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        # self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
+        # self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
+
         self.water_lvl_spawning_season = None  # ideal always
         self.water_lvl_change = None  # ideal
         self.is_veg_inundated = None  # ideal
-        # ideal HEC-RAS SI6 = 20 degrees
         self.mean_weekly_temp_reservoir_spawning_season = None
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
@@ -242,36 +247,21 @@ class HSI(vt.VegTransition):
         self.pct_active_ag_water_half_mi = None
         self.pct_nonhabitat_half_mi = None
 
+        self.ssc_july_sept_max_mean = None
+
         # black-crappie
-        self.blackcrappie_max_monthly_avg_summer_turbidity = None
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
             None  # set to ideal
         )
         self.blackcrappie_stream_gradient = None  # set to ideal
-        # self.blackcrappie_avg_vel_summer_flow_pools_bw = None
         self.blackcrappie_ph_year = None  # set to ideal
-        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_adult = None
-        # self.blackcrappie_most_suit_temp_in_midsummer_pools_bw_juvenile = None
-        # self.blackcrappie_avg_midsummer_temp_in_pools_bw_fry = None
-        # self.blackcrappie_avg_spawning_temp_in_bw_embryo = None
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
-        # self.blackcrappie_max_salinity_gs = None
-
         # catfish
         self.catfish_pct_cover_in_summer_pools_bw = None
-        self.catfish_fpp_substrate_avg_summer_flow = None
-        # self.catfish_avg_temp_in_midsummer_pools_bw = None
-        self.catfish_grow_season_length_frost_free_days = None
-        self.catfish_max_monthly_avg_summer_turbidity = None
+        self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
+        self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
-        # self.catfish_max_summer_salinity = None
-        # self.catfish_avg_temp_in_spawning_embryo_pools_bw = None
-        # self.catfish_max_salinity_spawning_embryo = None
-        # self.catfish_avg_midsummer_temp_in_pools_bw_fry = None
-        # self.catfish_max_summer_salinity_fry_juvenile = None
-        # self.catfish_avg_midsummer_temp_in_pools_bw_juvenile = None
-        # self.catfish_avg_vel_summer_flow = None
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)
@@ -294,7 +284,7 @@ class HSI(vt.VegTransition):
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"
         )
-        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid")
+        self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
         # simulation
@@ -319,7 +309,13 @@ class HSI(vt.VegTransition):
             "netcdf_velocity_path"
         )
         self.netcdf_flow_exchange_path = self.config["raster_data"].get(
-            "netcdf_flow_exchange_path"
+            "netcdf_flowexchange_path"
+        )
+        self.netcdf_suspended_sediment_path = self.config["raster_data"].get(
+            "netcdf_suspended_sediment_path"
+        )
+        self.netcdf_dissolved_oxygen_path = self.config["raster_data"].get(
+            "netcdf_dissolved_oxygen_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -443,13 +439,17 @@ class HSI(vt.VegTransition):
                     months=[7, 8, 9], cell=False
                 )
             )
+            self.water_temperature_april_june_mean = (
+                self._get_water_temperature_subset(
+                    months=[4, 5, 6],
+                )
+            )
 
         # load VegTransition output ----------------------------------
         self.veg_type = self._load_veg_type()
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
-        # self._load_dissolved_oxygen() # TODO: add dissolved xoygen loader here
         self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._classify_flow_exchange()
@@ -497,6 +497,23 @@ class HSI(vt.VegTransition):
         # water depth relative to marsh surface (for alligator HSI) ----
         self.water_depth_rel_marsh_annual_mean = (
             self._get_water_depth_relative_to_marsh()
+        )
+
+        # suspended sediment vars ----------------------------------------
+        self.ssc = self._load_suspended_sediment_general(self.wy)
+        self.ssc_july_sept_max_mean = self._get_ssc_subset(months=[7, 8, 9])
+
+        # dissolved oxygen vars ---------------------------------------
+        self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
+        self.dissolved_oxygen_july_sept_min_60m = self._get_d_o_subset(
+            months=[7, 8, 9],
+            agg="min",
+            cell=False,
+        )
+        self.dissolved_oxygen_july_sept_max = self._get_d_o_subset(
+            months=[7, 8, 9],
+            cell=True,
+            agg="max",
         )
 
         # veg based vars ----------------------------------------------
@@ -675,7 +692,6 @@ class HSI(vt.VegTransition):
     def _load_flowexchange_general(
         self,
         water_year: int,
-        cell: bool = False,
     ) -> xr.Dataset:
         """
         Load flow exchange data
@@ -708,6 +724,173 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No flow exchange file provided.")
             return None
+
+    def _load_dissolved_oxygen_general(
+        self,
+        water_year: int,
+    ) -> xr.Dataset:
+        """
+        Load dissolved oxygen output from XGBoost model.
+        """
+        if self.netcdf_dissolved_oxygen_path is not None:
+            self._logger.info(
+                "Loading dissolved oxygen data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="DO"
+            )
+            self._logger.info("Loading files: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+            except Exception:
+                try:
+                    # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
+                    crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+                    ds = ds.rio.write_crs(crs_wkt)
+                except Exception:
+                    try:
+                        # XGB: CRS from spatial_ref variable
+                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+                        ds = ds.rio.write_crs(crs_wkt)
+                    except Exception as exc:
+                        raise ValueError(
+                            "Unable to parse CRS from dissolved oxygen input"
+                        ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No dissolved oxygen file provided.")
+            return None
+
+    def _get_d_o_subset(
+        self,
+        months: list[int] | None = None,
+        agg: str = "min",
+        cell: bool = True,
+    ) -> np.ndarray | None:
+        """Aggregated monthly dissolved oxygen for the given months.
+
+        Parameters
+        ----------
+        months : list[int], optional
+            Months to include. Defaults to all months.
+        agg : str, optional
+            Aggregation method for the monthly resample: "min", "max", or "mean".
+            Defaults to "min".
+        cell : bool, optional
+            If True, coarsen from 60m to 480m. If False, return native 60m resolution.
+            Defaults to True.
+
+        Returns
+        -------
+        np.ndarray or None
+            Array of the aggregated monthly dissolved oxygen.
+        """
+        if self.dissolved_oxygen is None:
+            return None
+
+        if agg not in ("min", "max", "mean"):
+            raise ValueError(
+                f"agg must be 'min', 'max', or 'mean', got {agg!r}"
+            )
+
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        filtered = self.dissolved_oxygen.sel(
+            time=self.dissolved_oxygen["time"].dt.month.isin(months)
+        )
+        da = filtered["dissolved_oxygen"]
+        if agg == "min":
+            # average of the monthly minimums
+            monthly = da.resample(time="1ME").min()
+            reduced = monthly.mean(dim="time", skipna=True)
+        elif agg == "max":
+            # maximum of the monthly averages
+            monthly = da.resample(time="1ME").mean()
+            reduced = monthly.max(dim="time", skipna=True)
+        else:
+            # mean: simple temporal mean
+            reduced = da.mean(dim="time", skipna=True)
+
+        if cell:
+            reduced = reduced.coarsen(y=8, x=8, boundary="pad").mean()
+
+        return reduced.to_numpy()
+
+    def _load_suspended_sediment_general(
+        self, water_year: int
+    ) -> xr.Dataset | None:
+        """Load suspended sediment (SSC) data from Delft3D or MIKE 21 models."""
+        if self.netcdf_suspended_sediment_path is not None:
+            self._logger.info(
+                "Loading suspended sediment data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="SSC"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No suspended sediment file provided.")
+            return None
+
+    def _get_ssc_subset(
+        self,
+        months: list[int] | None = None,
+    ) -> np.ndarray | None:
+        """Max of monthly-mean SSC for the given months, resampled to 480m.
+
+        Parameters
+        ----------
+        months : list[int], optional
+            Months to include. Defaults to all months.
+
+        Returns
+        -------
+        np.ndarray or None
+            480m array of the maximum monthly-mean SSC.
+        """
+        if self.ssc is None:
+            return None
+
+        if not months:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        filtered = self.ssc.sel(time=self.ssc["time"].dt.month.isin(months))
+        monthly_mean = (
+            filtered["suspended_sediment_concentration"]
+            .resample(time="1ME")
+            .mean()
+        )
+        max_monthly_mean = monthly_mean.max(dim="time")
+
+        da_coarse = max_monthly_mean.coarsen(y=8, x=8, boundary="pad").mean()
+        return da_coarse.to_numpy()
 
     def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
         """Classify flood duration per 480m cell based on annual wet day count.
@@ -1362,7 +1545,7 @@ class HSI(vt.VegTransition):
             Positive values indicate water above the marsh surface;
             negative values indicate water below the marsh surface.
         """
-        months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+        months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         # Mean annual depth at 60m
         filtered_ds = self.water_depth.sel(
@@ -1678,70 +1861,6 @@ class HSI(vt.VegTransition):
 
         self.pct_near_forest = near_forest_mask_da.to_numpy()
 
-    # def _load_do_model(self):
-    #     """Load the XGBoost dissolved oxygen model from config path."""
-    #     if self.do_model_path is not None:
-    #         self.do_model = XGBRegressor()
-    #         self.do_model.load_model(self.do_model_path)
-    #         self._logger.info("Loaded DO model from %s", self.do_model_path)
-    #     else:
-    #         self.do_model = None
-    #         self._logger.info("No DO model path provided; DO will be ideal.")
-
-    # def _calculate_dissolved_oxygen(self):
-    #     """Predict daily dissolved oxygen (mg/L) at 60m using XGBoost.
-
-    #     Model features: Temp_C, Depth_m, Velocity_ms, Month, DayOfYear.
-    #     Result is stored as self.dissolved_oxygen, an xr.DataArray with
-    #     dims (time, y, x) at 60m resolution.
-    #     """
-    #     if self.do_model is None:
-    #         self._logger.info("No DO model loaded; skipping DO prediction.")
-    #         return
-
-    #     if self.water_temperature is None or self.water_depth is None:
-    #         self._logger.info("Missing temp or depth for DO model; skipping.")
-    #         return
-
-    #     temp = self.water_temperature["temperature"]  # (time, y, x)
-    #     depth = self.water_depth["height"]  # (time, y, x)
-
-    #     # velocity is a single 60m 2D array — broadcast across time
-    #     if self.velocity_july_sept_mean is not None:
-    #         vel = xr.DataArray(
-    #             self.velocity_july_sept_mean, dims=["y", "x"]
-    #         ).broadcast_like(temp)
-    #     else:
-    #         vel = xr.zeros_like(temp)
-
-    #     month = temp.time.dt.month.broadcast_like(temp)
-    #     doy = temp.time.dt.dayofyear.broadcast_like(temp)
-
-    #     def _predict_do(temp, depth, velocity, month, doy):
-    #         features = np.stack([temp, depth, velocity, month, doy], axis=-1)
-    #         shape = features.shape[:-1]
-    #         pred = self.do_model.predict(features.reshape(-1, 5))
-    #         return pred.reshape(shape)
-
-    #     self.dissolved_oxygen = xr.apply_ufunc(
-    #         _predict_do,
-    #         temp,
-    #         depth,
-    #         vel,
-    #         month,
-    #         doy,
-    #         output_dtypes=[np.float32],
-    #     )
-
-    #     # annual mean for output files
-    #     do_annual_mean = self.dissolved_oxygen.mean(dim="time")
-    #     self.dissolved_oxygen_annual_mean = do_annual_mean.to_numpy()
-    #     self.dissolved_oxygen_annual_mean_480 = (
-    #         do_annual_mean.coarsen(y=8, x=8, boundary="pad").mean().to_numpy()
-    #     )
-
-    #     self._logger.info("Daily dissolved oxygen prediction complete.")
-
     def _load_blue_crab_lookup(self):
         """
         Read blue crab lookup table
@@ -2053,15 +2172,16 @@ class HSI(vt.VegTransition):
 
         # -------- WPU HSI CSV Summaries --------
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        if 'year' in ds_out.dims:
-            ds_out = ds_out.rename({'year': 'time'})
+        if "year" in ds_out.dims:
+            ds_out = ds_out.rename({"year": "time"})
 
-        wpu_grid = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+        wpu_grid = xr.open_dataarray(
+            self.wpu_grid_path, engine="rasterio"
+        ).isel(band=0)
 
         df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
         hsi_wpu_outpath = os.path.join(
-            self.run_metadata_dir, 
-            f"{self.file_name}_wpu_hsi_means.csv"
+            self.run_metadata_dir, f"{self.file_name}_wpu_hsi_means.csv"
         )
         df_hsi_wpu.to_csv(hsi_wpu_outpath, index=False)
 

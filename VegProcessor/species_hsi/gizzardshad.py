@@ -16,20 +16,20 @@ class GizzardShadHSI:
 
     # hydro domain. If False, SI arrays relying only on veg type will maintain entire
     # veg type domain, which is a greate area then hydro domain.
-    hydro_domain_480: np.ndarray = None
-    dem_480: np.ndarray = None
+    hydro_domain_480: np.ndarray
+    dem_480: np.ndarray
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
-    v1_tds_summer_growing_season: np.ndarray = None  # ideal
-    v2_avg_num_frost_free_days_growing_season: np.ndarray = None  # ideal
-    v3_mean_weekly_summer_temp: np.ndarray = None  # ideal
-    v4_max_do_summer: np.ndarray = None  # ideal
-    v5a_water_lvl_change: np.ndarray = None  # ideal
-    v5b_is_veg_inundated: np.ndarray = None  # ideal
-    v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray = None  # ideal
-    v7a_pct_vegetated: np.ndarray = None
-    v7b_water_depth_spawning_season: np.ndarray = None
+    v1_tds_summer_growing_season: np.ndarray  # ideal
+    v2_avg_num_frost_free_days_growing_season: np.ndarray  # ideal
+    v3_mean_weekly_summer_temp: np.ndarray  # ideal
+    v4_max_do_summer: np.ndarray  # ideal
+    v5a_water_lvl_change: np.ndarray  # ideal
+    v5b_is_veg_inundated: np.ndarray  # ideal
+    v6_mean_weekly_temp_reservoir_spawning_season: np.ndarray  # ideal
+    v7a_pct_vegetated: np.ndarray
+    v7b_water_depth_spawning_season: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -55,10 +55,10 @@ class GizzardShadHSI:
             v1_tds_summer_growing_season=hsi_instance.tds_summer_growing_season,
             v2_avg_num_frost_free_days_growing_season=hsi_instance.avg_num_frost_free_days_growing_season,
             v3_mean_weekly_summer_temp=hsi_instance.mean_weekly_summer_temp,
-            v4_max_do_summer=hsi_instance.max_do_summer,
+            v4_max_do_summer=hsi_instance.dissolved_oxygen_july_sept_max,
             v5a_water_lvl_change=hsi_instance.water_lvl_change,
             v5b_is_veg_inundated=hsi_instance.is_veg_inundated,
-            v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.mean_weekly_temp_reservoir_spawning_season,
+            v6_mean_weekly_temp_reservoir_spawning_season=hsi_instance.water_temperature_april_june_mean,
             v7a_pct_vegetated=hsi_instance.pct_vegetated,
             v7b_water_depth_spawning_season=hsi_instance.water_depth_april_june_mean,
             dem_480=hsi_instance.dem_480,
@@ -105,13 +105,28 @@ class GizzardShadHSI:
             # Add the handler to the logger
             self._logger.addHandler(ch)
 
-    def _create_template_array(self) -> np.ndarray:
+    def _create_template_array(self, *input_arrays, cell: bool = True) -> np.ndarray:
         """Create an array from a template all valid pixels are 999.0, and
         NaN from the input are persisted.
+
+        Parameters
+        ----------
+        *input_arrays : np.ndarray, optional
+            One or more input arrays from which NaN values will be propagated
+
+        cell : bool
+            True if template should be created at 480m size, False if
+            60m (high resolution). Defaults to True (480m).
         """
         # Use intersection of valid DEM and hydro domain
         valid_mask = ~np.isnan(self.hydro_domain_480) & ~np.isnan(self.dem_480)
         arr = np.where(valid_mask, 999.0, np.nan)
+
+        # Propagate NaN from any input arrays
+        for input_arr in input_arrays:
+            if input_arr is not None:
+                arr = np.where(np.isnan(input_arr), np.nan, arr)
+
         return arr
 
     def calculate_si_1(self) -> np.ndarray:
@@ -354,15 +369,19 @@ class GizzardShadHSI:
     def calculate_si_6(self) -> np.ndarray:
         """MEAN WEEKLY TEMPERATURE IN TRIBUTARIES OR UPPER END OF LAKE OR RESERVOIR DURING SPAWNING SEASON (APR - JUN)."""
         self._logger.info("Running SI 6")
-        si_6 = self.template.copy()
 
         if self.v6_mean_weekly_temp_reservoir_spawning_season is None:
+            si_6 = self.template.copy()
             self._logger.info(
                 "Mean weekly temperature in reservoirs during spawning season data not provided. Setting index to 1."
             )
             si_6[~np.isnan(si_6)] = 1
 
         else:
+            si_6 = self._create_template_array(
+                self.v6_mean_weekly_temp_reservoir_spawning_season
+            )
+
             # condition 1
             mask_1 = self.v6_mean_weekly_temp_reservoir_spawning_season <= 10.9
             si_6[mask_1] = 0

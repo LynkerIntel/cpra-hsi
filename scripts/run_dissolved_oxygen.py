@@ -5,7 +5,7 @@ an XGBoost model trained on station data.
 Inputs (zarr):
     - Water temperature (daily, 60m)
     - Water depth / stage (daily, 60m)
-    - Velocity (single timestep, 60m)
+    - Velocity (daily, 60m)
     - DEM GeoTIFF (60m)
 
 Output:
@@ -30,15 +30,15 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_328.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_328_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_000_cogs"
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -175,14 +175,20 @@ def predict_do():
     stage_ds = reproject_match(stage_ds, dem)
     depth = compute_depth(stage_ds, dem).load()  # (time, y, x) — into memory
 
-    # Load velocity (single 2D snapshot)
+    # Load velocity (daily timesteps)
     if VELOCITY_PATH is not None:
         print(f"Loading velocity from {VELOCITY_PATH}...")
         vel_ds = load_zarr_with_crs(VELOCITY_PATH)
         vel_ds = reproject_match(vel_ds, dem)
-        vel_2d = vel_ds["velocity"][0].values  # (y, x) numpy array
+        if vel_ds["velocity"].sizes.get("time", 1) <= 1:
+            raise ValueError(
+                f"Velocity data must have daily timesteps, "
+                f"but only has {vel_ds['velocity'].sizes.get('time', 0)} timestep(s). "
+                f"Source: {VELOCITY_PATH}"
+            )
+        vel_vals = vel_ds["velocity"].load().values  # (time, y, x)
     else:
-        vel_2d = None
+        vel_vals = None
 
     # Pre-extract numpy arrays and time metadata
     temp_vals = temp.values  # (time, y, x)
@@ -196,17 +202,17 @@ def predict_do():
     do_arr = np.empty((n_days, ny, nx), dtype=np.float32)
     t_start = _time.time()
 
-    vel_flat = (
-        vel_2d.ravel()
-        if vel_2d is not None
-        else np.zeros(n_pixels, dtype=np.float32)
-    )
-
     for i in range(n_days):
         t = times[i]
         ts = pd.Timestamp(t)
         month = ts.month
         doy = ts.dayofyear
+
+        vel_flat = (
+            vel_vals[i].ravel()
+            if vel_vals is not None
+            else np.zeros(n_pixels, dtype=np.float32)
+        )
 
         features = np.column_stack(
             [

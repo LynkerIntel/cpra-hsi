@@ -32,7 +32,7 @@ DATA_DIR = "/Users/dillonragar/data/cpra"
 
 TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
 DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+VELOCITY_PATH = "/Users/dillonragar/data/cpra/data_staging/d3d_veloc_000_zarr/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
@@ -136,6 +136,99 @@ def save_daily_cogs(
                 },
             )
     print("Done exporting COGs.")
+
+
+def save_input_cogs(
+    temp_ds: xr.Dataset,
+    depth_da: xr.DataArray,
+    vel_ds: xr.Dataset,
+    output_dir: str,
+    water_year: int = None,
+    overwrite: bool = False,
+):
+    """Save DO model input variables as daily COGs for QAQC.
+
+    Uses the same export pattern as
+    ``VegProcessor.utils.save_variables_as_cogs``: reproject to Web
+    Mercator, label files by water-year DOY, and write with
+    odc.geo ``write_cog``.
+
+    Parameters
+    ----------
+    temp_ds : xr.Dataset
+        Temperature dataset with a ``temperature`` variable.
+    depth_da : xr.DataArray
+        Water depth array with dims (time, y, x).
+    vel_ds : xr.Dataset
+        Velocity dataset with a ``velocity`` variable.
+    output_dir : str
+        Root directory for the COG output.
+    water_year : int, optional
+        Water year used for DOY file labels. If None, extracted from
+        ``output_dir`` path.
+    overwrite : bool
+        If True, overwrite existing COGs.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    inputs_ds = xr.Dataset(
+        {
+            "temperature": temp_ds["temperature"],
+            "water_depth": depth_da,
+            "velocity": vel_ds["velocity"],
+        }
+    )
+    inputs_ds = inputs_ds.rio.write_crs("EPSG:6344")
+
+    print("Reprojecting inputs to web mercator...")
+    inputs_ds = inputs_ds.rio.reproject("EPSG:3857")
+
+    # resolve water year
+    if water_year is None:
+        wy_match = re.search(r"WY(\d+)", output_dir)
+        if wy_match:
+            wy = int(wy_match.group(1))
+            water_year = 2000 + wy if wy < 50 else 1900 + wy
+        else:
+            water_year = 2020
+
+    for var_name in inputs_ds.data_vars:
+        var = inputs_ds[var_name]
+        var_dir = os.path.join(output_dir, var_name)
+        os.makedirs(var_dir, exist_ok=True)
+        print(f"\nProcessing variable: {var_name}")
+
+        for t_idx in range(len(inputs_ds.time.values)):
+            doy = t_idx + 1
+            file_label = f"WY{water_year}_DOY_{doy:03d}"
+
+            da_slice = var.isel(time=t_idx).squeeze(drop=True)
+            min_value = float(da_slice.min().values)
+            max_value = float(da_slice.max().values)
+            units = da_slice.attrs.get("units", "")
+
+            output_path = os.path.join(
+                var_dir, f"{var_name}_{file_label}.tif"
+            )
+            if not overwrite and os.path.exists(output_path):
+                continue
+            print(
+                f"  writing: {output_path} "
+                f"(min: {min_value:.3f}, max: {max_value:.3f})"
+            )
+            write_cog(
+                da_slice,
+                fname=output_path,
+                overwrite=overwrite,
+                blocksize=512,
+                compress="deflate",
+                tags={
+                    "MIN_VALUE": min_value,
+                    "MAX_VALUE": max_value,
+                    "UNIT": units,
+                },
+            )
+    print("Done exporting input COGs.")
 
 
 def predict_do():
@@ -271,9 +364,20 @@ def predict_do():
         },
     )
 
-    # Write daily COGs
+    # Write daily COGs (DO output)
     print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
     save_daily_cogs(do_ds, OUTPUT_COG_DIR, water_year=2020, overwrite=True)
+
+    # Write daily COGs for input variables (QAQC)
+    input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
+    print(f"Writing input COGs to {input_cog_dir}...")
+    save_input_cogs(
+        temp_ds=temp_ds,
+        depth_da=depth,
+        vel_ds=vel_ds,
+        output_dir=input_cog_dir,
+        overwrite=True,
+    )
     print("Done.")
 
 

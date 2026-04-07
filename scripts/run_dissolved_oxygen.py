@@ -225,6 +225,8 @@ def predict_do():
         )
         pred = xgb.predict(features).reshape(ny, nx)
         pred[~domain_mask] = np.nan
+        depth_mask = (depth_vals[i] > 0.1) & (depth_vals[i] < 4.0)
+        pred[~depth_mask] = np.nan
         do_arr[i] = pred
 
         if (i + 1) % 10 == 0 or (i + 1) == n_days:

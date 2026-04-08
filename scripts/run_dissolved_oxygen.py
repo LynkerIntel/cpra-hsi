@@ -30,15 +30,22 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = "/Users/dillonragar/data/cpra/data_staging/d3d_veloc_000_zarr/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = "/Users/dillonragar/data/cpra/data_staging/d3d_veloc_000_zarr/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_000_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY22_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY22_000_cogs"
+
+
+def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
+    """Remove Feb 29 timesteps from a dataset."""
+    time = ds["time"].dt
+    mask = ~((time.month == 2) & (time.day == 29))
+    return ds.sel(time=mask)
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -207,9 +214,7 @@ def save_input_cogs(
             max_value = float(da_slice.max().values)
             units = da_slice.attrs.get("units", "")
 
-            output_path = os.path.join(
-                var_dir, f"{var_name}_{file_label}.tif"
-            )
+            output_path = os.path.join(var_dir, f"{var_name}_{file_label}.tif")
             if not overwrite and os.path.exists(output_path):
                 continue
             print(
@@ -260,12 +265,14 @@ def predict_do():
     if "wtemp" in temp_ds.data_vars:
         temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
+    temp_ds = drop_leap_days(temp_ds)
     temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
     # Load depth (stage -> depth via DEM subtraction), eagerly
     print(f"Loading stage/depth from {DEPTH_PATH}...")
     stage_ds = load_zarr_with_crs(DEPTH_PATH)
     stage_ds = reproject_match(stage_ds, dem)
+    stage_ds = drop_leap_days(stage_ds)
     depth = compute_depth(stage_ds, dem).load()  # (time, y, x) — into memory
 
     # Load velocity (daily timesteps)
@@ -273,6 +280,7 @@ def predict_do():
         print(f"Loading velocity from {VELOCITY_PATH}...")
         vel_ds = load_zarr_with_crs(VELOCITY_PATH)
         vel_ds = reproject_match(vel_ds, dem)
+        vel_ds = drop_leap_days(vel_ds)
         if vel_ds["velocity"].sizes.get("time", 1) <= 1:
             raise ValueError(
                 f"Velocity data must have daily timesteps, "
@@ -282,6 +290,18 @@ def predict_do():
         vel_vals = vel_ds["velocity"].load().values  # (time, y, x)
     else:
         vel_vals = None
+
+    # Align all inputs to common timestamps
+    common_times = np.intersect1d(temp.time.values, depth.time.values)
+    if vel_vals is not None:
+        common_times = np.intersect1d(
+            common_times, vel_ds["velocity"].time.values
+        )
+    print(f"Common timesteps across all inputs: {len(common_times)}")
+    temp = temp.sel(time=common_times)
+    depth = depth.sel(time=common_times)
+    if vel_vals is not None:
+        vel_vals = vel_ds["velocity"].sel(time=common_times).load().values
 
     # Pre-extract numpy arrays and time metadata
     temp_vals = temp.values  # (time, y, x)

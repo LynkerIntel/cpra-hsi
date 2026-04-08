@@ -386,9 +386,18 @@ def predict_do():
         },
     )
 
+    # Extract water year from output path
+    wy_match = re.search(r"WY(\d+)", OUTPUT_NC_PATH)
+    if not wy_match:
+        raise ValueError(
+            f"Cannot determine water year from OUTPUT_NC_PATH: {OUTPUT_NC_PATH}"
+        )
+    wy = int(wy_match.group(1))
+    water_year = 2000 + wy if wy < 50 else 1900 + wy
+
     # Write daily COGs (DO output)
     print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
-    save_daily_cogs(do_ds, OUTPUT_COG_DIR, water_year=2020, overwrite=True)
+    save_daily_cogs(do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True)
 
     # Write daily COGs for input variables (QAQC)
     input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
@@ -398,6 +407,7 @@ def predict_do():
         depth_da=depth,
         vel_ds=vel_ds,
         output_dir=input_cog_dir,
+        water_year=water_year,
         overwrite=True,
     )
     print("Done.")

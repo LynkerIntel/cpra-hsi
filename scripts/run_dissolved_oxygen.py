@@ -298,10 +298,12 @@ def predict_do():
             common_times, vel_ds["velocity"].time.values
         )
     print(f"Common timesteps across all inputs: {len(common_times)}")
-    temp = temp.sel(time=common_times)
+    temp_ds = temp_ds.sel(time=common_times)
+    temp = temp_ds["temperature"].load()
     depth = depth.sel(time=common_times)
     if vel_vals is not None:
-        vel_vals = vel_ds["velocity"].sel(time=common_times).load().values
+        vel_ds = vel_ds.sel(time=common_times)
+        vel_vals = vel_ds["velocity"].load().values
 
     # Pre-extract numpy arrays and time metadata
     temp_vals = temp.values  # (time, y, x)

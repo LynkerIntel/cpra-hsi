@@ -308,6 +308,7 @@ def main():
         return
 
     if run_veg:
+        veg_run_failures = {}
         # run each VegTransition scenario
         for config in veg_config_files:
             try:
@@ -324,14 +325,23 @@ def main():
                 )
                 print(f"Error message: {e}")
                 print("Continuing to next config...")
+                veg_run_failures[config] = str(e)
                 continue
 
         # Validate all veg outputs
         print("\nValidating VegTransition outputs...")
         for config in veg_config_files:
-            veg_results[config] = validate_veg_output(config)
+            if config in veg_run_failures:
+                veg_results[config] = {
+                    "success": False,
+                    "message": f"Runtime error: {veg_run_failures[config]}",
+                    "log_entries": [],
+                }
+            else:
+                veg_results[config] = validate_veg_output(config)
 
     if run_hsi:
+        hsi_run_failures = {}
         # run each HSI scenario
         for config in hsi_config_files:
             try:
@@ -344,12 +354,20 @@ def main():
                 print(f"ERROR: HSI model failed for config: {config}")
                 print(f"Error message: {e}")
                 print("Continuing to next config...")
+                hsi_run_failures[config] = str(e)
                 continue
 
         # Validate all HSI outputs
         print("\nValidating HSI outputs...")
         for config in hsi_config_files:
-            hsi_results[config] = validate_hsi_output(config)
+            if config in hsi_run_failures:
+                hsi_results[config] = {
+                    "success": False,
+                    "message": f"Runtime error: {hsi_run_failures[config]}",
+                    "log_entries": [],
+                }
+            else:
+                hsi_results[config] = validate_hsi_output(config)
 
     # Print summary
     if veg_results or hsi_results:

@@ -17,6 +17,7 @@ Usage:
 
 import os
 import re
+import time
 
 import numpy as np
 import pandas as pd
@@ -30,15 +31,15 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = "/Users/dillonragar/data/cpra/data_staging/d3d_veloc_000_zarr/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY22_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY22_000_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_000_cogs"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
@@ -238,8 +239,6 @@ def save_input_cogs(
 
 def predict_do():
     """Run daily dissolved oxygen prediction and save to NetCDF."""
-    import time as _time
-
     # Load DEM
     print("Loading DEM...")
     dem = xr.open_dataarray(DEM_PATH)
@@ -276,34 +275,29 @@ def predict_do():
     depth = compute_depth(stage_ds, dem).load()  # (time, y, x) — into memory
 
     # Load velocity (daily timesteps)
-    if VELOCITY_PATH is not None:
-        print(f"Loading velocity from {VELOCITY_PATH}...")
-        vel_ds = load_zarr_with_crs(VELOCITY_PATH)
-        vel_ds = reproject_match(vel_ds, dem)
-        vel_ds = drop_leap_days(vel_ds)
-        if vel_ds["velocity"].sizes.get("time", 1) <= 1:
-            raise ValueError(
-                f"Velocity data must have daily timesteps, "
-                f"but only has {vel_ds['velocity'].sizes.get('time', 0)} timestep(s). "
-                f"Source: {VELOCITY_PATH}"
-            )
-        vel_vals = vel_ds["velocity"].load().values  # (time, y, x)
-    else:
-        vel_vals = None
+    print(f"Loading velocity from {VELOCITY_PATH}...")
+    vel_ds = load_zarr_with_crs(VELOCITY_PATH)
+    vel_ds = reproject_match(vel_ds, dem)
+    vel_ds = drop_leap_days(vel_ds)
+    if vel_ds["velocity"].sizes.get("time", 1) <= 1:
+        raise ValueError(
+            f"Velocity data must have daily timesteps, "
+            f"but only has {vel_ds['velocity'].sizes.get('time', 0)} timestep(s). "
+            f"Source: {VELOCITY_PATH}"
+        )
+    vel_vals = vel_ds["velocity"].load().values  # (time, y, x)
 
     # Align all inputs to common timestamps
     common_times = np.intersect1d(temp.time.values, depth.time.values)
-    if vel_vals is not None:
-        common_times = np.intersect1d(
-            common_times, vel_ds["velocity"].time.values
-        )
+    common_times = np.intersect1d(
+        common_times, vel_ds["velocity"].time.values
+    )
     print(f"Common timesteps across all inputs: {len(common_times)}")
     temp_ds = temp_ds.sel(time=common_times)
     temp = temp_ds["temperature"].load()
     depth = depth.sel(time=common_times)
-    if vel_vals is not None:
-        vel_ds = vel_ds.sel(time=common_times)
-        vel_vals = vel_ds["velocity"].load().values
+    vel_ds = vel_ds.sel(time=common_times)
+    vel_vals = vel_ds["velocity"].load().values
 
     # Pre-extract numpy arrays and time metadata
     temp_vals = temp.values  # (time, y, x)
@@ -315,7 +309,7 @@ def predict_do():
     times = temp.time.values
     n_days = len(times)
     do_arr = np.empty((n_days, ny, nx), dtype=np.float32)
-    t_start = _time.time()
+    t_start = time.time()
 
     for i in range(n_days):
         t = times[i]
@@ -323,11 +317,7 @@ def predict_do():
         month = ts.month
         doy = ts.dayofyear
 
-        vel_flat = (
-            vel_vals[i].ravel()
-            if vel_vals is not None
-            else np.zeros(n_pixels, dtype=np.float32)
-        )
+        vel_flat = vel_vals[i].ravel()
 
         features = np.column_stack(
             [
@@ -345,7 +335,7 @@ def predict_do():
         do_arr[i] = pred
 
         if (i + 1) % 10 == 0 or (i + 1) == n_days:
-            elapsed = _time.time() - t_start
+            elapsed = time.time() - t_start
             per_day = elapsed / (i + 1)
             remaining = per_day * (n_days - i - 1)
             date_str = str(t)[:10]
@@ -397,7 +387,9 @@ def predict_do():
 
     # Write daily COGs (DO output)
     print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
-    save_daily_cogs(do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True)
+    save_daily_cogs(
+        do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True
+    )
 
     # Write daily COGs for input variables (QAQC)
     input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")

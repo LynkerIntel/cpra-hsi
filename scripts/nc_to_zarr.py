@@ -100,10 +100,11 @@ def convert_file(
         times = pd.DatetimeIndex(ds.time.values)
         print(f"  Time range in file: {times[0]} to {times[-1]} ({n} steps)")
 
-        # Build a 365-day water year starting Oct 1, dropping Feb 29 if leap
-        expected = pd.date_range(wy_start, periods=n, freq="D")
+        # Build the canonical 365-day water year (Oct 1 – Sep 30, no Feb 29)
+        wy_end = pd.Timestamp(f"{wy}-09-30")
+        expected = pd.date_range(wy_start, wy_end, freq="D")
         expected = expected[~((expected.month == 2) & (expected.day == 29))]
-        # If the source had more steps than 365 (leap), trim data to match
+        # Trim or validate data to match the 365-day target
         ds = ds.isel(time=slice(0, len(expected)))
         ds = ds.assign_coords(time=("time", expected))
         print(

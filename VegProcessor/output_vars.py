@@ -796,6 +796,16 @@ def get_hsi_480m_variables(hsi):
                 "description": "",
             },
         ],
+        "water_temperature_april_june_mean": [
+            hsi.water_temperature_april_june_mean,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "Deg C",
+                "long_name": "",
+                "description": "",
+            },
+        ],
         "pct_blh": [
             hsi.pct_blh,
             np.float32,

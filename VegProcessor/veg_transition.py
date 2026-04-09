@@ -304,6 +304,10 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
 
+        # habitat metrics
+        self.flood_pulse = self.calculate_flood_pulse()
+        self.low_water_refuge = self.calculate_low_water_refuge()
+
         self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
@@ -420,9 +424,6 @@ class VegTransition:
         self._logger.info("completed timestep: %s", timestep)
         self.current_timestep = None
         self.water_depth = None
-
-        self.flood_pulse = self.calculate_flood_pulse()
-        self.low_water_refuge = self.calculate_low_water_refuge()
 
         # clean up mpl objects
         plt.cla()
@@ -1351,15 +1352,32 @@ class VegTransition:
 
         logging.info("Calculating WPU veg type sums.")
         ds = xr.open_dataset(self.netcdf_filepath)
-        df = utils.wpu_sums(ds_veg=ds, zones=wpu)
-        outpath = os.path.join(
+        df = utils.wpu_sums(ds_veg=ds[["veg_type", "maturity"]], zones=wpu)
+        veg_outpath = os.path.join(
             self.run_metadata_dir,
             f"{self.file_name}_wpu_vegtype_timeseries.csv",
         )
-        df.to_csv(outpath)
+        df.to_csv(veg_outpath)
+
+        logging.info("Calculating WPU habitat metrics sums.")
+        df_lwr_fp = utils.wpu_sums(
+            ds_veg=ds[["flood_pulse", "low_water_refuge"]], zones=wpu
+        )
+
+        # Apply the 0.0036 conversion factor to get km2
+        for col in ["flood_pulse", "low_water_refuge"]:
+            df_lwr_fp[f"{col}_km2"] = df_lwr_fp[col] * 0.0036
+
+        lwr_fp_outpath = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_habitat_timeseries.csv",
+        )
+        df_lwr_fp.to_csv(lwr_fp_outpath)
 
         logging.info("Calculating full-domain veg type sums.")
-        df_full_domain = utils.pixel_sums_full_domain(ds=ds)
+        df_full_domain = utils.pixel_sums_full_domain(
+            ds=ds[["veg_type", "maturity"]]
+        )
         outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_vegtype_timeseries.csv"
         )

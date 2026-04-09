@@ -676,14 +676,24 @@ class HSI(vt.VegTransition):
                     "Unable to parse CRS from hydrologic input"
                 ) from exc
 
-            if ds["velocity"].sizes.get("time", 1) > 1:
+            # Compute July-September mean from daily data
+            ds_jul_sep = ds["velocity"].sel(
+                time=ds["time"].dt.month.isin([7, 8, 9])
+            )
+            if ds_jul_sep.sizes["time"] == 0:
                 raise ValueError(
-                    "Velocity file contains more than 1 timestep. "
-                    "Only an annual velocity should be supplied to the model."
+                    "Velocity file contains no July-September timesteps."
                 )
+            self._logger.info(
+                "Computing July-September mean from %d daily timesteps.",
+                ds_jul_sep.sizes["time"],
+            )
+            mean_velocity = ds_jul_sep.mean(dim="time")
 
-            ds = self._reproject_match_to_dem(ds)
-            return ds["velocity"][0].to_numpy()
+            ds_mean = mean_velocity.to_dataset(name="velocity")
+            ds_mean = ds_mean.rio.write_crs(ds.rio.crs)
+            ds_mean = self._reproject_match_to_dem(ds_mean)
+            return ds_mean["velocity"].to_numpy()
 
         else:
             self._logger.info("Velocity not provided.")

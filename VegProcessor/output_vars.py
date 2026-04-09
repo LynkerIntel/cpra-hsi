@@ -1767,7 +1767,16 @@ def get_veg_variables(veg):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "binary",
-                "long_name": "Flood Pulse Inundation",
+                "long_name": "flood pulse inundation",
+            },
+        ],
+        "low_water_refuge": [
+            veg.low_water_refuge,
+            np.int8,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "binary",
+                "long_name": "low water refuge",
             },
         ],
         # QC variables below

@@ -190,6 +190,7 @@ class VegTransition:
 
         self.flood_pulse = None
         self.blr_flooding_days = 0
+        self.low_water_refuge = None
 
         # initialize partial update arrays as None
         # self.veg_type_update_1 = None
@@ -421,6 +422,7 @@ class VegTransition:
         self.water_depth = None
 
         self.flood_pulse = self.calculate_flood_pulse()
+        self.low_water_refuge = self.calculate_low_water_refuge()
 
         # clean up mpl objects
         plt.cla()
@@ -1433,6 +1435,20 @@ class VegTransition:
             f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
         )
         return np.zeros_like(self.veg_type, dtype=np.int8)
+
+    def calculate_low_water_refuge(
+        self, depth_thresh: float = 1.0, persistence: float = 0.9
+    ) -> np.ndarray:
+        """
+        LWR Logic: Depth >= 1.0m for 90% of the October-January window.
+        Returns binary map (1=refuge, 0=not).
+        """
+        ds_window = self.water_depth.sel(
+            time=self.water_depth.time.dt.month.isin([10, 11, 12, 1])
+        )["height"]
+        lwr_da = (ds_window >= depth_thresh).mean(dim="time") >= persistence
+
+        return lwr_da.astype(np.int8).to_numpy()
 
     def create_qc_arrays(self):
         """

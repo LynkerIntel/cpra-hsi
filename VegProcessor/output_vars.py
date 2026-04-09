@@ -1062,8 +1062,12 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "meters",
-                "long_name": "Mean annual water depth relative to marsh surface",
-                "description": "Mean annual WSE minus mean elevation of vegetated pixels per cell",
+                "long_name": (
+                    "Mean annual water depth relative to marsh surface"
+                ),
+                "description": (
+                    "Mean annual WSE minus mean elevation of vegetated pixels per cell"
+                ),
             },
         ],
         "water_depth_jan_aug_mean": [
@@ -1152,7 +1156,9 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "mg/L",
-                "long_name": "suspended sediment max monthly mean July-September",
+                "long_name": (
+                    "suspended sediment max monthly mean July-September"
+                ),
                 "description": (
                     "Maximum of monthly-mean suspended sediment concentration "
                     "for July-September period at 480m resolution"
@@ -1753,6 +1759,15 @@ def get_veg_variables(veg):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "water salinity",
+            },
+        ],
+        "flood_pulse": [
+            veg.flood_pulse,
+            np.int8,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "binary",
+                "long_name": "Flood Pulse Inundation",
             },
         ],
         # QC variables below

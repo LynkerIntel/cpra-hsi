@@ -233,6 +233,52 @@ def load_mf_tifs(
     return xr_dataset
 
 
+def get_raster_value_at_point(
+    raster_path: str, x: float, y: float, target_crs: str = "EPSG:26915"
+) -> float:
+    """
+    Extracts a single numeric value from a raster at a specific coordinate.
+
+    This is specifically used for gage lookups (e.g., Butte LaRose) to establish
+    a ground elevation baseline for flood pulse metrics.
+
+    Parameters
+    ----------
+    raster_path : str
+        Path to the .tif file.
+    x : float
+        Easting or Longitude coordinate.
+    y : float
+        Northing or Latitude coordinate.
+    target_crs : str
+        The expected CRS of the input coordinates (default UTM Zone 15N).
+
+    Returns
+    -------
+    float
+        The cell value at the nearest neighbor to the provided coordinates.
+    """
+    with xr.open_dataset(raster_path) as ds:
+        # Get the first data variable (handles 'band_data', 'Band1', etc.)
+        da = ds[list(ds.data_vars.keys())[0]]
+
+        # CRS Check
+        if da.rio.crs and str(da.rio.crs).upper() != target_crs.upper():
+            logger.info(
+                f"CRS mismatch: Raster is {da.rio.crs} "
+                f"but point coords are {target_crs}."
+            )
+
+        try:
+            # Nearest neighbor selection
+            return float(da.sel(x=x, y=y, method="nearest").item())
+        except Exception as e:
+            logger.info(
+                f"Point lookup failed at ({x}, {y}) in {raster_path}: {e}"
+            )
+            return float("nan")
+
+
 def coarsen_and_reduce(
     da: xr.DataArray, veg_type: int | bool, **kwargs
 ) -> xr.DataArray:
@@ -599,33 +645,43 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
     return df_out
 
+
 def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
     """Computes annual mean scores for HSI/SI variables grouped by WPU."""
 
     hsi_vars = [
-        var for var in ds_hsi.data_vars if '_hsi' in var.lower() or '_si_' in var.lower()]
-    
+        var
+        for var in ds_hsi.data_vars
+        if "_hsi" in var.lower() or "_si_" in var.lower()
+    ]
+
     if not hsi_vars:
         return pd.DataFrame()
 
     # Downsamples the 60m WPU grid to the 480m HSI grid
     zonal_ids = wpu_grid.rio.reproject_match(ds_hsi).compute()
-    zonal_ids.name = "wpu" 
-    
+    zonal_ids.name = "wpu"
+
     zonal_ids = xr.where(zonal_ids > 0, zonal_ids, np.nan)
 
     ds_zonal_means = ds_hsi[hsi_vars].groupby(zonal_ids).mean()
     df_timeseries = ds_zonal_means.to_dataframe().reset_index()
-    
-    if 'time' in df_timeseries.columns:
-        df_timeseries.rename(columns={'time': 'timestep'}, inplace=True)
-    
-    df_timeseries = df_timeseries.dropna(subset=['wpu'])
-    df_timeseries['wpu'] = df_timeseries['wpu'].astype(int)
-    
-    cols = ['timestep', 'wpu'] + [c for c in df_timeseries.columns if c not in ['timestep', 'wpu']]
-    
-    return df_timeseries[cols].sort_values(['timestep', 'wpu']).reset_index(drop=True)
+
+    if "time" in df_timeseries.columns:
+        df_timeseries.rename(columns={"time": "timestep"}, inplace=True)
+
+    df_timeseries = df_timeseries.dropna(subset=["wpu"])
+    df_timeseries["wpu"] = df_timeseries["wpu"].astype(int)
+
+    cols = ["timestep", "wpu"] + [
+        c for c in df_timeseries.columns if c not in ["timestep", "wpu"]
+    ]
+
+    return (
+        df_timeseries[cols]
+        .sort_values(["timestep", "wpu"])
+        .reset_index(drop=True)
+    )
 
 
 def generate_filename(
@@ -1375,9 +1431,7 @@ def save_variables_as_cogs(
             max_value = float(da_slice.max().values)
             units = da_slice.attrs.get("units", "")
 
-            output_path = os.path.join(
-                var_dir, f"{var_name}_{file_label}.tif"
-            )
+            output_path = os.path.join(var_dir, f"{var_name}_{file_label}.tif")
             if not overwrite and os.path.exists(output_path):
                 print(f"  skipping existing file: {output_path}")
                 continue
@@ -1457,9 +1511,7 @@ def process_netcdf_folder(
                 if ds[var_name].dtype == bool or str(
                     ds[var_name].dtype
                 ).startswith("bool"):
-                    print(
-                        f"converting boolean variable {var_name} to uint8"
-                    )
+                    print(f"converting boolean variable {var_name} to uint8")
                     ds[var_name] = ds[var_name].astype("uint8")
 
             # ensure each data variable has the CRS

@@ -184,6 +184,13 @@ class VegTransition:
         self.veg_ts_out = None  # xarray output for timestep
         self.salinity_annual_mean = None
 
+        self.dem_at_blr = utils.get_raster_value_at_point(
+            self.dem_path, 626304.02, 3350717.43
+        )
+
+        self.flood_pulse = None
+        self.blr_flooding_days = 0
+
         # initialize partial update arrays as None
         # self.veg_type_update_1 = None
         # self.veg_type_update_2 = None
@@ -413,6 +420,8 @@ class VegTransition:
         self.current_timestep = None
         self.water_depth = None
 
+        self.flood_pulse = self.calculate_flood_pulse()
+
         # clean up mpl objects
         plt.cla()
         plt.clf()
@@ -533,7 +542,11 @@ class VegTransition:
         # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
-        model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
+        model = (
+            "XGB"
+            if hydro_variable == "DO"
+            else self.file_params["hydro_source_model"]
+        )
         nc_path = os.path.join(
             variable_base_path,
             f"AMP_{model}_WY{analog_year_str}_"
@@ -1007,9 +1020,7 @@ class VegTransition:
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
-            del (
-                salinity
-            )  # del the dataset because this is the only salinity var
+            del salinity  # del the dataset because this is the only salinity var
 
         else:
             # if salinity is a numpy array, it is the veg-based
@@ -1236,6 +1247,7 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
+                "flood_pulse",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1374,6 +1386,53 @@ class VegTransition:
         )
 
         logging.info("Post-processing complete.")
+
+    def calculate_flood_pulse(
+        self, stage_thresh: float = 3.6, depth_thresh: float = 0.05
+    ) -> np.ndarray:
+        """
+        Flood Pulse Metric: Dec-May window.
+        Triggered by BLR Gage Stage (WSE) > 3.6m for 121-157 days.
+        """
+        self._logger.info("Calculating Flood Pulse Inundation.")
+
+        # Define the gage coordinates (Butte LaRose Gage)
+        blr_x, blr_y = 626304.02, 3350717.43
+
+        # Extract depth series at gage for Dec-May
+        blr_depth = (
+            self.water_depth["height"]
+            .sel(x=blr_x, y=blr_y, method="nearest")
+            .sel(time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5]))
+        )
+
+        # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
+        self.blr_flooding_days = (
+            ((blr_depth + self.dem_at_blr) > stage_thresh).sum().values
+        )
+
+        # Map spatial extent only if the gage trigger is satisfied
+        if 121 <= self.blr_flooding_days <= 157:
+            self._logger.info(
+                f"Flood Pulse Criteria Met: {self.blr_flooding_days} days."
+            )
+
+            # Select Dec-May window for the entire domain grid
+            dm_depth = self.water_depth.sel(
+                time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5])
+            )["height"]
+
+            # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
+            is_flooded = (dm_depth > depth_thresh).any(dim="time")
+
+            return (
+                (is_flooded & (self.veg_type != 26)).astype(np.int8).to_numpy()
+            )
+
+        self._logger.info(
+            f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
+        )
+        return np.zeros_like(self.veg_type, dtype=np.int8)
 
     def create_qc_arrays(self):
         """

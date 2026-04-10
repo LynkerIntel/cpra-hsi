@@ -257,14 +257,38 @@ def predict_do():
     do_da = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
-        coords={"time": times, "y": temp.y, "x": temp.x},
+        coords={"time": times, "y": temp.y.values, "x": temp.x.values},
         attrs={
             "units": "mg/L",
             "long_name": "dissolved oxygen",
             "description": "Daily dissolved oxygen predicted by XGBoost model",
+            "grid_mapping": "spatial_ref",
         },
     )
     do_ds = xr.Dataset({"dissolved_oxygen": do_da})
+
+    # Attach CF-compliant coordinate metadata so ArcGIS recognizes the CRS
+    do_ds["x"].attrs.update(
+        {
+            "units": "m",
+            "long_name": "Easting",
+            "standard_name": "projection_x_coordinate",
+        }
+    )
+    do_ds["y"].attrs.update(
+        {
+            "units": "m",
+            "long_name": "Northing",
+            "standard_name": "projection_y_coordinate",
+        }
+    )
+    do_ds["time"].attrs.update(
+        {
+            "long_name": "time",
+            "standard_name": "time",
+        }
+    )
+
     do_ds = do_ds.rio.write_crs("EPSG:6344")
 
     # Write NetCDF

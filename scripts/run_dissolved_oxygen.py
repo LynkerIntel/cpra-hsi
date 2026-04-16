@@ -15,6 +15,7 @@ Usage:
     python predict_dissolved_oxygen.py
 """
 
+import gc
 import os
 import re
 import time
@@ -109,20 +110,24 @@ def save_daily_cogs(
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    print("Reprojecting to web mercator...")
-    ds = ds.rio.reproject("EPSG:3857")
-
     for var_name in ds.data_vars:
         var = ds[var_name]
         var_dir = os.path.join(output_dir, var_name)
         os.makedirs(var_dir, exist_ok=True)
-        print(f"\nProcessing variable: {var_name}")
+        print(
+            f"\nProcessing variable: {var_name} (reprojecting per-slice to EPSG:3857)"
+        )
 
         for t_idx in range(len(ds.time.values)):
-            doy = t_idx + 1
-            file_label = f"WY{water_year}_DOY_{doy:03d}"
+            ts = pd.Timestamp(ds.time.values[t_idx])
+            # Water year starts Oct 1: Oct-Dec belong to next calendar year's WY
+            wy = ts.year + 1 if ts.month >= 10 else ts.year
+            wy_start = pd.Timestamp(year=wy - 1, month=10, day=1)
+            doy = (ts.normalize() - wy_start).days + 1
+            file_label = f"WY{wy}_DOY_{doy:03d}"
 
             da_slice = var.isel(time=t_idx).squeeze(drop=True)
+            da_slice = da_slice.rio.reproject("EPSG:3857")
             min_value = float(da_slice.min().values)
             max_value = float(da_slice.max().values)
             units = da_slice.attrs.get("units", "")
@@ -146,6 +151,10 @@ def save_daily_cogs(
                     "UNIT": units,
                 },
             )
+            del da_slice
+            gc.collect()
+        del var
+        gc.collect()
     print("Done exporting COGs.")
 
 
@@ -300,6 +309,7 @@ def predict_do():
                 "dtype": "float32",
                 "zlib": True,
                 "complevel": 4,
+                "grid_mapping": "spatial_ref",
             },
             "time": {
                 "units": "days since 1850-01-01T00:00:00",
@@ -324,12 +334,16 @@ def predict_do():
         do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True
     )
 
+    # Free DO intermediates before the input-COG loop to reduce memory pressure
+    del do_arr, do_da, do_ds, temp_vals, depth_vals
+    gc.collect()
+
     # Write daily COGs for input variables (QAQC)
     input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
     print(f"Writing input COGs to {input_cog_dir}...")
     inputs_ds = xr.Dataset(
         {
-            "temperature": temp_ds["temperature"],
+            "temperature": temp,
             "water_depth": depth,
             "velocity": vel_ds["velocity"],
         }
@@ -342,4 +356,21 @@ def predict_do():
 
 
 if __name__ == "__main__":
-    predict_do()
+    import sys
+
+    completed = False
+    try:
+        predict_do()
+        completed = True
+    finally:
+        if not completed:
+            banner = "!" * 60
+            print(f"\n{banner}", file=sys.stderr)
+            print(
+                "WARNING: script exited BEFORE finishing. "
+                "Outputs may be incomplete.",
+                file=sys.stderr,
+            )
+            print(f"{banner}\n", file=sys.stderr)
+            # Note: SIGKILL (e.g. OS OOM-kill) cannot be caught — if the
+            # process dies with no traceback and no warning, suspect that.

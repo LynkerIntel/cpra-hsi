@@ -28,7 +28,14 @@ simulation:
 metadata:
   model: VEG # the model to RUN; either VEG or HSI
   hydro_source_model: HEC # the hydro input model to use, one of: HEC, MIK, or D3D
-  hydro_source_model_version: V1 # version option for hydro source model
+  hydro_source_model_versions: # per-variable version tokens appended to input zarr filenames
+    STAGE: V1
+    SALINITY: V1
+    WTEMP: V1
+    VELOCITY: V1
+    FLOWEXCH: V1
+    SSC: V1
+    DO: V1
   sea_level_condition: "000" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   input_group: G900 # Group for hydro input model

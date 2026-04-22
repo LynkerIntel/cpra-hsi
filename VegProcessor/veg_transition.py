@@ -133,9 +133,9 @@ class VegTransition:
             "hydro_source_model": self.metadata.get(
                 "hydro_source_model"
             ),  # one of: HEC, MIK, or D3D
-            "hydro_source_model_version": self.metadata.get(
-                "hydro_source_model_version"
-            ),  # model version, i.e. V1
+            "hydro_source_model_versions": self.metadata.get(
+                "hydro_source_model_versions"
+            ),  # per-variable version map, e.g. {"STAGE": "V1", "WTEMP": "V2", ...}
             "water_year": "WY99",  # default for now, may be needed
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),
@@ -534,12 +534,20 @@ class VegTransition:
         analog_year = int(f"20{analog_year_str}")
 
         model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
+        versions = self.file_params['hydro_source_model_versions']
+        if not isinstance(versions, dict) or hydro_variable not in versions:
+            raise KeyError(
+                f"No version specified for hydro variable '{hydro_variable}' in "
+                f"metadata.hydro_source_model_versions "
+                f"(available: {list(versions.keys()) if isinstance(versions, dict) else versions})"
+            )
+        variable_version = versions[hydro_variable]
         nc_path = os.path.join(
             variable_base_path,
             f"AMP_{model}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
-            f"{self.file_params['hydro_source_model_version']}.zarr",
+            f"{variable_version}.zarr",
         )
 
         return nc_path, analog_year

@@ -345,9 +345,9 @@ class HSI(vt.VegTransition):
             "hydro_source_model": self.metadata.get(
                 "hydro_source_model"
             ),  # one of: HEC, MIK, or D3D
-            "hydro_source_model_version": self.metadata.get(
-                "hydro_source_model_version"
-            ),  # model version, i.e. V1
+            "hydro_source_model_versions": self.metadata.get(
+                "hydro_source_model_versions"
+            ),  # per-variable version map, e.g. {"STAGE": "V1", "WTEMP": "V2", ...}
             "water_year": "WY99",  # default for now, may be needed
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),

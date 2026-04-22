@@ -32,15 +32,15 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY20_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY20_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY20_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY22_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY20_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY20_000_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY22_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY22_000_cogs"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:

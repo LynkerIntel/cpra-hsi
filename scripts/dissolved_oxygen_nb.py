@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.11"
+__generated_with = "0.23.3"
 app = marimo.App()
 
 
@@ -10,6 +10,7 @@ def _():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from sklearn.inspection import PartialDependenceDisplay, partial_dependence
 
     import os
     from xgboost import XGBRegressor
@@ -17,7 +18,16 @@ def _():
     from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve
 
 
-    return ShuffleSplit, XGBRegressor, cross_validate, os, pd
+    return (
+        PartialDependenceDisplay,
+        ShuffleSplit,
+        XGBRegressor,
+        cross_validate,
+        os,
+        partial_dependence,
+        pd,
+        plt,
+    )
 
 
 @app.cell
@@ -122,6 +132,57 @@ def _(ShuffleSplit, XGBRegressor, X_train, cross_validate, y_train):
         f"RMSE = {-cv_results['test_rmse'].mean():.3f} mg/L"
     )
     return (xgb,)
+
+
+@app.cell
+def _(features, pd, xgb):
+    # =========================================================
+    # FEATURE IMPORTANCE
+    # =========================================================
+    booster = xgb.get_booster()
+    importance_types = ["gain", "weight", "cover"]
+    importance_df = pd.DataFrame({"feature": features})
+    for imp_type in importance_types:
+        scores = booster.get_score(importance_type=imp_type)
+        importance_df[imp_type] = importance_df["feature"].map(scores).fillna(0.0)
+
+    importance_df = importance_df.sort_values("gain", ascending=False).reset_index(drop=True)
+    print("Feature importance (sorted by gain):")
+    print(importance_df.to_string(index=False))
+    return
+
+
+@app.cell
+def _(
+    PartialDependenceDisplay,
+    X_train,
+    features,
+    partial_dependence,
+    plt,
+    xgb,
+):
+    # =========================================================
+    # PARTIAL DEPENDENCE — quantify DO swing per feature
+    # =========================================================
+
+    fig, axes = plt.subplots(1, len(features), figsize=(4 * len(features), 4), sharey=True)
+    PartialDependenceDisplay.from_estimator(
+        xgb, X_train, features=features, ax=axes, grid_resolution=50
+    )
+    fig.suptitle("Partial dependence of predicted DO on each feature")
+    fig.tight_layout()
+
+    # Per-feature DO swing (max - min of partial dependence curve)
+    swings = {}
+    for f in features:
+        pd_result = partial_dependence(xgb, X_train, [f], grid_resolution=50)
+        avg = pd_result["average"][0]
+        swings[f] = float(avg.max() - avg.min())
+    print("Predicted DO swing across each feature's range (mg/L):")
+    for f, s in sorted(swings.items(), key=lambda kv: kv[1], reverse=True):
+        print(f"  {f:12s} {s:.3f}")
+    fig
+    return
 
 
 @app.cell

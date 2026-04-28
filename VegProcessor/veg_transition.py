@@ -417,6 +417,13 @@ class VegTransition:
 
         self._calculate_maturity(veg_type_in)
 
+        self.flooded = (
+            (self.water_depth["height"] > 0.05)
+            .max(dim="time")
+            .where(self.hydro_domain, np.nan)
+            .astype(np.float32)
+        )
+
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
         self._append_veg_vars_to_netcdf(timestep=self.current_timestep)
@@ -1250,6 +1257,7 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
+                "flooded",
                 "flood_pulse",
                 "low_water_refuge",
             ]

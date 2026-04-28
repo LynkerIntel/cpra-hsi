@@ -184,6 +184,14 @@ class VegTransition:
         self.veg_ts_out = None  # xarray output for timestep
         self.salinity_annual_mean = None
 
+        self.dem_at_blr = utils.get_raster_value_at_point(
+            self.dem_path, 626304.02, 3350717.43
+        )
+
+        self.flood_pulse = None
+        self.blr_flooding_days = 0
+        self.low_water_refuge = None
+
         # initialize partial update arrays as None
         # self.veg_type_update_1 = None
         # self.veg_type_update_2 = None
@@ -296,6 +304,10 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
 
+        # habitat metrics
+        self.flood_pulse = self.calculate_flood_pulse()
+        self.low_water_refuge = self.calculate_low_water_refuge()
+
         self._get_annual_avg_salinity()
         self.create_qc_arrays()
 
@@ -404,6 +416,13 @@ class VegTransition:
             )
 
         self._calculate_maturity(veg_type_in)
+
+        self.flooded = (
+            (self.water_depth["height"] > 0.05)
+            .max(dim="time")
+            .where(self.hydro_domain, np.nan)
+            .astype(np.float32)
+        )
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
@@ -533,7 +552,11 @@ class VegTransition:
         # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
-        model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
+        model = (
+            "XGB"
+            if hydro_variable == "DO"
+            else self.file_params["hydro_source_model"]
+        )
         nc_path = os.path.join(
             variable_base_path,
             f"AMP_{model}_WY{analog_year_str}_"
@@ -1007,9 +1030,7 @@ class VegTransition:
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
-            del (
-                salinity
-            )  # del the dataset because this is the only salinity var
+            del salinity  # del the dataset because this is the only salinity var
 
         else:
             # if salinity is a numpy array, it is the veg-based
@@ -1236,6 +1257,9 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
+                "flooded",
+                "flood_pulse",
+                "low_water_refuge",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1337,15 +1361,54 @@ class VegTransition:
 
         logging.info("Calculating WPU veg type sums.")
         ds = xr.open_dataset(self.netcdf_filepath)
-        df = utils.wpu_sums(ds_veg=ds, zones=wpu)
-        outpath = os.path.join(
+        df = utils.wpu_sums(ds_veg=ds[["veg_type", "maturity"]], zones=wpu)
+        veg_outpath = os.path.join(
             self.run_metadata_dir,
             f"{self.file_name}_wpu_vegtype_timeseries.csv",
         )
-        df.to_csv(outpath)
+        df.to_csv(veg_outpath)
+
+        # -------- WPU Habitat Metric CSV Summaries --------
+        logging.info("Calculating WPU habitat metrics sums.")
+
+        # Standardize the spatial alignment
+        ds.rio.write_crs("EPSG:6344", inplace=True)
+        wpu.rio.write_crs("EPSG:32615", inplace=True)
+
+        zonal_ids = wpu.rio.reproject_match(ds).compute()
+        zonal_ids.name = "wpu"
+        habitat_summary = (
+            ds[["low_water_refuge", "flood_pulse"]]
+            .groupby(zonal_ids)
+            .sum()
+            .to_dataframe()
+            .reset_index()
+        )
+
+        df_habitat = habitat_summary.copy()
+        df_habitat.rename(columns={"time": "timestep"}, inplace=True)
+
+        # Convert pixel counts to km2
+        df_habitat["low_water_refuge_km2"] = (
+            df_habitat["low_water_refuge"] * 0.0036
+        )
+        df_habitat["flood_pulse_km2"] = df_habitat["flood_pulse"] * 0.0036
+
+        cols_to_drop = ["spatial_ref"]
+        df_habitat = df_habitat.drop(
+            columns=[c for c in cols_to_drop if c in df_habitat.columns]
+        )
+
+        hab_outpath = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_habitat_timeseries.csv",
+        )
+        df_habitat.to_csv(hab_outpath, index=False)
 
         logging.info("Calculating full-domain veg type sums.")
-        df_full_domain = utils.pixel_sums_full_domain(ds=ds)
+        df_full_domain = utils.pixel_sums_full_domain(
+            ds=ds[["veg_type", "maturity"]]
+        )
         outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_vegtype_timeseries.csv"
         )
@@ -1374,6 +1437,72 @@ class VegTransition:
         )
 
         logging.info("Post-processing complete.")
+
+    def calculate_flood_pulse(
+        self, stage_thresh: float = 3.6, depth_thresh: float = 0.05
+    ) -> np.ndarray:
+        """
+        Flood Pulse Metric: Dec-May window.
+        Triggered by BLR Gage Stage (WSE) > 3.6m for 121-157 days.
+        """
+        self._logger.info("Calculating Flood Pulse Inundation.")
+
+        arr = np.where(self.hydro_domain, 0.0, np.nan).astype(np.float32)
+
+        # Define the gage coordinates (Butte LaRose Gage)
+        blr_x, blr_y = 626304.02, 3350717.43
+
+        # Extract depth series at gage for Dec-May
+        blr_depth = (
+            self.water_depth["height"]
+            .sel(x=blr_x, y=blr_y, method="nearest")
+            .sel(time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5]))
+        )
+
+        # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
+        self.blr_flooding_days = (
+            ((blr_depth + self.dem_at_blr) > stage_thresh).sum().values
+        )
+
+        # Map spatial extent only if the gage trigger is satisfied
+        if 121 <= self.blr_flooding_days <= 157:
+            self._logger.info(
+                f"Flood Pulse Criteria Met: {self.blr_flooding_days} days."
+            )
+
+            # Select Dec-May window
+            dm_depth = self.water_depth.sel(
+                time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5])
+            )["height"]
+
+            is_flooded = (dm_depth > depth_thresh).any(dim="time")
+
+            # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
+            flood_pulse_calc = (is_flooded & (self.veg_type != 26)).astype(
+                np.float32
+            )
+            arr = np.where(self.hydro_domain, flood_pulse_calc, np.nan)
+
+        else:
+            self._logger.info(
+                f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
+            )
+
+        return arr
+
+    def calculate_low_water_refuge(self, depth_thresh=1.0, persistence=0.9):
+        # Calculate persistence
+        persistence_map = (self.water_depth.height >= depth_thresh).mean(
+            dim="time"
+        )
+
+        # Create Binary Mask (1.0 for True, 0.0 for False)
+        lwr_binary = xr.where(persistence_map >= persistence, 1.0, 0.0).astype(
+            np.float32
+        )
+
+        # Apply domain mask
+        return lwr_binary.where(self.hydro_domain)
 
     def create_qc_arrays(self):
         """

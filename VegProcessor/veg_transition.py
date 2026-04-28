@@ -1251,6 +1251,7 @@ class VegTransition:
                 "maturity",
                 "salinity_annual_mean",
                 "flood_pulse",
+                "low_water_refuge",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1359,20 +1360,42 @@ class VegTransition:
         )
         df.to_csv(veg_outpath)
 
+        # -------- WPU Habitat Metric CSV Summaries --------
         logging.info("Calculating WPU habitat metrics sums.")
-        df_lwr_fp = utils.wpu_sums(
-            ds_veg=ds[["flood_pulse", "low_water_refuge"]], zones=wpu
+
+        # Standardize the spatial alignment
+        ds.rio.write_crs("EPSG:6344", inplace=True)
+        wpu.rio.write_crs("EPSG:32615", inplace=True)
+
+        zonal_ids = wpu.rio.reproject_match(ds).compute()
+        zonal_ids.name = "wpu"
+        habitat_summary = (
+            ds[["low_water_refuge", "flood_pulse"]]
+            .groupby(zonal_ids)
+            .sum()
+            .to_dataframe()
+            .reset_index()
         )
 
-        # Apply the 0.0036 conversion factor to get km2
-        for col in ["flood_pulse", "low_water_refuge"]:
-            df_lwr_fp[f"{col}_km2"] = df_lwr_fp[col] * 0.0036
+        df_habitat = habitat_summary.copy()
+        df_habitat.rename(columns={"time": "timestep"}, inplace=True)
 
-        lwr_fp_outpath = os.path.join(
+        # Convert pixel counts to km2
+        df_habitat["low_water_refuge_km2"] = (
+            df_habitat["low_water_refuge"] * 0.0036
+        )
+        df_habitat["flood_pulse_km2"] = df_habitat["flood_pulse"] * 0.0036
+
+        cols_to_drop = ["spatial_ref"]
+        df_habitat = df_habitat.drop(
+            columns=[c for c in cols_to_drop if c in df_habitat.columns]
+        )
+
+        hab_outpath = os.path.join(
             self.run_metadata_dir,
             f"{self.file_name}_wpu_habitat_timeseries.csv",
         )
-        df_lwr_fp.to_csv(lwr_fp_outpath)
+        df_habitat.to_csv(hab_outpath, index=False)
 
         logging.info("Calculating full-domain veg type sums.")
         df_full_domain = utils.pixel_sums_full_domain(
@@ -1416,6 +1439,8 @@ class VegTransition:
         """
         self._logger.info("Calculating Flood Pulse Inundation.")
 
+        arr = np.where(self.hydro_domain, 0.0, np.nan).astype(np.float32)
+
         # Define the gage coordinates (Butte LaRose Gage)
         blr_x, blr_y = 626304.02, 3350717.43
 
@@ -1437,36 +1462,39 @@ class VegTransition:
                 f"Flood Pulse Criteria Met: {self.blr_flooding_days} days."
             )
 
-            # Select Dec-May window for the entire domain grid
+            # Select Dec-May window
             dm_depth = self.water_depth.sel(
                 time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5])
             )["height"]
 
-            # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
             is_flooded = (dm_depth > depth_thresh).any(dim="time")
 
-            return (
-                (is_flooded & (self.veg_type != 26)).astype(np.int8).to_numpy()
+            # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
+            flood_pulse_calc = (is_flooded & (self.veg_type != 26)).astype(
+                np.float32
+            )
+            arr = np.where(self.hydro_domain, flood_pulse_calc, np.nan)
+
+        else:
+            self._logger.info(
+                f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
             )
 
-        self._logger.info(
-            f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
+        return arr
+
+    def calculate_low_water_refuge(self, depth_thresh=1.0, persistence=0.9):
+        # Calculate persistence
+        persistence_map = (self.water_depth.height >= depth_thresh).mean(
+            dim="time"
         )
-        return np.zeros_like(self.veg_type, dtype=np.int8)
 
-    def calculate_low_water_refuge(
-        self, depth_thresh: float = 1.0, persistence: float = 0.9
-    ) -> np.ndarray:
-        """
-        LWR Logic: Depth >= 1.0m for 90% of the October-January window.
-        Returns binary map (1=refuge, 0=not).
-        """
-        ds_window = self.water_depth.sel(
-            time=self.water_depth.time.dt.month.isin([10, 11, 12, 1])
-        )["height"]
-        lwr_da = (ds_window >= depth_thresh).mean(dim="time") >= persistence
+        # Create Binary Mask (1.0 for True, 0.0 for False)
+        lwr_binary = xr.where(persistence_map >= persistence, 1.0, 0.0).astype(
+            np.float32
+        )
 
-        return lwr_da.astype(np.int8).to_numpy()
+        # Apply domain mask
+        return lwr_binary.where(self.hydro_domain)
 
     def create_qc_arrays(self):
         """

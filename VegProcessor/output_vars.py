@@ -1763,7 +1763,7 @@ def get_veg_variables(veg):
         ],
         "flood_pulse": [
             veg.flood_pulse,
-            np.int8,
+            np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "binary",
@@ -1772,7 +1772,7 @@ def get_veg_variables(veg):
         ],
         "low_water_refuge": [
             veg.low_water_refuge,
-            np.int8,
+            np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "binary",

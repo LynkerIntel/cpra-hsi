@@ -141,11 +141,16 @@ def xr_rasterize(
     # attribute values. Otherwise, rasterise into a boolean array
     if attribute_col:
         # Use the geometry and attributes from `gdf` to create an iterable
-        shapes = zip(gdf_reproj.geometry, gdf_reproj[attribute_col].astype(int))
+        shapes = zip(
+            gdf_reproj.geometry, gdf_reproj[attribute_col].astype(int)
+        )
 
         # Convert polygons into a numpy array using attribute values
         arr = rasterio.features.rasterize(
-            shapes=shapes, out_shape=(y, x), transform=transform, **rasterio_kwargs
+            shapes=shapes,
+            out_shape=(y, x),
+            transform=transform,
+            **rasterio_kwargs,
         )
     else:
         # Convert polygons into a boolean numpy array
@@ -158,7 +163,9 @@ def xr_rasterize(
 
     # Convert result to a xarray.DataArray
     if name is not None:
-        xarr = xr.DataArray(arr, coords=xy_coords, dims=dims, attrs=da.attrs, name=name)
+        xarr = xr.DataArray(
+            arr, coords=xy_coords, dims=dims, attrs=da.attrs, name=name
+        )
     else:
         xarr = xr.DataArray(arr, coords=xy_coords, dims=dims, attrs=da.attrs)
 
@@ -190,7 +197,7 @@ def create_wpu_raster(
     gdf: GeoDataFrame,
     output_raster_path: str,
     attribute_col: str = "WPU_ID",
-    crs: str = "EPSG:32615",
+    crs: str = "EPSG:6344",
 ):
     """
     Create a WPU (Water Planning Unit) zones raster from a vegetation raster and GeoDataFrame.
@@ -215,7 +222,9 @@ def create_wpu_raster(
     """
     # Load the input vegetation raster
     veg_da = xr.open_dataarray(veg_raster_path)
-    veg_da = veg_da.isel(band=0)  # Select the first band if multiple bands exist
+    veg_da = veg_da.isel(
+        band=0
+    )  # Select the first band if multiple bands exist
     veg_da.rio.write_crs(crs, inplace=True)
 
     # Rasterize the GeoDataFrame to align with the vegetation raster

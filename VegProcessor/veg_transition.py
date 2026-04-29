@@ -533,8 +533,12 @@ class VegTransition:
         # and the truncating for this purpose.
         analog_year = int(f"20{analog_year_str}")
 
-        model = "XGB" if hydro_variable == "DO" else self.file_params['hydro_source_model']
-        versions = self.file_params['hydro_source_model_versions']
+        model = (
+            "XGB"
+            if hydro_variable == "DO"
+            else self.file_params["hydro_source_model"]
+        )
+        versions = self.file_params["hydro_source_model_versions"]
         if not isinstance(versions, dict) or hydro_variable not in versions:
             raise KeyError(
                 f"No version specified for hydro variable '{hydro_variable}' in "
@@ -600,16 +604,8 @@ class VegTransition:
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-        # model specific var names: -----------------------------------------------
-        if self.file_params["hydro_source_model"] == "HEC":
-            ds = ds.rename({"Band1": "height"})
-        if self.file_params["hydro_source_model"] == "D3D":
-            if "waterlevel" in ds.data_vars:
-                ds = ds.rename({"waterlevel": "height"})
-            elif "stage" in ds.data_vars:
-                ds = ds.rename({"stage": "height"})
-        if self.file_params["hydro_source_model"] == "MIK":
-            ds = ds.rename({"water_level": "height"})
+        # nc_to_zarr.py normalizes hydro stage variables to "stage" across all models
+        ds = ds.rename({"stage": "height"})
         # extract height var as da
         height_da = ds["height"]
 

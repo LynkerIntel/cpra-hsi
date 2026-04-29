@@ -149,7 +149,12 @@ def convert_file(
         ds = ds.rename(rename)
 
     # Normalize variable names
-    _VAR_RENAME = {"wtemp": "temperature", "waterlevel": "stage", "water_level": "stage"}
+    _VAR_RENAME = {
+        "wtemp": "temperature",
+        "waterlevel": "stage",   # D3D
+        "water_level": "stage",  # MIKE21
+        "Band1": "stage",        # HEC-RAS
+    }
     var_rename = {k: v for k, v in _VAR_RENAME.items() if k in ds.data_vars}
     if var_rename:
         print(f"  Renaming variables: {var_rename}")

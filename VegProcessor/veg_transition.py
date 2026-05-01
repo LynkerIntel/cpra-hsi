@@ -1462,7 +1462,7 @@ class VegTransition:
             # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
             pulse_extent = is_flooded.where((self.veg_type != 26), 0.0)
             pulse_extent = pulse_extent.where(
-                self.hydro_domain.notnull(), np.nan
+                ~np.isnan(self.hydro_domain), np.nan
             ).to_numpy()
 
         else:

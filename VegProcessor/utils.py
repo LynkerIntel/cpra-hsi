@@ -687,11 +687,8 @@ def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
     """
     Calculates WPU-based sums for quality of fisheries habitat metrics.
     """
-    # Standardize the spatial alignment
-    ds_hab.rio.write_crs("EPSG:6344", inplace=True)
-    zones.rio.write_crs("EPSG:32615", inplace=True)
     
-    zonal_ids = zones.rio.reproject_match(ds_hab).compute()
+    zonal_ids = zones.squeeze(drop=True)
     zonal_ids.name = "wpu"
     
     # Calculate pixel counts grouped by WPU

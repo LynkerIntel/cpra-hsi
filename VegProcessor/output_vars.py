@@ -1767,7 +1767,7 @@ def get_veg_variables(veg):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "binary",
-                "long_name": "flood pulse inundation",
+                "long_name": "flood pulse extent",
             },
         ],
         "low_water_refuge": [
@@ -1776,17 +1776,7 @@ def get_veg_variables(veg):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "binary",
-                "long_name": "low water refuge",
-            },
-        ],
-        "flooded": [
-            veg.flooded,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "binary",
-                "long_name": "is flooded",
-                "description": "1=Flooded at any point in WY (>5cm), 0=Dry",
+                "long_name": "low water refuge extent",
             },
         ],
         # QC variables below

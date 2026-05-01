@@ -189,7 +189,8 @@ class VegTransition:
         )
 
         self.flood_pulse = None
-        self.blr_flooding_days = 0
+        self.flood_pulse_freq = 0
+        self.pulse_freq_metric = []
         self.low_water_refuge = None
 
         # initialize partial update arrays as None
@@ -304,9 +305,15 @@ class VegTransition:
         veg_type_in = self.veg_type.copy()
         self.water_depth = self._load_depth_general(self.wy)
 
-        # habitat metrics
+        # quality of fisheries habitat metrics
         self.flood_pulse = self.calculate_flood_pulse()
         self.low_water_refuge = self.calculate_low_water_refuge()
+        self.pulse_freq_metric.append(
+            {
+                "timestep": timestep,
+                "flood_pulse_frequency": float(self.flood_pulse_freq),
+            }
+        )
 
         self._get_annual_avg_salinity()
         self.create_qc_arrays()
@@ -416,13 +423,6 @@ class VegTransition:
             )
 
         self._calculate_maturity(veg_type_in)
-
-        self.flooded = (
-            (self.water_depth["height"] > 0.05)
-            .max(dim="time")
-            .where(self.hydro_domain, np.nan)
-            .astype(np.float32)
-        )
 
         # serialize state variables: veg_type, maturity, mast %
         self._logger.info("saving state variables for timestep.")
@@ -1257,7 +1257,6 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
-                "flooded",
                 "flood_pulse",
                 "low_water_refuge",
             ]
@@ -1368,7 +1367,7 @@ class VegTransition:
         )
         df.to_csv(veg_outpath)
 
-        # -------- WPU Habitat Metric CSV Summaries --------
+        # -------- WPU Quality of Fisheries Habitat Metric CSV Summaries --------
         logging.info("Calculating WPU habitat metrics sums.")
 
         # Standardize the spatial alignment
@@ -1387,6 +1386,9 @@ class VegTransition:
 
         df_habitat = habitat_summary.copy()
         df_habitat.rename(columns={"time": "timestep"}, inplace=True)
+        if self.pulse_freq_metric:
+            df_metric = pd.DataFrame(self.pulse_freq_metric)
+            df_habitat = df_habitat.merge(df_metric, on="timestep", how="left")
 
         # Convert pixel counts to km2
         df_habitat["low_water_refuge_km2"] = (
@@ -1438,71 +1440,84 @@ class VegTransition:
 
         logging.info("Post-processing complete.")
 
+    # --- Quality of Fisheries Habitat Metrics ---
+
     def calculate_flood_pulse(
         self, stage_thresh: float = 3.6, depth_thresh: float = 0.05
     ) -> np.ndarray:
         """
         Flood Pulse Metric: Dec-May window.
-        Triggered by BLR Gage Stage (WSE) > 3.6m for 121-157 days.
+        Extent is generated only if BLR Gage Stage (WSE) > 3.6m for 121-157 days.
         """
         self._logger.info("Calculating Flood Pulse Inundation.")
 
-        arr = np.where(self.hydro_domain, 0.0, np.nan).astype(np.float32)
-
-        # Define the gage coordinates (Butte LaRose Gage)
-        blr_x, blr_y = 626304.02, 3350717.43
+        # Define the Butte LaRose (BLR) gage coordinates and analysis months
+        blr_gage_x, blr_gage_y = 626304.02, 3350717.43
+        pulse_months = [12, 1, 2, 3, 4, 5]
 
         # Extract depth series at gage for Dec-May
         blr_depth = (
             self.water_depth["height"]
-            .sel(x=blr_x, y=blr_y, method="nearest")
-            .sel(time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5]))
+            .sel(x=blr_gage_x, y=blr_gage_y, method="nearest")
+            .sel(time=self.water_depth.time.dt.month.isin(pulse_months))
         )
 
+        # Calculate Flood Pulse Frequency
         # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
-        self.blr_flooding_days = (
-            ((blr_depth + self.dem_at_blr) > stage_thresh).sum().values
-        )
+        self.flood_pulse_freq = (
+            (blr_depth + self.dem_at_blr) > stage_thresh
+        ).sum()
 
-        # Map spatial extent only if the gage trigger is satisfied
-        if 121 <= self.blr_flooding_days <= 157:
+        # Map flood pulse extent only if the gage trigger is satisfied
+        if 121 <= self.flood_pulse_freq <= 157:
             self._logger.info(
-                f"Flood Pulse Criteria Met: {self.blr_flooding_days} days."
+                f"Flood Pulse Criteria Met: {self.flood_pulse_freq} days."
             )
 
-            # Select Dec-May window
-            dm_depth = self.water_depth.sel(
-                time=self.water_depth.time.dt.month.isin([12, 1, 2, 3, 4, 5])
-            )["height"]
+            # Filter data by Dec-May months
+            filtered = self.water_depth.sel(
+                time=self.water_depth.time.dt.month.isin(pulse_months)
+            )
 
-            is_flooded = (dm_depth > depth_thresh).any(dim="time")
+            # Flooded > 5cm on any day from Dec - May
+            is_flooded = (filtered["height"] > depth_thresh).any(dim="time")
 
             # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
-            flood_pulse_calc = (is_flooded & (self.veg_type != 26)).astype(
-                np.float32
+            pulse_extent = xr.where(
+                is_flooded & (self.veg_type != 26), 1.0, 0.0
             )
-            arr = np.where(self.hydro_domain, flood_pulse_calc, np.nan)
+            pulse_extent = pulse_extent.where(self.hydro_domain, np.nan)
 
         else:
             self._logger.info(
-                f"Flood Pulse Criteria not Met: {self.blr_flooding_days} days."
+                f"Flood Pulse Criteria not Met: {self.flood_pulse_freq} days."
             )
+            pulse_extent = xr.where(self.hydro_domain, 0.0, np.nan)
 
-        return arr
+        return pulse_extent.to_numpy().astype(np.float32)
 
     def calculate_low_water_refuge(self, depth_thresh=1.0, persistence=0.9):
+        """
+        Determines which 60m grid cells are flooded with at least 1m
+        of water between October 1 and January 31. Areas which meet this criteria
+        for 90% of the days are designated as areas of potential low water refuge.
+        """
+        self._logger.info("Calculating Low Water Refuge (Oct - Jan).")
+
+        winter_depth = self.water_depth.sel(
+            time=self.water_depth.time.dt.month.isin([10, 11, 12, 1])
+        )
+
         # Calculate persistence
-        persistence_map = (self.water_depth.height >= depth_thresh).mean(
+        persistence_map = (winter_depth.height >= depth_thresh).mean(
             dim="time"
         )
 
         # Create Binary Mask (1.0 for True, 0.0 for False)
-        lwr_binary = xr.where(persistence_map >= persistence, 1.0, 0.0).astype(
-            np.float32
-        )
+        lwr_extent = xr.where(persistence_map >= persistence, 1.0, 0.0)
+        lwr_extent = lwr_extent.where(self.hydro_domain, np.nan)
 
-        # Apply domain mask
-        return lwr_binary.where(self.hydro_domain)
+        return lwr_extent.to_numpy().astype(np.float32)
 
     def create_qc_arrays(self):
         """

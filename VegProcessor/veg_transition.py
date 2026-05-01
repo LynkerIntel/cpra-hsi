@@ -1492,7 +1492,9 @@ class VegTransition:
             self._logger.info(
                 f"Flood Pulse Criteria not Met: {self.flood_pulse_freq} days."
             )
-            pulse_extent = xr.where(self.hydro_domain, 0.0, np.nan)
+            pulse_extent = (self.hydro_domain * 0.0).where(
+                self.hydro_domain, np.nan
+            )
 
         return pulse_extent.to_numpy().astype(np.float32)
 

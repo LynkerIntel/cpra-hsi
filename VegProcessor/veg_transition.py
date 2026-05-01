@@ -1370,35 +1370,10 @@ class VegTransition:
         # -------- WPU Quality of Fisheries Habitat Metric CSV Summaries --------
         logging.info("Calculating WPU habitat metrics sums.")
 
-        # Standardize the spatial alignment
-        ds.rio.write_crs("EPSG:6344", inplace=True)
-        wpu.rio.write_crs("EPSG:32615", inplace=True)
-
-        zonal_ids = wpu.rio.reproject_match(ds).compute()
-        zonal_ids.name = "wpu"
-        habitat_summary = (
-            ds[["low_water_refuge", "flood_pulse"]]
-            .groupby(zonal_ids)
-            .sum()
-            .to_dataframe()
-            .reset_index()
-        )
-
-        df_habitat = habitat_summary.copy()
-        df_habitat.rename(columns={"time": "timestep"}, inplace=True)
-        if self.pulse_freq_metric:
-            df_metric = pd.DataFrame(self.pulse_freq_metric)
-            df_habitat = df_habitat.merge(df_metric, on="timestep", how="left")
-
-        # Convert pixel counts to km2
-        df_habitat["low_water_refuge_km2"] = (
-            df_habitat["low_water_refuge"] * 0.0036
-        )
-        df_habitat["flood_pulse_km2"] = df_habitat["flood_pulse"] * 0.0036
-
-        cols_to_drop = ["spatial_ref"]
-        df_habitat = df_habitat.drop(
-            columns=[c for c in cols_to_drop if c in df_habitat.columns]
+        df_habitat = utils.wpu_habitat_sums(
+            ds_hab=ds[["low_water_refuge", "flood_pulse"]],
+            zones=wpu,
+            pulse_freq_metric=self.pulse_freq_metric,
         )
 
         hab_outpath = os.path.join(
@@ -1406,6 +1381,8 @@ class VegTransition:
             f"{self.file_name}_wpu_habitat_timeseries.csv",
         )
         df_habitat.to_csv(hab_outpath, index=False)
+
+        # -------- Full Domain Vegetation Type CSV Summaries --------
 
         logging.info("Calculating full-domain veg type sums.")
         df_full_domain = utils.pixel_sums_full_domain(
@@ -1483,20 +1460,18 @@ class VegTransition:
             is_flooded = (filtered["height"] > depth_thresh).any(dim="time")
 
             # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
-            pulse_extent = xr.where(
-                is_flooded & (self.veg_type != 26), 1.0, 0.0
-            )
-            pulse_extent = pulse_extent.where(self.hydro_domain, np.nan)
+            pulse_extent = is_flooded.where((self.veg_type != 26), 0.0)
+            pulse_extent = pulse_extent.where(
+                self.hydro_domain.notnull(), np.nan
+            ).to_numpy()
 
         else:
             self._logger.info(
                 f"Flood Pulse Criteria not Met: {self.flood_pulse_freq} days."
             )
-            pulse_extent = (self.hydro_domain * 0.0).where(
-                self.hydro_domain, np.nan
-            )
+            pulse_extent = np.where(np.isnan(self.hydro_domain), np.nan, 0.0)
 
-        return pulse_extent.to_numpy().astype(np.float32)
+        return pulse_extent.astype(np.float32)
 
     def calculate_low_water_refuge(self, depth_thresh=1.0, persistence=0.9):
         """

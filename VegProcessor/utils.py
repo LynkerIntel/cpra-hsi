@@ -683,6 +683,40 @@ def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
+def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
+    """
+    Calculates WPU-based sums for quality of fisheries habitat metrics.
+    """
+    # Standardize the spatial alignment
+    ds_hab.rio.write_crs("EPSG:6344", inplace=True)
+    zones.rio.write_crs("EPSG:32615", inplace=True)
+    
+    zonal_ids = zones.rio.reproject_match(ds_hab).compute()
+    zonal_ids.name = "wpu"
+    
+    # Calculate pixel counts grouped by WPU
+    df = (
+        ds_hab.groupby(zonal_ids)
+        .sum()
+        .to_dataframe()
+        .reset_index()
+    )
+    
+    df.rename(columns={"time": "timestep"}, inplace=True)
+    
+    # Merge frequency metric
+    if pulse_freq_metric:
+        df_metric = pd.DataFrame(pulse_freq_metric)
+        df = df.merge(df_metric, on="timestep", how="left")
+        
+    # Convert pixel counts (60m) to Area (km2)
+    df["low_water_refuge_km2"] = df["low_water_refuge"] * 0.0036
+    df["flood_pulse_km2"] = df["flood_pulse"] * 0.0036
+    
+    cols_to_drop = ["spatial_ref"]
+    df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
+    
+    return df.sort_values(["timestep", "wpu"])
 
 def generate_filename(
     params: dict,

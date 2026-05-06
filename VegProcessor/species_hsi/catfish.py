@@ -105,7 +105,7 @@ class RiverineCatfishHSI:
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
-            # depth vars for pools and backwaters
+            # 60m depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
             water_depth_july_sept_mean_60m=hsi_instance.water_depth_july_sept_mean_60m,
             water_depth_may_july_mean_60m=hsi_instance.water_depth_may_july_mean_60m,

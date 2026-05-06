@@ -1432,18 +1432,31 @@ class VegTransition:
         blr_gage_x, blr_gage_y = 626304.02, 3350717.43
         pulse_months = [12, 1, 2, 3, 4, 5]
 
-        # Extract depth series at gage for Dec-May
-        blr_depth = (
-            self.water_depth["height"]
-            .sel(x=blr_gage_x, y=blr_gage_y, method="nearest")
-            .sel(time=self.water_depth.time.dt.month.isin(pulse_months))
+        # Depth from Dec-May
+        dec_may_pulse = self.water_depth["height"].sel(
+            time=self.water_depth.time.dt.month.isin(pulse_months)
+        )
+
+        # Extract gage depth at gage for Dec-May
+        blr_depth = dec_may_pulse.sel(
+            x=blr_gage_x,
+            y=blr_gage_y,
+            method="nearest",
         )
 
         # Calculate Flood Pulse Frequency
         # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
         self.flood_pulse_freq = (
-            (blr_depth + self.dem_at_blr) > stage_thresh
-        ).sum()
+            ((blr_depth + self.dem_at_blr) > stage_thresh)
+            .sum()
+            .compute()
+            .item()
+        )
+
+        pulse_extent = np.full(
+            self.hydro_domain.shape, np.nan, dtype=np.float32
+        )
+        pulse_extent[self.hydro_domain] = 0.0
 
         # Map flood pulse extent only if the gage trigger is satisfied
         if 121 <= self.flood_pulse_freq <= 157:
@@ -1451,27 +1464,24 @@ class VegTransition:
                 f"Flood Pulse Criteria Met: {self.flood_pulse_freq} days."
             )
 
-            # Filter data by Dec-May months
-            filtered = self.water_depth.sel(
-                time=self.water_depth.time.dt.month.isin(pulse_months)
+            # Flooded > 5cm on any day from Dec - May
+            is_flooded = (
+                (dec_may_pulse > depth_thresh).any(dim="time").compute().values
             )
 
-            # Flooded > 5cm on any day from Dec - May
-            is_flooded = (filtered["height"] > depth_thresh).any(dim="time")
+            # Only include veg clasess we model (16-24)
+            habitat_mask = (self.veg_type >= 16) & (self.veg_type <= 24)
+            valid_mask = self.hydro_domain & habitat_mask
 
-            # Binary map: Pixel was flooded > 5cm on ANY day in window AND is not Open Water (26)
-            pulse_extent = is_flooded.where((self.veg_type != 26), 0.0)
-            pulse_extent = pulse_extent.where(
-                ~np.isnan(self.hydro_domain), np.nan
-            ).to_numpy()
+            # Flooded and not Open Water
+            pulse_extent[valid_mask & is_flooded] = 1.0
 
         else:
             self._logger.info(
                 f"Flood Pulse Criteria not Met: {self.flood_pulse_freq} days."
             )
-            pulse_extent = np.where(np.isnan(self.hydro_domain), np.nan, 0.0)
 
-        return pulse_extent.astype(np.float32)
+        return pulse_extent
 
     def calculate_low_water_refuge(self, depth_thresh=1.0, persistence=0.9):
         """

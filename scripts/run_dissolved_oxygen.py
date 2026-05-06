@@ -9,7 +9,7 @@ Inputs (zarr):
     - DEM GeoTIFF (60m)
 
 Output:
-    - NetCDF with daily dissolved oxygen at 60m resolution
+    - NetCDF with 7-day moving average of dissolved oxygen at 60m resolution
 
 Usage:
     python predict_dissolved_oxygen.py
@@ -39,8 +39,8 @@ DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY22_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY22_000_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_7day_ma_WY22_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_7day_ma_WY22_000_cogs"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
@@ -262,18 +262,23 @@ def predict_do():
                 f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining"
             )
 
-    # Build xarray DataArray from numpy result
-    do_da = xr.DataArray(
+    # Build xarray DataArray from numpy result, then take a trailing
+    # 7-day moving average. The first 6 timesteps will be NaN.
+    do_daily = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
         coords={"time": times, "y": temp.y.values, "x": temp.x.values},
-        attrs={
-            "units": "mg/L",
-            "long_name": "dissolved oxygen",
-            "description": "Daily dissolved oxygen predicted by XGBoost model",
-            "grid_mapping": "spatial_ref",
-        },
     )
+    do_da = do_daily.rolling(time=7, center=False).mean().astype(np.float32)
+    do_da.attrs = {
+        "units": "mg/L",
+        "long_name": "dissolved oxygen (7-day moving average)",
+        "description": (
+            "Trailing 7-day moving average of daily dissolved oxygen "
+            "predicted by XGBoost model"
+        ),
+        "grid_mapping": "spatial_ref",
+    }
     do_ds = xr.Dataset({"dissolved_oxygen": do_da})
 
     # Attach CF-compliant coordinate metadata so ArcGIS recognizes the CRS
@@ -335,7 +340,7 @@ def predict_do():
     )
 
     # Free DO intermediates before the input-COG loop to reduce memory pressure
-    del do_arr, do_da, do_ds, temp_vals, depth_vals
+    del do_arr, do_daily, do_da, do_ds, temp_vals, depth_vals
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)

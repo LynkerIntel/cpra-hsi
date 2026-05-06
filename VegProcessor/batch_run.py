@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import sys
 import yaml
 import xarray as xr
 import numpy as np
@@ -8,6 +9,40 @@ import numpy as np
 from veg_transition import VegTransition
 from hsi import HSI
 import utils
+
+
+# Variables written before the run loop (initial conditions / static) —
+# their presence alone does NOT indicate the step loop ran. A run that
+# aborts during the first step() still writes these.
+VEG_STATIC_VARS = frozenset({"veg_type", "maturity", "spatial_ref", "crs"})
+HSI_STATIC_VARS = frozenset({"spatial_ref", "crs"})
+
+
+def _check_dynamic_output(ds: xr.Dataset, static_vars: frozenset) -> str | None:
+    """Return an error message if the dataset has no populated dynamic vars, else None.
+
+    A dataset is considered hollow if, after excluding known static/IC-only
+    variables, no data variables remain, OR every remaining variable is
+    entirely NaN. Either condition indicates the run loop never produced
+    real output.
+    """
+    dynamic_vars = [
+        v for v in ds.data_vars
+        if v not in static_vars and "time" in ds[v].dims
+    ]
+    if not dynamic_vars:
+        return (
+            f"No dynamic output variables written "
+            f"(found only {sorted(ds.data_vars)}); run likely aborted "
+            f"before first step completed"
+        )
+    for v in dynamic_vars:
+        if not np.all(np.isnan(ds[v].values)):
+            return None
+    return (
+        f"All {len(dynamic_vars)} dynamic variables are entirely NaN; "
+        f"run produced no populated output"
+    )
 
 
 def discover_configs(config_dir: str) -> tuple[list[str], list[str]]:
@@ -100,13 +135,16 @@ def validate_veg_output(config_path: str) -> dict:
                     "log_entries": log_entries,
                 }
 
-            # Check last timestep has data (not all NaN)
-            last_veg = ds["veg_type"].isel(time=-1).values
-            if np.all(np.isnan(last_veg)):
+            # Check that dynamic (time-stepped) outputs were actually written.
+            # A run that aborts before the first step still writes veg_type /
+            # maturity from initial conditions, so those alone aren't evidence
+            # the run loop completed.
+            err = _check_dynamic_output(ds, VEG_STATIC_VARS)
+            if err is not None:
                 log_entries = get_last_log_entries(output_dir, str(filename))
                 return {
                     "success": False,
-                    "message": "Last timestep is all NaN",
+                    "message": err,
                     "log_entries": log_entries,
                 }
 
@@ -190,19 +228,14 @@ def validate_hsi_output(config_path: str) -> dict:
                     "log_entries": log_entries,
                 }
 
-            # Check that at least one data variable has data in last timestep
-            data_vars = [v for v in ds.data_vars if v != "spatial_ref"]
-            if data_vars:
-                last_data = ds[data_vars[0]].isel(time=-1).values
-                if np.all(np.isnan(last_data)):
-                    log_entries = get_last_log_entries(
-                        output_dir, str(filename)
-                    )
-                    return {
-                        "success": False,
-                        "message": "Last timestep is all NaN",
-                        "log_entries": log_entries,
-                    }
+            err = _check_dynamic_output(ds, HSI_STATIC_VARS)
+            if err is not None:
+                log_entries = get_last_log_entries(output_dir, str(filename))
+                return {
+                    "success": False,
+                    "message": err,
+                    "log_entries": log_entries,
+                }
 
         return {"success": True, "message": "OK", "log_entries": []}
 
@@ -210,8 +243,11 @@ def validate_hsi_output(config_path: str) -> dict:
         return {"success": False, "message": str(e), "log_entries": []}
 
 
-def print_results_summary(veg_results: dict, hsi_results: dict):
-    """Print a summary of successful and failed runs."""
+def print_results_summary(veg_results: dict, hsi_results: dict) -> int:
+    """Print a summary of successful and failed runs.
+
+    Returns the total number of failed configs across both model types.
+    """
     print("\n" + "=" * 60)
     print("BATCH RUN RESULTS SUMMARY")
     print("=" * 60)
@@ -256,7 +292,15 @@ def print_results_summary(veg_results: dict, hsi_results: dict):
                     for entry in log_entries:
                         print(f"      {entry}")
 
+    total_failed = sum(
+        1 for r in list(veg_results.values()) + list(hsi_results.values())
+        if not r["success"]
+    )
     print("\n" + "=" * 60)
+    if total_failed:
+        print(f"!! {total_failed} CONFIG(S) FAILED — see above !!")
+        print("=" * 60)
+    return total_failed
 
 
 def main():
@@ -304,8 +348,8 @@ def main():
         for config in hsi_config_files:
             hsi_results[config] = validate_hsi_output(config)
 
-        print_results_summary(veg_results, hsi_results)
-        return
+        total_failed = print_results_summary(veg_results, hsi_results)
+        sys.exit(1 if total_failed else 0)
 
     if run_veg:
         veg_run_failures = {}
@@ -371,7 +415,8 @@ def main():
 
     # Print summary
     if veg_results or hsi_results:
-        print_results_summary(veg_results, hsi_results)
+        total_failed = print_results_summary(veg_results, hsi_results)
+        sys.exit(1 if total_failed else 0)
 
 
 if __name__ == "__main__":

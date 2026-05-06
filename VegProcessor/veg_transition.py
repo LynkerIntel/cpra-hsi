@@ -604,8 +604,24 @@ class VegTransition:
 
         ds = utils.analog_years_handler(analog_year, water_year, ds)
 
-        # nc_to_zarr.py normalizes hydro stage variables to "stage" across all models
-        ds = ds.rename({"stage": "height"})
+        # model specific var names: -----------------------------------------------
+        # nc_to_zarr.py normalizes hydro stage variables to "stage", but older
+        # zarrs still use the original per-model names — handle both.
+        if self.file_params["hydro_source_model"] == "HEC":
+            if "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
+            else:
+                ds = ds.rename({"Band1": "height"})
+        if self.file_params["hydro_source_model"] == "D3D":
+            if "waterlevel" in ds.data_vars:
+                ds = ds.rename({"waterlevel": "height"})
+            elif "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
+        if self.file_params["hydro_source_model"] == "MIK":
+            if "water_level" in ds.data_vars:
+                ds = ds.rename({"water_level": "height"})
+            elif "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
         # extract height var as da
         height_da = ds["height"]
 

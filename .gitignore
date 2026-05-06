@@ -1,7 +1,7 @@
 *.nc
 **/debug_*
 **/data/tmp/scratch/
-test.ipynb
+*.ipynb
 hsi_testing.ipynb
 
 VegProcessor/configs/*.yaml

@@ -457,8 +457,8 @@ class BlackCrappieHSI:
         else:
             # condition 1
             mask_1 = self.v5_pct_pools_bw_avg_spring_summer_flow <= 50
-            si_5[mask_1] = 0.02 * (
-                self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1]
+            si_5[mask_1] = (
+                0.02 * (self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1])
             )
 
             # condition 2

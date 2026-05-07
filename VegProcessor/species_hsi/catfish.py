@@ -1000,9 +1000,9 @@ class RiverineCatfishHSI:
         )
 
         # Combine individual suitability indices
-        initial_hsi = (
-            self.fc * self.cc * (self.wq**2) * (self.rc**2)
-        ) ** (1 / 6)
+        initial_hsi = (self.fc * self.cc * (self.wq**2) * (self.rc**2)) ** (
+            1 / 6
+        )
 
         # If wq or rc <= 0.4, select min(wq, rc, initial_hsi)
         mask_hsi = (self.wq <= 0.4) | (self.rc <= 0.4)

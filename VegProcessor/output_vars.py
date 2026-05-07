@@ -506,7 +506,9 @@ def get_hsi_480m_variables(hsi):
                 "grid_mapping": "spatial_ref",
                 "units": "",
                 "long_name": "",
-                "description": "riverine catfish water quality initial",
+                "description": (
+                    "riverine catfish water quality initial component"
+                ),
             },
         ],
         "catfish_wq": [
@@ -517,6 +519,18 @@ def get_hsi_480m_variables(hsi):
                 "units": "",
                 "long_name": "",
                 "description": "riverine catfish water quality component",
+            },
+        ],
+        "catfish_rc_init": [
+            _safe_get_attr(hsi.catfish, "rc_init"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": (
+                    "riverine catfish reproduction initial component"
+                ),
             },
         ],
         "catfish_rc": [

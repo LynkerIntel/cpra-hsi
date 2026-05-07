@@ -457,8 +457,8 @@ class BlackCrappieHSI:
         else:
             # condition 1
             mask_1 = self.v5_pct_pools_bw_avg_spring_summer_flow <= 50
-            si_5[mask_1] = (
-                0.02 * (self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1])
+            si_5[mask_1] = 0.02 * (
+                self.v5_pct_pools_bw_avg_spring_summer_flow[mask_1]
             )
 
             # condition 2
@@ -959,13 +959,23 @@ class BlackCrappieHSI:
         )
 
         # water quality initial equation
-        self.wq_init = (
-            2 * (self.wq_tcr_adj)
-            + 2 * (self.si_12)
-            + self.si_7
-            + self.si_1
-            + self.si_14
-        ) / 7
+        if self.si_14 is not None:
+            # equation when optional salinity (SI_14) is available
+            self.wq_init = (
+                2 * (self.wq_tcr_adj)
+                + 2 * (self.si_12)
+                + self.si_7
+                + self.si_1
+                + self.si_14
+            ) / 7
+        else:
+            # standard equation without salinity
+            self.wq_init = (
+                2 * (self.wq_tcr_adj)
+                + 2 * (self.si_12)
+                + self.si_7
+                + self.si_1
+            ) / 6
 
         # condition 2
         wq_mask = ((self.wq_tcr_adj) <= 0.4) | (self.si_12 <= 0.4)

@@ -1030,7 +1030,9 @@ class VegTransition:
                 salinity["salinity"].mean(dim="time").compute().to_numpy()
             )
             salinity.close()
-            del salinity  # del the dataset because this is the only salinity var
+            del (
+                salinity
+            )  # del the dataset because this is the only salinity var
 
         else:
             # if salinity is a numpy array, it is the veg-based

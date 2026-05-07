@@ -125,7 +125,10 @@ def extract_date(path: pathlib.Path) -> datetime:
         date_str = path.stem.split("_")[-3:]  # Extract the last three
         date_str = "_".join(date_str)  # Combine back into "YYYY_MM_DD"
         return datetime.strptime(date_str, "%Y_%m_%d")
-    except (ValueError, IndexError):
+    except (
+        ValueError,
+        IndexError,
+    ):
         return None
 
 
@@ -683,37 +686,34 @@ def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
+
 def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
     """
     Calculates WPU-based sums for quality of fisheries habitat metrics.
     """
-    
+
     zonal_ids = zones.squeeze(drop=True)
     zonal_ids.name = "wpu"
-    
+
     # Calculate pixel counts grouped by WPU
-    df = (
-        ds_hab.groupby(zonal_ids)
-        .sum()
-        .to_dataframe()
-        .reset_index()
-    )
-    
+    df = ds_hab.groupby(zonal_ids).sum().to_dataframe().reset_index()
+
     df.rename(columns={"time": "timestep"}, inplace=True)
-    
+
     # Merge frequency metric
     if pulse_freq_metric:
         df_metric = pd.DataFrame(pulse_freq_metric)
         df = df.merge(df_metric, on="timestep", how="left")
-        
+
     # Convert pixel counts (60m) to Area (km2)
     df["low_water_refuge_km2"] = df["low_water_refuge"] * 0.0036
     df["flood_pulse_km2"] = df["flood_pulse"] * 0.0036
-    
+
     cols_to_drop = ["spatial_ref"]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
-    
+
     return df.sort_values(["timestep", "wpu"])
+
 
 def generate_filename(
     params: dict,
@@ -1137,13 +1137,13 @@ def analog_years_handler(
     # (e.g., velocity which is already a temporal average)
     if ds.sizes["time"] == 1:
         # Single timestep, just update the timestamp to match water year
-        target_date = pd.Timestamp(f"{water_year-1}-10-01")
+        target_date = pd.Timestamp(f"{water_year - 1}-10-01")
         ds = ds.assign_coords(time=("time", [target_date]))
         return ds
 
     # build a 365-day date range by dropping Feb 29
     target_range = pd.date_range(
-        f"{water_year-1}-10-01", f"{water_year}-09-30"
+        f"{water_year - 1}-10-01", f"{water_year}-09-30"
     )
     target_range = target_range[
         ~((target_range.month == 2) & (target_range.day == 29))
@@ -1278,7 +1278,7 @@ def create_binary_max_domain(
         start_idx = i * time_chunks
         end_idx = min((i + 1) * time_chunks, total_timesteps)
 
-        print(f"Processing timesteps {start_idx} to {end_idx-1}...")
+        print(f"Processing timesteps {start_idx} to {end_idx - 1}...")
 
         # Load only this chunk into memory
         if "time" in data.dims:
@@ -1529,9 +1529,9 @@ def process_netcdf_folder(
     print(f"Found {len(nc_files)} NetCDF files to process")
 
     for nc_file in nc_files:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Processing: {nc_file.name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         try:
             ds = xr.open_dataset(nc_file)
@@ -1587,6 +1587,6 @@ def process_netcdf_folder(
             print(f"Error processing {nc_file.name}: {str(e)}")
             continue
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Batch processing complete!")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")

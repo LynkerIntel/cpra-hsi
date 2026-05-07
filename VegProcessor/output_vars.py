@@ -499,6 +499,16 @@ def get_hsi_480m_variables(hsi):
                 "description": "riverine catfish cover component",
             },
         ],
+        "catfish_wq_init": [
+            _safe_get_attr(hsi.catfish, "wq_init"),
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "",
+                "description": "riverine catfish water quality initial",
+            },
+        ],
         "catfish_wq": [
             _safe_get_attr(hsi.catfish, "wq"),
             np.float32,
@@ -1062,8 +1072,12 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "meters",
-                "long_name": "Mean annual water depth relative to marsh surface",
-                "description": "Mean annual WSE minus mean elevation of vegetated pixels per cell",
+                "long_name": (
+                    "Mean annual water depth relative to marsh surface"
+                ),
+                "description": (
+                    "Mean annual WSE minus mean elevation of vegetated pixels per cell"
+                ),
             },
         ],
         "water_depth_jan_aug_mean": [
@@ -1152,7 +1166,9 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "mg/L",
-                "long_name": "suspended sediment max monthly mean July-September",
+                "long_name": (
+                    "suspended sediment max monthly mean July-September"
+                ),
                 "description": (
                     "Maximum of monthly-mean suspended sediment concentration "
                     "for July-September period at 480m resolution"

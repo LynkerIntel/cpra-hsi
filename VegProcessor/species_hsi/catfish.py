@@ -62,7 +62,9 @@ class RiverineCatfishHSI:
     fc: np.ndarray = field(init=False)
     cc: np.ndarray = field(init=False)
     wq: np.ndarray = field(init=False)
+    wq_init: np.ndarray = field(init=False)
     rc: np.ndarray = field(init=False)
+    rc_init: np.ndarray = field(init=False)
 
     # Overall Habitat Suitability Index (HSI)
     initial_hsi: np.ndarray = field(init=False)
@@ -946,7 +948,8 @@ class RiverineCatfishHSI:
             # The data is available, use the standard WQ equation
             wq_term1 = (2 * (self.si_5 + self.si_12 + self.si_14)) / 3
 
-        self.wq = (
+        # water quality initial equation
+        self.wq_init = (
             wq_term1 + self.si_7 + 2 * (self.si_8) + self.si_9 + self.si_13
         ) / 7
 
@@ -969,28 +972,31 @@ class RiverineCatfishHSI:
                     self.si_8,
                     self.si_9,
                     self.si_13,
-                    self.wq,
+                    self.wq_init,
                 ]
             ),
-            self.wq,
+            self.wq_init,
         )
 
-        # reproduction component (rc)
-        self.rc = (
+        # reproduction component (rc) initial
+        self.rc_init = (
             (self.si_1)
             * (self.si_2 ** (2))
             * (self.si_8 ** (2))
             * (self.si_10 ** (2))
             * (self.si_11)
         ) ** (1 / 8)
+
         # reproduction component conditions
         rc_mask = (
             (self.si_8 <= 0.4) | (self.si_10 <= 0.4) | (self.si_11 <= 0.4)
         )
         self.rc = np.where(
             rc_mask,
-            np.minimum.reduce([self.si_6, self.si_10, self.si_11, self.rc]),
-            self.rc,
+            np.minimum.reduce(
+                [self.si_6, self.si_10, self.si_11, self.rc_init]
+            ),
+            self.rc_init,
         )
 
         # Combine individual suitability indices

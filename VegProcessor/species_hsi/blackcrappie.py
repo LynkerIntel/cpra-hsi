@@ -959,7 +959,7 @@ class BlackCrappieHSI:
         )
 
         # water quality initial equation
-        if self.si_14 is not None:
+        if self.v14_max_salinity_gs is not None:
             # equation when optional salinity (SI_14) is available
             self.wq_init = (
                 2 * (self.wq_tcr_adj)

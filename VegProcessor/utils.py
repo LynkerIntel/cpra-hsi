@@ -254,7 +254,7 @@ def get_raster_value_at_point(
     y : float
         Northing or Latitude coordinate.
     target_crs : str
-        The expected CRS of the input coordinates (default NAD83(2011 / UTM zone 15N).
+        The expected CRS of the input coordinates (default NAD83(2011) / UTM zone 15N).
 
     Returns
     -------
@@ -689,7 +689,31 @@ def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
 
 def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
     """
-    Calculates WPU-based sums for quality of fisheries habitat metrics.
+    Calculates WPU-based sums and area in km2 for quality
+    of fisheries habitat metrics.
+
+    Parameters
+    ------
+    ds_hab : xr.Dataset
+        The habitat dataset containing 'low_water_refuge' and 'flood_pulse'
+        variables. These are 3D arrays with dimensions (time, y, x).
+    zones : xr.DataArray
+        A 2D array with dimensions (y, x) representing zone identifiers
+        (e.g., Watershed Planning Units (WPU zones)). Must match the
+        spatial dimensions of ds_hab.
+    pulse_freq_metric : list of dict, optional
+        List containing dictionaries for each timestep with keys:
+        - 'timestep' : datetime
+        - 'flood_pulse_frequency' : int
+        Used to merge gage pulse frequency data into the spatial area results.
+
+    Returns
+    ------
+    pd.DataFrame
+        A DataFrame of annual timestep-WPU timeseries containing WPU IDs, timestamps,
+        pixel counts ('low_water_refuge', 'flood_pulse'),
+        calculated area in km2 ('low_water_refuge_km2', 'flood_pulse_km2'),
+        and annual gage pulse frequency ('flood_pulse_frequency').
     """
 
     zonal_ids = zones.squeeze(drop=True)

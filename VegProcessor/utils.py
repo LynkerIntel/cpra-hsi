@@ -237,7 +237,7 @@ def load_mf_tifs(
 
 
 def get_raster_value_at_point(
-    raster_path: str, x: float, y: float, target_crs: str = "EPSG:26915"
+    raster_path: str, x: float, y: float, target_crs: str = "EPSG:6344"
 ) -> float:
     """
     Extracts a single numeric value from a raster at a specific coordinate.
@@ -254,7 +254,7 @@ def get_raster_value_at_point(
     y : float
         Northing or Latitude coordinate.
     target_crs : str
-        The expected CRS of the input coordinates (default UTM Zone 15N).
+        The expected CRS of the input coordinates (default NAD83(2011 / UTM zone 15N).
 
     Returns
     -------

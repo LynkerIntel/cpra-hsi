@@ -125,7 +125,10 @@ def extract_date(path: pathlib.Path) -> datetime:
         date_str = path.stem.split("_")[-3:]  # Extract the last three
         date_str = "_".join(date_str)  # Combine back into "YYYY_MM_DD"
         return datetime.strptime(date_str, "%Y_%m_%d")
-    except (ValueError, IndexError):
+    except (
+        ValueError,
+        IndexError,
+    ):
         return None
 
 
@@ -231,6 +234,52 @@ def load_mf_tifs(
     )
 
     return xr_dataset
+
+
+def get_raster_value_at_point(
+    raster_path: str, x: float, y: float, target_crs: str = "EPSG:6344"
+) -> float:
+    """
+    Extracts a single numeric value from a raster at a specific coordinate.
+
+    This is specifically used for gage lookups (e.g., Butte LaRose) to establish
+    a ground elevation baseline for flood pulse metrics.
+
+    Parameters
+    ----------
+    raster_path : str
+        Path to the .tif file.
+    x : float
+        Easting or Longitude coordinate.
+    y : float
+        Northing or Latitude coordinate.
+    target_crs : str
+        The expected CRS of the input coordinates (default NAD83(2011) / UTM zone 15N).
+
+    Returns
+    -------
+    float
+        The cell value at the nearest neighbor to the provided coordinates.
+    """
+    with xr.open_dataset(raster_path) as ds:
+        # Get the first data variable (handles 'band_data', 'Band1', etc.)
+        da = ds[list(ds.data_vars.keys())[0]]
+
+        # CRS Check
+        if da.rio.crs and str(da.rio.crs).upper() != target_crs.upper():
+            logger.info(
+                f"CRS mismatch: Raster is {da.rio.crs} "
+                f"but point coords are {target_crs}."
+            )
+
+        try:
+            # Nearest neighbor selection
+            return float(da.sel(x=x, y=y, method="nearest").item())
+        except Exception as e:
+            logger.info(
+                f"Point lookup failed at ({x}, {y}) in {raster_path}: {e}"
+            )
+            return float("nan")
 
 
 def coarsen_and_reduce(
@@ -599,33 +648,95 @@ def wpu_sums(ds_veg: xr.Dataset, zones: xr.DataArray) -> pd.DataFrame:
 
     return df_out
 
+
 def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
     """Computes annual mean scores for HSI/SI variables grouped by WPU."""
 
     hsi_vars = [
-        var for var in ds_hsi.data_vars if '_hsi' in var.lower() or '_si_' in var.lower()]
-    
+        var
+        for var in ds_hsi.data_vars
+        if "_hsi" in var.lower() or "_si_" in var.lower()
+    ]
+
     if not hsi_vars:
         return pd.DataFrame()
 
     # Downsamples the 60m WPU grid to the 480m HSI grid
     zonal_ids = wpu_grid.rio.reproject_match(ds_hsi).compute()
-    zonal_ids.name = "wpu" 
-    
+    zonal_ids.name = "wpu"
+
     zonal_ids = xr.where(zonal_ids > 0, zonal_ids, np.nan)
 
     ds_zonal_means = ds_hsi[hsi_vars].groupby(zonal_ids).mean()
     df_timeseries = ds_zonal_means.to_dataframe().reset_index()
-    
-    if 'time' in df_timeseries.columns:
-        df_timeseries.rename(columns={'time': 'timestep'}, inplace=True)
-    
-    df_timeseries = df_timeseries.dropna(subset=['wpu'])
-    df_timeseries['wpu'] = df_timeseries['wpu'].astype(int)
-    
-    cols = ['timestep', 'wpu'] + [c for c in df_timeseries.columns if c not in ['timestep', 'wpu']]
-    
-    return df_timeseries[cols].sort_values(['timestep', 'wpu']).reset_index(drop=True)
+
+    if "time" in df_timeseries.columns:
+        df_timeseries.rename(columns={"time": "timestep"}, inplace=True)
+
+    df_timeseries = df_timeseries.dropna(subset=["wpu"])
+    df_timeseries["wpu"] = df_timeseries["wpu"].astype(int)
+
+    cols = ["timestep", "wpu"] + [
+        c for c in df_timeseries.columns if c not in ["timestep", "wpu"]
+    ]
+
+    return (
+        df_timeseries[cols]
+        .sort_values(["timestep", "wpu"])
+        .reset_index(drop=True)
+    )
+
+
+def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
+    """
+    Calculates WPU-based sums and area in km2 for quality
+    of fisheries habitat metrics.
+
+    Parameters
+    ------
+    ds_hab : xr.Dataset
+        The habitat dataset containing 'low_water_refuge' and 'flood_pulse'
+        variables. These are 3D arrays with dimensions (time, y, x).
+    zones : xr.DataArray
+        A 2D array with dimensions (y, x) representing zone identifiers
+        (e.g., Watershed Planning Units (WPU zones)). Must match the
+        spatial dimensions of ds_hab.
+    pulse_freq_metric : list of dict, optional
+        List containing dictionaries for each timestep with keys:
+        - 'timestep' : datetime
+        - 'flood_pulse_frequency' : int
+        Used to merge gage pulse frequency data into the spatial area results.
+
+    Returns
+    ------
+    pd.DataFrame
+        A DataFrame of annual timestep-WPU timeseries containing WPU IDs, timestamps,
+        pixel counts ('low_water_refuge', 'flood_pulse'),
+        calculated area in km2 ('low_water_refuge_km2', 'flood_pulse_km2'),
+        and annual gage pulse frequency ('flood_pulse_frequency').
+    """
+
+    zonal_ids = zones.squeeze(drop=True)
+    zonal_ids.name = "wpu"
+
+    # Calculate pixel counts grouped by WPU
+    df = ds_hab.groupby(zonal_ids).sum().to_dataframe().reset_index()
+
+    df.rename(columns={"time": "timestep"}, inplace=True)
+
+    # Merge frequency metric
+    if pulse_freq_metric:
+        df_metric = pd.DataFrame(pulse_freq_metric)
+        df = df.merge(df_metric, on="timestep", how="left")
+
+    # Convert pixel counts (60m) to Area (km2)
+    df["low_water_refuge_km2"] = df["low_water_refuge"] * 0.0036
+    df["flood_pulse_km2"] = df["flood_pulse"] * 0.0036
+
+    cols_to_drop = ["spatial_ref"]
+    df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
+
+    return df.sort_values(["timestep", "wpu"])
 
 
 def generate_filename(
@@ -1050,13 +1161,13 @@ def analog_years_handler(
     # (e.g., velocity which is already a temporal average)
     if ds.sizes["time"] == 1:
         # Single timestep, just update the timestamp to match water year
-        target_date = pd.Timestamp(f"{water_year-1}-10-01")
+        target_date = pd.Timestamp(f"{water_year - 1}-10-01")
         ds = ds.assign_coords(time=("time", [target_date]))
         return ds
 
     # build a 365-day date range by dropping Feb 29
     target_range = pd.date_range(
-        f"{water_year-1}-10-01", f"{water_year}-09-30"
+        f"{water_year - 1}-10-01", f"{water_year}-09-30"
     )
     target_range = target_range[
         ~((target_range.month == 2) & (target_range.day == 29))
@@ -1191,7 +1302,7 @@ def create_binary_max_domain(
         start_idx = i * time_chunks
         end_idx = min((i + 1) * time_chunks, total_timesteps)
 
-        print(f"Processing timesteps {start_idx} to {end_idx-1}...")
+        print(f"Processing timesteps {start_idx} to {end_idx - 1}...")
 
         # Load only this chunk into memory
         if "time" in data.dims:
@@ -1375,9 +1486,7 @@ def save_variables_as_cogs(
             max_value = float(da_slice.max().values)
             units = da_slice.attrs.get("units", "")
 
-            output_path = os.path.join(
-                var_dir, f"{var_name}_{file_label}.tif"
-            )
+            output_path = os.path.join(var_dir, f"{var_name}_{file_label}.tif")
             if not overwrite and os.path.exists(output_path):
                 print(f"  skipping existing file: {output_path}")
                 continue
@@ -1444,9 +1553,9 @@ def process_netcdf_folder(
     print(f"Found {len(nc_files)} NetCDF files to process")
 
     for nc_file in nc_files:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Processing: {nc_file.name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         try:
             ds = xr.open_dataset(nc_file)
@@ -1457,9 +1566,7 @@ def process_netcdf_folder(
                 if ds[var_name].dtype == bool or str(
                     ds[var_name].dtype
                 ).startswith("bool"):
-                    print(
-                        f"converting boolean variable {var_name} to uint8"
-                    )
+                    print(f"converting boolean variable {var_name} to uint8")
                     ds[var_name] = ds[var_name].astype("uint8")
 
             # ensure each data variable has the CRS
@@ -1504,6 +1611,6 @@ def process_netcdf_folder(
             print(f"Error processing {nc_file.name}: {str(e)}")
             continue
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Batch processing complete!")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")

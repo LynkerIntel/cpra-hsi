@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import subprocess
 import sys
 import yaml
 import xarray as xr
@@ -51,6 +52,56 @@ def discover_configs(config_dir: str) -> tuple[list[str], list[str]]:
     veg_configs = [f for f in all_yamls if os.path.basename(f).startswith("veg_")]
     hsi_configs = [f for f in all_yamls if os.path.basename(f).startswith("hsi_")]
     return veg_configs, hsi_configs
+
+
+def get_current_branch() -> str:
+    """Return the current git branch name, or 'HEAD' if detached."""
+    return subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def read_code_branch(config_path: str) -> str | None:
+    """Return metadata.code_branch from a config, or None if unset/empty."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f) or {}
+    metadata = config.get("metadata") or {}
+    value = metadata.get("code_branch")
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def check_code_branch(config_files: list[str]) -> None:
+    """Abort if any config pins code_branch to something other than current branch.
+
+    Configs without code_branch are skipped. Detached HEAD with any pin set
+    is treated as a mismatch so the user is forced to make the intent explicit.
+    """
+    pins = [(c, read_code_branch(c)) for c in config_files]
+    pinned = [(c, b) for c, b in pins if b is not None]
+    if not pinned:
+        return
+
+    current = get_current_branch()
+    mismatches = [(c, b) for c, b in pinned if b != current]
+    if not mismatches:
+        return
+
+    if current == "HEAD":
+        current_desc = "detached HEAD"
+    else:
+        current_desc = f"branch '{current}'"
+    print(
+        f"ERROR: {len(mismatches)} config(s) pin code_branch to a branch other "
+        f"than the current {current_desc}:"
+    )
+    for config, expected in mismatches:
+        print(f"  {os.path.basename(config)}: expects '{expected}'")
+    print("Checkout the expected branch or clear code_branch to proceed.")
+    sys.exit(1)
 
 
 def get_last_log_entries(
@@ -320,6 +371,8 @@ def main():
 
     veg_config_files, hsi_config_files = discover_configs(config_dir)
     print(f"Found {len(veg_config_files)} veg configs and {len(hsi_config_files)} hsi configs in {config_dir}")
+
+    check_code_branch(veg_config_files + hsi_config_files)
 
     run_veg = (
         input("Do you want to run Veg models? (y/n): ").lower().strip() == "y"

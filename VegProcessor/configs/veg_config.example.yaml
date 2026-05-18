@@ -42,6 +42,7 @@ metadata:
   output_group: G900 # Model output group identifier
   wpu: ARS # Water Planning Unit identifier
   output_version: v12 # Output version for tracking the output from this config
+  code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.
 
 output:
   output_base: # output/ - Base directory for all model outputs

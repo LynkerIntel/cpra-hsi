@@ -948,21 +948,11 @@ class BlackCrappieHSI:
         # water quality term for cube root
         self.wq_tcr = (self.si_8 * self.si_9 * self.si_10) ** (1 / 3)
 
-        # condition 1 (water quality condition for cube root term)
-        wq_tcr_mask = (
-            (self.si_8 <= 0.4) | (self.si_9 <= 0.4) | (self.si_10 <= 0.4)
-        )
-        self.wq_tcr_adj = np.where(
-            wq_tcr_mask,
-            np.minimum.reduce([self.si_8, self.si_9, self.si_10]),
-            self.wq_tcr,
-        )
-
         # water quality initial equation
         if self.v14_max_salinity_gs is not None:
             # equation when optional salinity (SI_14) is available
             self.wq_init = (
-                2 * (self.wq_tcr_adj)
+                2 * (self.wq_tcr)
                 + 2 * (self.si_12)
                 + self.si_7
                 + self.si_1
@@ -971,19 +961,11 @@ class BlackCrappieHSI:
         else:
             # standard equation without salinity
             self.wq_init = (
-                2 * (self.wq_tcr_adj)
-                + 2 * (self.si_12)
-                + self.si_7
-                + self.si_1
+                2 * (self.wq_tcr) + 2 * (self.si_12) + self.si_7 + self.si_1
             ) / 6
 
-        # condition 2
-        wq_mask = ((self.wq_tcr_adj) <= 0.4) | (self.si_12 <= 0.4)
-        self.wq = np.where(
-            wq_mask,
-            np.minimum.reduce([self.wq_tcr_adj, self.si_12, self.wq_init]),
-            self.wq_init,
-        )
+        # Set final water quality component to the initial condition, bypassing limiting factors
+        self.wq = self.wq_init
 
         # reproduction component (rc)
         self.rc = (

@@ -625,14 +625,14 @@ class RiverineCatfishHSI:
 
             # condition 4
             mask_4 = (self.v10_water_temp_may_july_mean > 27.5) & (
-                self.v10_water_temp_may_july_mean <= 29.2
+                self.v10_water_temp_may_july_mean <= 32
             )
             si_10[mask_4] = (
-                -0.5882 * (self.v10_water_temp_may_july_mean[mask_4])
-            ) + 17.176
+                -0.2222 * (self.v10_water_temp_may_july_mean[mask_4])
+            ) + 7.1111
 
             # condition 5
-            mask_5 = self.v10_water_temp_may_july_mean > 29.2
+            mask_5 = self.v10_water_temp_may_july_mean > 32
             si_10[mask_5] = 0
 
             si_10 = self.mask_to_pools_backwaters_coarsen(

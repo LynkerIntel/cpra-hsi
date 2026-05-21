@@ -190,7 +190,7 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_pools_july_sept_mean = None
-        self.pct_pools_april_sept_mean = None
+        self.pct_pools_bw_april_sept_mean = None
 
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
@@ -488,10 +488,11 @@ class HSI(vt.VegTransition):
             low=3,
             high=6,
         )
-        self.pct_pools_april_sept_mean = self._get_pct_pools(
+        # pct pools and backwaters
+        self.pct_pools_bw_april_sept_mean = self._get_pct_pools(
             months=[4, 5, 6, 7, 8, 9],
             low=0.5,
-            high=3,
+            high=6,
         )
 
         # water depth relative to marsh surface (for alligator HSI) ----
@@ -751,12 +752,16 @@ class HSI(vt.VegTransition):
             except Exception:
                 try:
                     # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
-                    crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+                    crs_wkt = ds["transverse_mercator"].attrs.get(
+                        "spatial_ref"
+                    )
                     ds = ds.rio.write_crs(crs_wkt)
                 except Exception:
                     try:
                         # XGB: CRS from spatial_ref variable
-                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds[
+                            "spatial_ref"
+                        ].attrs.get("spatial_ref")
                         ds = ds.rio.write_crs(crs_wkt)
                     except Exception as exc:
                         raise ValueError(

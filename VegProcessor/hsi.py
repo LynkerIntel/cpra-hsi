@@ -287,6 +287,10 @@ class HSI(vt.VegTransition):
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
+        # polygon data — optional; sedflux polygon masking is skipped if unset.
+        polygon_data = self.config.get("polygon_data") or {}
+        self.sedflux_polygons_path = polygon_data.get("sedflux_polygons")
+
         # simulation
         self.water_year_start = self.config["simulation"].get(
             "water_year_start"
@@ -2116,86 +2120,127 @@ class HSI(vt.VegTransition):
         )
 
     def post_process(self):
-        """HSI post process
+        """Run post-processing steps against the per-timestep HSI NetCDFs.
 
-        (1) Opens files and then crops to hydro domain
-        (2) Create sidecar files with variables in the NetCDFs
+        Each step is a self-contained private method that reads/writes
+        from disk. They run sequentially and depend on the prior crop
+        step having already written the cropped NetCDF back to disk.
         """
-        # -------- crop 480m data --------
-        self._logger.info("Post-processing 480m NetCDF file")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
-            ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
-            # create sidecar info
-            attrs_df_480 = utils.dataset_attrs_to_df(
+        self._logger.info("Running HSI post-processing routine.")
+        self._crop_output_to_hydro_domain(resolution=480)
+        self._write_variable_sidecar_csv(resolution=480)
+        self._crop_output_to_hydro_domain(resolution=60)
+        self._write_variable_sidecar_csv(resolution=60)
+        self._write_wpu_hsi_means_csv()
+        self._write_sedflux_polygon_output()
+        self._convert_outputs_to_cogs()
+        self._logger.info("HSI post-processing complete.")
+
+    def _netcdf_path_for(self, resolution: int) -> str:
+        """Return the on-disk NetCDF path for the given output resolution."""
+        if resolution == 480:
+            return self.netcdf_filepath
+        if resolution == 60:
+            return self.netcdf_filepath_60m
+        raise ValueError(f"Resolution must be 480 or 60, got {resolution}")
+
+    def _crop_output_to_hydro_domain(self, resolution: int) -> None:
+        """Crop the output NetCDF at the given resolution to the hydro domain.
+
+        Opens the per-timestep NetCDF, masks out cells outside the domain,
+        then rewrites the file in place. The hydro domain raster used is
+        resolution-specific (480m uses ``hydro_domain_480``, 60m uses
+        ``hydro_domain``).
+        """
+        self._logger.info("Cropping %sm output to hydro domain.", resolution)
+        path = self._netcdf_path_for(resolution)
+        domain = self.hydro_domain_480 if resolution == 480 else self.hydro_domain
+
+        with xr.open_dataset(path) as ds:
+            ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
+
+        if os.path.exists(path):
+            os.remove(path)
+        ds_out.to_netcdf(path, mode="w", engine="h5netcdf")
+
+    def _write_variable_sidecar_csv(self, resolution: int) -> None:
+        """Write a CSV sidecar listing variables + attrs from the output NetCDF."""
+        self._logger.info("Writing %sm variable sidecar CSV.", resolution)
+        path = self._netcdf_path_for(resolution)
+        suffix = "hsi_netcdf_variables" if resolution == 480 else "hsi_60m_netcdf_variables"
+
+        with xr.open_dataset(path) as ds:
+            attrs_df = utils.dataset_attrs_to_df(
                 ds,
-                selected_attrs=[
-                    "long_name",
-                    "description",
-                    "units",
-                ],
+                selected_attrs=["long_name", "description", "units"],
             )
 
-            ds_out = ds_out.load()
-
-        if os.path.exists(self.netcdf_filepath):
-            os.remove(self.netcdf_filepath)
-
-        ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
-
-        # -------- create 480m sidecar file ---------
-        self._logger.info("Creating 480m variable name text file")
         outpath = os.path.join(
-            self.run_metadata_dir, f"{self.file_name}_hsi_netcdf_variables.csv"
+            self.run_metadata_dir, f"{self.file_name}_{suffix}.csv"
         )
-        attrs_df_480.to_csv(outpath, index=False)
+        attrs_df.to_csv(outpath, index=False)
 
-        # -------- crop 60m data --------
-        self._logger.info("Post-processing 60m NetCDF file")
-        with xr.open_dataset(self.netcdf_filepath_60m) as ds:
-            ds_out_60m = ds.where(~np.isnan(self.hydro_domain)).copy(deep=True)
-            # create sidecar info
-            attrs_df_60 = utils.dataset_attrs_to_df(
-                ds,
-                selected_attrs=[
-                    "long_name",
-                    "description",
-                    "units",
-                ],
-            )
-
-            ds_out_60m = ds_out_60m.load()
-
-        if os.path.exists(self.netcdf_filepath_60m):
-            os.remove(self.netcdf_filepath_60m)
-
-        ds_out_60m.to_netcdf(
-            self.netcdf_filepath_60m, mode="w", engine="h5netcdf"
-        )
-
-        # -------- create 60m sidecar file ---------
-        self._logger.info("Creating 60m variable name text file")
-        outpath_60m = os.path.join(
-            self.run_metadata_dir,
-            f"{self.file_name}_hsi_60m_netcdf_variables.csv",
-        )
-        attrs_df_60.to_csv(outpath_60m, index=False)
-
-        # -------- WPU HSI CSV Summaries --------
+    def _write_wpu_hsi_means_csv(self) -> None:
+        """Compute WPU-zone mean HSI/SI scores from the 480m output."""
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        if "year" in ds_out.dims:
-            ds_out = ds_out.rename({"year": "time"})
+        with xr.open_dataset(self.netcdf_filepath) as ds:
+            ds_hsi = ds.load()
+
+        if "year" in ds_hsi.dims:
+            ds_hsi = ds_hsi.rename({"year": "time"})
 
         wpu_grid = xr.open_dataarray(
             self.wpu_grid_path, engine="rasterio"
         ).isel(band=0)
 
-        df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
-        hsi_wpu_outpath = os.path.join(
+        df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_hsi, wpu_grid=wpu_grid)
+        outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_wpu_hsi_means.csv"
         )
-        df_hsi_wpu.to_csv(hsi_wpu_outpath, index=False)
+        df_hsi_wpu.to_csv(outpath, index=False)
 
-        # -------- convert NetCDFs to COGs --------
+    def _write_sedflux_polygon_output(self) -> None:
+        """Mask per-WY SEDFLUX data by subobjective polygons and write a NetCDF.
+
+        STUB — see ``utils.mask_sedflux_by_polygons``. Skips silently if
+        no polygon shapefile is configured.
+
+        For each simulation water year this method will:
+          1. Resolve the SEDFLUX zarr path via ``_get_hydro_netcdf_path``
+             using the analog-year mapping.
+          2. Open the zarr and apply each polygon-group mask.
+          3. Stack the masked arrays into a ``(time, zone, y, x)`` Dataset.
+          4. Write the result as a NetCDF alongside the HSI outputs.
+        """
+        if not self.sedflux_polygons_path:
+            self._logger.info(
+                "No sedflux polygons configured — skipping polygon masking."
+            )
+            return
+
+        self._logger.info("Writing SEDFLUX polygon-masked output (stub).")
+        years = list(range(self.water_year_start, self.water_year_end + 1))
+        sedflux_paths = []
+        for wy in years:
+            nc_path, _analog = self._get_hydro_netcdf_path(
+                water_year=wy, hydro_variable="SEDFLUX"
+            )
+            sedflux_paths.append(nc_path)
+
+        outpath = os.path.join(
+            self.output_dir_path, f"{self.file_name}_sedflux_polygons.nc"
+        )
+        # TODO: implement utils.mask_sedflux_by_polygons and remove the
+        # NotImplementedError so this method can run end-to-end.
+        utils.mask_sedflux_by_polygons(
+            polygons_path=self.sedflux_polygons_path,
+            sedflux_paths=sedflux_paths,
+            years=years,
+            output_path=outpath,
+        )
+
+    def _convert_outputs_to_cogs(self) -> None:
+        """Convert all per-resolution NetCDFs in the output dir to COGs."""
         self._logger.info("Converting NetCDF output to COGs.")
         cog_output_dir = os.path.join(self.output_dir_path, "cogs")
         utils.process_netcdf_folder(
@@ -2204,8 +2249,6 @@ class HSI(vt.VegTransition):
             overwrite=True,
             start_year=1,
         )
-
-        self._logger.info("Post-processing complete.")
 
     def log_data_attribute_types(self):
         """Log the data type of all non-private attributes to help with debugging

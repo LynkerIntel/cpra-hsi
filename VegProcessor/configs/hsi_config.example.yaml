@@ -14,6 +14,9 @@ raster_data:
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
 
+polygon_data:
+  sedflux_polygons: # AMP_SedimentationMetric.shp - Subobjective polygon shapefile for SEDFLUX masking. Leave blank to skip.
+
 simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
@@ -48,6 +51,7 @@ metadata:
     FLOWEXCH: V1
     SSC: V1
     DO: V1
+    SEDFLUX: V1 # only used if polygon_data.sedflux_polygons is set
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   group: G900 # Model group identifier

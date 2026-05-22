@@ -59,7 +59,7 @@ simulation:
     - swampwva
 
 metadata:
-  model: HSIH # Model identifier (H indicates HEC-RAS input)
+  model: HSI # Model identifier; the hydro-source letter (H/D/M) is appended automatically at filename generation
   hydro_source_model: HEC # the hydro input model to use, one of: HEC, MIK, or D3D
   hydro_source_model_versions: # per-variable version tokens appended to input zarr filenames
     STAGE: V1
@@ -72,7 +72,8 @@ metadata:
     SEDFLUX: V1 # only used if polygon_data.sedflux_polygons is set
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
-  group: G900 # Model group identifier
+  input_group: G900 # Group for hydro input model (encoded into input zarr filenames)
+  output_group: G900 # Model output group identifier
   wpu: AB # Water Planning Unit identifier
   output_version: v13 # Output version for tracking
   code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.

@@ -485,7 +485,7 @@ class HSI(vt.VegTransition):
         # pct pools --------------------------------------------------
         self.pct_pools_july_sept_mean = self._get_pct_pools(
             months=[7, 8, 9],
-            low=3,
+            low=1,
             high=6,
         )
         # pct pools and backwaters
@@ -1100,7 +1100,7 @@ class HSI(vt.VegTransition):
     def _get_pct_pools(
         self,
         months: list[int],
-        low: float = 3.0,
+        low: float = 1.0,
         high: float = 6.0,
     ):
         """Get percentage of "pool" pixels in each cell.
@@ -1110,7 +1110,7 @@ class HSI(vt.VegTransition):
         months : list
             List of months to average depth over
         low : float
-            The lower end of the pools definition, defaults to 3m.
+            The lower end of the pools definition, defaults to 1m.
         high : float
             The high end of the pools definition, defaults to 6m.
 

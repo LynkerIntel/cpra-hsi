@@ -761,7 +761,7 @@ class BlackCrappieHSI:
                 si_arr_60m=si_11,
                 water_depth_subset=self.water_depth_feb_march_mean_60m,
                 low=0.5,
-                high=3.0,
+                high=1.0,
             )
 
         if np.any(np.isclose(si_11, 999.0, atol=1e-5)):

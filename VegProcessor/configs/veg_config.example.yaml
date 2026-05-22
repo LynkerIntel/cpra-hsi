@@ -9,7 +9,6 @@ raster_data:
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
-  salinity_raster: # Optional: path to salinity raster
   initial_maturity: # AMP_Tree_Age.tif - Initial forest maturity/age raster
 
   # ---- Hydro input zarrs ----
@@ -31,7 +30,6 @@ polygon_data:
 simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
-  #wse_sequence_input: true # DEPRECATED true if using synthetic/analog WSE sequence, false for continuous
   years_mapping: # (YY) Maps simulation years to observed data years (for analog sequences)
     1: "06"
     3: "22"
@@ -52,7 +50,6 @@ metadata:
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   input_group: G900 # Group for hydro input model
   output_group: G900 # Model output group identifier
-  wpu: ARS # Water Planning Unit identifier
   output_version: v12 # Output version for tracking the output from this config
   code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.
 

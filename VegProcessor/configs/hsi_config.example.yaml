@@ -8,7 +8,6 @@ raster_data:
   hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
-  salinity_raster: # Optional: path to salinity raster
   veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
@@ -74,7 +73,6 @@ metadata:
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   input_group: G900 # Group for hydro input model (encoded into input zarr filenames)
   output_group: G900 # Model output group identifier
-  wpu: AB # Water Planning Unit identifier
   output_version: v13 # Output version for tracking
   code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.
 

@@ -279,7 +279,6 @@ class HSI(vt.VegTransition):
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"

@@ -5,7 +5,6 @@
 
 raster_data:
   dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
-  netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
@@ -13,6 +12,24 @@ raster_data:
   veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
+
+  # ---- Hydro input zarrs ----
+  # All hydro variable zarrs typically live in a single folder. The
+  # filenames already encode the variable, so one folder is unambiguous.
+  # Set `netcdf_hydro_path` and the YAML anchor (&hydro_dir) propagates
+  # it to every per-variable key via *hydro_dir. KEEP the `&hydro_dir`
+  # marker when you fill in your path, e.g.:
+  #   netcdf_hydro_path: &hydro_dir /data/cpra/AMP_inputs/
+  # To disable a variable entirely, replace its *hydro_dir alias with
+  # null (e.g. `netcdf_velocity_path:`) — the model will skip it and
+  # downstream HSI components will fall back to ideal defaults.
+  netcdf_hydro_path: &hydro_dir # path/to/hydro_inputs/
+  netcdf_salinity_path: *hydro_dir
+  netcdf_water_temperature_path: *hydro_dir
+  netcdf_velocity_path: *hydro_dir
+  netcdf_flowexchange_path: *hydro_dir
+  netcdf_suspended_sediment_path: *hydro_dir
+  netcdf_dissolved_oxygen_path: *hydro_dir
 
 polygon_data:
   sedflux_polygons: # AMP_SedimentationMetric.shp - Subobjective polygon shapefile for SEDFLUX masking. Leave blank to skip.

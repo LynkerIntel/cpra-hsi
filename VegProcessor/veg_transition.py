@@ -539,9 +539,11 @@ class VegTransition:
             variable_base_path = self.ssc_input_path
         elif hydro_variable == "DO":
             variable_base_path = self.do_input_path
+        elif hydro_variable == "SEDFLUX":
+            variable_base_path = self.sedflux_input_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO, SEDFLUX"
             )
 
         quintile = self.sequence_mapping[water_year]

@@ -320,6 +320,9 @@ class HSI(vt.VegTransition):
         self.do_input_path = self.config["raster_data"].get(
             "do_input_path"
         )
+        self.sedflux_input_path = self.config["raster_data"].get(
+            "sedflux_input_path"
+        )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
         )
@@ -782,6 +785,42 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No dissolved oxygen file provided.")
             return None
+
+    def _load_sedflux_general(self, water_year: int) -> np.ndarray | None:
+        """Load SEDFLUX data for one water year, reprojected to the DEM grid.
+
+        SEDFLUX zarrs are already aggregated to a single annual slice
+        (``cumulative_sediment_erosion_deposition``). Returns a 2D ``(y, x)``
+        array on the 60m HSI grid, or ``None`` if SEDFLUX input is not
+        configured.
+        """
+        if self.sedflux_input_path is None:
+            self._logger.info("SEDFLUX not provided.")
+            return None
+
+        self._logger.info("Loading SEDFLUX data with universal annual method.")
+        nc_path, analog_year = self._get_hydro_netcdf_path(
+            water_year, hydro_variable="SEDFLUX"
+        )
+        self._logger.info("Loading file: %s", nc_path)
+        ds = xr.open_zarr(nc_path)
+        ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+        try:
+            crs_wkt = ds["crs"].attrs.get("crs_wkt")
+            ds = ds.rio.write_crs(crs_wkt)
+        except Exception as exc:
+            raise ValueError(
+                "Unable to parse CRS from SEDFLUX input"
+            ) from exc
+
+        ds = self._reproject_match_to_dem(ds)
+
+        da = ds["cumulative_sediment_erosion_deposition"]
+        if "time" in da.dims:
+            da = da.isel(time=0, drop=True)
+
+        return da.to_numpy()
 
     def _get_d_o_subset(
         self,
@@ -2131,9 +2170,9 @@ class HSI(vt.VegTransition):
         self._crop_output_to_hydro_domain(resolution=480)
         self._write_variable_sidecar_csv(resolution=480)
         self._crop_output_to_hydro_domain(resolution=60)
+        self._append_sedflux_to_60m_netcdf()
         self._write_variable_sidecar_csv(resolution=60)
         self._write_wpu_hsi_means_csv()
-        self._write_sedflux_polygon_output()
         self._convert_outputs_to_cogs()
         self._logger.info("HSI post-processing complete.")
 
@@ -2204,44 +2243,58 @@ class HSI(vt.VegTransition):
         )
         df_hsi_wpu.to_csv(outpath, index=False)
 
-    def _write_sedflux_polygon_output(self) -> None:
-        """Mask per-WY SEDFLUX data by subobjective polygons and write a NetCDF.
+    def _append_sedflux_to_60m_netcdf(self) -> None:
+        """Append per-WY SEDFLUX rasters to the 60m HSI NetCDF.
 
-        STUB — see ``utils.mask_sedflux_by_polygons``. Skips silently if
-        no polygon shapefile is configured.
-
-        For each simulation water year this method will:
-          1. Resolve the SEDFLUX zarr path via ``_get_hydro_netcdf_path``
-             using the analog-year mapping.
-          2. Open the zarr and apply each polygon-group mask.
-          3. Stack the masked arrays into a ``(time, zone, y, x)`` Dataset.
-          4. Write the result as a NetCDF alongside the HSI outputs.
+        Iterates the simulation water years, calls ``_load_sedflux_general``
+        for each, and stores the annual slice into a
+        ``cumulative_sediment_erosion_deposition`` (time, y, x) variable
+        in the 60m output. Skips silently if SEDFLUX input is not configured.
         """
-        if not self.sedflux_polygons_path:
+        if self.sedflux_input_path is None:
             self._logger.info(
-                "No sedflux polygons configured — skipping polygon masking."
+                "No sedflux_input_path configured — skipping SEDFLUX append."
             )
             return
 
-        self._logger.info("Writing SEDFLUX polygon-masked output (stub).")
-        years = list(range(self.water_year_start, self.water_year_end + 1))
-        sedflux_paths = []
-        for wy in years:
-            nc_path, _analog = self._get_hydro_netcdf_path(
-                water_year=wy, hydro_variable="SEDFLUX"
-            )
-            sedflux_paths.append(nc_path)
+        self._logger.info("Appending SEDFLUX data to 60m NetCDF.")
+        var_name = "cumulative_sediment_erosion_deposition"
 
-        outpath = os.path.join(
-            self.output_dir_path, f"{self.file_name}_sedflux_polygons.nc"
+        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+            ds_loaded = ds.load()
+
+        if var_name not in ds_loaded:
+            shape = (
+                len(ds_loaded.time),
+                len(ds_loaded.y),
+                len(ds_loaded.x),
+            )
+            ds_loaded[var_name] = (
+                ["time", "y", "x"],
+                np.full(shape, np.nan, dtype=np.float32),
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "m",
+                    "long_name": "Cumulative sediment erosion / deposition",
+                },
+            )
+            ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
+
+        for wy in range(self.water_year_start, self.water_year_end + 1):
+            arr = self._load_sedflux_general(wy)
+            if arr is None:
+                continue
+            ts = pd.Timestamp(f"{wy}-10-01")
+            ds_loaded[var_name].loc[{"time": ts}] = arr.astype(np.float32)
+
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath_60m,
+            mode="a",
+            engine="h5netcdf",
         )
-        # TODO: implement utils.mask_sedflux_by_polygons and remove the
-        # NotImplementedError so this method can run end-to-end.
-        utils.mask_sedflux_by_polygons(
-            polygons_path=self.sedflux_polygons_path,
-            sedflux_paths=sedflux_paths,
-            years=years,
-            output_path=outpath,
+        ds_loaded.close()
+        self._logger.info(
+            "SEDFLUX append complete: '%s' added to 60m NetCDF.", var_name
         )
 
     def _convert_outputs_to_cogs(self) -> None:

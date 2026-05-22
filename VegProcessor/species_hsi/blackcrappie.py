@@ -98,7 +98,7 @@ class BlackCrappieHSI:
             v4_avg_vel_summer_flow_pools_bw=safe_multiply(
                 hsi_instance.velocity_july_sept_mean
             ),  # UNIT: m/s to cm/s, set to ideal
-            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_april_sept_mean,
+            v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_bw_april_sept_mean,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
             v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean_60m,
             v9_most_suit_temp_in_midsummer_pools_bw_juvenile=hsi_instance.water_temperature_july_august_mean_60m,

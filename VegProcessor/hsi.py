@@ -2033,6 +2033,7 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
+                    ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2097,6 +2098,7 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
+                    ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2157,6 +2159,10 @@ class HSI(vt.VegTransition):
 
         with xr.open_dataset(path) as ds:
             ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
+
+        # .where() can drop encoding silently — re-apply compression for each var
+        for name in ds_out.data_vars:
+            ds_out[name].encoding = {"zlib": True, "complevel": 4}
 
         if os.path.exists(path):
             os.remove(path)

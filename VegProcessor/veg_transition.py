@@ -1206,6 +1206,8 @@ class VegTransition:
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
+        ds["veg_type"].encoding = {"zlib": True, "complevel": 4}
+        ds["maturity"].encoding = {"zlib": True, "complevel": 4}
         # Save dataset to NetCDF with explicit encoding
         ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
         ds.close()
@@ -1301,6 +1303,7 @@ class VegTransition:
                     np.full(shape, default_value, dtype=dtype),
                     nc_attrs,
                 )
+                ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
 
             # Handle 'condition' variables (booleans)
             if dtype == bool:

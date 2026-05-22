@@ -38,13 +38,12 @@ def validate_config(config: Dict, config_file: str = None) -> None:
 def validate_hydro_source_consistency(
     config: Dict, config_file: str = None
 ) -> List[str]:
-    """Validate that hydro_source_model matches the file paths.
+    """Validate that hydro_source_model matches the veg_type_path filename.
 
     Checks that:
     1. If hydro_source_model is HEC, veg_type_path contains "VEGH"
     2. If hydro_source_model is D3D, veg_type_path contains "VEGD"
     3. If hydro_source_model is MIK, veg_type_path contains "VEGM"
-    4. netcdf_hydro_path matches the hydro_source_model
 
     Parameters
     ----------
@@ -102,23 +101,6 @@ def validate_hydro_source_consistency(
     else:
         errors.append(
             f"[{config_name}] Missing 'raster_data.veg_type_path' in config"
-        )
-
-    # Check netcdf_hydro_path
-    netcdf_hydro_path = config.get("raster_data", {}).get(
-        "netcdf_hydro_path", ""
-    )
-    if netcdf_hydro_path:
-        hydro_dir_name = Path(netcdf_hydro_path).name
-        if hydro_source not in hydro_dir_name:
-            errors.append(
-                f"[{config_name}] Hydro source model mismatch: "
-                f"hydro_source_model is '{hydro_source}' but netcdf_hydro_path contains "
-                f"'{hydro_dir_name}' (expected '{hydro_source}' in path)"
-            )
-    else:
-        errors.append(
-            f"[{config_name}] Missing 'raster_data.netcdf_hydro_path' in config"
         )
 
     return errors

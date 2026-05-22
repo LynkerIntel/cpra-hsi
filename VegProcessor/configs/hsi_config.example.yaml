@@ -16,20 +16,21 @@ raster_data:
   # ---- Hydro input zarrs ----
   # All hydro variable zarrs typically live in a single folder. The
   # filenames already encode the variable, so one folder is unambiguous.
-  # Set `netcdf_hydro_path` and the YAML anchor (&hydro_dir) propagates
+  # Set `stage_input_path` and the YAML anchor (&hydro_dir) propagates
   # it to every per-variable key via *hydro_dir. KEEP the `&hydro_dir`
   # marker when you fill in your path, e.g.:
-  #   netcdf_hydro_path: &hydro_dir /data/cpra/AMP_inputs/
+  #   stage_input_path: &hydro_dir /data/cpra/AMP_inputs/
   # To disable a variable entirely, replace its *hydro_dir alias with
-  # null (e.g. `netcdf_velocity_path:`) — the model will skip it and
+  # null (e.g. `velocity_input_path:`) — the model will skip it and
   # downstream HSI components will fall back to ideal defaults.
-  netcdf_hydro_path: &hydro_dir # path/to/hydro_inputs/
-  netcdf_salinity_path: *hydro_dir
-  netcdf_water_temperature_path: *hydro_dir
-  netcdf_velocity_path: *hydro_dir
-  netcdf_flowexchange_path: *hydro_dir
-  netcdf_suspended_sediment_path: *hydro_dir
-  netcdf_dissolved_oxygen_path: *hydro_dir
+  # Keys correspond to hydro_source_model_versions entries below.
+  stage_input_path: &hydro_dir # path/to/hydro_inputs/
+  salinity_input_path: *hydro_dir
+  wtemp_input_path: *hydro_dir
+  velocity_input_path: *hydro_dir
+  flowexch_input_path: *hydro_dir
+  ssc_input_path: *hydro_dir
+  do_input_path: *hydro_dir
 
 polygon_data:
   sedflux_polygons: # AMP_SedimentationMetric.shp - Subobjective polygon shapefile for SEDFLUX masking. Leave blank to skip.

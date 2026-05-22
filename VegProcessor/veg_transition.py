@@ -85,11 +85,11 @@ class VegTransition:
         self.hydro_domain_path = self.config["raster_data"].get(
             "hydro_domain_raster"
         )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
+        self.stage_input_path = self.config["raster_data"].get(
+            "stage_input_path"
         )
-        self.netcdf_salinity_path = self.config["raster_data"].get(
-            "netcdf_salinity_path"
+        self.salinity_input_path = self.config["raster_data"].get(
+            "salinity_input_path"
         )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
@@ -526,19 +526,19 @@ class VegTransition:
             - analog_year: The analog year as a 4-digit integer (e.g., 2020)
         """
         if hydro_variable == "STAGE":
-            variable_base_path = self.netcdf_hydro_path
+            variable_base_path = self.stage_input_path
         elif hydro_variable == "SALINITY":
-            variable_base_path = self.netcdf_salinity_path
+            variable_base_path = self.salinity_input_path
         elif hydro_variable == "WTEMP":
-            variable_base_path = self.netcdf_water_temperature_path
+            variable_base_path = self.wtemp_input_path
         elif hydro_variable == "VELOCITY":
-            variable_base_path = self.netcdf_velocity_path
+            variable_base_path = self.velocity_input_path
         elif hydro_variable == "FLOWEXCH":
-            variable_base_path = self.netcdf_flow_exchange_path
+            variable_base_path = self.flowexch_input_path
         elif hydro_variable == "SSC":
-            variable_base_path = self.netcdf_suspended_sediment_path
+            variable_base_path = self.ssc_input_path
         elif hydro_variable == "DO":
-            variable_base_path = self.netcdf_dissolved_oxygen_path
+            variable_base_path = self.do_input_path
         else:
             raise ValueError(
                 "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO"
@@ -722,7 +722,7 @@ class VegTransition:
         returns: an xr.Dataset of the data, or a np.ndarray with salinity
             approximated from the vegetation type array.
         """
-        if self.netcdf_salinity_path is not None:
+        if self.salinity_input_path is not None:
             self._logger.info(
                 "Loading salinity data with universal daily method."
             )

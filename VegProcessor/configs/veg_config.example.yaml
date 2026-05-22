@@ -15,14 +15,15 @@ raster_data:
   # ---- Hydro input zarrs ----
   # All hydro variable zarrs typically live in a single folder. The
   # filenames already encode the variable, so one folder is unambiguous.
-  # Set `netcdf_hydro_path` and the YAML anchor (&hydro_dir) propagates
+  # Set `stage_input_path` and the YAML anchor (&hydro_dir) propagates
   # it to every per-variable key via *hydro_dir. KEEP the `&hydro_dir`
   # marker when you fill in your path, e.g.:
-  #   netcdf_hydro_path: &hydro_dir /data/cpra/AMP_inputs/
+  #   stage_input_path: &hydro_dir /data/cpra/AMP_inputs/
   # To disable a variable entirely, replace its *hydro_dir alias with
-  # null (e.g. `netcdf_salinity_path:`) — the model will skip it.
-  netcdf_hydro_path: &hydro_dir # path/to/hydro_inputs/
-  netcdf_salinity_path: *hydro_dir
+  # null (e.g. `salinity_input_path:`) — the model will skip it.
+  # Keys correspond to hydro_source_model_versions entries below.
+  stage_input_path: &hydro_dir # path/to/hydro_inputs/
+  salinity_input_path: *hydro_dir
 
 polygon_data:
   wpu_polygons: # Atchafalaya MP WPUs.shp - Water Planning Unit polygon shapefile

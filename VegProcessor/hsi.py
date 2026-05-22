@@ -300,26 +300,26 @@ class HSI(vt.VegTransition):
         self.analog_sequence = self.config["simulation"].get(
             "wse_sequence_input"
         )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
+        self.stage_input_path = self.config["raster_data"].get(
+            "stage_input_path"
         )
-        self.netcdf_salinity_path = self.config["raster_data"].get(
-            "netcdf_salinity_path"
+        self.salinity_input_path = self.config["raster_data"].get(
+            "salinity_input_path"
         )
-        self.netcdf_water_temperature_path = self.config["raster_data"].get(
-            "netcdf_water_temperature_path"
+        self.wtemp_input_path = self.config["raster_data"].get(
+            "wtemp_input_path"
         )
-        self.netcdf_velocity_path = self.config["raster_data"].get(
-            "netcdf_velocity_path"
+        self.velocity_input_path = self.config["raster_data"].get(
+            "velocity_input_path"
         )
-        self.netcdf_flow_exchange_path = self.config["raster_data"].get(
-            "netcdf_flowexchange_path"
+        self.flowexch_input_path = self.config["raster_data"].get(
+            "flowexch_input_path"
         )
-        self.netcdf_suspended_sediment_path = self.config["raster_data"].get(
-            "netcdf_suspended_sediment_path"
+        self.ssc_input_path = self.config["raster_data"].get(
+            "ssc_input_path"
         )
-        self.netcdf_dissolved_oxygen_path = self.config["raster_data"].get(
-            "netcdf_dissolved_oxygen_path"
+        self.do_input_path = self.config["raster_data"].get(
+            "do_input_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -625,7 +625,7 @@ class HSI(vt.VegTransition):
 
     def _load_water_temp_general(self, water_year: int) -> xr.Dataset | None:
         """Load water temperature data from either Delft3D or MIKE 21 models."""
-        if self.netcdf_water_temperature_path is not None:
+        if self.wtemp_input_path is not None:
             self._logger.info(
                 f"Loading water temperature data with universal daily method."
             )
@@ -658,7 +658,7 @@ class HSI(vt.VegTransition):
 
     def _load_velocity_general(self, water_year: int) -> np.ndarray | None:
         """Load velocity data from either Delft3D or MIKE 21 models."""
-        if self.netcdf_velocity_path is not None:
+        if self.velocity_input_path is not None:
             self._logger.info(
                 f"Loading velocity data with universal daily method."
             )
@@ -710,7 +710,7 @@ class HSI(vt.VegTransition):
         """
         Load flow exchange data
         """
-        if self.netcdf_flow_exchange_path is not None:
+        if self.flowexch_input_path is not None:
             self._logger.info(
                 "Loading flow exchange data with universal daily method."
             )
@@ -746,7 +746,7 @@ class HSI(vt.VegTransition):
         """
         Load dissolved oxygen output from XGBoost model.
         """
-        if self.netcdf_dissolved_oxygen_path is not None:
+        if self.do_input_path is not None:
             self._logger.info(
                 "Loading dissolved oxygen data with universal daily method."
             )
@@ -844,7 +844,7 @@ class HSI(vt.VegTransition):
         self, water_year: int
     ) -> xr.Dataset | None:
         """Load suspended sediment (SSC) data from Delft3D or MIKE 21 models."""
-        if self.netcdf_suspended_sediment_path is not None:
+        if self.ssc_input_path is not None:
             self._logger.info(
                 "Loading suspended sediment data with universal daily method."
             )

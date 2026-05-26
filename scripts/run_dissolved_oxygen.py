@@ -5,18 +5,20 @@ an XGBoost model trained on station data.
 Inputs (zarr):
     - Water temperature (daily, 60m)
     - Water depth / stage (daily, 60m)
-    - Velocity (single timestep, 60m)
+    - Velocity (daily, 60m)
     - DEM GeoTIFF (60m)
 
 Output:
-    - NetCDF with daily dissolved oxygen at 60m resolution
+    - NetCDF with 7-day moving average of dissolved oxygen at 60m resolution
 
 Usage:
     python predict_dissolved_oxygen.py
 """
 
+import gc
 import os
 import re
+import time
 
 import numpy as np
 import pandas as pd
@@ -30,15 +32,22 @@ from xgboost import XGBRegressor
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_328_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_daily_WY06_328.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_daily_WY06_328_cogs"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_7day_ma_WY06_000.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_7day_ma_WY06_000_cogs"
+
+
+def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
+    """Remove Feb 29 timesteps from a dataset."""
+    dt = ds["time"].dt
+    mask = ~((dt.month == 2) & (dt.day == 29))
+    return ds.sel(time=mask)
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -79,39 +88,46 @@ def compute_depth(stage_ds: xr.Dataset, dem: xr.DataArray) -> xr.DataArray:
 def save_daily_cogs(
     ds: xr.Dataset,
     output_dir: str,
-    water_year: int = None,
+    water_year: int,
     overwrite: bool = False,
 ):
     """Save each variable and timestep as a Cloud Optimized GeoTIFF.
 
-    Mirrors VegProcessor.utils.save_variables_as_cogs.
+    Mirrors VegProcessor.utils.save_variables_as_cogs: reproject to Web
+    Mercator, label files by water-year DOY, and write with
+    odc.geo ``write_cog``.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to export. Must have a ``time`` dimension.
+    output_dir : str
+        Root directory for the COG output.
+    water_year : int
+        Water year used for DOY file labels.
+    overwrite : bool
+        If True, overwrite existing COGs.
     """
     os.makedirs(output_dir, exist_ok=True)
-
-    print("Reprojecting to web mercator...")
-    ds = ds.rio.reproject("EPSG:3857")
-
-    num_timesteps = len(ds.time.values)
-    is_daily_data = num_timesteps == 365
-
-    if is_daily_data and water_year is None:
-        wy_match = re.search(r"WY(\d+)", output_dir)
-        if wy_match:
-            wy = int(wy_match.group(1))
-            water_year = 2000 + wy if wy < 50 else 1900 + wy
-        else:
-            water_year = 2020
 
     for var_name in ds.data_vars:
         var = ds[var_name]
         var_dir = os.path.join(output_dir, var_name)
         os.makedirs(var_dir, exist_ok=True)
-        print(f"\nProcessing variable: {var_name}")
+        print(
+            f"\nProcessing variable: {var_name} (reprojecting per-slice to EPSG:3857)"
+        )
 
         for t_idx in range(len(ds.time.values)):
-            file_label = str(t_idx)
+            ts = pd.Timestamp(ds.time.values[t_idx])
+            # Water year starts Oct 1: Oct-Dec belong to next calendar year's WY
+            wy = ts.year + 1 if ts.month >= 10 else ts.year
+            wy_start = pd.Timestamp(year=wy - 1, month=10, day=1)
+            doy = (ts.normalize() - wy_start).days + 1
+            file_label = f"WY{wy}_DOY_{doy:03d}"
 
             da_slice = var.isel(time=t_idx).squeeze(drop=True)
+            da_slice = da_slice.rio.reproject("EPSG:3857")
             min_value = float(da_slice.min().values)
             max_value = float(da_slice.max().values)
             units = da_slice.attrs.get("units", "")
@@ -135,13 +151,15 @@ def save_daily_cogs(
                     "UNIT": units,
                 },
             )
+            del da_slice
+            gc.collect()
+        del var
+        gc.collect()
     print("Done exporting COGs.")
 
 
 def predict_do():
     """Run daily dissolved oxygen prediction and save to NetCDF."""
-    import time as _time
-
     # Load DEM
     print("Loading DEM...")
     dem = xr.open_dataarray(DEM_PATH)
@@ -167,22 +185,37 @@ def predict_do():
     if "wtemp" in temp_ds.data_vars:
         temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
+    temp_ds = drop_leap_days(temp_ds)
     temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
     # Load depth (stage -> depth via DEM subtraction), eagerly
     print(f"Loading stage/depth from {DEPTH_PATH}...")
     stage_ds = load_zarr_with_crs(DEPTH_PATH)
     stage_ds = reproject_match(stage_ds, dem)
+    stage_ds = drop_leap_days(stage_ds)
     depth = compute_depth(stage_ds, dem).load()  # (time, y, x) — into memory
 
-    # Load velocity (single 2D snapshot)
-    if VELOCITY_PATH is not None:
-        print(f"Loading velocity from {VELOCITY_PATH}...")
-        vel_ds = load_zarr_with_crs(VELOCITY_PATH)
-        vel_ds = reproject_match(vel_ds, dem)
-        vel_2d = vel_ds["velocity"][0].values  # (y, x) numpy array
-    else:
-        vel_2d = None
+    # Load velocity (daily timesteps)
+    print(f"Loading velocity from {VELOCITY_PATH}...")
+    vel_ds = load_zarr_with_crs(VELOCITY_PATH)
+    vel_ds = reproject_match(vel_ds, dem)
+    vel_ds = drop_leap_days(vel_ds)
+    if vel_ds["velocity"].sizes.get("time", 1) <= 1:
+        raise ValueError(
+            f"Velocity data must have daily timesteps, "
+            f"but only has {vel_ds['velocity'].sizes.get('time', 0)} timestep(s). "
+            f"Source: {VELOCITY_PATH}"
+        )
+
+    # Align all inputs to common timestamps
+    common_times = np.intersect1d(temp.time.values, depth.time.values)
+    common_times = np.intersect1d(common_times, vel_ds["velocity"].time.values)
+    print(f"Common timesteps across all inputs: {len(common_times)}")
+    temp_ds = temp_ds.sel(time=common_times)
+    temp = temp_ds["temperature"].load()
+    depth = depth.sel(time=common_times)
+    vel_ds = vel_ds.sel(time=common_times)
+    vel_vals = vel_ds["velocity"].load().values  # (time, y, x)
 
     # Pre-extract numpy arrays and time metadata
     temp_vals = temp.values  # (time, y, x)
@@ -194,19 +227,15 @@ def predict_do():
     times = temp.time.values
     n_days = len(times)
     do_arr = np.empty((n_days, ny, nx), dtype=np.float32)
-    t_start = _time.time()
-
-    vel_flat = (
-        vel_2d.ravel()
-        if vel_2d is not None
-        else np.zeros(n_pixels, dtype=np.float32)
-    )
+    t_start = time.time()
 
     for i in range(n_days):
         t = times[i]
         ts = pd.Timestamp(t)
         month = ts.month
         doy = ts.dayofyear
+
+        vel_flat = vel_vals[i].ravel()
 
         features = np.column_stack(
             [
@@ -219,10 +248,12 @@ def predict_do():
         )
         pred = xgb.predict(features).reshape(ny, nx)
         pred[~domain_mask] = np.nan
+        depth_mask = (depth_vals[i] > 0.1) & (depth_vals[i] < 4.0)
+        pred[~depth_mask] = np.nan
         do_arr[i] = pred
 
         if (i + 1) % 10 == 0 or (i + 1) == n_days:
-            elapsed = _time.time() - t_start
+            elapsed = time.time() - t_start
             per_day = elapsed / (i + 1)
             remaining = per_day * (n_days - i - 1)
             date_str = str(t)[:10]
@@ -231,18 +262,47 @@ def predict_do():
                 f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining"
             )
 
-    # Build xarray DataArray from numpy result
-    do_da = xr.DataArray(
+    # Build xarray DataArray from numpy result, then take a trailing
+    # 7-day moving average. The first 6 timesteps will be NaN.
+    do_daily = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
-        coords={"time": times, "y": temp.y, "x": temp.x},
-        attrs={
-            "units": "mg/L",
-            "long_name": "dissolved oxygen",
-            "description": "Daily dissolved oxygen predicted by XGBoost model",
-        },
+        coords={"time": times, "y": temp.y.values, "x": temp.x.values},
     )
+    do_da = do_daily.rolling(time=7, center=False).mean().astype(np.float32)
+    do_da.attrs = {
+        "units": "mg/L",
+        "long_name": "dissolved oxygen (7-day moving average)",
+        "description": (
+            "Trailing 7-day moving average of daily dissolved oxygen "
+            "predicted by XGBoost model"
+        ),
+        "grid_mapping": "spatial_ref",
+    }
     do_ds = xr.Dataset({"dissolved_oxygen": do_da})
+
+    # Attach CF-compliant coordinate metadata so ArcGIS recognizes the CRS
+    do_ds["x"].attrs.update(
+        {
+            "units": "m",
+            "long_name": "Easting",
+            "standard_name": "projection_x_coordinate",
+        }
+    )
+    do_ds["y"].attrs.update(
+        {
+            "units": "m",
+            "long_name": "Northing",
+            "standard_name": "projection_y_coordinate",
+        }
+    )
+    do_ds["time"].attrs.update(
+        {
+            "long_name": "time",
+            "standard_name": "time",
+        }
+    )
+
     do_ds = do_ds.rio.write_crs("EPSG:6344")
 
     # Write NetCDF
@@ -254,6 +314,7 @@ def predict_do():
                 "dtype": "float32",
                 "zlib": True,
                 "complevel": 4,
+                "grid_mapping": "spatial_ref",
             },
             "time": {
                 "units": "days since 1850-01-01T00:00:00",
@@ -263,11 +324,58 @@ def predict_do():
         },
     )
 
-    # Write daily COGs
+    # Extract water year from output path
+    wy_match = re.search(r"WY(\d+)", OUTPUT_NC_PATH)
+    if not wy_match:
+        raise ValueError(
+            f"Cannot determine water year from OUTPUT_NC_PATH: {OUTPUT_NC_PATH}"
+        )
+    wy = int(wy_match.group(1))
+    water_year = 2000 + wy if wy < 50 else 1900 + wy
+
+    # Write daily COGs (DO output)
     print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
-    save_daily_cogs(do_ds, OUTPUT_COG_DIR, water_year=2020, overwrite=True)
+    save_daily_cogs(
+        do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True
+    )
+
+    # Free DO intermediates before the input-COG loop to reduce memory pressure
+    del do_arr, do_daily, do_da, do_ds, temp_vals, depth_vals
+    gc.collect()
+
+    # Write daily COGs for input variables (QAQC)
+    input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
+    print(f"Writing input COGs to {input_cog_dir}...")
+    inputs_ds = xr.Dataset(
+        {
+            "temperature": temp,
+            "water_depth": depth,
+            "velocity": vel_ds["velocity"],
+        }
+    )
+    inputs_ds = inputs_ds.rio.write_crs("EPSG:6344")
+    save_daily_cogs(
+        inputs_ds, input_cog_dir, water_year=water_year, overwrite=True
+    )
     print("Done.")
 
 
 if __name__ == "__main__":
-    predict_do()
+    import sys
+
+    completed = False
+    try:
+        predict_do()
+        completed = True
+    finally:
+        if not completed:
+            banner = "!" * 60
+            print(f"\n{banner}", file=sys.stderr)
+            print(
+                "WARNING: script exited BEFORE finishing. "
+                "Outputs may be incomplete.",
+                file=sys.stderr,
+            )
+            print(f"{banner}\n", file=sys.stderr)
+            # Note: SIGKILL (e.g. OS OOM-kill) cannot be caught — if the
+            # process dies with no traceback and no warning, suspect that.

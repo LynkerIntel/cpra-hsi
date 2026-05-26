@@ -17,7 +17,6 @@ Usage:
 
 import gc
 import os
-import re
 import time
 
 import numpy as np
@@ -31,16 +30,21 @@ from xgboost import XGBRegressor
 # PATHS — edit these before running
 # =========================================================
 DATA_DIR = "/Users/dillonragar/data/cpra"
+GROUP = "G400"
+WY = "06"
+SLR = "000"
+VERSION = "V2"
 
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
+TEMPERATURE_PATH = f"{DATA_DIR}/AMP_INPUT/AMP_D3D_WY{WY}_{SLR}_FX_99_99_DLY_{GROUP}_AB_O_WTEMP_{VERSION}.zarr"
+DEPTH_PATH = f"{DATA_DIR}/AMP_INPUT/AMP_D3D_WY{WY}_{SLR}_FX_99_99_DLY_{GROUP}_AB_O_STAGE_{VERSION}.zarr"
+VELOCITY_PATH = f"{DATA_DIR}/AMP_INPUT/AMP_D3D_WY{WY}_{SLR}_FX_99_99_DLY_{GROUP}_AB_O_VELOCITY_{VERSION}.zarr"
 DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
 DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_7day_ma_WY06_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_7day_ma_WY06_000_cogs"
+OUTPUT_STEM = f"AMP_XGB_WY{WY}_{SLR}_FX_99_99_DLY_{GROUP}_AB_O_DO_{VERSION}"
+OUTPUT_NC_PATH = f"{OUTPUT_DIR}/{OUTPUT_STEM}.nc"
+OUTPUT_COG_DIR = f"{OUTPUT_DIR}/{OUTPUT_STEM}_cogs"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
@@ -88,7 +92,6 @@ def compute_depth(stage_ds: xr.Dataset, dem: xr.DataArray) -> xr.DataArray:
 def save_daily_cogs(
     ds: xr.Dataset,
     output_dir: str,
-    water_year: int,
     overwrite: bool = False,
 ):
     """Save each variable and timestep as a Cloud Optimized GeoTIFF.
@@ -103,8 +106,6 @@ def save_daily_cogs(
         Dataset to export. Must have a ``time`` dimension.
     output_dir : str
         Root directory for the COG output.
-    water_year : int
-        Water year used for DOY file labels.
     overwrite : bool
         If True, overwrite existing COGs.
     """
@@ -324,27 +325,16 @@ def predict_do():
         },
     )
 
-    # Extract water year from output path
-    wy_match = re.search(r"WY(\d+)", OUTPUT_NC_PATH)
-    if not wy_match:
-        raise ValueError(
-            f"Cannot determine water year from OUTPUT_NC_PATH: {OUTPUT_NC_PATH}"
-        )
-    wy = int(wy_match.group(1))
-    water_year = 2000 + wy if wy < 50 else 1900 + wy
-
     # Write daily COGs (DO output)
     print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
-    save_daily_cogs(
-        do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True
-    )
+    save_daily_cogs(do_ds, OUTPUT_COG_DIR, overwrite=True)
 
     # Free DO intermediates before the input-COG loop to reduce memory pressure
     del do_arr, do_daily, do_da, do_ds, temp_vals, depth_vals
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)
-    input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
+    input_cog_dir = os.path.join(OUTPUT_DIR, f"{OUTPUT_STEM}_inputs_cogs")
     print(f"Writing input COGs to {input_cog_dir}...")
     inputs_ds = xr.Dataset(
         {
@@ -354,9 +344,7 @@ def predict_do():
         }
     )
     inputs_ds = inputs_ds.rio.write_crs("EPSG:6344")
-    save_daily_cogs(
-        inputs_ds, input_cog_dir, water_year=water_year, overwrite=True
-    )
+    save_daily_cogs(inputs_ds, input_cog_dir, overwrite=True)
     print("Done.")
 
 

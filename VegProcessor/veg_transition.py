@@ -133,9 +133,9 @@ class VegTransition:
             "hydro_source_model": self.metadata.get(
                 "hydro_source_model"
             ),  # one of: HEC, MIK, or D3D
-            "hydro_source_model_version": self.metadata.get(
-                "hydro_source_model_version"
-            ),  # model version, i.e. V1
+            "hydro_source_model_versions": self.metadata.get(
+                "hydro_source_model_versions"
+            ),  # per-variable version map, e.g. {"STAGE": "V1", "WTEMP": "V2", ...}
             "water_year": "WY99",  # default for now, may be needed
             "sea_level_condition": self.metadata.get("sea_level_condition"),
             "flow_scenario": self.metadata.get("flow_scenario"),
@@ -557,12 +557,20 @@ class VegTransition:
             if hydro_variable == "DO"
             else self.file_params["hydro_source_model"]
         )
+        versions = self.file_params["hydro_source_model_versions"]
+        if not isinstance(versions, dict) or hydro_variable not in versions:
+            raise KeyError(
+                f"No version specified for hydro variable '{hydro_variable}' in "
+                f"metadata.hydro_source_model_versions "
+                f"(available: {list(versions.keys()) if isinstance(versions, dict) else versions})"
+            )
+        variable_version = versions[hydro_variable]
         nc_path = os.path.join(
             variable_base_path,
             f"AMP_{model}_WY{analog_year_str}_"
             f"{self.metadata['sea_level_condition']}_FX_99_99_DLY_"
             f"{self.file_params['input_group']}_AB_O_{hydro_variable}_"
-            f"{self.file_params['hydro_source_model_version']}.zarr",
+            f"{variable_version}.zarr",
         )
 
         return nc_path, analog_year
@@ -616,15 +624,23 @@ class VegTransition:
         ds = utils.analog_years_handler(analog_year, water_year, ds)
 
         # model specific var names: -----------------------------------------------
+        # nc_to_zarr.py normalizes hydro stage variables to "stage", but older
+        # zarrs still use the original per-model names — handle both.
         if self.file_params["hydro_source_model"] == "HEC":
-            ds = ds.rename({"Band1": "height"})
+            if "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
+            else:
+                ds = ds.rename({"Band1": "height"})
         if self.file_params["hydro_source_model"] == "D3D":
             if "waterlevel" in ds.data_vars:
                 ds = ds.rename({"waterlevel": "height"})
             elif "stage" in ds.data_vars:
                 ds = ds.rename({"stage": "height"})
         if self.file_params["hydro_source_model"] == "MIK":
-            ds = ds.rename({"water_level": "height"})
+            if "water_level" in ds.data_vars:
+                ds = ds.rename({"water_level": "height"})
+            elif "stage" in ds.data_vars:
+                ds = ds.rename({"stage": "height"})
         # extract height var as da
         height_da = ds["height"]
 

@@ -26,6 +26,7 @@ def validate_config(config: Dict, config_file: str = None) -> None:
 
     # Run validation checks
     errors.extend(validate_hydro_source_consistency(config, config_file))
+    errors.extend(validate_hydro_source_model_versions(config, config_file))
 
     if errors:
         error_msg = "\n".join(errors)
@@ -119,6 +120,62 @@ def validate_hydro_source_consistency(
         errors.append(
             f"[{config_name}] Missing 'raster_data.netcdf_hydro_path' in config"
         )
+
+    return errors
+
+
+def validate_hydro_source_model_versions(
+    config: Dict, config_file: str = None
+) -> List[str]:
+    """Validate the per-variable hydro_source_model_versions mapping.
+
+    Checks that:
+    1. metadata.hydro_source_model_versions exists and is a mapping
+    2. Each value is a non-empty string
+
+    Parameters
+    ----------
+    config : Dict
+        Loaded configuration dictionary
+    config_file : str, optional
+        Path to config file (for error messages)
+
+    Returns
+    -------
+    List[str]
+        List of error messages (empty if valid)
+    """
+    errors = []
+    config_name = config_file if config_file else "config"
+    valid_variables = {
+        "STAGE", "SALINITY", "WTEMP", "VELOCITY", "FLOWEXCH", "SSC", "DO"
+    }
+
+    versions = config.get("metadata", {}).get("hydro_source_model_versions")
+    if versions is None:
+        errors.append(
+            f"[{config_name}] Missing 'metadata.hydro_source_model_versions' in config"
+        )
+        return errors
+
+    if not isinstance(versions, dict):
+        errors.append(
+            f"[{config_name}] 'metadata.hydro_source_model_versions' must be a "
+            f"mapping of variable -> version string, got {type(versions).__name__}"
+        )
+        return errors
+
+    for variable, version in versions.items():
+        if variable not in valid_variables:
+            errors.append(
+                f"[{config_name}] Unknown hydro variable '{variable}' in "
+                f"hydro_source_model_versions. Must be one of: {sorted(valid_variables)}"
+            )
+        if not isinstance(version, str) or not version:
+            errors.append(
+                f"[{config_name}] hydro_source_model_versions['{variable}'] must be "
+                f"a non-empty string (e.g. 'V1'), got {version!r}"
+            )
 
     return errors
 

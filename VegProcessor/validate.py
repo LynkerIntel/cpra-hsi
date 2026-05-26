@@ -130,7 +130,14 @@ def validate_hydro_source_model_versions(
     errors = []
     config_name = config_file if config_file else "config"
     valid_variables = {
-        "STAGE", "SALINITY", "WTEMP", "VELOCITY", "FLOWEXCH", "SSC", "DO"
+        "STAGE",
+        "SALINITY",
+        "WTEMP",
+        "VELOCITY",
+        "FLOWEXCH",
+        "SSC",
+        "DO",
+        "SEDFLUX",
     }
 
     versions = config.get("metadata", {}).get("hydro_source_model_versions")

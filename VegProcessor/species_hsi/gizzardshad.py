@@ -302,6 +302,8 @@ class GizzardShadHSI:
             si_4[~np.isnan(si_4)] = 1
 
         else:
+            si_4 = self._create_template_array(self.v4_max_do_summer)
+
             # condition 1
             mask_1 = self.v4_max_do_summer <= 1
             si_4[mask_1] = 0

@@ -1,6 +1,8 @@
 import argparse
 import glob
 import os
+import subprocess
+import sys
 import yaml
 import xarray as xr
 import numpy as np
@@ -10,12 +12,96 @@ from hsi import HSI
 import utils
 
 
+# Variables written before the run loop (initial conditions / static) —
+# their presence alone does NOT indicate the step loop ran. A run that
+# aborts during the first step() still writes these.
+VEG_STATIC_VARS = frozenset({"veg_type", "maturity", "spatial_ref", "crs"})
+HSI_STATIC_VARS = frozenset({"spatial_ref", "crs"})
+
+
+def _check_dynamic_output(ds: xr.Dataset, static_vars: frozenset) -> str | None:
+    """Return an error message if the dataset has no populated dynamic vars, else None.
+
+    A dataset is considered hollow if, after excluding known static/IC-only
+    variables, no data variables remain, OR every remaining variable is
+    entirely NaN. Either condition indicates the run loop never produced
+    real output.
+    """
+    dynamic_vars = [
+        v for v in ds.data_vars
+        if v not in static_vars and "time" in ds[v].dims
+    ]
+    if not dynamic_vars:
+        return (
+            f"No dynamic output variables written "
+            f"(found only {sorted(ds.data_vars)}); run likely aborted "
+            f"before first step completed"
+        )
+    for v in dynamic_vars:
+        if not np.all(np.isnan(ds[v].values)):
+            return None
+    return (
+        f"All {len(dynamic_vars)} dynamic variables are entirely NaN; "
+        f"run produced no populated output"
+    )
+
+
 def discover_configs(config_dir: str) -> tuple[list[str], list[str]]:
     """Find all veg and hsi yaml config files in the given directory."""
     all_yamls = sorted(glob.glob(os.path.join(config_dir, "*.yaml")))
     veg_configs = [f for f in all_yamls if os.path.basename(f).startswith("veg_")]
     hsi_configs = [f for f in all_yamls if os.path.basename(f).startswith("hsi_")]
     return veg_configs, hsi_configs
+
+
+def get_current_branch() -> str:
+    """Return the current git branch name, or 'HEAD' if detached."""
+    return subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def read_code_branch(config_path: str) -> str | None:
+    """Return metadata.code_branch from a config, or None if unset/empty."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f) or {}
+    metadata = config.get("metadata") or {}
+    value = metadata.get("code_branch")
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def check_code_branch(config_files: list[str]) -> None:
+    """Abort if any config pins code_branch to something other than current branch.
+
+    Configs without code_branch are skipped. Detached HEAD with any pin set
+    is treated as a mismatch so the user is forced to make the intent explicit.
+    """
+    pins = [(c, read_code_branch(c)) for c in config_files]
+    pinned = [(c, b) for c, b in pins if b is not None]
+    if not pinned:
+        return
+
+    current = get_current_branch()
+    mismatches = [(c, b) for c, b in pinned if b != current]
+    if not mismatches:
+        return
+
+    if current == "HEAD":
+        current_desc = "detached HEAD"
+    else:
+        current_desc = f"branch '{current}'"
+    print(
+        f"ERROR: {len(mismatches)} config(s) pin code_branch to a branch other "
+        f"than the current {current_desc}:"
+    )
+    for config, expected in mismatches:
+        print(f"  {os.path.basename(config)}: expects '{expected}'")
+    print("Checkout the expected branch or clear code_branch to proceed.")
+    sys.exit(1)
 
 
 def get_last_log_entries(
@@ -100,13 +186,16 @@ def validate_veg_output(config_path: str) -> dict:
                     "log_entries": log_entries,
                 }
 
-            # Check last timestep has data (not all NaN)
-            last_veg = ds["veg_type"].isel(time=-1).values
-            if np.all(np.isnan(last_veg)):
+            # Check that dynamic (time-stepped) outputs were actually written.
+            # A run that aborts before the first step still writes veg_type /
+            # maturity from initial conditions, so those alone aren't evidence
+            # the run loop completed.
+            err = _check_dynamic_output(ds, VEG_STATIC_VARS)
+            if err is not None:
                 log_entries = get_last_log_entries(output_dir, str(filename))
                 return {
                     "success": False,
-                    "message": "Last timestep is all NaN",
+                    "message": err,
                     "log_entries": log_entries,
                 }
 
@@ -190,19 +279,14 @@ def validate_hsi_output(config_path: str) -> dict:
                     "log_entries": log_entries,
                 }
 
-            # Check that at least one data variable has data in last timestep
-            data_vars = [v for v in ds.data_vars if v != "spatial_ref"]
-            if data_vars:
-                last_data = ds[data_vars[0]].isel(time=-1).values
-                if np.all(np.isnan(last_data)):
-                    log_entries = get_last_log_entries(
-                        output_dir, str(filename)
-                    )
-                    return {
-                        "success": False,
-                        "message": "Last timestep is all NaN",
-                        "log_entries": log_entries,
-                    }
+            err = _check_dynamic_output(ds, HSI_STATIC_VARS)
+            if err is not None:
+                log_entries = get_last_log_entries(output_dir, str(filename))
+                return {
+                    "success": False,
+                    "message": err,
+                    "log_entries": log_entries,
+                }
 
         return {"success": True, "message": "OK", "log_entries": []}
 
@@ -210,8 +294,11 @@ def validate_hsi_output(config_path: str) -> dict:
         return {"success": False, "message": str(e), "log_entries": []}
 
 
-def print_results_summary(veg_results: dict, hsi_results: dict):
-    """Print a summary of successful and failed runs."""
+def print_results_summary(veg_results: dict, hsi_results: dict) -> int:
+    """Print a summary of successful and failed runs.
+
+    Returns the total number of failed configs across both model types.
+    """
     print("\n" + "=" * 60)
     print("BATCH RUN RESULTS SUMMARY")
     print("=" * 60)
@@ -256,7 +343,15 @@ def print_results_summary(veg_results: dict, hsi_results: dict):
                     for entry in log_entries:
                         print(f"      {entry}")
 
+    total_failed = sum(
+        1 for r in list(veg_results.values()) + list(hsi_results.values())
+        if not r["success"]
+    )
     print("\n" + "=" * 60)
+    if total_failed:
+        print(f"!! {total_failed} CONFIG(S) FAILED — see above !!")
+        print("=" * 60)
+    return total_failed
 
 
 def main():
@@ -276,6 +371,8 @@ def main():
 
     veg_config_files, hsi_config_files = discover_configs(config_dir)
     print(f"Found {len(veg_config_files)} veg configs and {len(hsi_config_files)} hsi configs in {config_dir}")
+
+    check_code_branch(veg_config_files + hsi_config_files)
 
     run_veg = (
         input("Do you want to run Veg models? (y/n): ").lower().strip() == "y"
@@ -304,10 +401,11 @@ def main():
         for config in hsi_config_files:
             hsi_results[config] = validate_hsi_output(config)
 
-        print_results_summary(veg_results, hsi_results)
-        return
+        total_failed = print_results_summary(veg_results, hsi_results)
+        sys.exit(1 if total_failed else 0)
 
     if run_veg:
+        veg_run_failures = {}
         # run each VegTransition scenario
         for config in veg_config_files:
             try:
@@ -324,14 +422,23 @@ def main():
                 )
                 print(f"Error message: {e}")
                 print("Continuing to next config...")
+                veg_run_failures[config] = str(e)
                 continue
 
         # Validate all veg outputs
         print("\nValidating VegTransition outputs...")
         for config in veg_config_files:
-            veg_results[config] = validate_veg_output(config)
+            if config in veg_run_failures:
+                veg_results[config] = {
+                    "success": False,
+                    "message": f"Runtime error: {veg_run_failures[config]}",
+                    "log_entries": [],
+                }
+            else:
+                veg_results[config] = validate_veg_output(config)
 
     if run_hsi:
+        hsi_run_failures = {}
         # run each HSI scenario
         for config in hsi_config_files:
             try:
@@ -344,16 +451,25 @@ def main():
                 print(f"ERROR: HSI model failed for config: {config}")
                 print(f"Error message: {e}")
                 print("Continuing to next config...")
+                hsi_run_failures[config] = str(e)
                 continue
 
         # Validate all HSI outputs
         print("\nValidating HSI outputs...")
         for config in hsi_config_files:
-            hsi_results[config] = validate_hsi_output(config)
+            if config in hsi_run_failures:
+                hsi_results[config] = {
+                    "success": False,
+                    "message": f"Runtime error: {hsi_run_failures[config]}",
+                    "log_entries": [],
+                }
+            else:
+                hsi_results[config] = validate_hsi_output(config)
 
     # Print summary
     if veg_results or hsi_results:
-        print_results_summary(veg_results, hsi_results)
+        total_failed = print_results_summary(veg_results, hsi_results)
+        sys.exit(1 if total_failed else 0)
 
 
 if __name__ == "__main__":

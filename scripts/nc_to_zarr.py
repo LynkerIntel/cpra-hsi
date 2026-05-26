@@ -1,11 +1,14 @@
 """Convert NetCDF files to Zarr stores (1:1).
 
-Each .nc file in the input directory is converted to a .zarr store
-with the same name. Optionally reprojects each dataset to match the
-grid of a reference raster using ``rioxarray.reproject_match()``.
+Every .nc file found recursively under the input directory is converted
+to a .zarr store with the same name. The subfolder layout is mirrored
+under the output directory (e.g. ``input/STAGE/file.nc`` →
+``output/STAGE/file.zarr``). Optionally reprojects each dataset to match
+the grid of a reference raster using ``rioxarray.reproject_match()``.
 
 Usage:
     python scripts/nc_to_zarr.py /data/hydro/mike_stage/
+    python scripts/nc_to_zarr.py /data/hydro/G900/            # recurses into subfolders
     python scripts/nc_to_zarr.py /data/hydro/mike_stage/ -o /data/zarr_stores/
     python scripts/nc_to_zarr.py /data/hydro/mike_stage/ --time-chunks 10
     python scripts/nc_to_zarr.py /data/hydro/mike_stage/ --match-raster /data/dem.tif
@@ -100,10 +103,11 @@ def convert_file(
         times = pd.DatetimeIndex(ds.time.values)
         print(f"  Time range in file: {times[0]} to {times[-1]} ({n} steps)")
 
-        # Build a 365-day water year starting Oct 1, dropping Feb 29 if leap
-        expected = pd.date_range(wy_start, periods=n, freq="D")
+        # Build the canonical 365-day water year (Oct 1 – Sep 30, no Feb 29)
+        wy_end = pd.Timestamp(f"{wy}-09-30")
+        expected = pd.date_range(wy_start, wy_end, freq="D")
         expected = expected[~((expected.month == 2) & (expected.day == 29))]
-        # If the source had more steps than 365 (leap), trim data to match
+        # Trim or validate data to match the 365-day target
         ds = ds.isel(time=slice(0, len(expected)))
         ds = ds.assign_coords(time=("time", expected))
         print(
@@ -145,7 +149,12 @@ def convert_file(
         ds = ds.rename(rename)
 
     # Normalize variable names
-    _VAR_RENAME = {"wtemp": "temperature", "waterlevel": "stage", "water_level": "stage"}
+    _VAR_RENAME = {
+        "wtemp": "temperature",
+        "waterlevel": "stage",   # D3D
+        "water_level": "stage",  # MIKE21
+        "Band1": "stage",        # HEC-RAS
+    }
     var_rename = {k: v for k, v in _VAR_RENAME.items() if k in ds.data_vars}
     if var_rename:
         print(f"  Renaming variables: {var_rename}")
@@ -194,12 +203,16 @@ def nc_to_zarr(
     time_chunks: int = 1,
     match_raster: Path | None = None,
 ) -> list[Path]:
-    """Convert all .nc files in a directory to .zarr stores.
+    """Convert all .nc files under a directory to .zarr stores (recursive).
+
+    Recurses into subfolders and mirrors the input subfolder structure in
+    the output directory — e.g. ``input_dir/STAGE/foo.nc`` becomes
+    ``output_dir/STAGE/foo.zarr``.
 
     Parameters
     ----------
     input_dir : Path
-        Directory containing .nc files.
+        Directory containing .nc files (may include nested subfolders).
     output_dir : Path, optional
         Output directory for .zarr stores. Defaults to
         ``{input_dir}_zarr`` (sibling directory).
@@ -215,9 +228,9 @@ def nc_to_zarr(
         Paths to the created Zarr stores.
     """
     input_dir = Path(input_dir)
-    nc_files = sorted(input_dir.glob("*.nc"))
+    nc_files = sorted(input_dir.rglob("*.nc"))
     if not nc_files:
-        print(f"No .nc files found in {input_dir}")
+        print(f"No .nc files found under {input_dir}")
         sys.exit(1)
 
     if output_dir is None:
@@ -225,21 +238,23 @@ def nc_to_zarr(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Found {len(nc_files)} NetCDF files in {input_dir}")
+    print(f"Found {len(nc_files)} NetCDF files under {input_dir}")
     for f in nc_files:
-        print(f"  {f.name} ({f.stat().st_size / 1024**2:.0f} MB)")
+        rel = f.relative_to(input_dir)
+        print(f"  {rel} ({f.stat().st_size / 1024**2:.0f} MB)")
 
     results = []
     for nc_file in nc_files:
-        zarr_name = nc_file.stem + ".zarr"
-        out = output_dir / zarr_name
+        rel = nc_file.relative_to(input_dir)
+        out = output_dir / rel.with_suffix(".zarr")
+        out.parent.mkdir(parents=True, exist_ok=True)
         result = convert_file(nc_file, out, time_chunks, match_raster)
         results.append(result)
 
     print(f"\n{'=' * 60}")
     print(f"Converted {len(results)} file(s) to {output_dir}")
     for p in results:
-        print(f"  {p.name}")
+        print(f"  {p.relative_to(output_dir)}")
 
     return results
 
@@ -249,7 +264,9 @@ def main():
         description="Convert NetCDF files to Zarr stores (1:1)."
     )
     parser.add_argument(
-        "input_dir", type=Path, help="Directory containing .nc files"
+        "input_dir",
+        type=Path,
+        help="Directory containing .nc files (recurses into subfolders)",
     )
     parser.add_argument(
         "-o",

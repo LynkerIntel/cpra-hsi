@@ -1467,14 +1467,51 @@ class VegTransition:
             method="nearest",
         )
 
-        # Calculate Flood Pulse Frequency
-        # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
-        self.flood_pulse_freq = (
-            ((blr_depth + self.dem_at_blr) > stage_thresh)
-            .sum()
-            .compute()
-            .item()
+        # Characterize the BLR gage sample for cross-model comparison and
+        # so the gate decision (count of days WSE > stage_thresh) is auditable.
+        blr_depth_vals = blr_depth.compute().values
+        blr_wse_vals = blr_depth_vals + self.dem_at_blr
+        n_total = int(blr_depth_vals.size)
+        n_nan = int(np.isnan(blr_depth_vals).sum())
+        n_above = int(np.nansum(blr_wse_vals > stage_thresh))
+        sampled_x = float(blr_depth["x"].values)
+        sampled_y = float(blr_depth["y"].values)
+        self._logger.info(
+            "Flood Pulse BLR | model=%s | dem_at_blr=%.3fm | "
+            "sampled cell=(x=%.2f, y=%.2f) | nearest offset=(dx=%.2f, dy=%.2f) | "
+            "Dec-May days=%d | NaN days=%d | days WSE>%.2fm=%d",
+            self.file_params.get("hydro_source_model"),
+            float(self.dem_at_blr),
+            sampled_x,
+            sampled_y,
+            sampled_x - blr_gage_x,
+            sampled_y - blr_gage_y,
+            n_total,
+            n_nan,
+            stage_thresh,
+            n_above,
         )
+        if n_nan < n_total:
+            self._logger.info(
+                "Flood Pulse BLR | BLR depth (m): min=%.3f mean=%.3f max=%.3f | "
+                "BLR WSE (m): min=%.3f mean=%.3f max=%.3f",
+                float(np.nanmin(blr_depth_vals)),
+                float(np.nanmean(blr_depth_vals)),
+                float(np.nanmax(blr_depth_vals)),
+                float(np.nanmin(blr_wse_vals)),
+                float(np.nanmean(blr_wse_vals)),
+                float(np.nanmax(blr_wse_vals)),
+            )
+        else:
+            # Gage point outside this model's hydro domain — gate will never trip.
+            self._logger.warning(
+                "Flood Pulse BLR | BLR sample is ALL NaN — gage point likely "
+                "outside hydro domain for this model."
+            )
+
+        # Reconstruct Stage (WSE = Depth + self.dem_at_blr) — count of days
+        # above stage_thresh is the gate value used below.
+        self.flood_pulse_freq = n_above
 
         pulse_extent = np.full(
             self.hydro_domain.shape, np.nan, dtype=np.float32

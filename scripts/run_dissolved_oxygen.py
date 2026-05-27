@@ -12,12 +12,15 @@ Output:
     - NetCDF with 7-day moving average of dissolved oxygen at 60m resolution
 
 Usage:
-    python predict_dissolved_oxygen.py
+    python run_dissolved_oxygen.py \\
+        --data-dir /Users/dillonragar/data/cpra \\
+        --group G400 --wy 22 --slr 328 \\
+        --input-version V2 --output-version V3
 """
 
+import argparse
 import gc
 import os
-import re
 import time
 
 import numpy as np
@@ -27,20 +30,7 @@ import rioxarray  # noqa: F401 — registers rio accessor
 from odc.geo.xr import write_cog
 from xgboost import XGBRegressor
 
-# =========================================================
-# PATHS — edit these before running
-# =========================================================
-DATA_DIR = "/Users/dillonragar/data/cpra"
-
-TEMPERATURE_PATH = f"{DATA_DIR}/AMP_D3D_WTEMP/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_WTEMP_V1.zarr"
-DEPTH_PATH = f"{DATA_DIR}/AMP_D3D_STAGE/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_STAGE_V1.zarr"
-VELOCITY_PATH = f"{DATA_DIR}/AMP_D3D_VELOCITY/AMP_D3D_WY06_000_FX_99_99_DLY_G900_AB_O_VELOCITY_V1.zarr"
-DEM_PATH = f"{DATA_DIR}/60m_dem_1280_3200_padded.tif"
-DOMAIN_PATH = f"{DATA_DIR}/D3D_model_domain.tif"
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
-OUTPUT_DIR = f"{DATA_DIR}/data_staging/do"
-OUTPUT_NC_PATH = f"{OUTPUT_DIR}/do_7day_ma_WY06_000.nc"
-OUTPUT_COG_DIR = f"{OUTPUT_DIR}/do_7day_ma_WY06_000_cogs"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
@@ -88,7 +78,6 @@ def compute_depth(stage_ds: xr.Dataset, dem: xr.DataArray) -> xr.DataArray:
 def save_daily_cogs(
     ds: xr.Dataset,
     output_dir: str,
-    water_year: int,
     overwrite: bool = False,
 ):
     """Save each variable and timestep as a Cloud Optimized GeoTIFF.
@@ -103,8 +92,6 @@ def save_daily_cogs(
         Dataset to export. Must have a ``time`` dimension.
     output_dir : str
         Root directory for the COG output.
-    water_year : int
-        Water year used for DOY file labels.
     overwrite : bool
         If True, overwrite existing COGs.
     """
@@ -158,17 +145,37 @@ def save_daily_cogs(
     print("Done exporting COGs.")
 
 
-def predict_do():
+def predict_do(
+    data_dir: str,
+    group: str,
+    wy: str,
+    slr: str,
+    input_version: str,
+    output_version: str,
+    predictors_out: bool,
+):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
+    temperature_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_WTEMP_{input_version}.zarr"
+    depth_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_STAGE_{input_version}.zarr"
+    velocity_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_VELOCITY_{input_version}.zarr"
+    dem_path = f"{data_dir}/60m_dem_1280_3200_padded.tif"
+    domain_path = f"{data_dir}/D3D_model_domain.tif"
+    output_dir = f"{data_dir}/data_staging/do"
+    output_stem = (
+        f"AMP_XGB_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_DO_{output_version}"
+    )
+    output_nc_path = f"{output_dir}/{output_stem}.nc"
+    output_cog_dir = f"{output_dir}/{output_stem}_cogs"
+
     # Load DEM
     print("Loading DEM...")
-    dem = xr.open_dataarray(DEM_PATH)
+    dem = xr.open_dataarray(dem_path)
     dem = dem.squeeze(drop="band")
     dem = dem.rio.write_crs("EPSG:6344")
 
     # Load hydro domain mask (same as VegTransition / HSI)
     print("Loading hydro domain mask...")
-    domain = xr.open_dataarray(DOMAIN_PATH)
+    domain = xr.open_dataarray(domain_path)
     domain = domain.squeeze(drop="band")
     domain = domain.rio.write_crs("EPSG:6344")
     domain = domain.rio.reproject_match(dem)
@@ -180,8 +187,8 @@ def predict_do():
     xgb.load_model(MODEL_PATH)
 
     # Load temperature eagerly (avoid dask scheduler overhead)
-    print(f"Loading temperature from {TEMPERATURE_PATH}...")
-    temp_ds = load_zarr_with_crs(TEMPERATURE_PATH)
+    print(f"Loading temperature from {temperature_path}...")
+    temp_ds = load_zarr_with_crs(temperature_path)
     if "wtemp" in temp_ds.data_vars:
         temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
@@ -189,22 +196,22 @@ def predict_do():
     temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
     # Load depth (stage -> depth via DEM subtraction), eagerly
-    print(f"Loading stage/depth from {DEPTH_PATH}...")
-    stage_ds = load_zarr_with_crs(DEPTH_PATH)
+    print(f"Loading stage/depth from {depth_path}...")
+    stage_ds = load_zarr_with_crs(depth_path)
     stage_ds = reproject_match(stage_ds, dem)
     stage_ds = drop_leap_days(stage_ds)
     depth = compute_depth(stage_ds, dem).load()  # (time, y, x) — into memory
 
     # Load velocity (daily timesteps)
-    print(f"Loading velocity from {VELOCITY_PATH}...")
-    vel_ds = load_zarr_with_crs(VELOCITY_PATH)
+    print(f"Loading velocity from {velocity_path}...")
+    vel_ds = load_zarr_with_crs(velocity_path)
     vel_ds = reproject_match(vel_ds, dem)
     vel_ds = drop_leap_days(vel_ds)
     if vel_ds["velocity"].sizes.get("time", 1) <= 1:
         raise ValueError(
             f"Velocity data must have daily timesteps, "
             f"but only has {vel_ds['velocity'].sizes.get('time', 0)} timestep(s). "
-            f"Source: {VELOCITY_PATH}"
+            f"Source: {velocity_path}"
         )
 
     # Align all inputs to common timestamps
@@ -306,9 +313,10 @@ def predict_do():
     do_ds = do_ds.rio.write_crs("EPSG:6344")
 
     # Write NetCDF
-    print(f"Writing NetCDF to {OUTPUT_NC_PATH}...")
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Writing NetCDF to {output_nc_path}...")
     do_ds.to_netcdf(
-        OUTPUT_NC_PATH,
+        output_nc_path,
         encoding={
             "dissolved_oxygen": {
                 "dtype": "float32",
@@ -324,48 +332,81 @@ def predict_do():
         },
     )
 
-    # Extract water year from output path
-    wy_match = re.search(r"WY(\d+)", OUTPUT_NC_PATH)
-    if not wy_match:
-        raise ValueError(
-            f"Cannot determine water year from OUTPUT_NC_PATH: {OUTPUT_NC_PATH}"
-        )
-    wy = int(wy_match.group(1))
-    water_year = 2000 + wy if wy < 50 else 1900 + wy
-
     # Write daily COGs (DO output)
-    print(f"Writing daily COGs to {OUTPUT_COG_DIR}...")
-    save_daily_cogs(
-        do_ds, OUTPUT_COG_DIR, water_year=water_year, overwrite=True
-    )
+    print(f"Writing daily COGs to {output_cog_dir}...")
+    save_daily_cogs(do_ds, output_cog_dir, overwrite=True)
 
     # Free DO intermediates before the input-COG loop to reduce memory pressure
     del do_arr, do_daily, do_da, do_ds, temp_vals, depth_vals
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)
-    input_cog_dir = os.path.join(OUTPUT_DIR, "do_inputs_cogs")
-    print(f"Writing input COGs to {input_cog_dir}...")
-    inputs_ds = xr.Dataset(
-        {
-            "temperature": temp,
-            "water_depth": depth,
-            "velocity": vel_ds["velocity"],
-        }
-    )
-    inputs_ds = inputs_ds.rio.write_crs("EPSG:6344")
-    save_daily_cogs(
-        inputs_ds, input_cog_dir, water_year=water_year, overwrite=True
-    )
+    if predictors_out:
+        input_cog_dir = os.path.join(output_dir, f"{output_stem}_inputs_cogs")
+        print(f"Writing input COGs to {input_cog_dir}...")
+        inputs_ds = xr.Dataset(
+            {
+                "temperature": temp,
+                "water_depth": depth,
+                "velocity": vel_ds["velocity"],
+            }
+        )
+        inputs_ds = inputs_ds.rio.write_crs("EPSG:6344")
+        save_daily_cogs(inputs_ds, input_cog_dir, overwrite=True)
+    else:
+        print("Skipping predictor input COGs (--predictors-out not set).")
     print("Done.")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate daily dissolved oxygen predictions from an XGBoost "
+            "model trained on station data."
+        )
+    )
+    parser.add_argument(
+        "--data-dir",
+        required=True,
+        help="Root data directory (e.g. /Users/dillonragar/data/cpra).",
+    )
+    parser.add_argument("--group", required=True, help="Group code, e.g. G400.")
+    parser.add_argument("--wy", required=True, help="Water year, e.g. 22.")
+    parser.add_argument("--slr", required=True, help="SLR scenario code, e.g. 328.")
+    parser.add_argument(
+        "--input-version",
+        required=True,
+        help="Input dataset version tag (e.g. V2).",
+    )
+    parser.add_argument(
+        "--output-version",
+        required=True,
+        help="Output dataset version tag (e.g. V3).",
+    )
+    parser.add_argument(
+        "--predictors-out",
+        action="store_true",
+        help="Also write daily COGs of the predictor inputs for QAQC.",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
     import sys
 
+    args = parse_args()
+
     completed = False
     try:
-        predict_do()
+        predict_do(
+            data_dir=args.data_dir,
+            group=args.group,
+            wy=args.wy,
+            slr=args.slr,
+            input_version=args.input_version,
+            output_version=args.output_version,
+            predictors_out=args.predictors_out,
+        )
         completed = True
     finally:
         if not completed:

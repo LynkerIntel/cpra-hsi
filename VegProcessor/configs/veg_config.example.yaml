@@ -6,12 +6,23 @@
 raster_data:
   dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
   hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
-  netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
-  salinity_raster: # Optional: path to salinity raster
   initial_maturity: # AMP_Tree_Age.tif - Initial forest maturity/age raster
+
+  # ---- Hydro input zarrs ----
+  # All hydro variable zarrs typically live in a single folder. The
+  # filenames already encode the variable, so one folder is unambiguous.
+  # Set `stage_input_path` and the YAML anchor (&hydro_dir) propagates
+  # it to every per-variable key via *hydro_dir. KEEP the `&hydro_dir`
+  # marker when you fill in your path, e.g.:
+  #   stage_input_path: &hydro_dir /data/cpra/AMP_inputs/
+  # To disable a variable entirely, replace its *hydro_dir alias with
+  # null (e.g. `salinity_input_path:`) — the model will skip it.
+  # Keys correspond to hydro_source_model_versions entries below.
+  stage_input_path: &hydro_dir # path/to/hydro_inputs/
+  salinity_input_path: *hydro_dir
 
 polygon_data:
   wpu_polygons: # Atchafalaya MP WPUs.shp - Water Planning Unit polygon shapefile
@@ -19,7 +30,6 @@ polygon_data:
 simulation:
   water_year_start: 1963 # Start year of simulation
   water_year_end: 1972 # End year of simulation
-  #wse_sequence_input: true # DEPRECATED true if using synthetic/analog WSE sequence, false for continuous
   years_mapping: # (YY) Maps simulation years to observed data years (for analog sequences)
     1: "06"
     3: "22"
@@ -40,7 +50,6 @@ metadata:
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
   input_group: G900 # Group for hydro input model
   output_group: G900 # Model output group identifier
-  wpu: ARS # Water Planning Unit identifier
   output_version: v12 # Output version for tracking the output from this config
   code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.
 

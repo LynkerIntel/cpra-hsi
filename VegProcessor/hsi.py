@@ -1139,19 +1139,18 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-        ds_vegetated_bluecrab = utils.generate_pct_cover_custom(
-            data_array=self.veg_type,
-            veg_types=[18, 19, 20, 21, 22, 23],  # for bluecrab SI_2
-            x=8,
-            y=8,
-            boundary="pad",
-        )
-
         ds_emergent_veg = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[
                 v for v in range(15, 24)
             ],  # these are marshes, fresh shrubs, blh and swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        ds_emergent_vegetated_bluecrab = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[18, 19, 20, 21, 22, 23],  # for bluecrab SI_2
             x=8,
             y=8,
             boundary="pad",
@@ -1181,7 +1180,9 @@ class HSI(vt.VegTransition):
         self.pct_water = ds_water.to_numpy()
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
-        self.pct_vegetated_bluecrab = ds_vegetated_bluecrab.to_numpy()
+        self.pct_emergent_vegetated_bluecrab = (
+            ds_emergent_vegetated_bluecrab.to_numpy()
+        )
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
         self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
         # Zone V, IV, III, (BLH's) II (swamp)

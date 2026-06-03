@@ -314,12 +314,8 @@ class HSI(vt.VegTransition):
         self.flowexch_input_path = self.config["raster_data"].get(
             "flowexch_input_path"
         )
-        self.ssc_input_path = self.config["raster_data"].get(
-            "ssc_input_path"
-        )
-        self.do_input_path = self.config["raster_data"].get(
-            "do_input_path"
-        )
+        self.ssc_input_path = self.config["raster_data"].get("ssc_input_path")
+        self.do_input_path = self.config["raster_data"].get("do_input_path")
         self.sedflux_input_path = self.config["raster_data"].get(
             "sedflux_input_path"
         )
@@ -511,15 +507,18 @@ class HSI(vt.VegTransition):
 
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
-        self.dissolved_oxygen_july_sept_min_60m = self._get_d_o_subset(
+        self.dissolved_oxygen_july_sept_min_60m = self._get_dissolved_oxygen_subset(
             months=[7, 8, 9],
             agg="min",
             cell=False,
+            min_temporal_completeness=0.5,
         )
-        self.dissolved_oxygen_july_sept_max = self._get_d_o_subset(
+        self.dissolved_oxygen_july_sept_max = self._get_dissolved_oxygen_subset(
             months=[7, 8, 9],
             cell=True,
             agg="max",
+            min_temporal_completeness=0.5,
+            min_valid_fraction=0.5,
         )
 
         # veg based vars ----------------------------------------------
@@ -767,12 +766,16 @@ class HSI(vt.VegTransition):
             except Exception:
                 try:
                     # HEC-RAS: CRS from transverse_mercator variable's spatial_ref attribute
-                    crs_wkt = ds["transverse_mercator"].attrs.get("spatial_ref")
+                    crs_wkt = ds["transverse_mercator"].attrs.get(
+                        "spatial_ref"
+                    )
                     ds = ds.rio.write_crs(crs_wkt)
                 except Exception:
                     try:
                         # XGB: CRS from spatial_ref variable
-                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds["spatial_ref"].attrs.get("spatial_ref")
+                        crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds[
+                            "spatial_ref"
+                        ].attrs.get("spatial_ref")
                         ds = ds.rio.write_crs(crs_wkt)
                     except Exception as exc:
                         raise ValueError(
@@ -810,9 +813,7 @@ class HSI(vt.VegTransition):
             crs_wkt = ds["crs"].attrs.get("crs_wkt")
             ds = ds.rio.write_crs(crs_wkt)
         except Exception as exc:
-            raise ValueError(
-                "Unable to parse CRS from SEDFLUX input"
-            ) from exc
+            raise ValueError("Unable to parse CRS from SEDFLUX input") from exc
 
         ds = self._reproject_match_to_dem(ds)
 
@@ -822,13 +823,17 @@ class HSI(vt.VegTransition):
 
         return da.to_numpy()
 
-    def _get_d_o_subset(
+    def _get_dissolved_oxygen_subset(
         self,
         months: list[int] | None = None,
         agg: str = "min",
         cell: bool = True,
+        min_temporal_completeness: float = 0.5,
+        min_valid_fraction: float = 0.3,
     ) -> np.ndarray | None:
-        """Aggregated monthly dissolved oxygen for the given months.
+        """Aggregated monthly dissolved oxygen for the given months. This includes a
+        temporal and spatial gate to prevent intermitently inundated areas from being
+        included as pixels/cells with dissolved oxygen values.
 
         Parameters
         ----------
@@ -840,6 +845,14 @@ class HSI(vt.VegTransition):
         cell : bool, optional
             If True, coarsen from 60m to 480m. If False, return native 60m resolution.
             Defaults to True.
+        min_temporal_completeness : float, optional
+            A 60m pixel is only kept if the fraction of valid (non-NaN) timesteps
+            over the selected months meets this threshold; otherwise the pixel is
+            set to NaN before aggregation. Defaults to 0.5.
+        min_valid_fraction : float, optional
+            When coarsening (``cell=True``), a 480m cell is only emitted if the
+            fraction of valid (non-NaN) 60m pixels in its 8x8 block meets this
+            threshold; otherwise the cell is set to NaN. Defaults to 0.3.
 
         Returns
         -------
@@ -861,6 +874,11 @@ class HSI(vt.VegTransition):
             time=self.dissolved_oxygen["time"].dt.month.isin(months)
         )
         da = filtered["dissolved_oxygen"]
+
+        # mask by temporal completeness
+        completeness = da.count(dim="time") / da.sizes["time"]
+        da = da.where(completeness >= min_temporal_completeness)
+
         if agg == "min":
             # average of the monthly minimums
             monthly = da.resample(time="1ME").min()
@@ -874,7 +892,18 @@ class HSI(vt.VegTransition):
             reduced = da.mean(dim="time", skipna=True)
 
         if cell:
-            reduced = reduced.coarsen(y=8, x=8, boundary="pad").mean()
+            # gate: only emit a 480m cell if enough of its 60m pixels are valid.
+            # denominator is the count of real (non-padded) pixels per block, so
+            # edge cells aren't penalized for padding.
+            block = dict(y=8, x=8, boundary="pad")
+            valid = reduced.notnull().astype("float32")
+            valid_pixels = valid.coarsen(**block).sum()
+            block_pixels = xr.ones_like(reduced).coarsen(**block).sum()
+
+            coarse = reduced.coarsen(**block).mean()
+            reduced = coarse.where(
+                valid_pixels / block_pixels >= min_valid_fraction
+            )
 
         return reduced.to_numpy()
 
@@ -2072,7 +2101,10 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
-                    ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
+                    ds_loaded[var_name].encoding = {
+                        "zlib": True,
+                        "complevel": 4,
+                    }
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2137,7 +2169,10 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
-                    ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
+                    ds_loaded[var_name].encoding = {
+                        "zlib": True,
+                        "complevel": 4,
+                    }
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2194,7 +2229,9 @@ class HSI(vt.VegTransition):
         """
         self._logger.info("Cropping %sm output to hydro domain.", resolution)
         path = self._netcdf_path_for(resolution)
-        domain = self.hydro_domain_480 if resolution == 480 else self.hydro_domain
+        domain = (
+            self.hydro_domain_480 if resolution == 480 else self.hydro_domain
+        )
 
         with xr.open_dataset(path) as ds:
             ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
@@ -2211,7 +2248,11 @@ class HSI(vt.VegTransition):
         """Write a CSV sidecar listing variables + attrs from the output NetCDF."""
         self._logger.info("Writing %sm variable sidecar CSV.", resolution)
         path = self._netcdf_path_for(resolution)
-        suffix = "hsi_netcdf_variables" if resolution == 480 else "hsi_60m_netcdf_variables"
+        suffix = (
+            "hsi_netcdf_variables"
+            if resolution == 480
+            else "hsi_60m_netcdf_variables"
+        )
 
         with xr.open_dataset(path) as ds:
             attrs_df = utils.dataset_attrs_to_df(

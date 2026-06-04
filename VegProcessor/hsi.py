@@ -203,7 +203,7 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
         self.dissolved_oxygen_july_sept_max = None
 
-        # self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        self.dissolved_oxygen_annual_mean_60m = None  # 60m annual mean
         # self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         # self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
 
@@ -524,7 +524,14 @@ class HSI(vt.VegTransition):
                 min_valid_fraction=0.3,
             )
         )
-
+        self.dissolved_oxygen_annual_mean_60m = (
+            self._get_dissolved_oxygen_subset(
+                months=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                cell=False,
+                agg="mean",
+                min_temporal_completeness=0.5,
+            )
+        )
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self._calculate_mast_percentage()

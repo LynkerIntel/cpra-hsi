@@ -507,18 +507,22 @@ class HSI(vt.VegTransition):
 
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
-        self.dissolved_oxygen_july_sept_min_60m = self._get_dissolved_oxygen_subset(
-            months=[7, 8, 9],
-            agg="min",
-            cell=False,
-            min_temporal_completeness=0.5,
+        self.dissolved_oxygen_july_sept_min_60m = (
+            self._get_dissolved_oxygen_subset(
+                months=[7, 8, 9],
+                agg="min",
+                cell=False,
+                min_temporal_completeness=0.5,
+            )
         )
-        self.dissolved_oxygen_july_sept_max = self._get_dissolved_oxygen_subset(
-            months=[7, 8, 9],
-            cell=True,
-            agg="max",
-            min_temporal_completeness=0.5,
-            min_valid_fraction=0.5,
+        self.dissolved_oxygen_july_sept_max = (
+            self._get_dissolved_oxygen_subset(
+                months=[7, 8, 9],
+                cell=True,
+                agg="max",
+                min_temporal_completeness=0.5,
+                min_valid_fraction=0.3,
+            )
         )
 
         # veg based vars ----------------------------------------------

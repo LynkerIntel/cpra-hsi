@@ -15,7 +15,7 @@ run_one() {
   echo "========================================================"
   echo "  ${label}"
   echo "========================================================"
-  if python "${RUNNER}" "$@"; then
+  if uv run python "${RUNNER}" "$@"; then
     echo "  OK: ${label}"
   else
     echo "  FAILED: ${label}" >&2

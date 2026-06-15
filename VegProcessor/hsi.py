@@ -522,15 +522,7 @@ class HSI(vt.VegTransition):
                 cell=True,
                 agg="max",
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.3,
-            )
-        )
-        self.dissolved_oxygen_annual_mean_60m = (
-            self._get_dissolved_oxygen_subset(
-                months=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                cell=False,
-                agg="mean",
-                min_temporal_completeness=0.5,
+                min_valid_fraction=0.5,
             )
         )
         # veg based vars ----------------------------------------------
@@ -1147,12 +1139,25 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-
         ds_emergent_veg = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[
                 v for v in range(15, 24)
             ],  # these are marshes, fresh shrubs, blh and swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        ds_emergent_veg_bluecrab = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[18, 19, 20, 21, 22, 23],  # for bluecrab SI_2
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        ds_water = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[24, 25, 26],  # water types
             x=8,
             y=8,
             boundary="pad",
@@ -1172,15 +1177,12 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
+        self.pct_water = ds_water.to_numpy()
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
-
+        self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
         self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
-
-        # Marsh 20-23
-        # self.pct_marsh = ds_marsh.to_numpy() # not currently in use
-
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         self.pct_blh = ds_blh.to_numpy()

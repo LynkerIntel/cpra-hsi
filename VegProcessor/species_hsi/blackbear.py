@@ -14,17 +14,18 @@ class BlackBearHSI:
     should use numpy operators instead of `math` to ensure vectorized computation.
     """
 
-    hydro_domain_480: np.ndarray = None
-    dem_480: np.ndarray = None
+    hydro_domain_480: np.ndarray
+    dem_480: np.ndarray
+    pct_open_water: np.ndarray
 
-    v1_pct_area_wetland_cover: np.ndarray = None
-    v2_pct_canopy_cover_s_mast_species: np.ndarray = None
-    v3_soft_mast_prod_species_above1pct_canopy: np.ndarray = None
-    v4_basal_area_mast_prod_species_above_30yr: np.ndarray = None
-    v5_num_h_mast_species_w_one_mature_tree: np.ndarray = None
-    v6_pct_area_nonforested_cover_250m: np.ndarray = None
-    v7_pct_cover_over1pct_cover_h_mast_species: np.ndarray = None
-    v8_pct_eval_area_inside_zones: np.ndarray = None
+    v1_pct_area_wetland_cover: np.ndarray
+    v2_pct_canopy_cover_s_mast_species: np.ndarray
+    v3_soft_mast_prod_species_above1pct_canopy: np.ndarray
+    v4_basal_area_mast_prod_species_above_30yr: np.ndarray
+    v5_num_h_mast_species_w_one_mature_tree: np.ndarray
+    v6_pct_area_nonforested_cover_250m: np.ndarray
+    v7_pct_cover_over1pct_cover_h_mast_species: np.ndarray
+    v8_pct_eval_area_inside_zones: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -68,6 +69,7 @@ class BlackBearHSI:
             v8_pct_eval_area_inside_zones=safe_multiply(
                 hsi_instance.human_influence
             ),
+            pct_open_water=hsi_instance.pct_open_water,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -133,6 +135,15 @@ class BlackBearHSI:
 
             # Add the handler to the logger
             self._logger.addHandler(ch)
+
+    def hsi_veg_mask(self, hsi):
+        """Mask HSI based on vegetation rules.
+
+        If cell is 100% open water, mask HSI.
+        """
+        mask = self.pct_open_water == 100
+        hsi[mask] = np.nan
+        return hsi
 
     def calculate_si_1(self) -> np.ndarray:
         """Percent of area in wetland cover types (excluding open water)"""
@@ -435,6 +446,9 @@ class BlackBearHSI:
             (spring_food + (summer_food * self.si_6) + (fall_food * self.si_7))
             / 3
         ) * human_intolerance
+
+        # apply veg mask
+        hsi = self.hsi_veg_mask(hsi)
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

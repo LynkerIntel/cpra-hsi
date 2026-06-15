@@ -133,7 +133,7 @@ python scripts/nc_to_zarr.py /data/hydro/mike_salinity/ -o /data/zarr/mike_salin
 
 By default, output Zarr stores are written to a sibling directory named `{input_dir}_zarr`. For example, converting `/data/hydro/hec_stage/` produces `/data/hydro/hec_stage_zarr/`.
 
-After conversion, update your config files to point to the `.zarr` stores in the `netcdf_hydro_path` and `netcdf_salinity_path` fields.
+After conversion, update your config files to point to the `.zarr` stores in the `stage_input_path` and `salinity_input_path` fields (and the other `*_input_path` keys as needed).
 
 > **Note on NetCDF Input Files:**
 >

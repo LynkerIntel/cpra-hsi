@@ -85,11 +85,11 @@ class VegTransition:
         self.hydro_domain_path = self.config["raster_data"].get(
             "hydro_domain_raster"
         )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
+        self.stage_input_path = self.config["raster_data"].get(
+            "stage_input_path"
         )
-        self.netcdf_salinity_path = self.config["raster_data"].get(
-            "netcdf_salinity_path"
+        self.salinity_input_path = self.config["raster_data"].get(
+            "salinity_input_path"
         )
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
@@ -526,22 +526,24 @@ class VegTransition:
             - analog_year: The analog year as a 4-digit integer (e.g., 2020)
         """
         if hydro_variable == "STAGE":
-            variable_base_path = self.netcdf_hydro_path
+            variable_base_path = self.stage_input_path
         elif hydro_variable == "SALINITY":
-            variable_base_path = self.netcdf_salinity_path
+            variable_base_path = self.salinity_input_path
         elif hydro_variable == "WTEMP":
-            variable_base_path = self.netcdf_water_temperature_path
+            variable_base_path = self.wtemp_input_path
         elif hydro_variable == "VELOCITY":
-            variable_base_path = self.netcdf_velocity_path
+            variable_base_path = self.velocity_input_path
         elif hydro_variable == "FLOWEXCH":
-            variable_base_path = self.netcdf_flow_exchange_path
+            variable_base_path = self.flowexch_input_path
         elif hydro_variable == "SSC":
-            variable_base_path = self.netcdf_suspended_sediment_path
+            variable_base_path = self.ssc_input_path
         elif hydro_variable == "DO":
-            variable_base_path = self.netcdf_dissolved_oxygen_path
+            variable_base_path = self.do_input_path
+        elif hydro_variable == "SEDFLUX":
+            variable_base_path = self.sedflux_input_path
         else:
             raise ValueError(
-                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO"
+                "must be one of: STAGE, SALINITY, WTEMP, VELOCITY, FLOWEXCH, SSC, DO, SEDFLUX"
             )
 
         quintile = self.sequence_mapping[water_year]
@@ -722,7 +724,7 @@ class VegTransition:
         returns: an xr.Dataset of the data, or a np.ndarray with salinity
             approximated from the vegetation type array.
         """
-        if self.netcdf_salinity_path is not None:
+        if self.salinity_input_path is not None:
             self._logger.info(
                 "Loading salinity data with universal daily method."
             )
@@ -1206,6 +1208,8 @@ class VegTransition:
         )
 
         ds = ds.rio.write_crs("EPSG:6344")
+        ds["veg_type"].encoding = {"zlib": True, "complevel": 4}
+        ds["maturity"].encoding = {"zlib": True, "complevel": 4}
         # Save dataset to NetCDF with explicit encoding
         ds.to_netcdf(self.netcdf_filepath, encoding=encoding)
         ds.close()
@@ -1301,6 +1305,7 @@ class VegTransition:
                     np.full(shape, default_value, dtype=dtype),
                     nc_attrs,
                 )
+                ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
 
             # Handle 'condition' variables (booleans)
             if dtype == bool:
@@ -1462,14 +1467,51 @@ class VegTransition:
             method="nearest",
         )
 
-        # Calculate Flood Pulse Frequency
-        # Reconstruct Stage (WSE = Depth + self.dem_at_blr)
-        self.flood_pulse_freq = (
-            ((blr_depth + self.dem_at_blr) > stage_thresh)
-            .sum()
-            .compute()
-            .item()
+        # Characterize the BLR gage sample for cross-model comparison and
+        # so the gate decision (count of days WSE > stage_thresh) is auditable.
+        blr_depth_vals = blr_depth.compute().values
+        blr_wse_vals = blr_depth_vals + self.dem_at_blr
+        n_total = int(blr_depth_vals.size)
+        n_nan = int(np.isnan(blr_depth_vals).sum())
+        n_above = int(np.nansum(blr_wse_vals > stage_thresh))
+        sampled_x = float(blr_depth["x"].values)
+        sampled_y = float(blr_depth["y"].values)
+        self._logger.info(
+            "Flood Pulse BLR | model=%s | dem_at_blr=%.3fm | "
+            "sampled cell=(x=%.2f, y=%.2f) | nearest offset=(dx=%.2f, dy=%.2f) | "
+            "Dec-May days=%d | NaN days=%d | days WSE>%.2fm=%d",
+            self.file_params.get("hydro_source_model"),
+            float(self.dem_at_blr),
+            sampled_x,
+            sampled_y,
+            sampled_x - blr_gage_x,
+            sampled_y - blr_gage_y,
+            n_total,
+            n_nan,
+            stage_thresh,
+            n_above,
         )
+        if n_nan < n_total:
+            self._logger.info(
+                "Flood Pulse BLR | BLR depth (m): min=%.3f mean=%.3f max=%.3f | "
+                "BLR WSE (m): min=%.3f mean=%.3f max=%.3f",
+                float(np.nanmin(blr_depth_vals)),
+                float(np.nanmean(blr_depth_vals)),
+                float(np.nanmax(blr_depth_vals)),
+                float(np.nanmin(blr_wse_vals)),
+                float(np.nanmean(blr_wse_vals)),
+                float(np.nanmax(blr_wse_vals)),
+            )
+        else:
+            # Gage point outside this model's hydro domain — gate will never trip.
+            self._logger.warning(
+                "Flood Pulse BLR | BLR sample is ALL NaN — gage point likely "
+                "outside hydro domain for this model."
+            )
+
+        # Reconstruct Stage (WSE = Depth + self.dem_at_blr) — count of days
+        # above stage_thresh is the gate value used below.
+        self.flood_pulse_freq = n_above
 
         pulse_extent = np.full(
             self.hydro_domain.shape, np.nan, dtype=np.float32

@@ -17,15 +17,20 @@ class BlueCrabHSI:
     """
 
     # veg type domain, which is a greate area then hydro domain.
-    hydro_domain_480: np.ndarray = None
-    dem_480: np.ndarray = None
+    hydro_domain_480: np.ndarray
+    dem_480: np.ndarray
 
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
-    v1a_mean_annual_salinity: np.ndarray = None
-    v1b_mean_annual_temperature: np.ndarray = None
-    v2_pct_emergent_vegetation: np.ndarray = None
-    v1c_bluecrab_lookup_table: pd.DataFrame = None
+    v1a_mean_annual_salinity: np.ndarray
+    v1b_mean_annual_temperature: np.ndarray
+    v2_pct_emergent_vegetation: np.ndarray
+    v1c_bluecrab_lookup_table: pd.DataFrame
+
+    # masking arrs
+    pct_vegetated: np.ndarray
+    pct_blh : np.ndarray
+    pct_water : np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -40,10 +45,13 @@ class BlueCrabHSI:
         return cls(
             v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
-            v2_pct_emergent_vegetation=hsi_instance.pct_emergent_vegetation,
+            v2_pct_emergent_vegetation=hsi_instance.pct_emergent_veg_bluecrab,
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
+            pct_vegetated=hsi_instance.pct_vegetated_bluecrab,
+            pct_blh=hsi_instance.pct_blh,
+            pct_water=hsi_instance.pct_water
         )
 
     def __post_init__(self):
@@ -102,6 +110,21 @@ class BlueCrabHSI:
                 arr = np.where(np.isnan(input_arr), np.nan, arr)
 
         return arr
+    
+    def mask_to_allowed_veg_types(self, hsi : np.ndarray) -> np.ndarray
+        """Mask HSI output to areas with suitable landcover, else
+        set HSI to defaults.
+        """
+        self._logger.info("Masking blue crab HSI to allowed vegtypes, with defaults.")
+        mask_1 = self.pct_vegetated < 10
+        hsi[mask_1] = np.nan
+        mask_2 = self.pct_blh == 100
+        hsi[mask_2] = 0
+        mask_3 = self.pct_water == 100
+        hsi[mask_3] = 0.25
+        
+        return hsi
+
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
@@ -208,6 +231,9 @@ class BlueCrabHSI:
 
         # Combine individual suitability indices
         hsi = (self.si_1 * self.si_2) ** (1 / 2)
+
+        # mask based on allowed veg types for blue crab HSI
+        hsi = self.mask_to_allowed_veg_types(hsi)
 
         # Check the final HSI array for invalid values
         invalid_values_hsi = (hsi < 0) | (hsi > 1)

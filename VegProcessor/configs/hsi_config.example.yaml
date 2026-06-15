@@ -5,14 +5,35 @@
 
 raster_data:
   dem_path: # AMP_NGOM2_DEM_60m_Bilinear_Resample.tif - Digital Elevation Model at 60m resolution
-  netcdf_hydro_path: # G999 - Directory containing HEC-RAS NetCDF output
   hydro_domain_raster: # HECRAS_domain_60m.tif - Hydrologic model domain mask (optional, if not provided DEM will be used)
   veg_base_raster: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif - Base land use/land cover raster
   veg_keys: # AMP_10kmBuffer_LULC_60m_Nearest_Resample.tif.vat.dbf - Vegetation type lookup table
-  salinity_raster: # Optional: path to salinity raster
   veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
+
+  # ---- Hydro input zarrs ----
+  # All hydro variable zarrs typically live in a single folder. The
+  # filenames already encode the variable, so one folder is unambiguous.
+  # Set `stage_input_path` and the YAML anchor (&hydro_dir) propagates
+  # it to every per-variable key via *hydro_dir. KEEP the `&hydro_dir`
+  # marker when you fill in your path, e.g.:
+  #   stage_input_path: &hydro_dir /data/cpra/AMP_inputs/
+  # To disable a variable entirely, replace its *hydro_dir alias with
+  # null (e.g. `velocity_input_path:`) — the model will skip it and
+  # downstream HSI components will fall back to ideal defaults.
+  # Keys correspond to hydro_source_model_versions entries below.
+  stage_input_path: &hydro_dir # path/to/hydro_inputs/
+  salinity_input_path: *hydro_dir
+  wtemp_input_path: *hydro_dir
+  velocity_input_path: *hydro_dir
+  flowexch_input_path: *hydro_dir
+  ssc_input_path: *hydro_dir
+  do_input_path: *hydro_dir
+  sedflux_input_path: *hydro_dir
+
+polygon_data:
+  sedflux_polygons: # AMP_SedimentationMetric.shp - Subobjective polygon shapefile for SEDFLUX masking. Leave blank to skip.
 
 simulation:
   water_year_start: 1963 # Start year of simulation
@@ -38,7 +59,7 @@ simulation:
     - swampwva
 
 metadata:
-  model: HSIH # Model identifier (H indicates HEC-RAS input)
+  model: HSI # Model identifier; the hydro-source letter (H/D/M) is appended automatically at filename generation
   hydro_source_model: HEC # the hydro input model to use, one of: HEC, MIK, or D3D
   hydro_source_model_versions: # per-variable version tokens appended to input zarr filenames
     STAGE: V1
@@ -48,10 +69,11 @@ metadata:
     FLOWEXCH: V1
     SSC: V1
     DO: V1
+    SEDFLUX: V1 # appended to 60m HSI output if sedflux_input_path is set
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)
   flow_scenario: "D" # Flow scenario: "D" for dry, "W" for wet
-  group: G900 # Model group identifier
-  wpu: AB # Water Planning Unit identifier
+  input_group: G900 # Group for hydro input model (encoded into input zarr filenames)
+  output_group: G900 # Model output group identifier
   output_version: v13 # Output version for tracking
   code_branch: # Optional: git branch this config expects to run against. If set, batch_run.py aborts unless the current branch matches. Leave blank to skip the check.
 

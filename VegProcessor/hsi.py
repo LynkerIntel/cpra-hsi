@@ -203,7 +203,7 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
         self.dissolved_oxygen_july_sept_max = None
 
-        # self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        self.dissolved_oxygen_annual_mean_60m = None  # 60m annual mean
         # self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         # self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
 
@@ -279,13 +279,16 @@ class HSI(vt.VegTransition):
         self.veg_base_path = self.config["raster_data"].get("veg_base_raster")
         self.veg_type_path = self.config["raster_data"].get("veg_type_path")
         self.veg_keys_path = self.config["raster_data"].get("veg_keys")
-        self.salinity_path = self.config["raster_data"].get("salinity_raster")
 
         self.flotant_marsh_path = self.config["raster_data"].get(
             "flotant_marsh_raster"
         )
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # polygon data — optional; sedflux polygon masking is skipped if unset.
+        polygon_data = self.config.get("polygon_data") or {}
+        self.sedflux_polygons_path = polygon_data.get("sedflux_polygons")
 
         # simulation
         self.water_year_start = self.config["simulation"].get(
@@ -296,26 +299,25 @@ class HSI(vt.VegTransition):
         self.analog_sequence = self.config["simulation"].get(
             "wse_sequence_input"
         )
-        self.netcdf_hydro_path = self.config["raster_data"].get(
-            "netcdf_hydro_path"
+        self.stage_input_path = self.config["raster_data"].get(
+            "stage_input_path"
         )
-        self.netcdf_salinity_path = self.config["raster_data"].get(
-            "netcdf_salinity_path"
+        self.salinity_input_path = self.config["raster_data"].get(
+            "salinity_input_path"
         )
-        self.netcdf_water_temperature_path = self.config["raster_data"].get(
-            "netcdf_water_temperature_path"
+        self.wtemp_input_path = self.config["raster_data"].get(
+            "wtemp_input_path"
         )
-        self.netcdf_velocity_path = self.config["raster_data"].get(
-            "netcdf_velocity_path"
+        self.velocity_input_path = self.config["raster_data"].get(
+            "velocity_input_path"
         )
-        self.netcdf_flow_exchange_path = self.config["raster_data"].get(
-            "netcdf_flowexchange_path"
+        self.flowexch_input_path = self.config["raster_data"].get(
+            "flowexch_input_path"
         )
-        self.netcdf_suspended_sediment_path = self.config["raster_data"].get(
-            "netcdf_suspended_sediment_path"
-        )
-        self.netcdf_dissolved_oxygen_path = self.config["raster_data"].get(
-            "netcdf_dissolved_oxygen_path"
+        self.ssc_input_path = self.config["raster_data"].get("ssc_input_path")
+        self.do_input_path = self.config["raster_data"].get("do_input_path")
+        self.sedflux_input_path = self.config["raster_data"].get(
+            "sedflux_input_path"
         )
         self.blue_crab_lookup_path = self.config["simulation"].get(
             "blue_crab_lookup_table"
@@ -506,17 +508,23 @@ class HSI(vt.VegTransition):
 
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
-        self.dissolved_oxygen_july_sept_min_60m = self._get_d_o_subset(
-            months=[7, 8, 9],
-            agg="min",
-            cell=False,
+        self.dissolved_oxygen_july_sept_min_60m = (
+            self._get_dissolved_oxygen_subset(
+                months=[7, 8, 9],
+                agg="min",
+                cell=False,
+                min_temporal_completeness=0.5,
+            )
         )
-        self.dissolved_oxygen_july_sept_max = self._get_d_o_subset(
-            months=[7, 8, 9],
-            cell=True,
-            agg="max",
+        self.dissolved_oxygen_july_sept_max = (
+            self._get_dissolved_oxygen_subset(
+                months=[7, 8, 9],
+                cell=True,
+                agg="max",
+                min_temporal_completeness=0.5,
+                min_valid_fraction=0.5,
+            )
         )
-
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self._calculate_mast_percentage()
@@ -622,7 +630,7 @@ class HSI(vt.VegTransition):
 
     def _load_water_temp_general(self, water_year: int) -> xr.Dataset | None:
         """Load water temperature data from either Delft3D or MIKE 21 models."""
-        if self.netcdf_water_temperature_path is not None:
+        if self.wtemp_input_path is not None:
             self._logger.info(
                 f"Loading water temperature data with universal daily method."
             )
@@ -655,7 +663,7 @@ class HSI(vt.VegTransition):
 
     def _load_velocity_general(self, water_year: int) -> np.ndarray | None:
         """Load velocity data from either Delft3D or MIKE 21 models."""
-        if self.netcdf_velocity_path is not None:
+        if self.velocity_input_path is not None:
             self._logger.info(
                 f"Loading velocity data with universal daily method."
             )
@@ -707,7 +715,7 @@ class HSI(vt.VegTransition):
         """
         Load flow exchange data
         """
-        if self.netcdf_flow_exchange_path is not None:
+        if self.flowexch_input_path is not None:
             self._logger.info(
                 "Loading flow exchange data with universal daily method."
             )
@@ -743,7 +751,7 @@ class HSI(vt.VegTransition):
         """
         Load dissolved oxygen output from XGBoost model.
         """
-        if self.netcdf_dissolved_oxygen_path is not None:
+        if self.do_input_path is not None:
             self._logger.info(
                 "Loading dissolved oxygen data with universal daily method."
             )
@@ -785,13 +793,51 @@ class HSI(vt.VegTransition):
             self._logger.info("No dissolved oxygen file provided.")
             return None
 
-    def _get_d_o_subset(
+    def _load_sedflux_general(self, water_year: int) -> np.ndarray | None:
+        """Load SEDFLUX data for one water year, reprojected to the DEM grid.
+
+        SEDFLUX zarrs are already aggregated to a single annual slice
+        (``cumulative_sediment_erosion_deposition``). Returns a 2D ``(y, x)``
+        array on the 60m HSI grid, or ``None`` if SEDFLUX input is not
+        configured.
+        """
+        if self.sedflux_input_path is None:
+            self._logger.info("SEDFLUX not provided.")
+            return None
+
+        self._logger.info("Loading SEDFLUX data with universal annual method.")
+        nc_path, analog_year = self._get_hydro_netcdf_path(
+            water_year, hydro_variable="SEDFLUX"
+        )
+        self._logger.info("Loading file: %s", nc_path)
+        ds = xr.open_zarr(nc_path)
+        ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+        try:
+            crs_wkt = ds["crs"].attrs.get("crs_wkt")
+            ds = ds.rio.write_crs(crs_wkt)
+        except Exception as exc:
+            raise ValueError("Unable to parse CRS from SEDFLUX input") from exc
+
+        ds = self._reproject_match_to_dem(ds)
+
+        da = ds["cumulative_sediment_erosion_deposition"]
+        if "time" in da.dims:
+            da = da.isel(time=0, drop=True)
+
+        return da.to_numpy()
+
+    def _get_dissolved_oxygen_subset(
         self,
         months: list[int] | None = None,
         agg: str = "min",
         cell: bool = True,
+        min_temporal_completeness: float = 0.5,
+        min_valid_fraction: float = 0.3,
     ) -> np.ndarray | None:
-        """Aggregated monthly dissolved oxygen for the given months.
+        """Aggregated monthly dissolved oxygen for the given months. This includes a
+        temporal and spatial gate to prevent intermitently inundated areas from being
+        included as pixels/cells with dissolved oxygen values.
 
         Parameters
         ----------
@@ -803,6 +849,14 @@ class HSI(vt.VegTransition):
         cell : bool, optional
             If True, coarsen from 60m to 480m. If False, return native 60m resolution.
             Defaults to True.
+        min_temporal_completeness : float, optional
+            A 60m pixel is only kept if the fraction of valid (non-NaN) timesteps
+            over the selected months meets this threshold; otherwise the pixel is
+            set to NaN before aggregation. Defaults to 0.5.
+        min_valid_fraction : float, optional
+            When coarsening (``cell=True``), a 480m cell is only emitted if the
+            fraction of valid (non-NaN) 60m pixels in its 8x8 block meets this
+            threshold; otherwise the cell is set to NaN. Defaults to 0.3.
 
         Returns
         -------
@@ -824,6 +878,11 @@ class HSI(vt.VegTransition):
             time=self.dissolved_oxygen["time"].dt.month.isin(months)
         )
         da = filtered["dissolved_oxygen"]
+
+        # mask by temporal completeness
+        completeness = da.count(dim="time") / da.sizes["time"]
+        da = da.where(completeness >= min_temporal_completeness)
+
         if agg == "min":
             # average of the monthly minimums
             monthly = da.resample(time="1ME").min()
@@ -837,7 +896,18 @@ class HSI(vt.VegTransition):
             reduced = da.mean(dim="time", skipna=True)
 
         if cell:
-            reduced = reduced.coarsen(y=8, x=8, boundary="pad").mean()
+            # gate: only emit a 480m cell if enough of its 60m pixels are valid.
+            # denominator is the count of real (non-padded) pixels per block, so
+            # edge cells aren't penalized for padding.
+            block = dict(y=8, x=8, boundary="pad")
+            valid = reduced.notnull().astype("float32")
+            valid_pixels = valid.coarsen(**block).sum()
+            block_pixels = xr.ones_like(reduced).coarsen(**block).sum()
+
+            coarse = reduced.coarsen(**block).mean()
+            reduced = coarse.where(
+                valid_pixels / block_pixels >= min_valid_fraction
+            )
 
         return reduced.to_numpy()
 
@@ -845,7 +915,7 @@ class HSI(vt.VegTransition):
         self, water_year: int
     ) -> xr.Dataset | None:
         """Load suspended sediment (SSC) data from Delft3D or MIKE 21 models."""
-        if self.netcdf_suspended_sediment_path is not None:
+        if self.ssc_input_path is not None:
             self._logger.info(
                 "Loading suspended sediment data with universal daily method."
             )
@@ -1069,12 +1139,25 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
-
         ds_emergent_veg = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[
                 v for v in range(15, 24)
             ],  # these are marshes, fresh shrubs, blh and swamp
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        ds_emergent_veg_bluecrab = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[18, 19, 20, 21, 22, 23],  # for bluecrab SI_2
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        ds_water = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[24, 25, 26],  # water types
             x=8,
             y=8,
             boundary="pad",
@@ -1094,15 +1177,12 @@ class HSI(vt.VegTransition):
         self.pct_saline_marsh = ds["pct_cover_23"].to_numpy()
         self.pct_open_water = ds["pct_cover_26"].to_numpy()
 
+        self.pct_water = ds_water.to_numpy()
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
-
+        self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
         self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
-
-        # Marsh 20-23
-        # self.pct_marsh = ds_marsh.to_numpy() # not currently in use
-
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
         self.pct_blh = ds_blh.to_numpy()
@@ -2035,6 +2115,10 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
+                    ds_loaded[var_name].encoding = {
+                        "zlib": True,
+                        "complevel": 4,
+                    }
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2099,6 +2183,10 @@ class HSI(vt.VegTransition):
                         np.full(shape, default_value, dtype=netcdf_dtype),
                         nc_attrs,
                     )
+                    ds_loaded[var_name].encoding = {
+                        "zlib": True,
+                        "complevel": 4,
+                    }
 
                 # boolean to int8 (0 and 1)
                 if dtype is bool:
@@ -2121,86 +2209,151 @@ class HSI(vt.VegTransition):
         )
 
     def post_process(self):
-        """HSI post process
+        """Run post-processing steps against the per-timestep HSI NetCDFs.
 
-        (1) Opens files and then crops to hydro domain
-        (2) Create sidecar files with variables in the NetCDFs
+        Each step is a self-contained private method that reads/writes
+        from disk. They run sequentially and depend on the prior crop
+        step having already written the cropped NetCDF back to disk.
         """
-        # -------- crop 480m data --------
-        self._logger.info("Post-processing 480m NetCDF file")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
-            ds_out = ds.where(~np.isnan(self.hydro_domain_480)).copy(deep=True)
-            # create sidecar info
-            attrs_df_480 = utils.dataset_attrs_to_df(
+        self._logger.info("Running HSI post-processing routine.")
+        self._crop_output_to_hydro_domain(resolution=480)
+        self._write_variable_sidecar_csv(resolution=480)
+        self._crop_output_to_hydro_domain(resolution=60)
+        self._append_sedflux_to_60m_netcdf()
+        self._write_variable_sidecar_csv(resolution=60)
+        self._write_wpu_hsi_means_csv()
+        self._convert_outputs_to_cogs()
+        self._logger.info("HSI post-processing complete.")
+
+    def _netcdf_path_for(self, resolution: int) -> str:
+        """Return the on-disk NetCDF path for the given output resolution."""
+        if resolution == 480:
+            return self.netcdf_filepath
+        if resolution == 60:
+            return self.netcdf_filepath_60m
+        raise ValueError(f"Resolution must be 480 or 60, got {resolution}")
+
+    def _crop_output_to_hydro_domain(self, resolution: int) -> None:
+        """Crop the output NetCDF at the given resolution to the hydro domain.
+
+        Opens the per-timestep NetCDF, masks out cells outside the domain,
+        then rewrites the file in place. The hydro domain raster used is
+        resolution-specific (480m uses ``hydro_domain_480``, 60m uses
+        ``hydro_domain``).
+        """
+        self._logger.info("Cropping %sm output to hydro domain.", resolution)
+        path = self._netcdf_path_for(resolution)
+        domain = (
+            self.hydro_domain_480 if resolution == 480 else self.hydro_domain
+        )
+
+        with xr.open_dataset(path) as ds:
+            ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
+
+        # .where() can drop encoding silently — re-apply compression for each var
+        for name in ds_out.data_vars:
+            ds_out[name].encoding = {"zlib": True, "complevel": 4}
+
+        if os.path.exists(path):
+            os.remove(path)
+        ds_out.to_netcdf(path, mode="w", engine="h5netcdf")
+
+    def _write_variable_sidecar_csv(self, resolution: int) -> None:
+        """Write a CSV sidecar listing variables + attrs from the output NetCDF."""
+        self._logger.info("Writing %sm variable sidecar CSV.", resolution)
+        path = self._netcdf_path_for(resolution)
+        suffix = (
+            "hsi_netcdf_variables"
+            if resolution == 480
+            else "hsi_60m_netcdf_variables"
+        )
+
+        with xr.open_dataset(path) as ds:
+            attrs_df = utils.dataset_attrs_to_df(
                 ds,
-                selected_attrs=[
-                    "long_name",
-                    "description",
-                    "units",
-                ],
+                selected_attrs=["long_name", "description", "units"],
             )
 
-            ds_out = ds_out.load()
-
-        if os.path.exists(self.netcdf_filepath):
-            os.remove(self.netcdf_filepath)
-
-        ds_out.to_netcdf(self.netcdf_filepath, mode="w", engine="h5netcdf")
-
-        # -------- create 480m sidecar file ---------
-        self._logger.info("Creating 480m variable name text file")
         outpath = os.path.join(
-            self.run_metadata_dir, f"{self.file_name}_hsi_netcdf_variables.csv"
+            self.run_metadata_dir, f"{self.file_name}_{suffix}.csv"
         )
-        attrs_df_480.to_csv(outpath, index=False)
+        attrs_df.to_csv(outpath, index=False)
 
-        # -------- crop 60m data --------
-        self._logger.info("Post-processing 60m NetCDF file")
-        with xr.open_dataset(self.netcdf_filepath_60m) as ds:
-            ds_out_60m = ds.where(~np.isnan(self.hydro_domain)).copy(deep=True)
-            # create sidecar info
-            attrs_df_60 = utils.dataset_attrs_to_df(
-                ds,
-                selected_attrs=[
-                    "long_name",
-                    "description",
-                    "units",
-                ],
-            )
-
-            ds_out_60m = ds_out_60m.load()
-
-        if os.path.exists(self.netcdf_filepath_60m):
-            os.remove(self.netcdf_filepath_60m)
-
-        ds_out_60m.to_netcdf(
-            self.netcdf_filepath_60m, mode="w", engine="h5netcdf"
-        )
-
-        # -------- create 60m sidecar file ---------
-        self._logger.info("Creating 60m variable name text file")
-        outpath_60m = os.path.join(
-            self.run_metadata_dir,
-            f"{self.file_name}_hsi_60m_netcdf_variables.csv",
-        )
-        attrs_df_60.to_csv(outpath_60m, index=False)
-
-        # -------- WPU HSI CSV Summaries --------
+    def _write_wpu_hsi_means_csv(self) -> None:
+        """Compute WPU-zone mean HSI/SI scores from the 480m output."""
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        if "year" in ds_out.dims:
-            ds_out = ds_out.rename({"year": "time"})
+        with xr.open_dataset(self.netcdf_filepath) as ds:
+            ds_hsi = ds.load()
+
+        if "year" in ds_hsi.dims:
+            ds_hsi = ds_hsi.rename({"year": "time"})
 
         wpu_grid = xr.open_dataarray(
             self.wpu_grid_path, engine="rasterio"
         ).isel(band=0)
 
-        df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_out, wpu_grid=wpu_grid)
-        hsi_wpu_outpath = os.path.join(
+        df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_hsi, wpu_grid=wpu_grid)
+        outpath = os.path.join(
             self.run_metadata_dir, f"{self.file_name}_wpu_hsi_means.csv"
         )
-        df_hsi_wpu.to_csv(hsi_wpu_outpath, index=False)
+        df_hsi_wpu.to_csv(outpath, index=False)
 
-        # -------- convert NetCDFs to COGs --------
+    def _append_sedflux_to_60m_netcdf(self) -> None:
+        """Append per-WY SEDFLUX rasters to the 60m HSI NetCDF.
+
+        Iterates the simulation water years, calls ``_load_sedflux_general``
+        for each, and stores the annual slice into a
+        ``cumulative_sediment_erosion_deposition`` (time, y, x) variable
+        in the 60m output. Skips silently if SEDFLUX input is not configured.
+        """
+        if self.sedflux_input_path is None:
+            self._logger.info(
+                "No sedflux_input_path configured — skipping SEDFLUX append."
+            )
+            return
+
+        self._logger.info("Appending SEDFLUX data to 60m NetCDF.")
+        var_name = "cumulative_sediment_erosion_deposition"
+
+        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+            ds_loaded = ds.load()
+
+        if var_name not in ds_loaded:
+            shape = (
+                len(ds_loaded.time),
+                len(ds_loaded.y),
+                len(ds_loaded.x),
+            )
+            ds_loaded[var_name] = (
+                ["time", "y", "x"],
+                np.full(shape, np.nan, dtype=np.float32),
+                {
+                    "grid_mapping": "spatial_ref",
+                    "units": "m",
+                    "long_name": "Cumulative sediment erosion / deposition",
+                },
+            )
+            ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
+
+        for wy in range(self.water_year_start, self.water_year_end + 1):
+            arr = self._load_sedflux_general(wy)
+            if arr is None:
+                continue
+            ts = pd.Timestamp(f"{wy}-10-01")
+            ds_loaded[var_name].loc[{"time": ts}] = arr.astype(np.float32)
+
+        ds_loaded.to_netcdf(
+            self.netcdf_filepath_60m,
+            mode="a",
+            engine="h5netcdf",
+        )
+        ds_loaded.close()
+        self._logger.info(
+            "SEDFLUX append complete: '%s' added to 60m NetCDF.", var_name
+        )
+
+    def _convert_outputs_to_cogs(self) -> None:
+        """Convert all per-resolution NetCDFs in the output dir to COGs."""
         self._logger.info("Converting NetCDF output to COGs.")
         cog_output_dir = os.path.join(self.output_dir_path, "cogs")
         utils.process_netcdf_folder(
@@ -2209,8 +2362,6 @@ class HSI(vt.VegTransition):
             overwrite=True,
             start_year=1,
         )
-
-        self._logger.info("Post-processing complete.")
 
     def log_data_attribute_types(self):
         """Log the data type of all non-private attributes to help with debugging

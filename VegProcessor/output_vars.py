@@ -1727,6 +1727,16 @@ def get_hsi_60m_variables(hsi):
                 "description": "Mean water velocity at 60m resolution",
             },
         ],
+        "dissolved_oxygen_annual_mean": [
+            hsi.dissolved_oxygen_annyal_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": "dissolved oxygen annual mean",
+                "description": "dissolved oxygen annual mean",
+            },
+        ],
         "dissolved_oxygen_july_sept_min": [
             hsi.dissolved_oxygen_july_sept_min_60m,
             np.float32,

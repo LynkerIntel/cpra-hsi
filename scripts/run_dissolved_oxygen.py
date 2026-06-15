@@ -9,7 +9,7 @@ Inputs (zarr):
     - DEM GeoTIFF (60m)
 
 Output:
-    - NetCDF with 7-day moving average of dissolved oxygen at 60m resolution
+    - NetCDF with daily dissolved oxygen at 60m resolution
 
 Usage:
     python run_dissolved_oxygen.py \\
@@ -269,21 +269,16 @@ def predict_do(
                 f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining"
             )
 
-    # Build xarray DataArray from numpy result, then take a trailing
-    # 7-day moving average. The first 6 timesteps will be NaN.
-    do_daily = xr.DataArray(
+    # Build xarray DataArray from numpy result.
+    do_da = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
         coords={"time": times, "y": temp.y.values, "x": temp.x.values},
     )
-    do_da = do_daily.rolling(time=7, center=False).mean().astype(np.float32)
     do_da.attrs = {
         "units": "mg/L",
-        "long_name": "dissolved oxygen (7-day moving average)",
-        "description": (
-            "Trailing 7-day moving average of daily dissolved oxygen "
-            "predicted by XGBoost model"
-        ),
+        "long_name": "dissolved oxygen",
+        "description": "Daily dissolved oxygen predicted by XGBoost model",
         "grid_mapping": "spatial_ref",
     }
     do_ds = xr.Dataset({"dissolved_oxygen": do_da})
@@ -337,7 +332,7 @@ def predict_do(
     save_daily_cogs(do_ds, output_cog_dir, overwrite=True)
 
     # Free DO intermediates before the input-COG loop to reduce memory pressure
-    del do_arr, do_daily, do_da, do_ds, temp_vals, depth_vals
+    del do_arr, do_da, do_ds, temp_vals, depth_vals
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)
@@ -370,9 +365,13 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Root data directory (e.g. /Users/dillonragar/data/cpra).",
     )
-    parser.add_argument("--group", required=True, help="Group code, e.g. G400.")
+    parser.add_argument(
+        "--group", required=True, help="Group code, e.g. G400."
+    )
     parser.add_argument("--wy", required=True, help="Water year, e.g. 22.")
-    parser.add_argument("--slr", required=True, help="SLR scenario code, e.g. 328.")
+    parser.add_argument(
+        "--slr", required=True, help="SLR scenario code, e.g. 328."
+    )
     parser.add_argument(
         "--input-version",
         required=True,

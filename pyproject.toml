@@ -3,13 +3,13 @@ name = "cpra-hsi"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "bokeh>=3.9.0",
     "cartopy>=0.25.0",
     "cftime>=1.6.5",
     "dask>=2026.1.2",
-    "datacube>=1.9.14",
+    "datacube>=1.9.9,<1.9.13",  # 1.9.13+ requires rasterio>=1.4.4 (PROJ 9.7.1); 1.9.12 allows rasterio 1.4.3 (PROJ 9.4.1)
     "gdal>=3.12.2",
     "geocube>=0.7.1",
     "geopandas>=1.1.2",
@@ -20,6 +20,7 @@ dependencies = [
     "netcdf4>=1.7.4",
     "openpyxl>=3.1.5",
     "plotly>=6.5.2",
+    "rasterio<1.4.4",  # 1.4.3 → PROJ 9.4.1, layout-compatible with pyproj 9.5.1; 1.4.4+ ship PROJ 9.7.1 which breaks reproject against pyproj's DB
     "rioxarray>=0.19.0",
     "scikit-image>=0.25.2",
     "scikit-learn>=1.7.2",

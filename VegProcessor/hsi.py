@@ -190,7 +190,7 @@ class HSI(vt.VegTransition):
 
         self.pct_bare_ground = None
         self.pct_pools_july_sept_mean = None
-        self.pct_pools_april_sept_mean = None
+        self.pct_pools_bw_april_sept_mean = None
 
         # gizzard shad vars
         self.tds_summer_growing_season = None  # ideal always
@@ -203,7 +203,7 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
         self.dissolved_oxygen_july_sept_max = None
 
-        # self.dissolved_oxygen_annual_mean = None  # 60m annual mean
+        self.dissolved_oxygen_annual_mean_60m = None  # 60m annual mean
         # self.dissolved_oxygen_annual_mean_480 = None  # 480m annual mean
         # self.max_do_summer = None  # ideal HEC-RAS SI4 = 6ppm
 
@@ -490,10 +490,11 @@ class HSI(vt.VegTransition):
             low=3,
             high=6,
         )
-        self.pct_pools_april_sept_mean = self._get_pct_pools(
+        # pct pools and backwaters
+        self.pct_pools_bw_april_sept_mean = self._get_pct_pools(
             months=[4, 5, 6, 7, 8, 9],
             low=0.5,
-            high=3,
+            high=6,
         )
 
         # water depth relative to marsh surface (for alligator HSI) ----
@@ -524,7 +525,6 @@ class HSI(vt.VegTransition):
                 min_valid_fraction=0.5,
             )
         )
-
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self._calculate_mast_percentage()

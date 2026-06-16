@@ -1728,7 +1728,7 @@ def get_hsi_60m_variables(hsi):
             },
         ],
         "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annyal_mean_60m,
+            hsi.dissolved_oxygen_annual_mean_60m,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

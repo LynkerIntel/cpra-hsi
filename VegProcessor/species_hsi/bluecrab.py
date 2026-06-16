@@ -49,7 +49,7 @@ class BlueCrabHSI:
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_vegetated=hsi_instance.pct_vegetated_bluecrab,
+            pct_vegetated=hsi_instance.pct_vegetated,
             pct_blh=hsi_instance.pct_blh,
             pct_water=hsi_instance.pct_water,
         )

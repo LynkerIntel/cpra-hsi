@@ -1203,15 +1203,15 @@ def get_hsi_480m_variables(hsi):
                 ),
             },
         ],
-        "pct_pools_april_sept_mean": [
-            hsi.pct_pools_april_sept_mean,
+        "pct_pools_bw_april_sept_mean": [
+            hsi.pct_pools_bw_april_sept_mean,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
                 "units": "%",
-                "long_name": "percent pools April-September mean",
+                "long_name": "percent pools and backwaters April-September mean",
                 "description": (
-                    "Percentage of pool pixels for April-September period"
+                    "Percentage of pool and backwaters pixels for April-September period"
                 ),
             },
         ],
@@ -1728,7 +1728,7 @@ def get_hsi_60m_variables(hsi):
             },
         ],
         "dissolved_oxygen_annual_mean": [
-            hsi.dissolved_oxygen_annyal_mean_60m,
+            hsi.dissolved_oxygen_annual_mean_60m,
             np.float32,
             {
                 "grid_mapping": "spatial_ref",

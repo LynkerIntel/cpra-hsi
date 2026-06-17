@@ -29,8 +29,8 @@ class BlueCrabHSI:
 
     # masking arrs
     pct_vegetated: np.ndarray
-    pct_blh : np.ndarray
-    pct_water : np.ndarray
+    pct_blh: np.ndarray
+    pct_water: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -49,9 +49,9 @@ class BlueCrabHSI:
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_vegetated=hsi_instance.pct_vegetated_bluecrab,
+            pct_vegetated=hsi_instance.pct_vegetated,
             pct_blh=hsi_instance.pct_blh,
-            pct_water=hsi_instance.pct_water
+            pct_water=hsi_instance.pct_water,
         )
 
     def __post_init__(self):
@@ -110,21 +110,22 @@ class BlueCrabHSI:
                 arr = np.where(np.isnan(input_arr), np.nan, arr)
 
         return arr
-    
-    def mask_to_allowed_veg_types(self, hsi : np.ndarray) -> np.ndarray
+
+    def mask_to_allowed_veg_types(self, hsi: np.ndarray) -> np.ndarray:
         """Mask HSI output to areas with suitable landcover, else
         set HSI to defaults.
         """
-        self._logger.info("Masking blue crab HSI to allowed vegtypes, with defaults.")
+        self._logger.info(
+            "Masking blue crab HSI to allowed vegtypes, with defaults."
+        )
         mask_1 = self.pct_vegetated < 10
         hsi[mask_1] = np.nan
         mask_2 = self.pct_blh == 100
         hsi[mask_2] = 0
         mask_3 = self.pct_water == 100
         hsi[mask_3] = 0.25
-        
-        return hsi
 
+        return hsi
 
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""

@@ -1497,18 +1497,18 @@ def get_hsi_480m_variables(hsi):
                 "description": "black crappie water quality component",
             },
         ],
-        "blackcrappie_wq_tcr_adj": [
-            _safe_get_attr(hsi.blackcrappie, "wq_tcr_adj"),
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "",
-                "long_name": "",
-                "description": (
-                    "black crappie water quality component adjusted"
-                ),
-            },
-        ],
+        # "blackcrappie_wq_tcr_adj": [
+        #     _safe_get_attr(hsi.blackcrappie, "wq_tcr_adj"),
+        #     np.float32,
+        #     {
+        #         "grid_mapping": "spatial_ref",
+        #         "units": "",
+        #         "long_name": "",
+        #         "description": (
+        #             "black crappie water quality component adjusted"
+        #         ),
+        #     },
+        # ],
         "blackcrappie_wq_init": [
             _safe_get_attr(hsi.blackcrappie, "wq_init"),
             np.float32,

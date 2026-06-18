@@ -314,10 +314,17 @@ def coarsen_and_reduce(
             based on the coarsen dims.
         :return (np.ndarray): coarsened chunk
         """
-        # Sum over the provided axis
+        # Sum over the provided axis. The denominator is the count of valid
+        # (non-NaN) 60m pixels in each block, NOT the full block size. With
+        # boundary="pad", incomplete edge blocks are padded with NaN, and the
+        # veg raster itself carries NaN for nodata (study-area boundary, water,
+        # masked pixels). Dividing by the fixed block size would charge those
+        # invalid pixels against every veg class, diluting pct cover toward
+        # data boundaries (edge effects). Cells with no valid pixels -> NaN.
         count = (block == veg_type).sum(axis=axis)
-        total_cells = block.shape[axis[0]] * block.shape[axis[1]]
-        return (count / total_cells) * 100
+        valid_cells = np.isfinite(block).sum(axis=axis)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return (count / valid_cells) * 100
 
     result = da.coarsen(**kwargs).reduce(
         _count_vegtype_and_calculate_percentage
@@ -371,8 +378,13 @@ def generate_pct_cover_custom(
 
     :return: Aggregated xr.DataArray
     """
-    # create new binary var with tuple of dims, data
-    data_array["boolean"] = (["y", "x"], np.isin(data_array, veg_types))
+    # create new binary var with tuple of dims, data. Preserve NaN from the
+    # input so nodata/padded pixels stay excluded from the pct-cover denominator
+    # in coarsen_and_reduce (np.isin alone would collapse NaN to False, putting
+    # invalid pixels back into the denominator and re-introducing edge effects).
+    boolean = np.isin(data_array, veg_types).astype("float32")
+    boolean = np.where(np.isnan(data_array), np.nan, boolean)
+    data_array["boolean"] = (["y", "x"], boolean)
     # run coarsen w/ True as valid veg type
     da_out = coarsen_and_reduce(
         da=data_array["boolean"], veg_type=True, **kwargs

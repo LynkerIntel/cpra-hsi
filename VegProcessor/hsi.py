@@ -171,7 +171,7 @@ class HSI(vt.VegTransition):
         self.salinity_max_july_sept = None
         self.salinity_max_may_july = None
 
-        self.velocity_july_sept_mean = None
+        self.velocity_july_sept_mean = None  # always ideal
 
         self.pct_swamp_bottom_hardwood = None
         self.pct_fresh_marsh = None
@@ -452,7 +452,9 @@ class HSI(vt.VegTransition):
         self.maturity = self._load_maturity()
         self.maturity_480 = self._load_maturity(resample_cell=True)
 
-        self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
+        # set velocity as always ideal
+        # self.velocity_july_sept_mean = self._load_velocity_general(self.wy)
+
         self.flow_exchange = self._load_flowexchange_general(self.wy)
         self.flow_exchange_cat = self._classify_flow_exchange()
         self.flood_duration_blh = self._calculate_flood_duration(habitat="blh")

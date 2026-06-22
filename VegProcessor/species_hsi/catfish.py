@@ -103,7 +103,7 @@ class RiverineCatfishHSI:
             v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
             v18_avg_vel_summer_flow=safe_multiply(
                 hsi_instance.velocity_july_sept_mean
-            ),  # UNIT: m/s to cm/s
+            ),  # UNIT: m/s to cm/s, set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
@@ -863,6 +863,7 @@ class RiverineCatfishHSI:
         """Average current velocity in cover areas during average summer flow"""
         self._logger.info("Running SI 18")
 
+        # set to ideal
         if self.v18_avg_vel_summer_flow is None:
             si_18 = self.template.copy()
             self._logger.info(

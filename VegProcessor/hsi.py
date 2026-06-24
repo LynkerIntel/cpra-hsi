@@ -2349,12 +2349,6 @@ class HSI(vt.VegTransition):
         if os.path.exists(self.netcdf_filepath_60m):
             with xr.open_dataset(self.netcdf_filepath_60m) as ds:
                 if var_name in ds.variables:
-                    # self._logger.warning(
-                    #     "'%s' already present in 60m NetCDF — skipping SEDFLUX "
-                    #     "append. Delete the variable or regenerate the file to "
-                    #     "re-append.",
-                    #     var_name,
-                    # )
                     raise ValueError(
                         f"'{var_name}' already present in 60m NetCDF — skipping "
                         "SEDFLUX append. Delete the variable or regenerate the "

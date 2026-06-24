@@ -795,40 +795,6 @@ class HSI(vt.VegTransition):
             self._logger.info("No dissolved oxygen file provided.")
             return None
 
-    def _load_sedflux_general(self, water_year: int) -> np.ndarray | None:
-        """Load SEDFLUX data for one water year, reprojected to the DEM grid.
-
-        SEDFLUX zarrs are already aggregated to a single annual slice
-        (``cumulative_sediment_erosion_deposition``). Returns a 2D ``(y, x)``
-        array on the 60m HSI grid, or ``None`` if SEDFLUX input is not
-        configured.
-        """
-        if self.sedflux_input_path is None:
-            self._logger.info("SEDFLUX not provided.")
-            return None
-
-        self._logger.info("Loading SEDFLUX data with universal annual method.")
-        nc_path, analog_year = self._get_hydro_netcdf_path(
-            water_year, hydro_variable="SEDFLUX"
-        )
-        self._logger.info("Loading file: %s", nc_path)
-        ds = xr.open_zarr(nc_path)
-        ds = utils.analog_years_handler(analog_year, water_year, ds)
-
-        try:
-            crs_wkt = ds["crs"].attrs.get("crs_wkt")
-            ds = ds.rio.write_crs(crs_wkt)
-        except Exception as exc:
-            raise ValueError("Unable to parse CRS from SEDFLUX input") from exc
-
-        ds = self._reproject_match_to_dem(ds)
-
-        da = ds["cumulative_sediment_erosion_deposition"]
-        if "time" in da.dims:
-            da = da.isel(time=0, drop=True)
-
-        return da.to_numpy()
-
     def _get_dissolved_oxygen_subset(
         self,
         months: list[int] | None = None,
@@ -2300,56 +2266,121 @@ class HSI(vt.VegTransition):
         )
         df_hsi_wpu.to_csv(outpath, index=False)
 
-    def _append_sedflux_to_60m_netcdf(self) -> None:
-        """Append per-WY SEDFLUX rasters to the 60m HSI NetCDF.
+    # SEDFLUX is a post-process-only access pattern: it is not consumed by any
+    # HSI suitability model, only assembled here and written to the 60m output.
+    # The two methods below keep that pattern self-contained — a lazy build step
+    # and a lazy write step — separate from the run-loop ``_load_*_general``
+    # family used during ``step``/``run``.
 
-        Iterates the simulation water years, calls ``_load_sedflux_general``
-        for each, and stores the annual slice into a
-        ``cumulative_sediment_erosion_deposition`` (time, y, x) variable
-        in the 60m output. Skips silently if SEDFLUX input is not configured.
+    def _build_sedflux_dataset(self) -> xr.DataArray | None:
+        """Compile the full simulation-length SEDFLUX series as a lazy dataset.
+
+        Each simulation water year maps to one of the (typically 3) analog
+        years via the sequence/years mapping. Rather than opening and
+        reprojecting a file per water year (the run-loop access pattern),
+        this reads each *unique* analog zarr only once — keeping the data
+        dask-backed — reprojects it to the DEM grid, then concatenates the
+        per-water-year slices along a new annual ``time`` axis. The result
+        is a lazy ``(time, y, x)`` DataArray spanning ``water_year_start``..
+        ``water_year_end`` whose underlying reads/reprojection are deferred
+        until the array is computed (e.g. on write).
+
+        Returns ``None`` if SEDFLUX input is not configured.
         """
         if self.sedflux_input_path is None:
+            return None
+
+        var_name = "cumulative_sediment_erosion_deposition"
+        # Cache reprojected analog arrays by source path, so each unique analog
+        # year is opened + reprojected only once even though several simulation
+        # water years resolve to it.
+        analog_cache: dict[str, xr.DataArray] = {}
+        slices: list[xr.DataArray] = []
+        times: list[pd.Timestamp] = []
+
+        for wy in range(self.water_year_start, self.water_year_end + 1):
+            nc_path, _ = self._get_hydro_netcdf_path(
+                wy, hydro_variable="SEDFLUX"
+            )
+            if nc_path not in analog_cache:
+                self._logger.info("Loading SEDFLUX analog file: %s", nc_path)
+                ds = xr.open_zarr(nc_path)
+                try:
+                    crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                    ds = ds.rio.write_crs(crs_wkt)
+                except Exception as exc:
+                    raise ValueError(
+                        "Unable to parse CRS from SEDFLUX input"
+                    ) from exc
+                ds = self._reproject_match_to_dem(ds)
+                da = ds[var_name]
+                if "time" in da.dims:
+                    da = da.isel(time=0, drop=True)
+                analog_cache[nc_path] = da
+
+            slices.append(analog_cache[nc_path])
+            times.append(pd.Timestamp(f"{wy}-10-01"))
+
+        combined = xr.concat(
+            slices, dim=pd.DatetimeIndex(times, name="time")
+        ).astype(np.float32)
+        combined.name = var_name
+        combined.attrs = {
+            "grid_mapping": "spatial_ref",
+            "units": "m",
+            "long_name": "Cumulative sediment erosion / deposition",
+        }
+        return combined
+
+    def _append_sedflux_to_60m_netcdf(self) -> None:
+        """Append the SEDFLUX series to the 60m HSI NetCDF.
+
+        Builds the simulation-length SEDFLUX series as a lazy, dask-backed
+        dataset (see ``_build_sedflux_dataset``) and writes it into the 60m
+        output as a ``cumulative_sediment_erosion_deposition`` (time, y, x)
+        variable. The lazy graph (zarr reads + reprojection) is realized
+        here on write. Skips if SEDFLUX input is not configured, or if the
+        variable is already present (append mode cannot overwrite an
+        existing netCDF variable in place).
+        """
+        var_name = "cumulative_sediment_erosion_deposition"
+
+        # Metadata-only check (no data read): bail before building/reprojecting
+        # if the variable is already present, since append mode would otherwise
+        # fail trying to recreate it.
+        if os.path.exists(self.netcdf_filepath_60m):
+            with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+                if var_name in ds.variables:
+                    raise ValueError(
+                        f"'{var_name}' already present in 60m NetCDF — skipping "
+                        "SEDFLUX append. Delete the variable or regenerate the "
+                        "file to re-append."
+                    )
+
+        sedflux = self._build_sedflux_dataset()
+        if sedflux is None:
             self._logger.info(
                 "No sedflux_input_path configured — skipping SEDFLUX append."
             )
             return
 
         self._logger.info("Appending SEDFLUX data to 60m NetCDF.")
-        var_name = "cumulative_sediment_erosion_deposition"
 
-        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
-            ds_loaded = ds.load()
+        # Append only the new variable. Its (time, y, x) dims already exist in
+        # the target file and are reused by name, so the rest of the file is
+        # never read into memory. Drop the coordinate variables (time, y, x,
+        # spatial_ref) so append mode doesn't try to recreate ones the file
+        # already has. The dask graph is realized chunk-by-chunk on write.
+        sedflux.encoding = {"zlib": True, "complevel": 4}
+        sedflux_ds = sedflux.to_dataset(name=var_name).drop_vars(
+            list(sedflux.coords), errors="ignore"
+        )
 
-        if var_name not in ds_loaded:
-            shape = (
-                len(ds_loaded.time),
-                len(ds_loaded.y),
-                len(ds_loaded.x),
-            )
-            ds_loaded[var_name] = (
-                ["time", "y", "x"],
-                np.full(shape, np.nan, dtype=np.float32),
-                {
-                    "grid_mapping": "spatial_ref",
-                    "units": "m",
-                    "long_name": "Cumulative sediment erosion / deposition",
-                },
-            )
-            ds_loaded[var_name].encoding = {"zlib": True, "complevel": 4}
-
-        for wy in range(self.water_year_start, self.water_year_end + 1):
-            arr = self._load_sedflux_general(wy)
-            if arr is None:
-                continue
-            ts = pd.Timestamp(f"{wy}-10-01")
-            ds_loaded[var_name].loc[{"time": ts}] = arr.astype(np.float32)
-
-        ds_loaded.to_netcdf(
+        sedflux_ds.to_netcdf(
             self.netcdf_filepath_60m,
             mode="a",
             engine="h5netcdf",
         )
-        ds_loaded.close()
         self._logger.info(
             "SEDFLUX append complete: '%s' added to 60m NetCDF.", var_name
         )

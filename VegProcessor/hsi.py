@@ -2356,10 +2356,9 @@ class HSI(vt.VegTransition):
                     #     var_name,
                     # )
                     raise ValueError(
-                        "'%s' already present in 60m NetCDF — skipping SEDFLUX "
-                        "append. Delete the variable or regenerate the file to "
-                        "re-append.",
-                        var_name,
+                        f"'{var_name}' already present in 60m NetCDF — skipping "
+                        "SEDFLUX append. Delete the variable or regenerate the "
+                        "file to re-append."
                     )
 
         sedflux = self._build_sedflux_dataset()

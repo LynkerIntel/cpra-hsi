@@ -97,7 +97,7 @@ class BlackCrappieHSI:
             v3_stream_gradient=hsi_instance.blackcrappie_stream_gradient,  # set to ideal
             v4_avg_vel_summer_flow_pools_bw=safe_multiply(
                 hsi_instance.velocity_july_sept_mean
-            ),  # UNIT: m/s to cm/s
+            ),  # UNIT: m/s to cm/s, set to ideal
             v5_pct_pools_bw_avg_spring_summer_flow=hsi_instance.pct_pools_bw_april_sept_mean,
             v7_ph_year=hsi_instance.blackcrappie_ph_year,  # set to ideal
             v8_most_suit_temp_in_midsummer_pools_bw_adult=hsi_instance.water_temperature_july_august_mean_60m,
@@ -391,6 +391,7 @@ class BlackCrappieHSI:
         """
         self._logger.info("Running SI 4")
 
+        # set to ideal
         if self.v4_avg_vel_summer_flow_pools_bw is None:
             self._logger.info(
                 "Average current velocity in pools and backwater areas during average "
@@ -761,7 +762,7 @@ class BlackCrappieHSI:
                 si_arr_60m=si_11,
                 water_depth_subset=self.water_depth_feb_march_mean_60m,
                 low=0.5,
-                high=3.0,
+                high=1.0,
             )
 
         if np.any(np.isclose(si_11, 999.0, atol=1e-5)):
@@ -948,21 +949,11 @@ class BlackCrappieHSI:
         # water quality term for cube root
         self.wq_tcr = (self.si_8 * self.si_9 * self.si_10) ** (1 / 3)
 
-        # condition 1 (water quality condition for cube root term)
-        wq_tcr_mask = (
-            (self.si_8 <= 0.4) | (self.si_9 <= 0.4) | (self.si_10 <= 0.4)
-        )
-        self.wq_tcr_adj = np.where(
-            wq_tcr_mask,
-            np.minimum.reduce([self.si_8, self.si_9, self.si_10]),
-            self.wq_tcr,
-        )
-
         # water quality initial equation
         if self.v14_max_salinity_gs is not None:
             # equation when optional salinity (SI_14) is available
             self.wq_init = (
-                2 * (self.wq_tcr_adj)
+                2 * (self.wq_tcr)
                 + 2 * (self.si_12)
                 + self.si_7
                 + self.si_1
@@ -971,19 +962,11 @@ class BlackCrappieHSI:
         else:
             # standard equation without salinity
             self.wq_init = (
-                2 * (self.wq_tcr_adj)
-                + 2 * (self.si_12)
-                + self.si_7
-                + self.si_1
+                2 * (self.wq_tcr) + 2 * (self.si_12) + self.si_7 + self.si_1
             ) / 6
 
-        # condition 2
-        wq_mask = ((self.wq_tcr_adj) <= 0.4) | (self.si_12 <= 0.4)
-        self.wq = np.where(
-            wq_mask,
-            np.minimum.reduce([self.wq_tcr_adj, self.si_12, self.wq_init]),
-            self.wq_init,
-        )
+        # Set final water quality component to the initial condition, bypassing limiting factors
+        self.wq = self.wq_init
 
         # reproduction component (rc)
         self.rc = (

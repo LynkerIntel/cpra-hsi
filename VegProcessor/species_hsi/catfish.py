@@ -103,7 +103,7 @@ class RiverineCatfishHSI:
             v14_avg_midsummer_temp_in_pools_bw_juvenile=hsi_instance.water_temperature_july_sept_mean_60m,
             v18_avg_vel_summer_flow=safe_multiply(
                 hsi_instance.velocity_july_sept_mean
-            ),  # UNIT: m/s to cm/s
+            ),  # UNIT: m/s to cm/s, set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             hydro_domain_60=hsi_instance.hydro_domain,
@@ -625,14 +625,14 @@ class RiverineCatfishHSI:
 
             # condition 4
             mask_4 = (self.v10_water_temp_may_july_mean > 27.5) & (
-                self.v10_water_temp_may_july_mean <= 29.2
+                self.v10_water_temp_may_july_mean <= 32
             )
             si_10[mask_4] = (
-                -0.5882 * (self.v10_water_temp_may_july_mean[mask_4])
-            ) + 17.176
+                -0.2222 * (self.v10_water_temp_may_july_mean[mask_4])
+            ) + 7.1111
 
             # condition 5
-            mask_5 = self.v10_water_temp_may_july_mean > 29.2
+            mask_5 = self.v10_water_temp_may_july_mean > 32
             si_10[mask_5] = 0
 
             si_10 = self.mask_to_pools_backwaters_coarsen(
@@ -863,6 +863,7 @@ class RiverineCatfishHSI:
         """Average current velocity in cover areas during average summer flow"""
         self._logger.info("Running SI 18")
 
+        # set to ideal
         if self.v18_avg_vel_summer_flow is None:
             si_18 = self.template.copy()
             self._logger.info(

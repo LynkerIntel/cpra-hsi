@@ -187,23 +187,25 @@ class BassHSI:
 
             # condition 3
             mask_3 = (self.v2_pct_emergent_vegetation >= 30) & (
-                self.v2_pct_emergent_vegetation < 50
+                self.v2_pct_emergent_vegetation <= 50
             )
             si_2[mask_3] = 1.0
 
             # condition 4
-            mask_4 = (self.v2_pct_emergent_vegetation >= 50) & (
-                self.v2_pct_emergent_vegetation < 85
+            mask_4 = (self.v2_pct_emergent_vegetation > 50) & (
+                self.v2_pct_emergent_vegetation <= 99
             )
             si_2[mask_4] = (
-                -0.0283 * self.v2_pct_emergent_vegetation[mask_4]
-            ) + 2.414
+                -0.0202 * self.v2_pct_emergent_vegetation[mask_4]
+            ) + 2.0102
 
             # condition 5
-            mask_5 = (self.v2_pct_emergent_vegetation >= 85) & (
+            mask_5 = (self.v2_pct_emergent_vegetation > 99) & (
                 self.v2_pct_emergent_vegetation < 100
             )
-            si_2[mask_5] = 0.01
+            si_2[mask_5] = (
+                -0.01 * self.v2_pct_emergent_vegetation[mask_5]
+            ) + 1
 
             # condition 6
             mask_3 = self.v2_pct_emergent_vegetation == 100

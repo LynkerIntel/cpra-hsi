@@ -286,9 +286,12 @@ class HSI(vt.VegTransition):
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
 
-        # polygon data — optional; sedflux polygon masking is skipped if unset.
+        # polygon data — optional; sedflux waterbody summary is skipped if unset.
+        # Rasterized per-waterbody boolean masks stored in a NetCDF.
         polygon_data = self.config.get("polygon_data") or {}
-        self.sedflux_polygons_path = polygon_data.get("sedflux_polygons")
+        self.sedflux_waterbody_masks_path = polygon_data.get(
+            "sedflux_waterbody_masks"
+        )
 
         # simulation
         self.water_year_start = self.config["simulation"].get(
@@ -2189,6 +2192,7 @@ class HSI(vt.VegTransition):
         self._crop_output_to_hydro_domain(resolution=60)
         self._append_sedflux_to_60m_netcdf()
         self._write_variable_sidecar_csv(resolution=60)
+        self._write_sedflux_waterbody_means_csv()
         self._write_wpu_hsi_means_csv()
         self._convert_outputs_to_cogs()
         self._logger.info("HSI post-processing complete.")
@@ -2384,6 +2388,80 @@ class HSI(vt.VegTransition):
         self._logger.info(
             "SEDFLUX append complete: '%s' added to 60m NetCDF.", var_name
         )
+
+    def _write_sedflux_waterbody_means_csv(self) -> None:
+        """Average SEDFLUX over each waterbody mask, per year, to a CSV.
+
+        Reads the rasterized waterbody-mask NetCDF — a single ``mask``
+        (waterbody, y, x) array of 0/1 zone masks, with ``waterbody``,
+        ``objective`` and ``subobjective`` coords along the waterbody dim —
+        reprojects it onto the SEDFLUX 60m grid, then for each simulation
+        year computes the spatial mean of
+        ``cumulative_sediment_erosion_deposition`` over each waterbody's
+        pixels. Output rows are
+        ``(timestep, waterbody, objective, subobjective, mean)``. Skips if
+        either the SEDFLUX input or the waterbody masks are not configured.
+        """
+        if self.sedflux_waterbody_masks_path is None:
+            self._logger.info(
+                "No sedflux_waterbody_masks configured — skipping SEDFLUX "
+                "waterbody summary."
+            )
+            return
+
+        sedflux = self._build_sedflux_dataset()
+        if sedflux is None:
+            self._logger.info(
+                "No sedflux_input_path configured — skipping SEDFLUX "
+                "waterbody summary."
+            )
+            return
+
+        self._logger.info("Computing SEDFLUX waterbody means.")
+        sedflux = sedflux.load()  # realize the lazy (time, y, x) array once
+
+        with xr.open_dataset(self.sedflux_waterbody_masks_path) as ds_masks:
+            # CRS lives in the `crs` variable's crs_wkt attr (rio.crs is None
+            # until written), mirroring the SEDFLUX zarr access pattern.
+            ds_masks = ds_masks.rio.write_crs(
+                ds_masks["crs"].attrs.get("crs_wkt")
+            )
+            # align the (waterbody, y, x) mask to the same DEM grid the
+            # sedflux series was reprojected onto. The class method skips the
+            # (nearest-resampled) reproject when the grid already matches.
+            mask = self._reproject_match_to_dem(ds_masks["mask"]).load()
+
+        records = []
+        for i in range(mask.sizes["waterbody"]):
+            m = mask.isel(waterbody=i)
+            # spatial mean over this waterbody's pixels, one value per year
+            annual_mean = sedflux.where(m > 0).mean(dim=("y", "x"), skipna=True)
+            for t, val in zip(
+                annual_mean["time"].to_numpy(), annual_mean.to_numpy()
+            ):
+                records.append(
+                    {
+                        "timestep": pd.Timestamp(t),
+                        "waterbody": m["waterbody"].item(),
+                        "objective": m["objective"].item(),
+                        "subobjective": m["subobjective"].item(),
+                        "mean_cumulative_sediment_erosion_deposition": float(
+                            val
+                        ),
+                    }
+                )
+
+        df = (
+            pd.DataFrame.from_records(records)
+            .sort_values(["timestep", "waterbody"])
+            .reset_index(drop=True)
+        )
+        outpath = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_sedflux_waterbody_means.csv",
+        )
+        df.to_csv(outpath, index=False)
+        self._logger.info("SEDFLUX waterbody means written: %s", outpath)
 
     def _convert_outputs_to_cogs(self) -> None:
         """Convert all per-resolution NetCDFs in the output dir to COGs."""

@@ -33,7 +33,7 @@ raster_data:
   sedflux_input_path: *hydro_dir
 
 polygon_data:
-  sedflux_polygons: # AMP_SedimentationMetric.shp - Subobjective polygon shapefile for SEDFLUX masking. Leave blank to skip.
+  sedflux_waterbody_masks: # waterbodies_60m.nc - Rasterized 0/1 waterbody zone masks (NetCDF, 'mask' var with waterbody/objective/subobjective coords) for the SEDFLUX waterbody summary. Leave blank to skip.
 
 simulation:
   water_year_start: 1963 # Start year of simulation

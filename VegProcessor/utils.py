@@ -687,6 +687,92 @@ def wpu_hsi_means(ds_hsi: xr.Dataset, wpu_grid: xr.DataArray) -> pd.DataFrame:
     )
 
 
+def wpu_habitat_units(
+    ds_hsi: xr.Dataset, wpu_grid: xr.DataArray
+) -> pd.DataFrame:
+    """Computes annual HSI/SI mean scores and Habitat Units (HU) in km2 grouped by WPU.
+
+    A habitat unit represents the total ecological value of an area, calculated by
+    multiplying the mean suitability index (HSI/SI) by the active, non-NaN spatial area
+    utilized to determine that specific HSI/SI score.
+    """
+
+    hsi_vars = [
+        var
+        for var in ds_hsi.data_vars
+        if "_hsi" in var.lower() or "_si_" in var.lower()
+    ]
+
+    if not hsi_vars:
+        return pd.DataFrame()
+
+    # Downsamples the 60m WPU grid to the 480m HSI grid
+    zonal_ids = wpu_grid.rio.reproject_match(ds_hsi).compute()
+    zonal_ids.name = "wpu"
+
+    # Mask out non-WPU areas
+    zonal_ids = xr.where(zonal_ids > 0, zonal_ids, np.nan)
+
+    # Calculate pixel area from pixel resolution (480 x 480) and convert from m2 to km2
+    res_x, res_y = ds_hsi.rio.resolution()
+    pixel_area_km2 = abs(res_x * res_y) / 1_000_000
+
+    # Group by WPU and calculate both means and valid pixel counts
+    grouped = ds_hsi[hsi_vars].groupby(zonal_ids)
+    ds_zonal_means = grouped.mean()
+    ds_zonal_counts = grouped.count()  # Counts non-NaN pixels per WPU
+
+    df_means = ds_zonal_means.to_dataframe().reset_index()
+    df_counts = ds_zonal_counts.to_dataframe().reset_index()
+
+    if "time" in df_means.columns:
+        df_means.rename(columns={"time": "timestep"}, inplace=True)
+        df_counts.rename(columns={"time": "timestep"}, inplace=True)
+
+    df_means = df_means.dropna(subset=["wpu"])
+    df_means["wpu"] = df_means["wpu"].astype(int)
+
+    df_counts = df_counts.dropna(subset=["wpu"])
+    df_counts["wpu"] = df_counts["wpu"].astype(int)
+
+    # Merge means and counts
+    merge_cols = (
+        ["timestep", "wpu"] if "timestep" in df_means.columns else ["wpu"]
+    )
+    df_merged = pd.merge(
+        df_means, df_counts, on=merge_cols, suffixes=("", "_count")
+    )
+
+    df_merged = df_merged.copy()
+
+    new_hu_columns = {}
+    for var in hsi_vars:
+        area_col = f"{var}_area_km2"
+        hu_col = f"{var}_hu"
+
+        mean_suitability = df_merged[var]
+
+        # Calculate HSI/SI area dynamically using its non-NaN pixel count
+        new_hu_columns[area_col] = df_merged[f"{var}_count"] * pixel_area_km2
+        # [HU Results] = [Mean HSI/SI Score] * [Area km2]
+        new_hu_columns[hu_col] = mean_suitability * new_hu_columns[area_col]
+
+    df_new_calcs = pd.DataFrame(new_hu_columns, index=df_merged.index)
+    df_final = pd.concat([df_merged, df_new_calcs], axis=1)
+
+    # Clean up the temporary count columns
+    drop_cols = [f"{var}_count" for var in hsi_vars]
+    df_final = df_final.drop(columns=drop_cols)
+
+    base_cols = (
+        ["timestep", "wpu"] if "timestep" in df_final.columns else ["wpu"]
+    )
+    calc_cols = [c for c in df_final.columns if c not in base_cols]
+    final_cols = base_cols + sorted(calc_cols)
+
+    return df_final[final_cols].sort_values(base_cols).reset_index(drop=True)
+
+
 def wpu_habitat_sums(ds_hab, zones, pulse_freq_metric=None):
     """
     Calculates WPU-based sums and area in km2 for quality

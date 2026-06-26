@@ -2194,6 +2194,7 @@ class HSI(vt.VegTransition):
         self._write_variable_sidecar_csv(resolution=60)
         self._write_sedflux_waterbody_means_csv()
         self._write_wpu_hsi_means_csv()
+        self._write_wpu_hsi_habitat_units_csv()
         self._convert_outputs_to_cogs()
         self._logger.info("HSI post-processing complete.")
 
@@ -2269,6 +2270,30 @@ class HSI(vt.VegTransition):
             self.run_metadata_dir, f"{self.file_name}_wpu_hsi_means.csv"
         )
         df_hsi_wpu.to_csv(outpath, index=False)
+
+    def _write_wpu_hsi_habitat_units_csv(self) -> None:
+        """Compute WPU-zone Habitat Units scores from the 480m output."""
+        self._logger.info("Calculating WPU Habitat Units.")
+        with xr.open_dataset(self.netcdf_filepath) as ds:
+            ds_hsi = ds.load()
+
+        if "year" in ds_hsi.dims:
+            ds_hsi = ds_hsi.rename({"year": "time"})
+
+        wpu_grid = (
+            xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
+            .isel(band=0)
+            .load()
+        )
+
+        df_habitat_units = utils.wpu_habitat_units(
+            ds_hsi=ds_hsi, wpu_grid=wpu_grid
+        )
+        outpath = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_hsi_habitat_units.csv",
+        )
+        df_habitat_units.to_csv(outpath, index=False)
 
     # SEDFLUX is a post-process-only access pattern: it is not consumed by any
     # HSI suitability model, only assembled here and written to the 60m output.
@@ -2435,7 +2460,9 @@ class HSI(vt.VegTransition):
         for i in range(mask.sizes["waterbody"]):
             m = mask.isel(waterbody=i)
             # spatial mean over this waterbody's pixels, one value per year
-            annual_mean = sedflux.where(m > 0).mean(dim=("y", "x"), skipna=True)
+            annual_mean = sedflux.where(m > 0).mean(
+                dim=("y", "x"), skipna=True
+            )
             for t, val in zip(
                 annual_mean["time"].to_numpy(), annual_mean.to_numpy()
             ):

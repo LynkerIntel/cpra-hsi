@@ -519,7 +519,7 @@ class HSI(vt.VegTransition):
                 agg="min",
                 cell=False,
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.5,
+                min_valid_fraction=0.3,
             )
         )
         self.dissolved_oxygen_july_sept_max = (
@@ -528,7 +528,7 @@ class HSI(vt.VegTransition):
                 cell=True,
                 agg="max",
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.5,
+                min_valid_fraction=0.3,
             )
         )
         # veg based vars ----------------------------------------------
@@ -2453,7 +2453,9 @@ class HSI(vt.VegTransition):
         for i in range(mask.sizes["waterbody"]):
             m = mask.isel(waterbody=i)
             # spatial mean over this waterbody's pixels, one value per year
-            annual_mean = sedflux.where(m > 0).mean(dim=("y", "x"), skipna=True)
+            annual_mean = sedflux.where(m > 0).mean(
+                dim=("y", "x"), skipna=True
+            )
             for t, val in zip(
                 annual_mean["time"].to_numpy(), annual_mean.to_numpy()
             ):

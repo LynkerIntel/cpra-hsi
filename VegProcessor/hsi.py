@@ -519,6 +519,7 @@ class HSI(vt.VegTransition):
                 agg="min",
                 cell=False,
                 min_temporal_completeness=0.5,
+                min_valid_fraction=0.5,
             )
         )
         self.dissolved_oxygen_july_sept_max = (
@@ -824,10 +825,13 @@ class HSI(vt.VegTransition):
             A 60m pixel is only kept if the fraction of valid (non-NaN) timesteps
             over the selected months meets this threshold; otherwise the pixel is
             set to NaN before aggregation. Defaults to 0.5.
-        min_valid_fraction : float, optional
-            When coarsening (``cell=True``), a 480m cell is only emitted if the
-            fraction of valid (non-NaN) 60m pixels in its 8x8 block meets this
-            threshold; otherwise the cell is set to NaN. Defaults to 0.3.
+        min_valid_fraction : float or None, optional
+            Spatial completeness gate over 8x8 (480m) blocks of 60m pixels: a
+            block must have at least this fraction of valid (non-NaN) pixels to
+            survive. When ``cell=True`` each surviving block becomes one 480m
+            cell; when ``cell=False`` the gate masks the underlying 60m pixels
+            in place, so the 60m and 480m products share identical spatial
+            completeness. ``None`` disables the gate. Defaults to 0.3.
 
         Returns
         -------
@@ -866,19 +870,37 @@ class HSI(vt.VegTransition):
             # mean: simple temporal mean
             reduced = da.mean(dim="time", skipna=True)
 
-        if cell:
-            # gate: only emit a 480m cell if enough of its 60m pixels are valid.
-            # denominator is the count of real (non-padded) pixels per block, so
-            # edge cells aren't penalized for padding.
+        if min_valid_fraction is not None:
+            # Spatial completeness gate: each 8x8 (480m) block of 60m pixels must
+            # have at least `min_valid_fraction` valid pixels. The denominator is
+            # the count of real (non-padded) pixels per block, so edge blocks
+            # aren't penalized for padding. The gate is identical for the 60m and
+            # 480m products; only the output grid differs.
             block = dict(y=8, x=8, boundary="pad")
             valid = reduced.notnull().astype("float32")
             valid_pixels = valid.coarsen(**block).sum()
             block_pixels = xr.ones_like(reduced).coarsen(**block).sum()
+            block_ok = (valid_pixels / block_pixels) >= min_valid_fraction
 
-            coarse = reduced.coarsen(**block).mean()
-            reduced = coarse.where(
-                valid_pixels / block_pixels >= min_valid_fraction
-            )
+            if cell:
+                # coarsen to 480m, keeping only blocks that pass the gate
+                reduced = reduced.coarsen(**block).mean().where(block_ok)
+            else:
+                # stay at 60m, but drop every pixel whose 8x8 block fails the gate
+                ny, nx = reduced.sizes["y"], reduced.sizes["x"]
+                ok_fine = np.repeat(
+                    np.repeat(block_ok.to_numpy(), 8, axis=0), 8, axis=1
+                )[:ny, :nx]
+                reduced = reduced.where(
+                    xr.DataArray(
+                        ok_fine,
+                        dims=("y", "x"),
+                        coords={"y": reduced.y, "x": reduced.x},
+                    )
+                )
+        elif cell:
+            # coarsen to 480m with no spatial gate
+            reduced = reduced.coarsen(y=8, x=8, boundary="pad").mean()
 
         return reduced.to_numpy()
 

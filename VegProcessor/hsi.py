@@ -2261,9 +2261,7 @@ class HSI(vt.VegTransition):
         if "year" in ds_hsi.dims:
             ds_hsi = ds_hsi.rename({"year": "time"})
 
-        wpu_grid = xr.open_dataarray(
-            self.wpu_grid_path, engine="rasterio"
-        ).isel(band=0)
+        wpu_grid = self._load_wpu_grid()
 
         df_hsi_wpu = utils.wpu_hsi_means(ds_hsi=ds_hsi, wpu_grid=wpu_grid)
         outpath = os.path.join(
@@ -2280,11 +2278,7 @@ class HSI(vt.VegTransition):
         if "year" in ds_hsi.dims:
             ds_hsi = ds_hsi.rename({"year": "time"})
 
-        wpu_grid = (
-            xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
-            .isel(band=0)
-            .load()
-        )
+        wpu_grid = self._load_wpu_grid().load()
 
         df_habitat_units = utils.wpu_habitat_units(
             ds_hsi=ds_hsi, wpu_grid=wpu_grid

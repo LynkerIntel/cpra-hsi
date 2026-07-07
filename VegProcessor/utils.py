@@ -697,11 +697,7 @@ def wpu_habitat_units(
     utilized to determine that specific HSI/SI score.
     """
 
-    hsi_vars = [
-        var
-        for var in ds_hsi.data_vars
-        if "_hsi" in var.lower() or "_si_" in var.lower()
-    ]
+    hsi_vars = [var for var in ds_hsi.data_vars if "_hsi" in var.lower()]
 
     if not hsi_vars:
         return pd.DataFrame()

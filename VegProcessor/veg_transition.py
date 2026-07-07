@@ -987,6 +987,17 @@ class VegTransition:
         self._logger.info("Loaded Vegetation Keys")
         return dbf
 
+    def _load_wpu_grid(self) -> xr.DataArray:
+        """Load the WPU (Water Planning Unit) zone grid as a single-band DataArray.
+
+        Shared loader for the WPU zonal-ID raster (``wpu_grid_path``), used by
+        the post-processing summaries in both VegTransition and HSI. Opens the
+        raster, drops the singleton band dim, and masks the zone-0 sentinel
+        (pixels outside all WPU polygons) to NaN.
+        """
+        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+        return xr.where(wpu != 0, wpu, np.nan)
+
     def _load_initial_maturity_raster(self) -> np.ndarray:
         """Load initial conditions for vegetation maturity."""
         self._logger.info("Loading initial maturity raster.")
@@ -1376,10 +1387,7 @@ class VegTransition:
             exection time.
         """
         logging.info("Running post-processing routine.")
-        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio")
-        wpu = wpu.isel(band=0)
-        # Replace 0 with NaN (Zone 0 is outside of all WPU polygons)
-        wpu = xr.where(wpu != 0, wpu, np.nan)
+        wpu = self._load_wpu_grid()
 
         logging.info("Calculating WPU veg type sums.")
         ds = xr.open_dataset(self.netcdf_filepath)

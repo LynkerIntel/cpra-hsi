@@ -37,3 +37,24 @@ def mask_sedflux_by_polygons(
         "mask_sedflux_by_polygons is a stub — port logic from "
         "cpra-metrics/delineate-subobjective-zones.py"
     )
+
+
+def get_dissolved_oxygen_metric(ds: xr.dataset)
+    """
+    Generate annual dissolved oxygen metric. 
+
+    Parameters:
+
+    ds : xr.dataset
+        A dask-backed (lazy) dataset of the full sequence, built
+        from two or more analog simulations years.
+    """
+    # subset first to reduce memory pressure, 
+    # but keep JAS + a June lookback buffer for the trailing 21-day window
+    ds_pre = ds.sel(time=ds["time"].dt.month.isin([6, 7, 8, 9]))
+
+    ds_rolled = ds_pre.rolling(time=21, min_periods=11).mean()
+    ds_jas = ds_rolled.sel(time=ds_rolled["time"].dt.month.isin([7, 8, 9]))
+    ds_jas_min = ds_jas.resample(time="YS").min()
+    return ds_jas_min
+    

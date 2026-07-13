@@ -2373,6 +2373,73 @@ class HSI(vt.VegTransition):
         }
         return combined
 
+    def _build_dissolved_oxygen_dataset(self) -> xr.DataArray | None:
+        """Compile the full simulation-length dissolved oxygen series as a lazy dataset.
+
+        Mirrors ``_build_sedflux_dataset`` but for the daily XGBoost dissolved
+        oxygen output. Each simulation water year maps to one of the (typically
+        3) analog years via the sequence/years mapping. Rather than opening and
+        reprojecting a file per water year (the run-loop access pattern), this
+        reads each *unique* analog zarr only once — keeping the data
+        dask-backed — reprojects it to the DEM grid, then reassigns each water
+        year's daily time axis (via ``analog_years_handler``) and concatenates
+        the per-water-year daily slices along a continuous ``time`` axis. The
+        result is a lazy ``(time, y, x)`` DataArray spanning
+        ``water_year_start``..``water_year_end`` whose underlying
+        reads/reprojection are deferred until the array is computed (e.g. on
+        write).
+
+        Returns ``None`` if dissolved oxygen input is not configured.
+        """
+        if self.do_input_path is None:
+            return None
+
+        var_name = "dissolved_oxygen"
+        # Cache reprojected analog datasets by source path, so each unique
+        # analog year is opened + reprojected only once even though several
+        # simulation water years resolve to it. Time coords are (re)assigned
+        # per water year after the cache lookup: the analog->water-year mapping
+        # is many-to-one, but each water year needs its own daily time axis.
+        analog_cache: dict = {}
+        slices: list[xr.DataArray] = []
+
+        for wy in range(self.water_year_start, self.water_year_end + 1):
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                wy, hydro_variable="DO"
+            )
+            if nc_path not in analog_cache:
+                self._logger.info("Loading DO analog file: %s", nc_path)
+                ds = xr.open_zarr(nc_path)
+                # DO is always XGB: CRS from the spatial_ref variable.
+                try:
+                    crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds[
+                        "spatial_ref"
+                    ].attrs.get("spatial_ref")
+                    ds = ds.rio.write_crs(crs_wkt)
+                except Exception as exc:
+                    raise ValueError(
+                        "Unable to parse CRS from dissolved oxygen input"
+                    ) from exc
+                ds = self._reproject_match_to_dem(ds)
+                analog_cache[nc_path] = ds
+
+            # Reassign the cached analog series onto this water year's daily
+            # time axis (drops Feb 29 for leap analogs). Coord-only op, so water
+            # years sharing an analog reuse the same lazy reprojected data.
+            da = utils.analog_years_handler(
+                analog_year, wy, analog_cache[nc_path]
+            )[var_name]
+            slices.append(da)
+
+        combined = xr.concat(slices, dim="time").astype(np.float32)
+        combined.name = var_name
+        combined.attrs = {
+            "grid_mapping": "spatial_ref",
+            "units": "mg/L",
+            "long_name": "Dissolved oxygen",
+        }
+        return combined
+
     def _append_sedflux_to_60m_netcdf(self) -> None:
         """Append the SEDFLUX series to the 60m HSI NetCDF.
 

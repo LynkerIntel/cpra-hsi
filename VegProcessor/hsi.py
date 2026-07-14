@@ -18,6 +18,7 @@ from xgboost import XGBRegressor
 
 # import veg_logic
 import hydro_logic
+import metrics
 import utils
 import validate
 
@@ -2209,6 +2210,7 @@ class HSI(vt.VegTransition):
         self._write_variable_sidecar_csv(resolution=480)
         self._crop_output_to_hydro_domain(resolution=60)
         self._append_sedflux_to_60m_netcdf()
+        self._write_water_quality_metric()
         self._write_variable_sidecar_csv(resolution=60)
         self._write_sedflux_waterbody_means_csv()
         self._write_wpu_hsi_means_csv()
@@ -2568,6 +2570,92 @@ class HSI(vt.VegTransition):
         )
         df.to_csv(outpath, index=False)
         self._logger.info("SEDFLUX waterbody means written: %s", outpath)
+
+    def _write_water_quality_metric(self) -> None:
+        """Calculate water quality metric using lazy-dask dissolved oxygen
+        dataset, then write to the 10-year output file.
+
+        Builds the simulation-length dissolved oxygen series as a lazy,
+        dask-backed dataset (see ``_build_dissolved_oxygen_dataset``), reduces
+        it to an annual July–September minimum via
+        ``metrics.get_water_quality_metric``, and writes the result into the
+        60m output as a ``dissolved_oxygen_jas_min`` (time, y, x) variable.
+        The lazy graph (zarr reads + reprojection + rolling reduction) is
+        realized here on write. Skips if dissolved oxygen input is not
+        configured, or if the variable is already present (append mode cannot
+        overwrite an existing netCDF variable in place).
+        """
+        self._logger.info("Water quality metric started.")
+        var_name = "dissolved_oxygen_july_sept_min"
+
+        # Metadata-only check (no data read): bail before building/reprojecting
+        # if the variable is already present, since append mode would otherwise
+        # fail trying to recreate it.
+        if os.path.exists(self.netcdf_filepath_60m):
+            with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+                if var_name in ds.variables:
+                    raise ValueError(
+                        f"'{var_name}' already present in 60m NetCDF — skipping "
+                        "water quality metric. Delete the variable or "
+                        "regenerate the file to re-append."
+                    )
+
+        do = self._build_dissolved_oxygen_dataset()
+        if do is None:
+            self._logger.info(
+                "No dissolved oxygen input configured — skipping water "
+                "quality metric."
+            )
+            return
+
+        self._logger.info("Calculating water quality metric (annual DO min).")
+        metric = metrics.get_water_quality_metric(do)
+
+        # ``get_water_quality_metric`` resamples JAS to a calendar-year axis
+        # ({wy}-01-01), since water year wy's Jul-Sep falls in calendar year
+        # wy. Relabel to the water-year output convention ({wy}-10-01) so the
+        # (time, y, x) axis lines up with the SEDFLUX/HSI annual time dim the
+        # 60m NetCDF already carries.
+        water_years = pd.DatetimeIndex(
+            [
+                pd.Timestamp(f"{wy}-10-01")
+                for wy in range(self.water_year_start, self.water_year_end + 1)
+            ],
+            name="time",
+        )
+        if metric.sizes["time"] != len(water_years):
+            raise ValueError(
+                "Water quality metric produced "
+                f"{metric.sizes['time']} annual timesteps, expected "
+                f"{len(water_years)} (one per water year)."
+            )
+        metric = metric.assign_coords(time=water_years)
+
+        metric.name = var_name
+        metric.attrs = {
+            "grid_mapping": "spatial_ref",
+            "units": "mg/L",
+            "long_name": "Annual July-September minimum dissolved oxygen",
+        }
+
+        # Append only the new variable. Its (time, y, x) dims already exist in
+        # the target file and are reused by name, so the rest of the file is
+        # never read into memory. Drop the coordinate variables (time, y, x,
+        # spatial_ref) so append mode doesn't try to recreate ones the file
+        # already has. The dask graph is realized chunk-by-chunk on write.
+        metric.encoding = {"zlib": True, "complevel": 4}
+        metric_ds = metric.to_dataset(name=var_name).drop_vars(
+            list(metric.coords), errors="ignore"
+        )
+        metric_ds.to_netcdf(
+            self.netcdf_filepath_60m,
+            mode="a",
+            engine="h5netcdf",
+        )
+        self._logger.info(
+            "Water quality metric append complete: '%s' added to 60m NetCDF.",
+            var_name,
+        )
 
     def _convert_outputs_to_cogs(self) -> None:
         """Convert all per-resolution NetCDFs in the output dir to COGs."""

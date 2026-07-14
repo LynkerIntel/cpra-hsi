@@ -5,6 +5,8 @@
 # are independent of the HSI models (i.e. sediment flux)--otherwise they should be calculated and serialized during
 # the HSI model run loop.
 
+from typing import List
+
 import xarray as xr
 
 
@@ -39,14 +41,16 @@ def mask_sedflux_by_polygons(
     )
 
 
-def get_dissolved_oxygen_metric(ds: xr.dataset)
+def get_water_quality_metric(
+    ds: xr.DataArray | xr.Dataset,
+) -> xr.DataArray | xr.Dataset:
     """
-    Generate annual dissolved oxygen metric. 
+    Generate annual dissolved oxygen metric.
 
     Parameters:
 
-    ds : xr.dataset
-        A dask-backed (lazy) dataset of the full sequence, built
+    ds : xr.DataArray | xr.Dataset
+        A dask-backed (lazy) array/dataset of the full sequence, built
         from two or more analog simulations years.
     """
     # subset first to reduce memory pressure, 

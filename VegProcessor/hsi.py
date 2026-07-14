@@ -2577,16 +2577,21 @@ class HSI(vt.VegTransition):
 
         Builds the simulation-length dissolved oxygen series as a lazy,
         dask-backed dataset (see ``_build_dissolved_oxygen_dataset``), reduces
-        it to an annual July–September minimum via
+        it to an annual July–September minimum of the 21-day rolling mean via
         ``metrics.get_water_quality_metric``, and writes the result into the
-        60m output as a ``dissolved_oxygen_jas_min`` (time, y, x) variable.
-        The lazy graph (zarr reads + reprojection + rolling reduction) is
+        60m output as a ``dissolved_oxygen_july_sept_min_21d`` (time, y, x)
+        variable — distinct from the run-loop's raw JAS-min output
+        ``dissolved_oxygen_july_sept_min``. The lazy graph (zarr reads +
+        reprojection + rolling reduction) is
         realized here on write. Skips if dissolved oxygen input is not
         configured, or if the variable is already present (append mode cannot
         overwrite an existing netCDF variable in place).
         """
         self._logger.info("Water quality metric started.")
-        var_name = "dissolved_oxygen_july_sept_min"
+        # Distinct from the run-loop's raw JAS-min output of the same family
+        # ("dissolved_oxygen_july_sept_min", output_vars.py): this is the
+        # 21-day rolling-mean variant computed across the full sequence.
+        var_name = "dissolved_oxygen_july_sept_min_21d"
 
         # Metadata-only check (no data read): bail before building/reprojecting
         # if the variable is already present, since append mode would otherwise
@@ -2635,7 +2640,10 @@ class HSI(vt.VegTransition):
         metric.attrs = {
             "grid_mapping": "spatial_ref",
             "units": "mg/L",
-            "long_name": "Annual July-September minimum dissolved oxygen",
+            "long_name": (
+                "Annual July-September minimum of 21-day rolling-mean "
+                "dissolved oxygen"
+            ),
         }
 
         # Append only the new variable. Its (time, y, x) dims already exist in

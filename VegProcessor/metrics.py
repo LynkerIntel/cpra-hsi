@@ -6,7 +6,6 @@
 # the HSI model run loop.
 
 from typing import List
-
 import xarray as xr
 
 
@@ -53,7 +52,7 @@ def get_water_quality_metric(
         A dask-backed (lazy) array/dataset of the full sequence, built
         from two or more analog simulations years.
     """
-    # subset first to reduce memory pressure, 
+    # subset first to reduce memory pressure,
     # but keep JAS + a June lookback buffer for the trailing 21-day window
     ds_pre = ds.sel(time=ds["time"].dt.month.isin([6, 7, 8, 9]))
 
@@ -61,4 +60,3 @@ def get_water_quality_metric(
     ds_jas = ds_rolled.sel(time=ds_rolled["time"].dt.month.isin([7, 8, 9]))
     ds_jas_min = ds_jas.resample(time="YS").min()
     return ds_jas_min
-    

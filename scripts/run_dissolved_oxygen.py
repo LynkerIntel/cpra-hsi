@@ -21,6 +21,8 @@ Usage:
 import argparse
 import gc
 import os
+import resource
+import sys
 import time
 
 import numpy as np
@@ -378,9 +380,15 @@ def predict_do(
             per_day = elapsed / (i + 1)
             remaining = per_day * (n_days - i - 1)
             date_str = str(t)[:10]
+            # do_arr is np.empty, so its pages fault in as the loop fills it:
+            # RSS peaks on the LAST iteration, not the first. Printing it makes
+            # an OOM-kill visible as a climb instead of a silent death.
+            maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            peak_gb = maxrss / (1024**3 if sys.platform == "darwin" else 1024**2)
             print(
                 f"  [{i + 1}/{n_days}] {date_str} — "
-                f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining"
+                f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining, "
+                f"peak RSS {peak_gb:.1f} GB"
             )
 
     # Build xarray DataArray from numpy result.
@@ -519,8 +527,6 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    import sys
-
     args = parse_args()
 
     completed = False

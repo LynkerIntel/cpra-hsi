@@ -15,11 +15,22 @@ run_one() {
   echo "========================================================"
   echo "  ${label}"
   echo "========================================================"
-  if uv run python "${RUNNER}" "$@"; then
+  # -u keeps stdout unbuffered: on a SIGKILL the buffer is never flushed, so a
+  # buffered run loses exactly the lines that say where it died.
+  local rc=0
+  uv run python -u "${RUNNER}" "$@" || rc=$?
+  if ((rc == 0)); then
     echo "  OK: ${label}"
   else
-    echo "  FAILED: ${label}" >&2
-    failed+=("${label}")
+    local detail=""
+    if ((rc == 137)); then
+      detail=" — SIGKILL, almost certainly the OOM killer."
+      detail+=" Confirm with: dmesg -T | grep -i 'killed process'"
+    elif ((rc > 128)); then
+      detail=" — killed by signal $((rc - 128))"
+    fi
+    echo "  FAILED: ${label} (exit ${rc})${detail}" >&2
+    failed+=("${label} (exit ${rc})")
   fi
 }
 

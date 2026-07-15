@@ -243,14 +243,13 @@ def predict_do(
     xgb = XGBRegressor()
     xgb.load_model(model_path)
 
-    # Load temperature eagerly (avoid dask scheduler overhead)
-    print(f"Loading temperature from {temperature_path}...")
+    # Open temperature lazily; it is materialized after time alignment below.
+    print(f"Opening temperature from {temperature_path}...")
     temp_ds = load_zarr_with_crs(temperature_path)
     if "wtemp" in temp_ds.data_vars:
         temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
     temp_ds = drop_leap_days(temp_ds)
-    temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
     # Load depth (stage -> depth via DEM subtraction), eagerly
     print(f"Loading stage/depth from {depth_path}...")
@@ -271,11 +270,15 @@ def predict_do(
             f"Source: {velocity_path}"
         )
 
-    # Align all inputs to common timestamps
-    common_times = np.intersect1d(temp.time.values, depth.time.values)
+    # Align all inputs to common timestamps. Use the lazy time coords here;
+    # the arrays are only materialized after selection, below.
+    common_times = np.intersect1d(
+        temp_ds["temperature"].time.values, depth.time.values
+    )
     common_times = np.intersect1d(common_times, vel_ds["velocity"].time.values)
     print(f"Common timesteps across all inputs: {len(common_times)}")
     temp_ds = temp_ds.sel(time=common_times)
+    print(f"Loading temperature ({len(common_times)} timesteps)...")
     temp = temp_ds["temperature"].load()
     depth = depth.sel(time=common_times)
     vel_ds = vel_ds.sel(time=common_times)

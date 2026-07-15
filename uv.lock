@@ -352,6 +352,11 @@ dependencies = [
     { name = "zarr" },
 ]
 
+[package.optional-dependencies]
+gpu = [
+    { name = "cupy-cuda12x", marker = "sys_platform == 'linux'" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
@@ -362,6 +367,7 @@ requires-dist = [
     { name = "bokeh", specifier = ">=3.9.0" },
     { name = "cartopy", specifier = ">=0.25.0" },
     { name = "cftime", specifier = ">=1.6.5" },
+    { name = "cupy-cuda12x", marker = "sys_platform == 'linux' and extra == 'gpu'", specifier = ">=13.3.0" },
     { name = "dask", specifier = ">=2026.1.2" },
     { name = "datacube", specifier = ">=1.9.9,<1.9.13" },
     { name = "gdal", specifier = ">=3.12.2" },
@@ -384,9 +390,31 @@ requires-dist = [
     { name = "xgboost", specifier = ">=3.2.0" },
     { name = "zarr", specifier = ">=3.0" },
 ]
+provides-extras = ["gpu"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ipykernel", specifier = ">=7.2.0" }]
+
+[[package]]
+name = "cuda-pathfinder"
+version = "1.5.6"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/53/8fc9b0cdc5b7f62746e6a01b85b6461e5ae27f871010a5fcf8fa6950766d/cuda_pathfinder-1.5.6-py3-none-any.whl", hash = "sha256:7e4c07c117b78ba1fb35dac4c444d21f3677b1b1ff56175c53a8e3025c5b43c0", size = 52972, upload-time = "2026-06-30T00:58:04.34Z" },
+]
+
+[[package]]
+name = "cupy-cuda12x"
+version = "14.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cuda-pathfinder", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "numpy", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/90/00fe874c47207b26c9b6ac950d0cecc533b4a145491641932df17e573f3c/cupy_cuda12x-14.1.1-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:afbb3d1fa9484b0ae20d76372c5939a8c5da327e3fc8711b77b2354566cac355", size = 143920086, upload-time = "2026-06-01T04:52:51.726Z" },
+    { url = "https://files.pythonhosted.org/packages/89/a4/c46ff91dba0dbe2a0a557974faf4c090a3159d6e7296431ca6846038d047/cupy_cuda12x-14.1.1-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:76ea35469e2aa0a8332b88f72505ea2f7871a0bc8f9b0c87184f57e47c9aa3bf", size = 133071615, upload-time = "2026-06-01T04:52:57.428Z" },
+]
 
 [[package]]
 name = "cycler"

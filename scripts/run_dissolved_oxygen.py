@@ -33,6 +33,31 @@ from xgboost import XGBRegressor
 MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 
 
+def resolve_device(requested: str) -> str:
+    """Pick the XGBoost inference device.
+
+    ``auto`` uses CUDA when cupy reports a usable GPU and falls back to CPU
+    otherwise (e.g. macOS, where XGBoost has no GPU backend at all).
+    """
+    if requested == "cpu":
+        return "cpu"
+    try:
+        import cupy
+
+        available = cupy.cuda.runtime.getDeviceCount() > 0
+    except Exception as err:
+        if requested == "cuda":
+            raise RuntimeError(
+                f"--device cuda requested but cupy/CUDA is unavailable: {err}"
+            ) from err
+        return "cpu"
+    if not available:
+        if requested == "cuda":
+            raise RuntimeError("--device cuda requested but no GPU was found.")
+        return "cpu"
+    return "cuda"
+
+
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
     """Remove Feb 29 timesteps from a dataset."""
     dt = ds["time"].dt
@@ -174,8 +199,10 @@ def predict_do(
     input_version: str,
     output_version: str,
     predictors_out: bool,
+    device: str = "auto",
 ):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
+    device = resolve_device(device)
     stem = f"AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O"
     temperature_path = resolve_store(data_dir, f"{stem}_WTEMP_{input_version}")
     depth_path = resolve_store(data_dir, f"{stem}_STAGE_{input_version}")
@@ -252,7 +279,13 @@ def predict_do(
     ny, nx = temp_vals.shape[1], temp_vals.shape[2]
     n_pixels = ny * nx
 
-    print("Running DO prediction...")
+    print(f"Running DO prediction on {device}...")
+    booster = xgb.get_booster()
+    if device == "cuda":
+        import cupy as cp
+
+        booster.set_param({"device": "cuda"})
+
     times = temp.time.values
     n_days = len(times)
     do_arr = np.empty((n_days, ny, nx), dtype=np.float32)
@@ -274,8 +307,16 @@ def predict_do(
                 np.full(n_pixels, month, dtype=np.float32),
                 np.full(n_pixels, doy, dtype=np.float32),
             ]
-        )
-        pred = xgb.predict(features).reshape(ny, nx)
+        ).astype(np.float32, copy=False)
+
+        if device == "cuda":
+            # inplace_predict needs device-resident input, else XGBoost falls
+            # back to a slower host DMatrix path.
+            pred = cp.asnumpy(booster.inplace_predict(cp.asarray(features)))
+        else:
+            pred = booster.inplace_predict(features)
+        pred = pred.reshape(ny, nx)
+
         pred[~domain_mask] = np.nan
         depth_mask = (depth_vals[i] > 0.1) & (depth_vals[i] < 4.0)
         pred[~depth_mask] = np.nan
@@ -409,6 +450,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also write daily COGs of the predictor inputs for QAQC.",
     )
+    parser.add_argument(
+        "--device",
+        choices=["auto", "cpu", "cuda"],
+        default="auto",
+        help=(
+            "XGBoost inference device. 'auto' (default) uses a CUDA GPU when "
+            "one is available and falls back to CPU."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -427,6 +477,7 @@ if __name__ == "__main__":
             input_version=args.input_version,
             output_version=args.output_version,
             predictors_out=args.predictors_out,
+            device=args.device,
         )
         completed = True
     finally:

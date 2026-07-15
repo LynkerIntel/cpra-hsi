@@ -52,10 +52,15 @@ def resolve_device(requested: str) -> str:
             raise RuntimeError(
                 f"--device cuda requested but cupy/CUDA is unavailable: {err}"
             ) from err
+        print(
+            f"No GPU: cupy/CUDA unavailable ({err}). Falling back to CPU. "
+            "On a CUDA host, install the extra with `uv sync --extra gpu`."
+        )
         return "cpu"
     if not available:
         if requested == "cuda":
             raise RuntimeError("--device cuda requested but no GPU was found.")
+        print("No GPU: cupy reports 0 devices. Falling back to CPU.")
         return "cpu"
     return "cuda"
 

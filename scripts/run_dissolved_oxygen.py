@@ -30,7 +30,9 @@ import rioxarray  # noqa: F401 — registers rio accessor
 from odc.geo.xr import write_cog
 from xgboost import XGBRegressor
 
-MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
+DEFAULT_MODEL_PATH = (
+    "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
+)
 
 
 def resolve_device(requested: str) -> str:
@@ -200,6 +202,7 @@ def predict_do(
     output_version: str,
     predictors_out: bool,
     device: str = "auto",
+    model_path: str = DEFAULT_MODEL_PATH,
 ):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
     device = resolve_device(device)
@@ -231,9 +234,9 @@ def predict_do(
     domain_mask = ~np.isnan(domain.values)  # True = valid domain pixel
 
     # Load XGBoost model
-    print(f"Loading DO model from {MODEL_PATH}...")
+    print(f"Loading DO model from {model_path}...")
     xgb = XGBRegressor()
-    xgb.load_model(MODEL_PATH)
+    xgb.load_model(model_path)
 
     # Load temperature eagerly (avoid dask scheduler overhead)
     print(f"Loading temperature from {temperature_path}...")
@@ -451,6 +454,11 @@ def parse_args() -> argparse.Namespace:
         help="Also write daily COGs of the predictor inputs for QAQC.",
     )
     parser.add_argument(
+        "--model-path",
+        default=DEFAULT_MODEL_PATH,
+        help="Path to the trained XGBoost DO model JSON.",
+    )
+    parser.add_argument(
         "--device",
         choices=["auto", "cpu", "cuda"],
         default="auto",
@@ -478,6 +486,7 @@ if __name__ == "__main__":
             output_version=args.output_version,
             predictors_out=args.predictors_out,
             device=args.device,
+            model_path=args.model_path,
         )
         completed = True
     finally:

@@ -59,31 +59,37 @@ run_one() {
 # ------ G414 -----------------------------------------------------------
 run_one "G414 WY06 SLR000" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 06 --slr 000 \
   --input-version V2 --output-version V4
 
 run_one "G414 WY06 SLR328" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 06 --slr 328 \
   --input-version V2 --output-version V4
 
 run_one "G414 WY20 SLR000" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 20 --slr 000 \
   --input-version V2 --output-version V4
 
 run_one "G414 WY20 SLR328" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 20 --slr 328 \
   --input-version V2 --output-version V4
 
 run_one "G414 WY22 SLR000" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 22 --slr 000 \
   --input-version V2 --output-version V4
 
 run_one "G414 WY22 SLR328" \
   --data-dir /home/dillon/cpra/AMP_INPUT/ \
+  --model-path /home/dillon/cpra/run_resources/xgb_dissolved_oxygen.json \
   --group G414 --wy 22 --slr 328 \
   --input-version V2 --output-version V4
 

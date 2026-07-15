@@ -176,9 +176,10 @@ def predict_do(
     predictors_out: bool,
 ):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
-    temperature_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_WTEMP_{input_version}.zarr"
-    depth_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_STAGE_{input_version}.zarr"
-    velocity_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_VELOCITY_{input_version}.zarr"
+    stem = f"AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O"
+    temperature_path = resolve_store(data_dir, f"{stem}_WTEMP_{input_version}")
+    depth_path = resolve_store(data_dir, f"{stem}_STAGE_{input_version}")
+    velocity_path = resolve_store(data_dir, f"{stem}_VELOCITY_{input_version}")
     dem_path = f"{data_dir}/60m_dem_1280_3200_padded.tif"
     domain_path = f"{data_dir}/D3D_model_domain.tif"
     output_dir = f"{data_dir}/data_staging/do"

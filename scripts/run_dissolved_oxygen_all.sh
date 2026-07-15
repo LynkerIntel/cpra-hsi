@@ -63,7 +63,7 @@ run_one "G414 WY06 SLR000" \
   --input-version V2 --output-version V4
 
 run_one "G414 WY06 SLR328" \
-  --data-dir /home/dillon/cpra/AMP_INPUT/' \
+  --data-dir /home/dillon/cpra/AMP_INPUT/ \
   --group G414 --wy 06 --slr 328 \
   --input-version V2 --output-version V4
 

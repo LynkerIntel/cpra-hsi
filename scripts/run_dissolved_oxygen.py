@@ -34,6 +34,11 @@ DEFAULT_MODEL_PATH = (
     "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 )
 
+# Column order of the feature matrix built in predict_do. inplace_predict()
+# takes a bare array and matches columns by POSITION, silently ignoring names,
+# so this must equal the model's own feature_names — checked at load time.
+FEATURE_ORDER = ["Temp_C", "Depth_m", "Velocity_ms", "Month", "DayOfYear"]
+
 
 def resolve_device(requested: str) -> str:
     """Pick the XGBoost inference device.
@@ -242,6 +247,14 @@ def predict_do(
     print(f"Loading DO model from {model_path}...")
     xgb = XGBRegressor()
     xgb.load_model(model_path)
+    trained_features = xgb.get_booster().feature_names
+    if trained_features is not None and trained_features != FEATURE_ORDER:
+        raise ValueError(
+            "Model feature order does not match the feature matrix built "
+            f"below.\n  model:  {trained_features}\n  script: {FEATURE_ORDER}\n"
+            "Predictions would be silently wrong; update FEATURE_ORDER and "
+            "the column_stack call together."
+        )
 
     # Open temperature lazily; it is materialized after time alignment below.
     print(f"Opening temperature from {temperature_path}...")
@@ -288,6 +301,33 @@ def predict_do(
     temp_vals = temp.values  # (time, y, x)
     depth_vals = depth.values  # (time, y, x)
     ny, nx = temp_vals.shape[1], temp_vals.shape[2]
+
+    # The prediction loop indexes these three arrays positionally and ravels
+    # them into one feature row per pixel, so any drift in grid or timestamps
+    # would silently mix pixels/days rather than raise. reproject_match only
+    # compares CRS and bounds, which does not imply identical pixel centres.
+    if not (temp_vals.shape == depth_vals.shape == vel_vals.shape):
+        raise ValueError(
+            "Input arrays are not the same shape: "
+            f"temp {temp_vals.shape}, depth {depth_vals.shape}, "
+            f"velocity {vel_vals.shape}."
+        )
+    for name, other in (("depth", depth), ("velocity", vel_ds["velocity"])):
+        if not np.array_equal(other.time.values, temp.time.values):
+            raise ValueError(f"{name} timestamps do not match temperature.")
+        if not (
+            np.array_equal(other.y.values, temp.y.values)
+            and np.array_equal(other.x.values, temp.x.values)
+        ):
+            raise ValueError(f"{name} grid does not match temperature.")
+    if not (
+        np.array_equal(temp.y.values, dem.y.values)
+        and np.array_equal(temp.x.values, dem.x.values)
+    ):
+        raise ValueError(
+            "Input grid does not match the DEM grid; depth = stage - DEM "
+            "would be computed on misaligned pixels."
+        )
     n_pixels = ny * nx
 
     print(f"Running DO prediction on {device}...")

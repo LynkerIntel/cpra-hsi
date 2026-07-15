@@ -40,6 +40,27 @@ def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
     return ds.sel(time=mask)
 
 
+def resolve_store(data_dir: str, stem: str) -> str:
+    """Locate the zarr store for *stem*, tolerating known layout variants.
+
+    Stores are either flat under ``AMP_INPUT/`` (the local data dir) or
+    mirrored from the source NetCDF tree by ``nc_to_zarr.py``, which nests
+    each store in a folder of the same name (``{stem}/{stem}.zarr``).
+    """
+    candidates = [
+        f"{data_dir}/AMP_INPUT/{stem}.zarr",
+        f"{data_dir}/{stem}/{stem}.zarr",
+        f"{data_dir}/{stem}.zarr",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    raise FileNotFoundError(
+        f"No zarr store found for {stem} under {data_dir}. Tried:\n"
+        + "\n".join(f"  {c}" for c in candidates)
+    )
+
+
 def load_zarr_with_crs(path: str) -> xr.Dataset:
     """Open a zarr store and write CRS from its metadata."""
     ds = xr.open_zarr(path)

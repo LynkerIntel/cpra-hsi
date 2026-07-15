@@ -25,35 +25,35 @@ run_one() {
 
 
 # ------ G401 -----------------------------------------------------------
-run_one "G401 WY06 SLR000" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 06 --slr 000 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY06 SLR000" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 06 --slr 000 \
+#   --input-version V2 --output-version V4
 
-run_one "G401 WY06 SLR328" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 06 --slr 328 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY06 SLR328" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 06 --slr 328 \
+#   --input-version V2 --output-version V4
 
-run_one "G401 WY20 SLR000" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 20 --slr 000 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY20 SLR000" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 20 --slr 000 \
+#   --input-version V2 --output-version V4
 
-run_one "G401 WY20 SLR328" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 20 --slr 328 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY20 SLR328" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 20 --slr 328 \
+#   --input-version V2 --output-version V4
 
-run_one "G401 WY22 SLR000" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 22 --slr 000 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY22 SLR000" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 22 --slr 000 \
+#   --input-version V2 --output-version V4
 
-run_one "G401 WY22 SLR328" \
-  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
-  --group G401 --wy 22 --slr 328 \
-  --input-version V2 --output-version V4
+# run_one "G401 WY22 SLR328" \
+#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --group G401 --wy 22 --slr 328 \
+#   --input-version V2 --output-version V4
 
 
 # ------ G414 -----------------------------------------------------------

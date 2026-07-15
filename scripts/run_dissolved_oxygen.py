@@ -391,11 +391,20 @@ def predict_do(
                 f"peak RSS {peak_gb:.1f} GB"
             )
 
+    # The three input arrays are ~5.6 GB each and are dead once the loop ends,
+    # unless --predictors-out re-reads them for the QAQC COGs. Freeing them
+    # here rather than after the writes keeps the NetCDF write off the OOM
+    # ceiling: peak RSS is ~27.5 GB on a 32 GB host with them still resident.
+    y_coords, x_coords = temp.y.values, temp.x.values
+    if not predictors_out:
+        del temp_vals, depth_vals, vel_vals, temp, depth, vel_ds, stage_ds
+        gc.collect()
+
     # Build xarray DataArray from numpy result.
     do_da = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
-        coords={"time": times, "y": temp.y.values, "x": temp.x.values},
+        coords={"time": times, "y": y_coords, "x": x_coords},
     )
     do_da.attrs = {
         "units": "mg/L",
@@ -453,8 +462,10 @@ def predict_do(
     print(f"Writing daily COGs to {output_cog_dir}...")
     save_daily_cogs(do_ds, output_cog_dir, overwrite=True)
 
-    # Free DO intermediates before the input-COG loop to reduce memory pressure
-    del do_arr, do_da, do_ds, temp_vals, depth_vals
+    # Free DO intermediates before the input-COG loop to reduce memory pressure.
+    # The inputs are already gone unless --predictors-out kept them alive for
+    # the QAQC COGs below, which read the DataArrays rather than the _vals views.
+    del do_arr, do_da, do_ds
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)

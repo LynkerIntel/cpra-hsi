@@ -56,6 +56,40 @@ run_one "G401 WY22 SLR328" \
   --input-version V2 --output-version V4
 
 
+# ------ G414 -----------------------------------------------------------
+run_one "G414 WY06 SLR000" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 06 --slr 000 \
+  --input-version V2 --output-version V4
+
+run_one "G414 WY06 SLR328" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 06 --slr 328 \
+  --input-version V2 --output-version V4
+
+run_one "G414 WY20 SLR000" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 20 --slr 000 \
+  --input-version V2 --output-version V4
+
+run_one "G414 WY20 SLR328" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 20 --slr 328 \
+  --input-version V2 --output-version V4
+
+run_one "G414 WY22 SLR000" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 22 --slr 000 \
+  --input-version V2 --output-version V4
+
+run_one "G414 WY22 SLR328" \
+  --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+  --group G414 --wy 22 --slr 328 \
+  --input-version V2 --output-version V4
+
+
+
+
 # # --- G400 ---------------------------------------------------------------
 # run_one "G400 WY06 SLR000" \
 #   --data-dir /Users/dillonragar/data/cpra \

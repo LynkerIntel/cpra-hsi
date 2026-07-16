@@ -1700,3 +1700,45 @@ def process_netcdf_folder(
     print(f"\n{'=' * 60}")
     print(f"Batch processing complete!")
     print(f"{'=' * 60}")
+
+
+def collect_cogs_to_shared_dir(
+    run_output_dir: str,
+    output_base_dir: str,
+    file_name: str | Path,
+) -> None:
+    """Move a run's COGs into a shared top-level ``cogs`` directory.
+
+    ``process_netcdf_folder`` writes COGs to ``<run_dir>/cogs``, which
+    leaves every run's COGs nested inside its own output folder. For S3
+    upload they need to sit together under one directory, so this moves
+    the run's ``cogs`` tree to ``<output_base_dir>/cogs/<file_name>_cogs``
+    (the AMP naming convention already carries the ``AMP_`` prefix). Each
+    run then lands as a sibling under ``<output_base_dir>/cogs`` and the
+    whole shared folder can be uploaded in one shot.
+
+    Parameters
+    ----------
+    run_output_dir : str
+        The run's output directory containing a ``cogs`` subfolder.
+    output_base_dir : str
+        Base output directory under which the shared ``cogs`` dir lives.
+    file_name : str or Path
+        Run file name used to label the collected COG folder.
+    """
+    src = os.path.join(run_output_dir, "cogs")
+    if not os.path.isdir(src):
+        logger.info("No COGs found at %s — skipping collect.", src)
+        return
+
+    dest = os.path.join(output_base_dir, "cogs", f"{file_name}_cogs")
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+
+    # Replace any stale destination from a prior run so the move is
+    # idempotent — shutil.move would otherwise nest src *inside* an
+    # existing dest dir rather than replacing it.
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
+
+    shutil.move(src, dest)
+    logger.info("COGs collected to shared dir: %s", dest)

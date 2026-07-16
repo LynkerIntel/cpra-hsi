@@ -1,5 +1,4 @@
 import logging
-import shutil
 import yaml
 import xarray as xr
 import numpy as np
@@ -2679,35 +2678,12 @@ class HSI(vt.VegTransition):
         )
 
     def _collect_cogs_to_shared_dir(self) -> None:
-        """Move this run's COGs into a shared top-level ``cogs`` directory.
-
-        ``_convert_outputs_to_cogs`` writes COGs to ``<run_dir>/cogs``, which
-        leaves every run's COGs nested inside its own output folder. For S3
-        upload they need to sit together under one directory, so this moves
-        the run's ``cogs`` tree to
-        ``<output_base>/cogs/<file_name>_cogs`` (the AMP naming convention
-        already carries the ``AMP_`` prefix). Each run then lands as a
-        sibling under ``<output_base>/cogs`` and the whole shared folder can
-        be uploaded in one shot.
-        """
-        src = os.path.join(self.output_dir_path, "cogs")
-        if not os.path.isdir(src):
-            self._logger.info("No COGs found at %s — skipping collect.", src)
-            return
-
-        dest = os.path.join(
-            self.output_base_dir, "cogs", f"{self.file_name}_cogs"
+        """Move this run's COGs into the shared top-level ``cogs`` directory."""
+        utils.collect_cogs_to_shared_dir(
+            run_output_dir=self.output_dir_path,
+            output_base_dir=self.output_base_dir,
+            file_name=self.file_name,
         )
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-
-        # Replace any stale destination from a prior run so the move is
-        # idempotent — shutil.move would otherwise nest src *inside* an
-        # existing dest dir rather than replacing it.
-        if os.path.exists(dest):
-            shutil.rmtree(dest)
-
-        shutil.move(src, dest)
-        self._logger.info("COGs collected to shared dir: %s", dest)
 
     def log_data_attribute_types(self):
         """Log the data type of all non-private attributes to help with debugging

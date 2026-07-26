@@ -438,7 +438,7 @@ class BlackBearHSI:
 
         spring_food = self.si_1
         summer_food = (self.si_2 * self.si_3) ** (1 / 2)
-        fall_food = (self.si_3 * self.si_4) ** (1 / 2)
+        fall_food = (self.si_4 * self.si_5) ** (1 / 2)
         human_intolerance = self.si_8
 
         # Combine individual suitability indices

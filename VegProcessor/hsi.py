@@ -2216,6 +2216,7 @@ class HSI(vt.VegTransition):
         self._write_wpu_hsi_means_csv()
         self._write_wpu_hsi_habitat_units_csv()
         self._convert_outputs_to_cogs()
+        self._collect_cogs_to_shared_dir()
         self._logger.info("HSI post-processing complete.")
 
     def _netcdf_path_for(self, resolution: int) -> str:
@@ -2674,6 +2675,14 @@ class HSI(vt.VegTransition):
             output_base_dir=cog_output_dir,
             overwrite=True,
             start_year=1,
+        )
+
+    def _collect_cogs_to_shared_dir(self) -> None:
+        """Move this run's COGs into the shared top-level ``cogs`` directory."""
+        utils.collect_cogs_to_shared_dir(
+            run_output_dir=self.output_dir_path,
+            output_base_dir=self.output_base_dir,
+            file_name=self.file_name,
         )
 
     def log_data_attribute_types(self):

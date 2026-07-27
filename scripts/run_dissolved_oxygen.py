@@ -21,6 +21,8 @@ Usage:
 import argparse
 import gc
 import os
+import resource
+import sys
 import time
 
 import numpy as np
@@ -30,7 +32,44 @@ import rioxarray  # noqa: F401 — registers rio accessor
 from odc.geo.xr import write_cog
 from xgboost import XGBRegressor
 
-MODEL_PATH = "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
+DEFAULT_MODEL_PATH = (
+    "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
+)
+
+# Column order of the feature matrix built in predict_do. inplace_predict()
+# takes a bare array and matches columns by POSITION, silently ignoring names,
+# so this must equal the model's own feature_names — checked at load time.
+FEATURE_ORDER = ["Temp_C", "Depth_m", "Velocity_ms", "Month", "DayOfYear"]
+
+
+def resolve_device(requested: str) -> str:
+    """Pick the XGBoost inference device.
+
+    ``auto`` uses CUDA when cupy reports a usable GPU and falls back to CPU
+    otherwise (e.g. macOS, where XGBoost has no GPU backend at all).
+    """
+    if requested == "cpu":
+        return "cpu"
+    try:
+        import cupy
+
+        available = cupy.cuda.runtime.getDeviceCount() > 0
+    except Exception as err:
+        if requested == "cuda":
+            raise RuntimeError(
+                f"--device cuda requested but cupy/CUDA is unavailable: {err}"
+            ) from err
+        print(
+            f"No GPU: cupy/CUDA unavailable ({err}). Falling back to CPU. "
+            "On a CUDA host, install the extra with `uv sync --extra gpu`."
+        )
+        return "cpu"
+    if not available:
+        if requested == "cuda":
+            raise RuntimeError("--device cuda requested but no GPU was found.")
+        print("No GPU: cupy reports 0 devices. Falling back to CPU.")
+        return "cpu"
+    return "cuda"
 
 
 def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
@@ -38,6 +77,27 @@ def drop_leap_days(ds: xr.Dataset) -> xr.Dataset:
     dt = ds["time"].dt
     mask = ~((dt.month == 2) & (dt.day == 29))
     return ds.sel(time=mask)
+
+
+def resolve_store(data_dir: str, stem: str) -> str:
+    """Locate the zarr store for *stem*, tolerating known layout variants.
+
+    Stores are either flat under ``AMP_INPUT/`` (the local data dir) or
+    mirrored from the source NetCDF tree by ``nc_to_zarr.py``, which nests
+    each store in a folder of the same name (``{stem}/{stem}.zarr``).
+    """
+    candidates = [
+        f"{data_dir}/AMP_INPUT/{stem}.zarr",
+        f"{data_dir}/{stem}/{stem}.zarr",
+        f"{data_dir}/{stem}.zarr",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    raise FileNotFoundError(
+        f"No zarr store found for {stem} under {data_dir}. Tried:\n"
+        + "\n".join(f"  {c}" for c in candidates)
+    )
 
 
 def load_zarr_with_crs(path: str) -> xr.Dataset:
@@ -153,11 +213,15 @@ def predict_do(
     input_version: str,
     output_version: str,
     predictors_out: bool,
+    device: str = "auto",
+    model_path: str = DEFAULT_MODEL_PATH,
 ):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
-    temperature_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_WTEMP_{input_version}.zarr"
-    depth_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_STAGE_{input_version}.zarr"
-    velocity_path = f"{data_dir}/AMP_INPUT/AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_VELOCITY_{input_version}.zarr"
+    device = resolve_device(device)
+    stem = f"AMP_D3D_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O"
+    temperature_path = resolve_store(data_dir, f"{stem}_WTEMP_{input_version}")
+    depth_path = resolve_store(data_dir, f"{stem}_STAGE_{input_version}")
+    velocity_path = resolve_store(data_dir, f"{stem}_VELOCITY_{input_version}")
     dem_path = f"{data_dir}/60m_dem_1280_3200_padded.tif"
     domain_path = f"{data_dir}/D3D_model_domain.tif"
     output_dir = f"{data_dir}/data_staging/do"
@@ -182,18 +246,25 @@ def predict_do(
     domain_mask = ~np.isnan(domain.values)  # True = valid domain pixel
 
     # Load XGBoost model
-    print(f"Loading DO model from {MODEL_PATH}...")
+    print(f"Loading DO model from {model_path}...")
     xgb = XGBRegressor()
-    xgb.load_model(MODEL_PATH)
+    xgb.load_model(model_path)
+    trained_features = xgb.get_booster().feature_names
+    if trained_features is not None and trained_features != FEATURE_ORDER:
+        raise ValueError(
+            "Model feature order does not match the feature matrix built "
+            f"below.\n  model:  {trained_features}\n  script: {FEATURE_ORDER}\n"
+            "Predictions would be silently wrong; update FEATURE_ORDER and "
+            "the column_stack call together."
+        )
 
-    # Load temperature eagerly (avoid dask scheduler overhead)
-    print(f"Loading temperature from {temperature_path}...")
+    # Open temperature lazily; it is materialized after time alignment below.
+    print(f"Opening temperature from {temperature_path}...")
     temp_ds = load_zarr_with_crs(temperature_path)
     if "wtemp" in temp_ds.data_vars:
         temp_ds = temp_ds.rename({"wtemp": "temperature"})
     temp_ds = reproject_match(temp_ds, dem)
     temp_ds = drop_leap_days(temp_ds)
-    temp = temp_ds["temperature"].load()  # (time, y, x) — into memory
 
     # Load depth (stage -> depth via DEM subtraction), eagerly
     print(f"Loading stage/depth from {depth_path}...")
@@ -214,11 +285,15 @@ def predict_do(
             f"Source: {velocity_path}"
         )
 
-    # Align all inputs to common timestamps
-    common_times = np.intersect1d(temp.time.values, depth.time.values)
+    # Align all inputs to common timestamps. Use the lazy time coords here;
+    # the arrays are only materialized after selection, below.
+    common_times = np.intersect1d(
+        temp_ds["temperature"].time.values, depth.time.values
+    )
     common_times = np.intersect1d(common_times, vel_ds["velocity"].time.values)
     print(f"Common timesteps across all inputs: {len(common_times)}")
     temp_ds = temp_ds.sel(time=common_times)
+    print(f"Loading temperature ({len(common_times)} timesteps)...")
     temp = temp_ds["temperature"].load()
     depth = depth.sel(time=common_times)
     vel_ds = vel_ds.sel(time=common_times)
@@ -228,9 +303,42 @@ def predict_do(
     temp_vals = temp.values  # (time, y, x)
     depth_vals = depth.values  # (time, y, x)
     ny, nx = temp_vals.shape[1], temp_vals.shape[2]
+
+    # The prediction loop indexes these three arrays positionally and ravels
+    # them into one feature row per pixel, so any drift in grid or timestamps
+    # would silently mix pixels/days rather than raise. reproject_match only
+    # compares CRS and bounds, which does not imply identical pixel centres.
+    if not (temp_vals.shape == depth_vals.shape == vel_vals.shape):
+        raise ValueError(
+            "Input arrays are not the same shape: "
+            f"temp {temp_vals.shape}, depth {depth_vals.shape}, "
+            f"velocity {vel_vals.shape}."
+        )
+    for name, other in (("depth", depth), ("velocity", vel_ds["velocity"])):
+        if not np.array_equal(other.time.values, temp.time.values):
+            raise ValueError(f"{name} timestamps do not match temperature.")
+        if not (
+            np.array_equal(other.y.values, temp.y.values)
+            and np.array_equal(other.x.values, temp.x.values)
+        ):
+            raise ValueError(f"{name} grid does not match temperature.")
+    if not (
+        np.array_equal(temp.y.values, dem.y.values)
+        and np.array_equal(temp.x.values, dem.x.values)
+    ):
+        raise ValueError(
+            "Input grid does not match the DEM grid; depth = stage - DEM "
+            "would be computed on misaligned pixels."
+        )
     n_pixels = ny * nx
 
-    print("Running DO prediction...")
+    print(f"Running DO prediction on {device}...")
+    booster = xgb.get_booster()
+    if device == "cuda":
+        import cupy as cp
+
+        booster.set_param({"device": "cuda"})
+
     times = temp.time.values
     n_days = len(times)
     do_arr = np.empty((n_days, ny, nx), dtype=np.float32)
@@ -252,8 +360,16 @@ def predict_do(
                 np.full(n_pixels, month, dtype=np.float32),
                 np.full(n_pixels, doy, dtype=np.float32),
             ]
-        )
-        pred = xgb.predict(features).reshape(ny, nx)
+        ).astype(np.float32, copy=False)
+
+        if device == "cuda":
+            # inplace_predict needs device-resident input, else XGBoost falls
+            # back to a slower host DMatrix path.
+            pred = cp.asnumpy(booster.inplace_predict(cp.asarray(features)))
+        else:
+            pred = booster.inplace_predict(features)
+        pred = pred.reshape(ny, nx)
+
         pred[~domain_mask] = np.nan
         depth_mask = (depth_vals[i] > 0.1) & (depth_vals[i] < 4.0)
         pred[~depth_mask] = np.nan
@@ -264,16 +380,31 @@ def predict_do(
             per_day = elapsed / (i + 1)
             remaining = per_day * (n_days - i - 1)
             date_str = str(t)[:10]
+            # do_arr is np.empty, so its pages fault in as the loop fills it:
+            # RSS peaks on the LAST iteration, not the first. Printing it makes
+            # an OOM-kill visible as a climb instead of a silent death.
+            maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            peak_gb = maxrss / (1024**3 if sys.platform == "darwin" else 1024**2)
             print(
                 f"  [{i + 1}/{n_days}] {date_str} — "
-                f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining"
+                f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining, "
+                f"peak RSS {peak_gb:.1f} GB"
             )
+
+    # The three input arrays are ~5.6 GB each and are dead once the loop ends,
+    # unless --predictors-out re-reads them for the QAQC COGs. Freeing them
+    # here rather than after the writes keeps the NetCDF write off the OOM
+    # ceiling: peak RSS is ~27.5 GB on a 32 GB host with them still resident.
+    y_coords, x_coords = temp.y.values, temp.x.values
+    if not predictors_out:
+        del temp_vals, depth_vals, vel_vals, temp, depth, vel_ds, stage_ds
+        gc.collect()
 
     # Build xarray DataArray from numpy result.
     do_da = xr.DataArray(
         do_arr,
         dims=("time", "y", "x"),
-        coords={"time": times, "y": temp.y.values, "x": temp.x.values},
+        coords={"time": times, "y": y_coords, "x": x_coords},
     )
     do_da.attrs = {
         "units": "mg/L",
@@ -331,8 +462,10 @@ def predict_do(
     print(f"Writing daily COGs to {output_cog_dir}...")
     save_daily_cogs(do_ds, output_cog_dir, overwrite=True)
 
-    # Free DO intermediates before the input-COG loop to reduce memory pressure
-    del do_arr, do_da, do_ds, temp_vals, depth_vals
+    # Free DO intermediates before the input-COG loop to reduce memory pressure.
+    # The inputs are already gone unless --predictors-out kept them alive for
+    # the QAQC COGs below, which read the DataArrays rather than the _vals views.
+    del do_arr, do_da, do_ds
     gc.collect()
 
     # Write daily COGs for input variables (QAQC)
@@ -387,12 +520,24 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also write daily COGs of the predictor inputs for QAQC.",
     )
+    parser.add_argument(
+        "--model-path",
+        default=DEFAULT_MODEL_PATH,
+        help="Path to the trained XGBoost DO model JSON.",
+    )
+    parser.add_argument(
+        "--device",
+        choices=["auto", "cpu", "cuda"],
+        default="auto",
+        help=(
+            "XGBoost inference device. 'auto' (default) uses a CUDA GPU when "
+            "one is available and falls back to CPU."
+        ),
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    import sys
-
     args = parse_args()
 
     completed = False
@@ -405,6 +550,8 @@ if __name__ == "__main__":
             input_version=args.input_version,
             output_version=args.output_version,
             predictors_out=args.predictors_out,
+            device=args.device,
+            model_path=args.model_path,
         )
         completed = True
     finally:

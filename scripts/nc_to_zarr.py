@@ -228,7 +228,10 @@ def nc_to_zarr(
         Paths to the created Zarr stores.
     """
     input_dir = Path(input_dir)
-    nc_files = sorted(input_dir.rglob("*.nc"))
+    # ._* are macOS AppleDouble sidecars, not real NetCDF
+    nc_files = sorted(
+        f for f in input_dir.rglob("*.nc") if not f.name.startswith("._")
+    )
     if not nc_files:
         print(f"No .nc files found under {input_dir}")
         sys.exit(1)

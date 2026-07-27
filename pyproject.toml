@@ -31,6 +31,16 @@ dependencies = [
     "zarr>=3.0",
 ]
 
+[project.optional-dependencies]
+# GPU inference for run_dissolved_oxygen.py (--device cuda). Install on the
+# CUDA server with `uv sync --extra gpu`; the marker makes it a no-op on macOS,
+# where cupy has no wheels and its sdist refuses to build.
+# The [ctk] extra pulls the CUDA toolkit headers, which cupy needs to JIT
+# its kernels at runtime; without them prediction dies on the first compile.
+gpu = [
+    "cupy-cuda12x[ctk]>=13.3.0; sys_platform == 'linux'",
+]
+
 [tool.ruff]
 line-length = 79
 

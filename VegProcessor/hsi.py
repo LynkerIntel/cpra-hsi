@@ -1371,15 +1371,28 @@ class HSI(vt.VegTransition):
 
     def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
-        radii 5.7 km around towns; 3.5 km around cropland; and 1.1 km around
-        residences.
+        radii 1.6 km around cropland and 0.4 km around developed land. There is
+        no residence-specific landcover class, so residences are folded into
+        developed.
 
         Radiuses are defined by circular (disk) kernel, which expands True
         pixels outward.
 
-        480m radii:
-        5,700 / 60 = 11.875 pixels
-        3,500 / 60 = 7.29 pixels
+        Inputs are already coarsened to the 480m grid, so radii are converted
+        at 480m/pixel:
+        1,600 / 480 = 3.33 pixels -> disk(3)
+        400 / 480 = 0.83 pixels -> disk(1)
+
+        `strict_radius=False` extends each kernel by 0.5 px on the diagonals,
+        so effective reach is 1,440-1,517m for cropland and 480-679m for
+        developed. The developed kernel is the smallest that still expands at
+        all; disk(0) would be a no-op.
+
+        NOTE: this is deliberately binary, per CPRA request. The original 60m
+        implementation (commented out above) dilated at 60m and coarsened to a
+        0-100 percent per 480m cell, which let single pixels dominate the V8
+        map. Operating on majority-cover 480m cells instead yields 0% or 100%
+        feeding the V8 equation, which is the accepted tradeoff.
 
         Parameters
         ----------
@@ -1395,13 +1408,13 @@ class HSI(vt.VegTransition):
         crops_bool = self.pct_crops > 50
         developed_bool = self.pct_developed > 50
 
-        disk_kernel = disk(radius or 7, strict_radius=False)
+        disk_kernel = disk(radius or 3, strict_radius=False)
         crops_expanded = binary_dilation(
             crops_bool,
             structure=disk_kernel,
         )
 
-        disk_kernel = disk(radius or 12, strict_radius=False)
+        disk_kernel = disk(radius or 1, strict_radius=False)
         developed_expanded = binary_dilation(
             developed_bool,
             structure=disk_kernel,

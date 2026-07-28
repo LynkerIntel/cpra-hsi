@@ -1372,9 +1372,10 @@ class HSI(vt.VegTransition):
 
     def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
         """Percent of evaluation area inside of zones of influence defined by
-        radii 1.6 km around cropland and 0.4 km around developed land. There is
-        no residence-specific landcover class, so residences are folded into
-        developed.
+        radii 1.6 km around towns and 0.4 km around cropland (Rogers & Allen
+        1987, as revised by CPRA 07/24/2026). There is no residence-specific
+        landcover class, so the 0.1 km residence radius is folded into
+        developed / towns.
 
         Radiuses are defined by circular (disk) kernel, which expands True
         pixels outward.
@@ -1385,8 +1386,8 @@ class HSI(vt.VegTransition):
         400 / 480 = 0.83 pixels -> disk(1)
 
         `strict_radius=False` extends each kernel by 0.5 px on the diagonals,
-        so effective reach is 1,440-1,517m for cropland and 480-679m for
-        developed. The developed kernel is the smallest that still expands at
+        so effective reach is 1,440-1,517m for developed and 480-679m for
+        cropland. The cropland kernel is the smallest that still expands at
         all; disk(0) would be a no-op.
 
         NOTE: this is deliberately binary, per CPRA request. The original 60m
@@ -1409,15 +1410,17 @@ class HSI(vt.VegTransition):
         crops_bool = self.pct_crops > 50
         developed_bool = self.pct_developed > 50
 
+        # 1.6 km around towns
         disk_kernel = disk(radius or 3, strict_radius=False)
-        crops_expanded = binary_dilation(
-            crops_bool,
+        developed_expanded = binary_dilation(
+            developed_bool,
             structure=disk_kernel,
         )
 
+        # 0.4 km around cropland
         disk_kernel = disk(radius or 1, strict_radius=False)
-        developed_expanded = binary_dilation(
-            developed_bool,
+        crops_expanded = binary_dilation(
+            crops_bool,
             structure=disk_kernel,
         )
 

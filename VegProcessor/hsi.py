@@ -121,6 +121,8 @@ class HSI(vt.VegTransition):
         )
         self.flotant_marsh = self._calculate_flotant_marsh()
         self.human_influence = None
+        self.human_influence_croplands = None
+        self.human_influence_developed = None
         self.hydro_domain = self._load_hydro_domain_raster(as_float=True)
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
 
@@ -1255,9 +1257,12 @@ class HSI(vt.VegTransition):
         self.pct_developed = ds_developed.to_numpy()
 
         self._logger.info("Calculating static var: pct area influence")
-        self.human_influence = self._calculate_pct_area_influence(
+        influence = self._calculate_pct_area_influence(
             radius=self.testing_radius
         )
+        self.human_influence_croplands = influence["croplands"]
+        self.human_influence_developed = influence["developed"]
+        self.human_influence = influence["any"]
 
         surrounding_lu_data = self._calculate_surrounding_land_use()
         self.pct_forested_half_mi = surrounding_lu_data["forested"]
@@ -1370,11 +1375,15 @@ class HSI(vt.VegTransition):
 
     #     return near_landtypes_da.to_numpy()
 
-    def _calculate_pct_area_influence(self, radius: int = None) -> np.ndarray:
+    def _calculate_pct_area_influence(self, radius: int = None) -> dict:
         """Percent of evaluation area inside of zones of influence defined by
-        radii 1.6 km around cropland and 0.4 km around developed land. There is
-        no residence-specific landcover class, so residences are folded into
-        developed.
+        radii 1.6 km around towns and 0.4 km around cropland (Rogers & Allen
+        1987, as revised by CPRA 07/24/2026).
+
+        There is no residence-specific landcover class, so the 0.1 km residence
+        radius is folded into developed / towns. Note that residences are
+        specified as curve B in the V8 equation but will be evaluated on the
+        towns curve (A) at the towns radius as a result.
 
         Radiuses are defined by circular (disk) kernel, which expands True
         pixels outward.
@@ -1385,8 +1394,8 @@ class HSI(vt.VegTransition):
         400 / 480 = 0.83 pixels -> disk(1)
 
         `strict_radius=False` extends each kernel by 0.5 px on the diagonals,
-        so effective reach is 1,440-1,517m for cropland and 480-679m for
-        developed. The developed kernel is the smallest that still expands at
+        so effective reach is 1,440-1,517m for developed and 480-679m for
+        cropland. The cropland kernel is the smallest that still expands at
         all; disk(0) would be a no-op.
 
         NOTE: this is deliberately binary, per CPRA request. The original 60m
@@ -1403,27 +1412,35 @@ class HSI(vt.VegTransition):
 
         Returns
         --------
-        near_landtypes_da : np.ndarray
-            Binary near landtypes array (480m grid cell)
+        influence : dict[str, np.ndarray]
+            Binary near landtypes arrays (480m grid cell), keyed by
+            "croplands", "developed", and "any" (the union of the two).
+            Black bear V8 applies a different linear model per landcover
+            type, so the components are returned alongside the union.
         """
         crops_bool = self.pct_crops > 50
         developed_bool = self.pct_developed > 50
 
+        # 1.6 km around towns
         disk_kernel = disk(radius or 3, strict_radius=False)
-        crops_expanded = binary_dilation(
-            crops_bool,
-            structure=disk_kernel,
-        )
-
-        disk_kernel = disk(radius or 1, strict_radius=False)
         developed_expanded = binary_dilation(
             developed_bool,
             structure=disk_kernel,
         )
 
+        # 0.4 km around cropland
+        disk_kernel = disk(radius or 1, strict_radius=False)
+        crops_expanded = binary_dilation(
+            crops_bool,
+            structure=disk_kernel,
+        )
+
         stacked = np.stack([crops_expanded, developed_expanded])
-        influence_bool = np.any(stacked, axis=0)
-        return influence_bool
+        return {
+            "croplands": crops_expanded,
+            "developed": developed_expanded,
+            "any": np.any(stacked, axis=0),
+        }
 
     def _calculate_surrounding_land_use(self):
         """

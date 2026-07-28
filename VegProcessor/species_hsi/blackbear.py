@@ -25,7 +25,8 @@ class BlackBearHSI:
     v5_num_h_mast_species_w_one_mature_tree: np.ndarray
     v6_pct_area_nonforested_cover_250m: np.ndarray
     v7_pct_cover_over1pct_cover_h_mast_species: np.ndarray
-    v8_pct_eval_area_inside_zones: np.ndarray
+    v8a_pct_eval_area_inside_zones_developed: np.ndarray
+    v8b_pct_eval_area_inside_zones_croplands: np.ndarray
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -66,8 +67,11 @@ class BlackBearHSI:
             v5_num_h_mast_species_w_one_mature_tree=hsi_instance.num_hard_mast_species,  # set to ideal
             v6_pct_area_nonforested_cover_250m=hsi_instance.pct_near_forest,
             v7_pct_cover_over1pct_cover_h_mast_species=hsi_instance.pct_hard_mast,
-            v8_pct_eval_area_inside_zones=safe_multiply(
-                hsi_instance.human_influence
+            v8a_pct_eval_area_inside_zones_developed=safe_multiply(
+                hsi_instance.human_influence_developed
+            ),
+            v8b_pct_eval_area_inside_zones_croplands=safe_multiply(
+                hsi_instance.human_influence_croplands
             ),
             pct_open_water=hsi_instance.pct_open_water,
             dem_480=hsi_instance.dem_480,
@@ -393,21 +397,71 @@ class BlackBearHSI:
         return self.clip_array(si_7)
 
     def calculate_si_8(self) -> np.ndarray:
-        """Percent of evaluation area inside of zones of influence defined by radii 5.7 km around towns;
-        3.5 km around cropland; and 1.1 km around residences."""
+        """Percent of evaluation area inside of zones of influence, defined by
+        radii 1.6 km around towns; 0.4 km around cropland; and 0.1 km around
+        residences.
+
+        Each landcover type has its own linear model (Rogers & Allen 1987, as
+        revised by CPRA 07/24/2026): developed land uses curve A and cropland
+        uses curve B. Residences also use curve B, but there is no
+        residence-specific landcover class, so they are folded into developed
+        upstream and evaluated on curve A.
+        """
         ## Calculate for inital conditions and use for all time periods
         self._logger.info("Running SI 8")
         si_8 = self.template.copy()
+        valid = ~np.isnan(si_8)
 
-        if self.v8_pct_eval_area_inside_zones is None:
+        # curve A: developed / towns
+        if self.v8a_pct_eval_area_inside_zones_developed is None:
             self._logger.info(
-                "Pct of eval area inside of zones of influence not provided. Setting index to 1."
+                "Pct of eval area inside of developed zones of influence not provided. "
+                "Developed land contributes no human intolerance."
             )
-            si_8[~np.isnan(si_8)] = 1
+            in_developed = np.zeros(si_8.shape, dtype=bool)
+            curve_a = np.ones(si_8.shape)
 
         else:
-            # condition 1 (only one condition so no mask needed)
-            si_8 = (-0.0095 * self.v8_pct_eval_area_inside_zones) + 1
+            in_developed = (
+                self.v8a_pct_eval_area_inside_zones_developed > 0
+            ) & valid
+            curve_a = (
+                -0.007 * self.v8a_pct_eval_area_inside_zones_developed
+            ) + 1
+
+        # curve B: cropland
+        if self.v8b_pct_eval_area_inside_zones_croplands is None:
+            self._logger.info(
+                "Pct of eval area inside of cropland zones of influence not provided. "
+                "Cropland contributes no human intolerance."
+            )
+            in_croplands = np.zeros(si_8.shape, dtype=bool)
+            curve_b = np.ones(si_8.shape)
+
+        else:
+            in_croplands = (
+                self.v8b_pct_eval_area_inside_zones_croplands > 0
+            ) & valid
+            curve_b = (
+                -0.004 * self.v8b_pct_eval_area_inside_zones_croplands
+            ) + 1
+
+        # condition 1: inside developed zones only
+        mask_1 = in_developed & ~in_croplands
+        si_8[mask_1] = curve_a[mask_1]
+
+        # condition 2: inside cropland zones only
+        mask_2 = in_croplands & ~in_developed
+        si_8[mask_2] = curve_b[mask_2]
+
+        # condition 3: overlap, e.g. cropland adjacent to a town. Use highest
+        # SI value, i.e. the least limiting of the two curves.
+        mask_3 = in_developed & in_croplands
+        si_8[mask_3] = np.maximum(curve_a, curve_b)[mask_3]
+
+        # condition 4: outside all zones of influence
+        mask_4 = valid & ~in_developed & ~in_croplands
+        si_8[mask_4] = 1
 
         if np.any(np.isclose(si_8, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

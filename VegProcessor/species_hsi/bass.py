@@ -253,6 +253,10 @@ class BassHSI:
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
+            # keep the template's NaN mask (hydro domain, depth), which the
+            # conditions above overwrite because they select on veg pct alone
+            si_2 = np.where(np.isnan(self.template), np.nan, si_2)
+
         return si_2
 
     def calculate_overall_suitability(self) -> np.ndarray:

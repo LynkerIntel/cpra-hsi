@@ -259,7 +259,6 @@ class HSI(vt.VegTransition):
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
         # catfish
-        self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_avg_min_do_in_midsummer_pools_bw = None

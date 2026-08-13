@@ -1450,7 +1450,6 @@ class VegTransition:
         utils.collect_cogs_to_shared_dir(
             run_output_dir=self.output_dir_path,
             output_base_dir=self.output_base_dir,
-            file_name=self.file_name,
         )
 
         logging.info("Post-processing complete.")

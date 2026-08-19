@@ -326,6 +326,26 @@ This ensures HSI models have access to the required VegTransition outputs.
 
 ---
 
+### Full production run workflow:
+
+These are the steps required to make finished runs available to Royal / CPRA:
+
+(1) Make code `cpra-hsi` change, use new branch (unless code has not changed)
+(2) Make configs, w/ +1 increment for version number, i.e. v40
+(3) Move all group configs into a folder (if new group or experiment), or use existing config folder
+(3) `cd` into your new folder, then use: `find . -name '*.yaml' -exec gsed -i 's/v00/v01/gI' {} +` to update version in ALL configs
+(4) update branch in the configs (if running an experiment, if using main, leave branch arg empty)
+(5) run all configs
+(6) check summary to see if any failed
+(7) upload COGs to the s3 bucket (`https://amp-qaqc.s3.amazonaws.com`), then update the most reccent version number dropdown on the `cpra-qaqc` repo and redeploy QAQC app (i.e. push to `main`)
+(8) upload NetCDFs to Egnyte in FTP folder
+(9) Update AttributeStatux.xlsx
+(10) update ClickUp / send email to Royal / notify Cam
+(11) Done!
+
+
+
+
 ## Debugging & Logs
 
 - Logs are stored in `output/run-metadata/simulation.log`

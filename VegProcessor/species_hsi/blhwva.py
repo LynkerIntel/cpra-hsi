@@ -448,7 +448,9 @@ class BottomlandHardwoodHSI:
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Bottomland Hardwood final HSI.")
-        hsi = self.template.copy()
+        # Propagate NaN from maturity data, which has additional NaNs
+        # beyond the hydro domain (non-forested areas)
+        hsi = self._create_template_array(self.v2_stand_maturity)
         for si_name, si_array in [
             ("SI 1", self.si_1),
             ("SI 2", self.si_2),
@@ -499,6 +501,9 @@ class BottomlandHardwoodHSI:
                 * (self.si_4[mask_2] ** 2)
                 * (self.si_5[mask_2])
             ) ** (1 / 13)
+
+        if np.any(np.isclose(hsi, 999.0, atol=1e-5)):
+            raise ValueError("Unhandled condition in HSI logic!")
 
         # Quality control check for invalid values: Ensure combined_score is between 0 and 1
         invalid_values = (hsi < 0) | (hsi > 1)

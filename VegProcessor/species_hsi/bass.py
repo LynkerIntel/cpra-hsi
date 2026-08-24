@@ -28,6 +28,8 @@ class BassHSI:
     v1a_mean_annual_salinity: np.ndarray = None
     v1b_mean_annual_temperature: np.ndarray = None
     v2_pct_emergent_vegetation: np.ndarray = None
+    # pct cover of veg types allowed for SI 2; cells <50% are set to NaN
+    v2_veg_mask: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -43,6 +45,7 @@ class BassHSI:
             v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_emergent_vegetation,
+            v2_veg_mask=hsi_instance.pct_vegetated_bass,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
             water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
@@ -237,6 +240,11 @@ class BassHSI:
             # keep the template's NaN mask (hydro domain, depth), which the
             # conditions above overwrite because they select on veg pct alone
             si_2 = np.where(np.isnan(self.template), np.nan, si_2)
+
+        # Mask cells that are <50% allowed veg types. Applied after the SI
+        # logic, which assigns from `v2_pct_emergent_vegetation` alone and
+        # would otherwise overwrite NaNs seeded into the template.
+        si_2 = np.where(self.v2_veg_mask >= 50, si_2, np.nan)
 
         return si_2
 

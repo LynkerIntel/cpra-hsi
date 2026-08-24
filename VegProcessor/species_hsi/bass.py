@@ -24,6 +24,8 @@ class BassHSI:
     v1a_mean_annual_salinity: np.ndarray = None
     v1b_mean_annual_temperature: np.ndarray = None
     v2_pct_emergent_vegetation: np.ndarray = None
+    # pct cover of veg types allowed for SI 2; cells <50% are set to NaN
+    v2_veg_mask: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -39,6 +41,7 @@ class BassHSI:
             v1a_mean_annual_salinity=hsi_instance.salinity_annual_mean,
             v1b_mean_annual_temperature=hsi_instance.water_temperature_annual_mean,
             v2_pct_emergent_vegetation=hsi_instance.pct_emergent_vegetation,
+            v2_veg_mask=hsi_instance.pct_vegetated_bass,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
         )
@@ -214,6 +217,11 @@ class BassHSI:
             # Check for unhandled condition with tolerance
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
+
+        # Mask cells that are <50% allowed veg types. Applied after the SI
+        # logic, which assigns from `v2_pct_emergent_vegetation` alone and
+        # would otherwise overwrite NaNs seeded into the template.
+        si_2 = np.where(self.v2_veg_mask >= 50, si_2, np.nan)
 
         return si_2
 

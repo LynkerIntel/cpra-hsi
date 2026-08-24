@@ -263,6 +263,8 @@ class HSI(vt.VegTransition):
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
+        # bass
+        self.pct_vegetated_bass = None  # for masking SI2 only
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)
@@ -1145,6 +1147,29 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
+        ds_pct_vegetated_bass = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[
+                9,
+                10,
+                11,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+            ],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
         ds_water = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[24, 25, 26],  # water types
@@ -1172,6 +1197,7 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = ds_vegetated.to_numpy()
         self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
+        self.pct_vegetated_bass = ds_pct_vegetated_bass.to_numpy()
         self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()

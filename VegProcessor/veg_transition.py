@@ -907,12 +907,6 @@ class VegTransition:
         # all other types (non-forested, non-handled) to np.nan
         self.maturity[~type_mask] = np.nan
 
-        # plotting.np_arr(
-        #     self.maturity,
-        #     title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-        #     out_path=self.timestep_output_dir_figs,
-        # )
-
     def _load_veg_initial_raster(
         self,
         xarray: bool = False,
@@ -995,7 +989,9 @@ class VegTransition:
         raster, drops the singleton band dim, and masks the zone-0 sentinel
         (pixels outside all WPU polygons) to NaN.
         """
-        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(
+            band=0
+        )
         return xr.where(wpu != 0, wpu, np.nan)
 
     def _load_initial_maturity_raster(self) -> np.ndarray:

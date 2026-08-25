@@ -841,7 +841,13 @@ class VegTransition:
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
-        +1 year maturity for pixels without vegetation changes.
+        +1 year maturity for forested pixels without vegetation changes.
+
+        Forested pixels which changed type are reset to 5 years, rather than
+        0. Trees which become dominant in a cell (> 50% coverage) are already
+        established, not seedlings. This covers a change between forested
+        types, and Fresh Shrub to Zone II, the only transition defined from a
+        non-forested type into a forested type. Non-forested pixels are NaN.
 
         TODO: Should static veg pixel increment age? Or should only valid WSE pixels
         advance?
@@ -895,8 +901,9 @@ class VegTransition:
                 "Forested types have overlapping True location(s)"
             )
 
-        # if forested pixels change, reset age to 0
-        self.maturity[combined_mask_change] = 0
+        # if forested pixels change, reset age to 5, because trees which become
+        # dominant in a cell are already established, rather than seedlings
+        self.maturity[combined_mask_change] = 5
         self._logger.info("Maturity reset for changed veg type (forested)")
         # if forested pixels are the same, add one year
         self.maturity[combined_mask_no_change] += 1
@@ -906,12 +913,6 @@ class VegTransition:
 
         # all other types (non-forested, non-handled) to np.nan
         self.maturity[~type_mask] = np.nan
-
-        # plotting.np_arr(
-        #     self.maturity,
-        #     title=f"Timestep Maturity {self.current_timestep.strftime('%Y-%m-%d')} {self.scenario_type}",
-        #     out_path=self.timestep_output_dir_figs,
-        # )
 
     def _load_veg_initial_raster(
         self,
@@ -995,7 +996,9 @@ class VegTransition:
         raster, drops the singleton band dim, and masks the zone-0 sentinel
         (pixels outside all WPU polygons) to NaN.
         """
-        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(band=0)
+        wpu = xr.open_dataarray(self.wpu_grid_path, engine="rasterio").isel(
+            band=0
+        )
         return xr.where(wpu != 0, wpu, np.nan)
 
     def _load_initial_maturity_raster(self) -> np.ndarray:
@@ -1450,7 +1453,6 @@ class VegTransition:
         utils.collect_cogs_to_shared_dir(
             run_output_dir=self.output_dir_path,
             output_base_dir=self.output_base_dir,
-            file_name=self.file_name,
         )
 
         logging.info("Post-processing complete.")

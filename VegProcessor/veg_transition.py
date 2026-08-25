@@ -841,7 +841,13 @@ class VegTransition:
 
     def _calculate_maturity(self, veg_type_in: np.ndarray):
         """
-        +1 year maturity for pixels without vegetation changes.
+        +1 year maturity for forested pixels without vegetation changes.
+
+        Forested pixels which changed type are reset to 5 years, rather than
+        0. Trees which become dominant in a cell (> 50% coverage) are already
+        established, not seedlings. This covers a change between forested
+        types, and Fresh Shrub to Zone II, the only transition defined from a
+        non-forested type into a forested type. Non-forested pixels are NaN.
 
         TODO: Should static veg pixel increment age? Or should only valid WSE pixels
         advance?
@@ -895,8 +901,9 @@ class VegTransition:
                 "Forested types have overlapping True location(s)"
             )
 
-        # if forested pixels change, reset age to 0
-        self.maturity[combined_mask_change] = 0
+        # if forested pixels change, reset age to 5, because trees which become
+        # dominant in a cell are already established, rather than seedlings
+        self.maturity[combined_mask_change] = 5
         self._logger.info("Maturity reset for changed veg type (forested)")
         # if forested pixels are the same, add one year
         self.maturity[combined_mask_no_change] += 1

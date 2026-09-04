@@ -29,6 +29,7 @@ raster_data:
   velocity_input_path: *hydro_dir
   flowexch_input_path: *hydro_dir
   ssc_input_path: *hydro_dir
+  bss_input_path: *hydro_dir
   do_input_path: *hydro_dir
   sedflux_input_path: *hydro_dir
 
@@ -68,6 +69,7 @@ metadata:
     VELOCITY: V1
     FLOWEXCH: V1
     SSC: V1
+    BSS: V2
     DO: V1
     SEDFLUX: V1 # appended to 60m HSI output if sedflux_input_path is set
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)

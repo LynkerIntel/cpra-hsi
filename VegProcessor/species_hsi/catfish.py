@@ -24,7 +24,7 @@ class RiverineCatfishHSI:
     water_depth_may_july_mean_60m: np.ndarray
 
     v1_pct_pools_avg_summer_flow: np.ndarray
-    v2_pct_cover_in_summer_pools_bw: np.ndarray
+    v2_pct_vegetated: np.ndarray
     v4_fpp_substrate_avg_summer_flow: np.ndarray
     v5_avg_temp_in_midsummer: np.ndarray
     v6_grow_season_length_frost_free_days: np.ndarray
@@ -89,7 +89,7 @@ class RiverineCatfishHSI:
 
         return cls(
             v1_pct_pools_avg_summer_flow=hsi_instance.pct_pools_july_sept_mean,
-            v2_pct_cover_in_summer_pools_bw=hsi_instance.catfish_pct_cover_in_summer_pools_bw,  # set to ideal
+            v2_pct_vegetated=hsi_instance.pct_vegetated,
             v4_fpp_substrate_avg_summer_flow=hsi_instance.catfish_fpp_substrate_avg_summer_flow,  # set to ideal
             v5_avg_temp_in_midsummer=hsi_instance.water_temperature_july_august_mean_60m,
             v6_grow_season_length_frost_free_days=hsi_instance.catfish_grow_season_length_frost_free_days,  # set to ideal
@@ -289,29 +289,41 @@ class RiverineCatfishHSI:
         self._logger.info("Running SI 2")
         si_2 = self.template.copy()
 
-        # Set to ideal
-        if self.v2_pct_cover_in_summer_pools_bw is None:
+        if self.v2_pct_vegetated is None:
             self._logger.info(
-                "Pct cover during summer within pools, backwaters assumes ideal conditions. "
-                "Setting index to 1."
+                "Pct vegetated is not provided. Setting index to 1."
             )
             si_2[~np.isnan(si_2)] = 1
 
         else:
+            # create 60m template for data processing
+            si_2 = self._create_template_array(cell=False)
+
+            # upsample the 480m pct cover array to 60m
+            # so that we can use it w/ depth rules.
+            # the 60m values are duplicated onto the 480m
+            # grid.
+            ny, nx = si_2.shape
+            v2 = np.repeat(
+                np.repeat(self.v2_pct_vegetated, 8, axis=0),
+                8,
+                axis=1,
+            )[:ny, :nx]
+
             # condition 1
-            mask_1 = (self.v2_pct_cover_in_summer_pools_bw >= 0) & (
-                self.v2_pct_cover_in_summer_pools_bw < 40
-            )
-            si_2[mask_1] = (
-                0.022 * (self.v2_pct_cover_in_summer_pools_bw[mask_1])
-            ) + 0.1397
+            mask_1 = (v2 >= 0) & (v2 < 40)
+            si_2[mask_1] = (0.022 * v2[mask_1]) + 0.1397
 
             # condition 2
-            mask_2 = self.v2_pct_cover_in_summer_pools_bw >= 40
+            mask_2 = v2 >= 40
             si_2[mask_2] = 1
 
-            # # propogate nans from source array
-            # si_2[np.isnan(self.v2_pct_cover_in_summer_pools_bw)] = np.nan
+            si_2 = self.mask_to_pools_backwaters_coarsen(
+                si_arr_60m=si_2,
+                water_depth_subset=self.water_depth_july_sept_mean_60m,
+                low=0.5,
+                high=6,
+            )
 
         if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
             raise ValueError("Unhandled condition in SI logic!")

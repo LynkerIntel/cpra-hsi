@@ -521,7 +521,7 @@ class HSI(vt.VegTransition):
                 agg="min",
                 cell=False,
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.2,
+                min_valid_fraction=0.1,
             )
         )
         self.dissolved_oxygen_july_sept_max = (
@@ -530,7 +530,7 @@ class HSI(vt.VegTransition):
                 cell=True,
                 agg="max",
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.2,
+                min_valid_fraction=0.1,
             )
         )
         # veg based vars ----------------------------------------------

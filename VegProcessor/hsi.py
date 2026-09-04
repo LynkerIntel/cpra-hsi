@@ -252,6 +252,8 @@ class HSI(vt.VegTransition):
 
         self.ssc_july_sept_max_mean = None
 
+        self.bss = None  # the source xr.dataset
+
         # black-crappie
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
             None  # set to ideal
@@ -321,6 +323,7 @@ class HSI(vt.VegTransition):
             "flowexch_input_path"
         )
         self.ssc_input_path = self.config["raster_data"].get("ssc_input_path")
+        self.bss_input_path = self.config["raster_data"].get("bss_input_path")
         self.do_input_path = self.config["raster_data"].get("do_input_path")
         self.sedflux_input_path = self.config["raster_data"].get(
             "sedflux_input_path"
@@ -513,6 +516,9 @@ class HSI(vt.VegTransition):
         # suspended sediment vars ----------------------------------------
         self.ssc = self._load_suspended_sediment_general(self.wy)
         self.ssc_july_sept_max_mean = self._get_ssc_subset(months=[7, 8, 9])
+
+        # bed shear stress vars ------------------------------------------
+        self.bss = self._load_bss_general(self.wy)
 
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
@@ -934,6 +940,37 @@ class HSI(vt.VegTransition):
 
         else:
             self._logger.info("No suspended sediment file provided.")
+            return None
+
+    def _load_bss_general(self, water_year: int) -> xr.Dataset | None:
+        """Load bed shear stress (BSS) data from Delft3D or MIKE 21 models."""
+        if self.bss_input_path is not None:
+            self._logger.info(
+                "Loading bed shear stress data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="BSS"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No bed shear stress file provided.")
             return None
 
     def _get_ssc_subset(

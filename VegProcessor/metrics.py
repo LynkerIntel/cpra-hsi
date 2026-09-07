@@ -6,6 +6,7 @@
 # the HSI model run loop.
 
 from typing import List
+import numpy as np
 import xarray as xr
 
 
@@ -41,22 +42,39 @@ def mask_sedflux_by_polygons(
 
 
 def get_water_quality_metric(
-    ds: xr.DataArray | xr.Dataset,
-) -> xr.DataArray | xr.Dataset:
+    ds: xr.DataArray | xr.Dataset | None,
+) -> np.ndarray | None:
     """
-    Generate annual dissolved oxygen metric.
+    Generate the annual dissolved oxygen metric for a single water year.
 
-    Parameters:
+    Reduces one water year of daily dissolved oxygen to the July-September
+    minimum of the 21-day rolling mean. A water year (Oct 1 - Sep 30) fully
+    contains its own Jun-Sep, so the trailing 21-day window at the start of
+    July never reaches outside the water year, and the metric can be built up
+    one timestep at a time alongside the rest of the model variables.
 
-    ds : xr.DataArray | xr.Dataset
-        A dask-backed (lazy) array/dataset of the full sequence, built
-        from two or more analog simulations years.
+    Parameters
+    ----------
+    ds : xr.DataArray | xr.Dataset | None
+        Daily (time, y, x) dissolved oxygen for one water year. ``None`` when
+        no dissolved oxygen input is configured, in which case ``None`` is
+        returned.
+
+    Returns
+    -------
+    np.ndarray or None
+        The (y, x) July-September minimum of the 21-day rolling mean.
     """
+    if ds is None:
+        return None
+
+    if isinstance(ds, xr.Dataset):
+        ds = ds["dissolved_oxygen"]
+
     # subset first to reduce memory pressure,
     # but keep JAS + a June lookback buffer for the trailing 21-day window
     ds_pre = ds.sel(time=ds["time"].dt.month.isin([6, 7, 8, 9]))
 
     ds_rolled = ds_pre.rolling(time=21, min_periods=11).mean()
     ds_jas = ds_rolled.sel(time=ds_rolled["time"].dt.month.isin([7, 8, 9]))
-    ds_jas_min = ds_jas.resample(time="YS").min()
-    return ds_jas_min
+    return ds_jas.min(dim="time", skipna=True).to_numpy()

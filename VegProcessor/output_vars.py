@@ -1818,6 +1818,24 @@ def get_hsi_60m_variables(hsi):
                 ),
             },
         ],
+        "dissolved_oxygen_july_sept_min_21d": [
+            hsi.dissolved_oxygen_july_sept_min_21d_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": (
+                    "Annual July-September minimum of 21-day rolling-mean "
+                    "dissolved oxygen"
+                ),
+                "description": (
+                    "Minimum over July-September of the 21-day rolling mean "
+                    "of daily dissolved oxygen, at 60m resolution. Distinct "
+                    "from 'dissolved_oxygen_july_sept_min', which is the mean "
+                    "of the monthly minimums."
+                ),
+            },
+        ],
     }
 
 

@@ -993,8 +993,12 @@ class HSI(vt.VegTransition):
         indicate deposition potential. The NaN mask in the BSS input is the
         static model domain, not dry days — every in-domain pixel carries a
         value on every day of the water year — so the two counts always sum
-        to the length of the year. Out-of-domain pixels stay NaN rather than
-        reading as zero days.
+        to the length of the year. Two masks are intersected to decide which
+        pixels report a count: the 60m hydro domain raster
+        (``self.hydro_domain``), which sets the reporting extent, and the
+        pixels where BSS actually carries data. A pixel that is in-domain but
+        never has a BSS value stays NaN rather than reporting zero days for
+        both counts.
 
         Parameters
         ----------
@@ -1011,12 +1015,21 @@ class HSI(vt.VegTransition):
             return None, None
 
         da = self.bss["BSS"]
-        in_domain = da.notnull().any(dim="time")
+        # 60m hydro domain raster: NaN outside the domain, matching the
+        # masking convention used elsewhere (see `_crop_output_to_hydro_domain`).
+        # Intersected with the pixels BSS actually has data for, so an
+        # in-domain pixel with no BSS values reports NaN, not zero days.
+        in_domain = ~np.isnan(self.hydro_domain)
+        has_data = da.notnull().any(dim="time").to_numpy()
+        valid = in_domain & has_data
 
-        days_above = (da > threshold).sum(dim="time").where(in_domain)
-        days_below = (da <= threshold).sum(dim="time").where(in_domain)
+        days_above = (da > threshold).sum(dim="time").to_numpy()
+        days_below = (da <= threshold).sum(dim="time").to_numpy()
 
-        return days_above.to_numpy(), days_below.to_numpy()
+        return (
+            np.where(valid, days_above, np.nan),
+            np.where(valid, days_below, np.nan),
+        )
 
     def _get_ssc_subset(
         self,

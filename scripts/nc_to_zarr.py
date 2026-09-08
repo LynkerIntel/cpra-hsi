@@ -160,7 +160,10 @@ def convert_file(
         print(f"  Renaming variables: {var_rename}")
         ds = ds.rename(var_rename)
 
-    ds = ds.chunk({"time": time_chunks})
+    # Static 2D rasters (e.g. HEC-RAS FLUX) have no time dimension; they
+    # keep the "auto" chunking chosen at open.
+    if "time" in ds.dims:
+        ds = ds.chunk({"time": time_chunks})
 
     if match_raster is not None:
         ds = _reproject_match(ds, match_raster)

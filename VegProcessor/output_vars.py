@@ -1818,6 +1818,36 @@ def get_hsi_60m_variables(hsi):
                 ),
             },
         ],
+        "bss_erosion_days": [
+            hsi.bss_erosion_days_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "days",
+                "long_name": "bed shear stress days above 0.2 Pa",
+                "description": (
+                    "Annual count of days with bed shear stress above 0.2 Pa "
+                    "(erosion potential) at 60m resolution. Only valid "
+                    "(non-NaN) days are counted. Not yet used in any HSI "
+                    "calculation."
+                ),
+            },
+        ],
+        "bss_deposition_days": [
+            hsi.bss_deposition_days_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "days",
+                "long_name": "bed shear stress days below 0.2 Pa",
+                "description": (
+                    "Annual count of days with bed shear stress at or below "
+                    "0.2 Pa (deposition potential) at 60m resolution. Only "
+                    "valid (non-NaN) days are counted. Not yet used in any "
+                    "HSI calculation."
+                ),
+            },
+        ],
     }
 
 

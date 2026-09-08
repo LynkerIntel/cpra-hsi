@@ -253,6 +253,8 @@ class HSI(vt.VegTransition):
         self.ssc_july_sept_max_mean = None
 
         self.bss = None  # the source xr.dataset
+        self.bss_erosion_days_60m = None  # days above threshold
+        self.bss_deposition_days_60m = None  # days below threshold
 
         # black-crappie
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
@@ -519,6 +521,9 @@ class HSI(vt.VegTransition):
 
         # bed shear stress vars ------------------------------------------
         self.bss = self._load_bss_general(self.wy)
+        self.bss_erosion_days_60m, self.bss_deposition_days_60m = (
+            self._get_bss_day_counts(threshold=0.2)
+        )
 
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
@@ -972,6 +977,41 @@ class HSI(vt.VegTransition):
         else:
             self._logger.info("No bed shear stress file provided.")
             return None
+
+    def _get_bss_day_counts(
+        self,
+        threshold: float = 0.2,
+    ) -> tuple[np.ndarray | None, ...]:
+        """Count days above and below a bed shear stress threshold.
+
+        Days above the threshold indicate erosion potential; days below it
+        indicate deposition potential. The NaN mask in the BSS input is the
+        static model domain, not dry days — every in-domain pixel carries a
+        value on every day of the water year — so the two counts always sum
+        to the length of the year. Out-of-domain pixels stay NaN rather than
+        reading as zero days.
+
+        Parameters
+        ----------
+        threshold : float, optional
+            Bed shear stress threshold in Pa. Defaults to 0.2.
+
+        Returns
+        -------
+        tuple
+            (days above threshold, days below threshold) at 60m resolution,
+            or two Nones if no bed shear stress data was loaded.
+        """
+        if self.bss is None:
+            return None, None
+
+        da = self.bss["BSS"]
+        in_domain = da.notnull().any(dim="time")
+
+        days_above = (da > threshold).sum(dim="time").where(in_domain)
+        days_below = (da <= threshold).sum(dim="time").where(in_domain)
+
+        return days_above.to_numpy(), days_below.to_numpy()
 
     def _get_ssc_subset(
         self,

@@ -1823,7 +1823,7 @@ def get_hsi_60m_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "days",
+                "units": "count",
                 "long_name": "bed shear stress days above 0.2 Pa",
                 "description": (
                     "Annual count of days with bed shear stress above 0.2 Pa "
@@ -1838,7 +1838,7 @@ def get_hsi_60m_variables(hsi):
             np.float32,
             {
                 "grid_mapping": "spatial_ref",
-                "units": "days",
+                "units": "count",
                 "long_name": "bed shear stress days below 0.2 Pa",
                 "description": (
                     "Annual count of days with bed shear stress at or below "

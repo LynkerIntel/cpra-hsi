@@ -2210,7 +2210,9 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_480m_variables(self)
 
-        with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, cache=False, decode_timedelta=False
+        ) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
 
         for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
@@ -2278,7 +2280,9 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         qc_60m_variables = get_hsi_60m_variables(self)
 
-        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath_60m, cache=False, decode_timedelta=False
+        ) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
 
         for var_name, (data, dtype, nc_attrs) in qc_60m_variables.items():
@@ -2365,7 +2369,7 @@ class HSI(vt.VegTransition):
             self.hydro_domain_480 if resolution == 480 else self.hydro_domain
         )
 
-        with xr.open_dataset(path) as ds:
+        with xr.open_dataset(path, decode_timedelta=False) as ds:
             ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
 
         # .where() can drop encoding silently — re-apply compression for each var
@@ -2386,7 +2390,7 @@ class HSI(vt.VegTransition):
             else "hsi_60m_netcdf_variables"
         )
 
-        with xr.open_dataset(path) as ds:
+        with xr.open_dataset(path, decode_timedelta=False) as ds:
             attrs_df = utils.dataset_attrs_to_df(
                 ds,
                 selected_attrs=["long_name", "description", "units"],
@@ -2400,7 +2404,9 @@ class HSI(vt.VegTransition):
     def _write_wpu_hsi_means_csv(self) -> None:
         """Compute WPU-zone mean HSI/SI scores from the 480m output."""
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, decode_timedelta=False
+        ) as ds:
             ds_hsi = ds.load()
 
         if "year" in ds_hsi.dims:
@@ -2417,7 +2423,9 @@ class HSI(vt.VegTransition):
     def _write_wpu_hsi_habitat_units_csv(self) -> None:
         """Compute WPU-zone Habitat Units scores from the 480m output."""
         self._logger.info("Calculating WPU Habitat Units.")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, decode_timedelta=False
+        ) as ds:
             ds_hsi = ds.load()
 
         if "year" in ds_hsi.dims:
@@ -2517,7 +2525,9 @@ class HSI(vt.VegTransition):
         # if the variable is already present, since append mode would otherwise
         # fail trying to recreate it.
         if os.path.exists(self.netcdf_filepath_60m):
-            with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+            with xr.open_dataset(
+                self.netcdf_filepath_60m, decode_timedelta=False
+            ) as ds:
                 if var_name in ds.variables:
                     raise ValueError(
                         f"'{var_name}' already present in 60m NetCDF — skipping "

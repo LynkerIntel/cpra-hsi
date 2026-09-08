@@ -615,7 +615,6 @@ class HSI(vt.VegTransition):
         # (after main loop to include all vars)
         self.log_data_attribute_types()
         self._logger.info("Simulation complete")
-        logging.shutdown()
 
     def _load_veg_type(self) -> xr.DataArray:
         """Load VegTransition output.
@@ -2689,24 +2688,3 @@ class HSI(vt.VegTransition):
         # log the full dictionary with pretty formatting
         formatted_dict = pprint.pformat(attr_types, width=100, indent=2)
         self._logger.info("HSI data inputs for run:\n%s", formatted_dict)
-
-
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True

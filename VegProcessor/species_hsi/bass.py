@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-import logging
 import numpy as np
+from logging_setup import get_logger
 
 
 @dataclass
@@ -46,7 +46,8 @@ class BassHSI:
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
-        self._setup_logger()
+        # handlers are attached by the active run; see `logging_setup`
+        self._logger = get_logger(__name__)
         self.template = self._create_template_array()
 
         # Determine the shape of the arrays
@@ -58,26 +59,6 @@ class BassHSI:
 
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
-
-    def _setup_logger(self):
-        """Set up the logger for the class."""
-        self._logger = logging.getLogger("BassHSI")
-        self._logger.setLevel(logging.INFO)
-
-        # Prevent adding multiple handlers if already added
-        if not self._logger.handlers:
-            # Create console handler and set level
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.INFO)
-
-            # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            ch.setFormatter(formatter)
-
-            # Add the handler to the logger
-            self._logger.addHandler(ch)
 
     def _create_template_array(self, *input_arrays) -> np.ndarray:
         """Create an array from a template where valid pixels are 999.0, and

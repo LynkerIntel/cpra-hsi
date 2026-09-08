@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 import numpy as np
-import logging
 
 import utils
+from logging_setup import get_logger
 
 
 @dataclass
@@ -116,7 +116,8 @@ class RiverineCatfishHSI:
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
-        self._setup_logger()
+        # handlers are attached by the active run; see `logging_setup`
+        self._logger = get_logger(__name__)
         self.template = self._create_template_array()
 
         # Calculate individual suitability indices
@@ -184,26 +185,6 @@ class RiverineCatfishHSI:
                 "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
             )
         return clipped
-
-    def _setup_logger(self):
-        """Set up the logger for the class."""
-        self._logger = logging.getLogger("RiverineCatfishHSI")
-        self._logger.setLevel(logging.INFO)
-
-        # Prevent adding multiple handlers if already added
-        if not self._logger.handlers:
-            # Create console handler and set level
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.INFO)
-
-            # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            ch.setFormatter(formatter)
-
-            # Add the handler to the logger
-            self._logger.addHandler(ch)
 
     def mask_to_pools_backwaters_coarsen(
         self,

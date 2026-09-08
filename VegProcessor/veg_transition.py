@@ -24,8 +24,11 @@ from output_vars import get_veg_variables
 
 import veg_logic
 import hydro_logic
+import logging_setup
 import plotting
 import utils
+
+from logging_setup import get_logger
 
 
 class VegTransition:
@@ -212,56 +215,57 @@ class VegTransition:
         self._create_output_file()
 
     def _setup_logger(self, log_level=logging.INFO):
-        # always create a unique logger for each instance, using class name
-        self._logger = logging.getLogger(
-            f"{self.__class__.__name__}_{id(self)}"
+        """Route this run's logging to its own output folder.
+
+        Handlers belong to the run, not to the module: they are attached to
+        the package root logger here and removed in `close`, so several
+        runs sharing a process never write into each other's log files.
+        """
+        # `type(self).__module__` so an HSI run is tagged `vegprocessor.hsi`
+        # rather than the module this method happens to be defined in
+        self._logger = get_logger(type(self).__module__)
+
+        # safety net: a previous run that was not closed (no `with`, or an
+        # interpreter session that kept the instance alive) would otherwise
+        # keep its file handler attached and receive this run's messages
+        self.close()
+
+        self._log_handlers = logging_setup.attach_run_handlers(
+            output_dir=self.output_dir_path,
+            file_name=self.file_name,
+            log_level=log_level,
         )
-        self._logger.setLevel(log_level)
-        self._logger.propagate = False
-
-        # always remove old handlers (critical in Jupyter notebooks)
-        if self._logger.hasHandlers():
-            for handler in self._logger.handlers:
-                self._logger.removeHandler(handler)
-                handler.close()
-
-        # now create fresh handlers
-        ch = logging.StreamHandler()
-        ch.setLevel(log_level)
-
-        run_metadata_dir = os.path.join(self.output_dir_path, "run-metadata")
-        os.makedirs(run_metadata_dir, exist_ok=True)
-        log_file_path = os.path.join(
-            run_metadata_dir, f"{self.file_name}_simulation.log"
-        )
-        fh = logging.FileHandler(log_file_path)
-        fh.setLevel(log_level)
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - [Timestep: %(timestep)s] - %(message)s"
-        )
-
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
-
-        self._logger.addHandler(ch)
-        self._logger.addHandler(fh)
-
-        # add the timestep filter
-        filter_instance = _TimestepFilter(self)
-        self._logger.addFilter(filter_instance)
-
         self._logger.info("Logger setup complete.")
 
-        # add the veg transition logger
-        utils_logger = logging.getLogger("VegTransition")
-        utils_logger.setLevel(log_level)
-        utils_logger.propagate = False
+    def close(self) -> None:
+        """Detach this run's log handlers.
 
-        utils_logger.addHandler(ch)
-        utils_logger.addHandler(fh)
+        Called automatically when the model is used as a context manager.
+        Safe to call more than once.
+        """
+        handlers = getattr(self, "_log_handlers", None)
+        if handlers:
+            logging_setup.detach_run_handlers(handlers)
+        self._log_handlers = []
 
-        utils_logger.addFilter(filter_instance)
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+        return False
+
+    @property
+    def current_timestep(self):
+        """Current model timestep, or None outside the run loop."""
+        return self._current_timestep
+
+    @current_timestep.setter
+    def current_timestep(self, timestep):
+        # keep the timestep tagged onto log records in sync with the model,
+        # for records raised anywhere in the package
+        self._current_timestep = timestep
+        logging_setup.set_timestep(timestep)
 
     def _get_git_commit_hash(self):
         """Retrieve the current Git commit hash for the repository."""
@@ -473,7 +477,6 @@ class VegTransition:
 
             self._logger.info("Simulation complete")
             del self.water_depth
-            logging.shutdown()
 
         finally:
             plt.switch_backend(default_backend)
@@ -1646,22 +1649,3 @@ class VegTransition:
         gc.collect()
 
 
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True

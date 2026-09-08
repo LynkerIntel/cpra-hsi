@@ -1254,20 +1254,21 @@ class TestCalculateNearForest(unittest.TestCase):
         import os
 
         # create an instance of HSI with a dummy config file
-        hsi = HSI(config_file="tests/test_config.yml")
+        with HSI(config_file="tests/test_config.yml") as hsi:
+            # create a 16x16 veg_type array filled with non-forest, add
+            # forest in center
+            veg = np.zeros((16, 16), dtype=int)
+            veg[7:9, 7:9] = 15  # small forest patch in the center
 
-        # create a 16x16 veg_type array filled with non-forest, add forest in center
-        veg = np.zeros((16, 16), dtype=int)
-        veg[7:9, 7:9] = 15  # small forest patch in the center
+            hsi.veg_type = xr.DataArray(
+                veg,
+                coords={"y": np.arange(16), "x": np.arange(16)},
+                dims=["y", "x"],
+            )
 
-        hsi.veg_type = xr.DataArray(
-            veg,
-            coords={"y": np.arange(16), "x": np.arange(16)},
-            dims=["y", "x"],
-        )
-
-        # call the private method (note: in real test, public interface is better)
-        result = hsi._calculate_near_forest(radius=2)
+            # call the private method (note: in real test, public interface
+            # is better)
+            result = hsi._calculate_near_forest(radius=2)
 
         # ensure the output is a coarsened array and has non-zero values around the center
         # assert isinstance(result, xr.DataArray)

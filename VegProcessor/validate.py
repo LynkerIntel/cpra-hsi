@@ -138,6 +138,7 @@ def validate_hydro_source_model_versions(
         "SSC",
         "DO",
         "SEDFLUX",
+        "BSS",
     }
 
     versions = config.get("metadata", {}).get("hydro_source_model_versions")

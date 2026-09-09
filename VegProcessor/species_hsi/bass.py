@@ -19,10 +19,6 @@ class BassHSI:
     hydro_domain_480: np.ndarray = None
     dem_480: np.ndarray = None
 
-    # mean annual water depth (480m), used to mask the HSI to areas
-    # with sufficient water depth
-    water_depth_annual_mean: np.ndarray = None
-
     # gridded data as numpy arrays or None
     # init with None to be distinct from np.nan
     v1a_mean_annual_salinity: np.ndarray = None
@@ -48,7 +44,6 @@ class BassHSI:
             v2_veg_mask=hsi_instance.pct_vegetated_bass,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            water_depth_annual_mean=hsi_instance.water_depth_annual_mean,
         )
 
     def __post_init__(self):
@@ -56,8 +51,7 @@ class BassHSI:
         # Set up the logger
         # handlers are attached by the active run; see `logging_setup`
         self._logger = get_logger(__name__)
-        self.depth_mask_480 = self._create_depth_mask()
-        self.template = self._create_template_array(self.depth_mask_480)
+        self.template = self._create_template_array()
 
         # Determine the shape of the arrays
         # self._shape = self._determine_shape()
@@ -68,32 +62,6 @@ class BassHSI:
 
         # Calculate overall suitability score with quality control
         self.hsi = self.calculate_overall_suitability()
-
-    def _create_depth_mask(self) -> np.ndarray | None:
-        """Create a mask array restricting bass habitat to areas with at
-        least 0.5m mean annual water depth.
-
-        The returned array is intended to be passed to
-        `_create_template_array()` as an input array, so that shallow cells
-        propagate as NaN from the template through the SIs to the final HSI.
-
-        Returns
-        -------
-        np.ndarray | None
-            Mean annual water depth with cells shallower than 0.5m set to
-            NaN, or None if depth data was not provided.
-        """
-        if self.water_depth_annual_mean is None:
-            self._logger.info(
-                "Mean annual water depth data not provided. Skipping depth mask."
-            )
-            return None
-
-        return np.where(
-            self.water_depth_annual_mean < 0.5,
-            np.nan,
-            self.water_depth_annual_mean,
-        )
 
     def _create_template_array(self, *input_arrays) -> np.ndarray:
         """Create an array from a template where valid pixels are 999.0, and
@@ -122,9 +90,7 @@ class BassHSI:
     def calculate_si_1(self) -> np.ndarray:
         """Mean salinity and water temperature from the entire year."""
         self._logger.info("Running SI 1")
-        si_1 = self._create_template_array(
-            self.v1a_mean_annual_salinity, self.depth_mask_480
-        )
+        si_1 = self._create_template_array(self.v1a_mean_annual_salinity)
 
         if self.v1a_mean_annual_salinity is None:
             self._logger.info(
@@ -174,8 +140,8 @@ class BassHSI:
                 / 14.3
             )
 
-            # keep the template's NaN mask (hydro domain, salinity, depth),
-            # which the SI logic above does not carry through
+            # keep the template's NaN mask (hydro domain, salinity), which
+            # the SI logic above does not carry through
             si_1 = np.where(np.isnan(si_1), np.nan, result)
 
             if np.any(np.isclose(si_1, 999.0, atol=1e-5)):
@@ -237,7 +203,7 @@ class BassHSI:
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):
                 raise ValueError("Unhandled condition in SI logic!")
 
-            # keep the template's NaN mask (hydro domain, depth), which the
+            # keep the template's NaN mask (hydro domain), which the
             # conditions above overwrite because they select on veg pct alone
             si_2 = np.where(np.isnan(self.template), np.nan, si_2)
 

@@ -267,7 +267,6 @@ class HSI(vt.VegTransition):
         self.blackcrappie_min_do_in_midsummer_temp_strata = None
         self.blackcrappie_min_do_in_spawning_bw = None
         # catfish
-        self.catfish_pct_cover_in_summer_pools_bw = None
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
@@ -535,7 +534,7 @@ class HSI(vt.VegTransition):
                 agg="min",
                 cell=False,
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.3,
+                min_valid_fraction=0.1,
             )
         )
         self.dissolved_oxygen_july_sept_max = (
@@ -544,7 +543,7 @@ class HSI(vt.VegTransition):
                 cell=True,
                 agg="max",
                 min_temporal_completeness=0.5,
-                min_valid_fraction=0.3,
+                min_valid_fraction=0.1,
             )
         )
         self.dissolved_oxygen_july_sept_min_21d_60m = (

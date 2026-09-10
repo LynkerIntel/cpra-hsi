@@ -125,6 +125,8 @@ class HSI(vt.VegTransition):
         self.human_influence_developed = None
         self.hydro_domain = self._load_hydro_domain_raster(as_float=True)
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
+        self.bay_mask_60m = None  # set by `_load_bay_mask`, None if not D3D
+        self.bay_mask_480 = self._load_bay_mask()
 
         # Dynamic Variables --------------------------------------------
         self.maturity = None  # 60m, used by HSI
@@ -295,6 +297,9 @@ class HSI(vt.VegTransition):
         )
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # Bay mask — optional, D3D-only. See `_load_bay_mask`.
+        self.bay_mask_path = self.config["raster_data"].get("bay_mask_raster")
 
         # polygon data — optional; sedflux waterbody summary is skipped if unset.
         # Rasterized per-waterbody boolean masks stored in a NetCDF.
@@ -1656,6 +1661,61 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
         return da.to_numpy()
+
+    def _load_bay_mask(self) -> np.ndarray | None:
+        """Load the bay mask raster and coarsen it to 480m percent-cover.
+
+        The array is consumed by the species models, each of which owns a
+        `bay_mask` method applied to its final HSI (see e.g.
+        `species_hsi/bass.py`). The mask applies to Delft3D runs only; for
+        any other hydro source this returns None and each species'
+        `bay_mask` becomes a no-op, following the framework convention
+        that None means "variable not available".
+
+        Also sets `self.bay_mask_60m` (boolean, 60m) for QC.
+
+        Returns
+        -------
+        np.ndarray | None
+            Percent of each 480m cell that is bay, or None if the mask
+            does not apply to this run.
+        """
+        hydro_source = self.file_params["hydro_source_model"]
+
+        if hydro_source != "D3D":
+            if self.bay_mask_path:
+                self._logger.warning(
+                    "bay_mask_raster is set, but hydro_source_model is '%s'. "
+                    "Bay masking is D3D-only and will be skipped.",
+                    hydro_source,
+                )
+            return None
+
+        if not self.bay_mask_path:
+            self._logger.info(
+                "No bay_mask_raster provided; bay masking is disabled."
+            )
+            return None
+
+        self._logger.info("Loading bay mask raster.")
+        da = xr.open_dataarray(self.bay_mask_path)
+        da = da.squeeze(drop="band")
+        # reproject to match hsi grid
+        da = self._reproject_match_to_dem(da)
+
+        # define which value is bay in raster key
+        bay = da == 1
+        self.bay_mask_60m = bay.to_numpy()
+
+        # get pct of each 480m cell that is bay
+        da_coarse = utils.coarsen_and_reduce(
+            da=bay,
+            veg_type=True,
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        return da_coarse.to_numpy()
 
     def _calculate_flotant_marsh(self) -> xr.DataArray:
         """

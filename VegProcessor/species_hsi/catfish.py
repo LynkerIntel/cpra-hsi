@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 import numpy as np
-import logging
 
 import utils
+from logging_setup import get_logger
 
 
 @dataclass
@@ -37,6 +37,9 @@ class RiverineCatfishHSI:
     v13_max_summer_salinity_fry_juvenile: np.ndarray
     v14_avg_midsummer_temp_in_pools_bw_juvenile: np.ndarray
     v18_avg_vel_summer_flow: np.ndarray
+
+    # % of each 480m cell that is bay; None when not a D3D run
+    bay_mask_480: np.ndarray = None
 
     # Suitability indices (calculated)
     si_1: np.ndarray = field(init=False)
@@ -106,6 +109,7 @@ class RiverineCatfishHSI:
             ),  # UNIT: m/s to cm/s, set to ideal
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
+            bay_mask_480=hsi_instance.bay_mask_480,
             hydro_domain_60=hsi_instance.hydro_domain,
             # 60m depth vars for pools and backwaters
             water_depth_july_august_mean_60m=hsi_instance.water_depth_july_august_mean_60m,
@@ -116,7 +120,8 @@ class RiverineCatfishHSI:
     def __post_init__(self):
         """Run class methods to get HSI after instance is created."""
         # Set up the logger
-        self._setup_logger()
+        # handlers are attached by the active run; see `logging_setup`
+        self._logger = get_logger(__name__)
         self.template = self._create_template_array()
 
         # Calculate individual suitability indices
@@ -184,26 +189,6 @@ class RiverineCatfishHSI:
                 "SI output clipped to [0, 1]. SI arr includes values > 1.1, check logic!"
             )
         return clipped
-
-    def _setup_logger(self):
-        """Set up the logger for the class."""
-        self._logger = logging.getLogger("RiverineCatfishHSI")
-        self._logger.setLevel(logging.INFO)
-
-        # Prevent adding multiple handlers if already added
-        if not self._logger.handlers:
-            # Create console handler and set level
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.INFO)
-
-            # Create formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            ch.setFormatter(formatter)
-
-            # Add the handler to the logger
-            self._logger.addHandler(ch)
 
     def mask_to_pools_backwaters_coarsen(
         self,
@@ -916,6 +901,31 @@ class RiverineCatfishHSI:
 
         return self.clip_array(si_18)
 
+    def bay_mask(self, hsi: np.ndarray) -> np.ndarray:
+        """Set HSI to NaN in bays, which are not habitat for this species.
+
+        `bay_mask_480` is the percent of each 480m cell that is bay; a cell
+        is masked when more than 50% of it is bay. Bay masking is Delft3D
+        only: under any other hydro source `bay_mask_480` is None and this
+        returns `hsi` unchanged.
+
+        Applied to the final HSI only, so the individual si_* components
+        stay inspectable in bays in the QC output. NaN (not 0) is
+        deliberate: the WPU summaries in `utils` skip NaN, so masked bays
+        leave the WPU means and contribute no habitat-unit area.
+
+        To exempt this species from bay masking, remove the call to this
+        method in `calculate_overall_suitability`.
+        """
+        if self.bay_mask_480 is None:
+            return hsi
+
+        bay = self.bay_mask_480 > 50
+        self._logger.info(
+            "Masking %d bay cells from final HSI.", np.count_nonzero(bay)
+        )
+        return np.where(bay, np.nan, hsi)
+
     def calculate_overall_suitability(self) -> np.ndarray:
         """Combine individual suitability indices to compute the overall HSI with quality control."""
         self._logger.info("Running Catfish final HSI.")
@@ -1033,6 +1043,9 @@ class RiverineCatfishHSI:
                 "Combined suitability score has %d values outside [0,1]",
                 num_invalid,
             )
+
+        # exclude bays from this species' habitat (D3D runs only)
+        hsi = self.bay_mask(hsi)
 
         # subset final HSI array to vegetation domain (not hydrologic domain)
         # Masking: Set values in `mask` to NaN wherever `data` is NaN

@@ -22,8 +22,10 @@ import re
 from pathlib import Path
 import rioxarray  # noqa: F401 - registers .rio accessor on xarray objects
 
-# Configure the logger in VegTransition
-logger = logging.getLogger("VegTransition")
+from logging_setup import get_logger
+
+# Handlers are attached by the active run; see `logging_setup`.
+logger = get_logger(__name__)
 
 
 def generate_combined_sequence(

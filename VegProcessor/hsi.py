@@ -125,6 +125,8 @@ class HSI(vt.VegTransition):
         self.human_influence_developed = None
         self.hydro_domain = self._load_hydro_domain_raster(as_float=True)
         self.hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
+        self.bay_mask_60m = None  # set by `_load_bay_mask`, None if not D3D
+        self.bay_mask_480 = self._load_bay_mask()
 
         # Dynamic Variables --------------------------------------------
         self.maturity = None  # 60m, used by HSI
@@ -203,6 +205,8 @@ class HSI(vt.VegTransition):
         )
         self.dissolved_oxygen = None  # daily DO prediction (time, y, x) 60m
         self.dissolved_oxygen_july_sept_min_60m = None
+        # JAS min of the 21-day rolling mean; distinct from the raw JAS min
+        self.dissolved_oxygen_july_sept_min_21d_60m = None
         self.dissolved_oxygen_feb_march_min_60m = None  # always ideal
         self.dissolved_oxygen_july_sept_max = None
 
@@ -252,6 +256,10 @@ class HSI(vt.VegTransition):
 
         self.ssc_july_sept_max_mean = None
 
+        self.bss = None  # the source xr.dataset
+        self.bss_erosion_days_60m = None  # days above threshold
+        self.bss_deposition_days_60m = None  # days below threshold
+
         # black-crappie
         self.blackcrappie_pct_cover_in_midsummer_pools_overflow_bw = (
             None  # set to ideal
@@ -264,6 +272,8 @@ class HSI(vt.VegTransition):
         self.catfish_fpp_substrate_avg_summer_flow = None  # always ideal
         self.catfish_grow_season_length_frost_free_days = None  # always ideal
         self.catfish_avg_min_do_in_midsummer_pools_bw = None
+        # bass
+        self.pct_vegetated_bass = None  # for masking SI2 only
 
         self._create_output_file(resolution=480)
         self._create_output_file(resolution=60)
@@ -287,6 +297,9 @@ class HSI(vt.VegTransition):
         )
         self.wpu_grid_path = self.config["raster_data"].get("wpu_grid_path")
         # self.flotant_marsh_keys_path = self.config["raster_data"].get("flotant_marsh_keys")
+
+        # Bay mask — optional, D3D-only. See `_load_bay_mask`.
+        self.bay_mask_path = self.config["raster_data"].get("bay_mask_raster")
 
         # polygon data — optional; sedflux waterbody summary is skipped if unset.
         # Rasterized per-waterbody boolean masks stored in a NetCDF.
@@ -320,6 +333,7 @@ class HSI(vt.VegTransition):
             "flowexch_input_path"
         )
         self.ssc_input_path = self.config["raster_data"].get("ssc_input_path")
+        self.bss_input_path = self.config["raster_data"].get("bss_input_path")
         self.do_input_path = self.config["raster_data"].get("do_input_path")
         self.sedflux_input_path = self.config["raster_data"].get(
             "sedflux_input_path"
@@ -513,6 +527,12 @@ class HSI(vt.VegTransition):
         self.ssc = self._load_suspended_sediment_general(self.wy)
         self.ssc_july_sept_max_mean = self._get_ssc_subset(months=[7, 8, 9])
 
+        # bed shear stress vars ------------------------------------------
+        self.bss = self._load_bss_general(self.wy)
+        self.bss_erosion_days_60m, self.bss_deposition_days_60m = (
+            self._get_bss_day_counts(threshold=0.2)
+        )
+
         # dissolved oxygen vars ---------------------------------------
         self.dissolved_oxygen = self._load_dissolved_oxygen_general(self.wy)
         self.dissolved_oxygen_july_sept_min_60m = (
@@ -532,6 +552,9 @@ class HSI(vt.VegTransition):
                 min_temporal_completeness=0.5,
                 min_valid_fraction=0.1,
             )
+        )
+        self.dissolved_oxygen_july_sept_min_21d_60m = (
+            metrics.get_water_quality_metric(self.dissolved_oxygen)
         )
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
@@ -598,7 +621,6 @@ class HSI(vt.VegTransition):
         # (after main loop to include all vars)
         self.log_data_attribute_types()
         self._logger.info("Simulation complete")
-        logging.shutdown()
 
     def _load_veg_type(self) -> xr.DataArray:
         """Load VegTransition output.
@@ -935,6 +957,85 @@ class HSI(vt.VegTransition):
             self._logger.info("No suspended sediment file provided.")
             return None
 
+    def _load_bss_general(self, water_year: int) -> xr.Dataset | None:
+        """Load bed shear stress (BSS) data from Delft3D or MIKE 21 models."""
+        if self.bss_input_path is not None:
+            self._logger.info(
+                "Loading bed shear stress data with universal daily method."
+            )
+            nc_path, analog_year = self._get_hydro_netcdf_path(
+                water_year, hydro_variable="BSS"
+            )
+            self._logger.info("Loading file: %s", nc_path)
+            ds = xr.open_zarr(nc_path)
+            ds = utils.analog_years_handler(analog_year, water_year, ds)
+
+            # handle varied CRS metadata locations between model files-----------------
+            try:
+                # D3D & MIKE: CRS from crs variable's crs_wkt attribute
+                crs_wkt = ds["crs"].attrs.get("crs_wkt")
+                ds = ds.rio.write_crs(crs_wkt)
+
+            except Exception as exc:
+                raise ValueError(
+                    "Unable to parse CRS from hydrologic input"
+                ) from exc
+
+            ds = self._reproject_match_to_dem(ds)
+            return ds
+
+        else:
+            self._logger.info("No bed shear stress file provided.")
+            return None
+
+    def _get_bss_day_counts(
+        self,
+        threshold: float = 0.2,
+    ) -> tuple[np.ndarray | None, ...]:
+        """Count days above and below a bed shear stress threshold.
+
+        Days above the threshold indicate erosion potential; days below it
+        indicate deposition potential. The NaN mask in the BSS input is the
+        static model domain, not dry days — every in-domain pixel carries a
+        value on every day of the water year — so the two counts always sum
+        to the length of the year. Two masks are intersected to decide which
+        pixels report a count: the 60m hydro domain raster
+        (``self.hydro_domain``), which sets the reporting extent, and the
+        pixels where BSS actually carries data. A pixel that is in-domain but
+        never has a BSS value stays NaN rather than reporting zero days for
+        both counts.
+
+        Parameters
+        ----------
+        threshold : float, optional
+            Bed shear stress threshold in Pa. Defaults to 0.2.
+
+        Returns
+        -------
+        tuple
+            (days above threshold, days below threshold) at 60m resolution,
+            or two Nones if no bed shear stress data was loaded.
+        """
+        if self.bss is None:
+            return None, None
+
+        da = self.bss["BSS"]
+        # 60m hydro domain raster: NaN outside the domain, matching the
+        # masking convention used elsewhere (see `_crop_output_to_hydro_domain`).
+        # Intersected with the pixels BSS actually has data for, so an
+        # in-domain pixel with no BSS values reports NaN, not zero days.
+        in_domain = ~np.isnan(self.hydro_domain)
+        has_data = da.notnull().any(dim="time").to_numpy()
+        valid = in_domain & has_data
+
+        days_above = (da > threshold).sum(dim="time").to_numpy()
+        days_below = (da <= threshold).sum(dim="time").to_numpy()
+
+        return (
+            np.where(valid, days_above, np.nan),
+            np.where(valid, days_below, np.nan),
+        )
+
     def _get_ssc_subset(
         self,
         months: list[int] | None = None,
@@ -1146,6 +1247,29 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
+        ds_pct_vegetated_bass = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[
+                9,
+                10,
+                11,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+            ],
+            x=8,
+            y=8,
+            boundary="pad",
+        )
         ds_water = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[24, 25, 26],  # water types
@@ -1173,6 +1297,7 @@ class HSI(vt.VegTransition):
         self.pct_vegetated = ds_vegetated.to_numpy()
         self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
+        self.pct_vegetated_bass = ds_pct_vegetated_bass.to_numpy()
         self.pct_emergent_vegetation = ds_emergent_veg.to_numpy()
         # Zone V, IV, III, (BLH's) II (swamp)
         self.pct_swamp_bottom_hardwood = ds_swamp_blh.to_numpy()
@@ -1536,6 +1661,61 @@ class HSI(vt.VegTransition):
             boundary="pad",
         )
         return da.to_numpy()
+
+    def _load_bay_mask(self) -> np.ndarray | None:
+        """Load the bay mask raster and coarsen it to 480m percent-cover.
+
+        The array is consumed by the species models, each of which owns a
+        `bay_mask` method applied to its final HSI (see e.g.
+        `species_hsi/bass.py`). The mask applies to Delft3D runs only; for
+        any other hydro source this returns None and each species'
+        `bay_mask` becomes a no-op, following the framework convention
+        that None means "variable not available".
+
+        Also sets `self.bay_mask_60m` (boolean, 60m) for QC.
+
+        Returns
+        -------
+        np.ndarray | None
+            Percent of each 480m cell that is bay, or None if the mask
+            does not apply to this run.
+        """
+        hydro_source = self.file_params["hydro_source_model"]
+
+        if hydro_source != "D3D":
+            if self.bay_mask_path:
+                self._logger.warning(
+                    "bay_mask_raster is set, but hydro_source_model is '%s'. "
+                    "Bay masking is D3D-only and will be skipped.",
+                    hydro_source,
+                )
+            return None
+
+        if not self.bay_mask_path:
+            self._logger.info(
+                "No bay_mask_raster provided; bay masking is disabled."
+            )
+            return None
+
+        self._logger.info("Loading bay mask raster.")
+        da = xr.open_dataarray(self.bay_mask_path)
+        da = da.squeeze(drop="band")
+        # reproject to match hsi grid
+        da = self._reproject_match_to_dem(da)
+
+        # define which value is bay in raster key
+        bay = da == 1
+        self.bay_mask_60m = bay.to_numpy()
+
+        # get pct of each 480m cell that is bay
+        da_coarse = utils.coarsen_and_reduce(
+            da=bay,
+            veg_type=True,
+            x=8,
+            y=8,
+            boundary="pad",
+        )
+        return da_coarse.to_numpy()
 
     def _calculate_flotant_marsh(self) -> xr.DataArray:
         """
@@ -2114,7 +2294,9 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         hsi_variables = get_hsi_480m_variables(self)
 
-        with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, cache=False, decode_timedelta=False
+        ) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
 
         for var_name, (data, dtype, nc_attrs) in hsi_variables.items():
@@ -2182,7 +2364,9 @@ class HSI(vt.VegTransition):
         timestep_str = timestep.strftime("%Y-%m-%d")
         qc_60m_variables = get_hsi_60m_variables(self)
 
-        with xr.open_dataset(self.netcdf_filepath_60m, cache=False) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath_60m, cache=False, decode_timedelta=False
+        ) as ds:
             ds_loaded = ds.load()  # loads into memory and closes file
 
         for var_name, (data, dtype, nc_attrs) in qc_60m_variables.items():
@@ -2239,7 +2423,6 @@ class HSI(vt.VegTransition):
         self._write_variable_sidecar_csv(resolution=480)
         self._crop_output_to_hydro_domain(resolution=60)
         self._append_sedflux_to_60m_netcdf()
-        self._write_water_quality_metric()
         self._write_variable_sidecar_csv(resolution=60)
         self._write_sedflux_waterbody_means_csv()
         self._write_wpu_hsi_means_csv()
@@ -2270,7 +2453,7 @@ class HSI(vt.VegTransition):
             self.hydro_domain_480 if resolution == 480 else self.hydro_domain
         )
 
-        with xr.open_dataset(path) as ds:
+        with xr.open_dataset(path, decode_timedelta=False) as ds:
             ds_out = ds.where(~np.isnan(domain)).copy(deep=True).load()
 
         # .where() can drop encoding silently — re-apply compression for each var
@@ -2291,7 +2474,7 @@ class HSI(vt.VegTransition):
             else "hsi_60m_netcdf_variables"
         )
 
-        with xr.open_dataset(path) as ds:
+        with xr.open_dataset(path, decode_timedelta=False) as ds:
             attrs_df = utils.dataset_attrs_to_df(
                 ds,
                 selected_attrs=["long_name", "description", "units"],
@@ -2305,7 +2488,9 @@ class HSI(vt.VegTransition):
     def _write_wpu_hsi_means_csv(self) -> None:
         """Compute WPU-zone mean HSI/SI scores from the 480m output."""
         self._logger.info("Calculating WPU HSI/SI mean scores.")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, decode_timedelta=False
+        ) as ds:
             ds_hsi = ds.load()
 
         if "year" in ds_hsi.dims:
@@ -2322,7 +2507,9 @@ class HSI(vt.VegTransition):
     def _write_wpu_hsi_habitat_units_csv(self) -> None:
         """Compute WPU-zone Habitat Units scores from the 480m output."""
         self._logger.info("Calculating WPU Habitat Units.")
-        with xr.open_dataset(self.netcdf_filepath) as ds:
+        with xr.open_dataset(
+            self.netcdf_filepath, decode_timedelta=False
+        ) as ds:
             ds_hsi = ds.load()
 
         if "year" in ds_hsi.dims:
@@ -2405,73 +2592,6 @@ class HSI(vt.VegTransition):
         }
         return combined
 
-    def _build_dissolved_oxygen_dataset(self) -> xr.DataArray | None:
-        """Compile the full simulation-length dissolved oxygen series as a lazy dataset.
-
-        Mirrors ``_build_sedflux_dataset`` but for the daily XGBoost dissolved
-        oxygen output. Each simulation water year maps to one of the (typically
-        3) analog years via the sequence/years mapping. Rather than opening and
-        reprojecting a file per water year (the run-loop access pattern), this
-        reads each *unique* analog zarr only once — keeping the data
-        dask-backed — reprojects it to the DEM grid, then reassigns each water
-        year's daily time axis (via ``analog_years_handler``) and concatenates
-        the per-water-year daily slices along a continuous ``time`` axis. The
-        result is a lazy ``(time, y, x)`` DataArray spanning
-        ``water_year_start``..``water_year_end`` whose underlying
-        reads/reprojection are deferred until the array is computed (e.g. on
-        write).
-
-        Returns ``None`` if dissolved oxygen input is not configured.
-        """
-        if self.do_input_path is None:
-            return None
-
-        var_name = "dissolved_oxygen"
-        # Cache reprojected analog datasets by source path, so each unique
-        # analog year is opened + reprojected only once even though several
-        # simulation water years resolve to it. Time coords are (re)assigned
-        # per water year after the cache lookup: the analog->water-year mapping
-        # is many-to-one, but each water year needs its own daily time axis.
-        analog_cache: dict = {}
-        slices: list[xr.DataArray] = []
-
-        for wy in range(self.water_year_start, self.water_year_end + 1):
-            nc_path, analog_year = self._get_hydro_netcdf_path(
-                wy, hydro_variable="DO"
-            )
-            if nc_path not in analog_cache:
-                self._logger.info("Loading DO analog file: %s", nc_path)
-                ds = xr.open_zarr(nc_path)
-                # DO is always XGB: CRS from the spatial_ref variable.
-                try:
-                    crs_wkt = ds["spatial_ref"].attrs.get("crs_wkt") or ds[
-                        "spatial_ref"
-                    ].attrs.get("spatial_ref")
-                    ds = ds.rio.write_crs(crs_wkt)
-                except Exception as exc:
-                    raise ValueError(
-                        "Unable to parse CRS from dissolved oxygen input"
-                    ) from exc
-                ds = self._reproject_match_to_dem(ds)
-                analog_cache[nc_path] = ds
-
-            # Reassign the cached analog series onto this water year's daily
-            # time axis (drops Feb 29 for leap analogs). Coord-only op, so water
-            # years sharing an analog reuse the same lazy reprojected data.
-            da = utils.analog_years_handler(
-                analog_year, wy, analog_cache[nc_path]
-            )[var_name]
-            slices.append(da)
-
-        combined = xr.concat(slices, dim="time").astype(np.float32)
-        combined.name = var_name
-        combined.attrs = {
-            "grid_mapping": "spatial_ref",
-            "units": "mg/L",
-            "long_name": "Dissolved oxygen",
-        }
-        return combined
-
     def _append_sedflux_to_60m_netcdf(self) -> None:
         """Append the SEDFLUX series to the 60m HSI NetCDF.
 
@@ -2489,7 +2609,9 @@ class HSI(vt.VegTransition):
         # if the variable is already present, since append mode would otherwise
         # fail trying to recreate it.
         if os.path.exists(self.netcdf_filepath_60m):
-            with xr.open_dataset(self.netcdf_filepath_60m) as ds:
+            with xr.open_dataset(
+                self.netcdf_filepath_60m, decode_timedelta=False
+            ) as ds:
                 if var_name in ds.variables:
                     raise ValueError(
                         f"'{var_name}' already present in 60m NetCDF — skipping "
@@ -2601,100 +2723,6 @@ class HSI(vt.VegTransition):
         df.to_csv(outpath, index=False)
         self._logger.info("SEDFLUX waterbody means written: %s", outpath)
 
-    def _write_water_quality_metric(self) -> None:
-        """Calculate water quality metric using lazy-dask dissolved oxygen
-        dataset, then write to the 10-year output file.
-
-        Builds the simulation-length dissolved oxygen series as a lazy,
-        dask-backed dataset (see ``_build_dissolved_oxygen_dataset``), reduces
-        it to an annual July–September minimum of the 21-day rolling mean via
-        ``metrics.get_water_quality_metric``, and writes the result into the
-        60m output as a ``dissolved_oxygen_july_sept_min_21d`` (time, y, x)
-        variable — distinct from the run-loop's raw JAS-min output
-        ``dissolved_oxygen_july_sept_min``. The lazy graph (zarr reads +
-        reprojection + rolling reduction) is
-        realized here on write. Skips if dissolved oxygen input is not
-        configured, or if the variable is already present (append mode cannot
-        overwrite an existing netCDF variable in place).
-        """
-        self._logger.info("Water quality metric started.")
-        # Distinct from the run-loop's raw JAS-min output of the same family
-        # ("dissolved_oxygen_july_sept_min", output_vars.py): this is the
-        # 21-day rolling-mean variant computed across the full sequence.
-        var_name = "dissolved_oxygen_july_sept_min_21d"
-
-        # Metadata-only check (no data read): bail before building/reprojecting
-        # if the variable is already present, since append mode would otherwise
-        # fail trying to recreate it.
-        if os.path.exists(self.netcdf_filepath_60m):
-            with xr.open_dataset(self.netcdf_filepath_60m) as ds:
-                if var_name in ds.variables:
-                    raise ValueError(
-                        f"'{var_name}' already present in 60m NetCDF — skipping "
-                        "water quality metric. Delete the variable or "
-                        "regenerate the file to re-append."
-                    )
-
-        do = self._build_dissolved_oxygen_dataset()
-        if do is None:
-            self._logger.info(
-                "No dissolved oxygen input configured — skipping water "
-                "quality metric."
-            )
-            return
-
-        self._logger.info("Calculating water quality metric (annual DO min).")
-        metric = metrics.get_water_quality_metric(do)
-
-        # ``get_water_quality_metric`` resamples JAS to a calendar-year axis
-        # ({wy}-01-01), since water year wy's Jul-Sep falls in calendar year
-        # wy. Relabel to the water-year output convention ({wy}-10-01) so the
-        # (time, y, x) axis lines up with the SEDFLUX/HSI annual time dim the
-        # 60m NetCDF already carries.
-        water_years = pd.DatetimeIndex(
-            [
-                pd.Timestamp(f"{wy}-10-01")
-                for wy in range(self.water_year_start, self.water_year_end + 1)
-            ],
-            name="time",
-        )
-        if metric.sizes["time"] != len(water_years):
-            raise ValueError(
-                "Water quality metric produced "
-                f"{metric.sizes['time']} annual timesteps, expected "
-                f"{len(water_years)} (one per water year)."
-            )
-        metric = metric.assign_coords(time=water_years)
-
-        metric.name = var_name
-        metric.attrs = {
-            "grid_mapping": "spatial_ref",
-            "units": "mg/L",
-            "long_name": (
-                "Annual July-September minimum of 21-day rolling-mean "
-                "dissolved oxygen"
-            ),
-        }
-
-        # Append only the new variable. Its (time, y, x) dims already exist in
-        # the target file and are reused by name, so the rest of the file is
-        # never read into memory. Drop the coordinate variables (time, y, x,
-        # spatial_ref) so append mode doesn't try to recreate ones the file
-        # already has. The dask graph is realized chunk-by-chunk on write.
-        metric.encoding = {"zlib": True, "complevel": 4}
-        metric_ds = metric.to_dataset(name=var_name).drop_vars(
-            list(metric.coords), errors="ignore"
-        )
-        metric_ds.to_netcdf(
-            self.netcdf_filepath_60m,
-            mode="a",
-            engine="h5netcdf",
-        )
-        self._logger.info(
-            "Water quality metric append complete: '%s' added to 60m NetCDF.",
-            var_name,
-        )
-
     def _convert_outputs_to_cogs(self) -> None:
         """Convert all per-resolution NetCDFs in the output dir to COGs."""
         self._logger.info("Converting NetCDF output to COGs.")
@@ -2745,24 +2773,3 @@ class HSI(vt.VegTransition):
         # log the full dictionary with pretty formatting
         formatted_dict = pprint.pformat(attr_types, width=100, indent=2)
         self._logger.info("HSI data inputs for run:\n%s", formatted_dict)
-
-
-class _TimestepFilter(logging.Filter):
-    """A roundabout way to inject the current timestep into log records.
-    Should & could be simplified.
-
-    N/A if log messages occurs while self.current_timestep is not set.
-    """
-
-    def __init__(self, veg_transition_instance):
-        super().__init__()
-        self.veg_transition_instance = veg_transition_instance
-
-    def filter(self, record):
-        # Dynamically add the current timestep to log records
-        record.timestep = (
-            self.veg_transition_instance.current_timestep.strftime("%Y-%m-%d")
-            if self.veg_transition_instance.current_timestep
-            else "N/A"
-        )
-        return True

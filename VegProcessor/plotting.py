@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import logging
 import pandas as pd
 import os
 import xarray as xr
@@ -10,7 +9,10 @@ import geopandas as gpd
 import gc
 from typing import Optional
 
-logger = logging.getLogger("VegTransition")
+from logging_setup import get_logger
+
+# Handlers are attached by the active run; see `logging_setup`.
+logger = get_logger(__name__)
 
 
 def np_arr(

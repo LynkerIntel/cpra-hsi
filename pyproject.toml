@@ -10,7 +10,10 @@ dependencies = [
     "cftime>=1.6.5",
     "dask>=2026.1.2",
     "datacube>=1.9.9,<1.9.13",  # 1.9.13+ requires rasterio>=1.4.4 (PROJ 9.7.1); 1.9.12 allows rasterio 1.4.3 (PROJ 9.4.1)
-    "gdal>=3.12.2",
+    # Built from sdist against the system libgdal, so the minor version must
+    # match `gdal-config --version` (Homebrew gdal 3.13.x). Building 3.12.x
+    # against 3.13 headers fails: `use of undeclared identifier 'ABS'`.
+    "gdal>=3.13.3,<3.14",
     "geocube>=0.7.1",
     "geopandas>=1.1.2",
     "h5netcdf>=1.8.1",

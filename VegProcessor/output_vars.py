@@ -800,6 +800,19 @@ def get_hsi_480m_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_water": [
+            hsi.pct_water,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent water",
+                "description": (
+                    "Percent cover of all water types (veg types 24-26). "
+                    "Used in bluecrab SI_2."
+                ),
+            },
+        ],
         "salinity_annual_mean": [
             hsi.salinity_annual_mean,
             np.float32,
@@ -978,6 +991,20 @@ def get_hsi_480m_variables(hsi):
                 "units": "",
                 "long_name": "",
                 "description": "",
+            },
+        ],
+        "pct_emergent_veg_bluecrab": [
+            hsi.pct_emergent_veg_bluecrab,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent emergent vegetation (bluecrab)",
+                "description": (
+                    "Percent cover of emergent vegetation for veg types 18-23, "
+                    "distinct from `pct_emergent_vegetation` (types 15-23). "
+                    "Used in bluecrab SI_2."
+                ),
             },
         ],
         "pct_vegetated": [
@@ -1275,6 +1302,34 @@ def get_hsi_480m_variables(hsi):
                 "units": "",
                 "long_name": "",
                 "description": "",
+            },
+        ],
+        "human_influence_croplands_bool": [
+            hsi.human_influence_croplands,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "human influence, croplands",
+                "description": (
+                    "Binary zone of influence around cropland (0.4 km). "
+                    "Component of `human_influence_bool`; black bear V8 "
+                    "applies a different linear model per landcover type."
+                ),
+            },
+        ],
+        "human_influence_developed_bool": [
+            hsi.human_influence_developed,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "",
+                "long_name": "human influence, developed",
+                "description": (
+                    "Binary zone of influence around towns/developed land "
+                    "(1.6 km). Component of `human_influence_bool`; black bear "
+                    "V8 applies a different linear model per landcover type."
+                ),
             },
         ],
         "forested_connectivity": [
@@ -1666,6 +1721,19 @@ def get_hsi_60m_variables(hsi):
                 ),
             },
         ],
+        "water_depth_feb_march_mean": [
+            hsi.water_depth_feb_march_mean_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "meters",
+                "long_name": "water depth February-March mean",
+                "description": (
+                    "Mean water depth for February-March period at 60m resolution. "
+                    "Used for pools/backwaters masking in blackcrappie SI_11."
+                ),
+            },
+        ],
         "water_temperature_july_august_mean": [
             hsi.water_temperature_july_august_mean_60m,
             np.float32,
@@ -1747,6 +1815,54 @@ def get_hsi_60m_variables(hsi):
                 "description": (
                     "Minimum monthly dissolved oxygen (July-September) "
                     "at 60m resolution."
+                ),
+            },
+        ],
+        "bss_erosion_days": [
+            hsi.bss_erosion_days_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "count",
+                "long_name": "bed shear stress days above 0.2 Pa",
+                "description": (
+                    "Annual count of days with bed shear stress above 0.2 Pa "
+                    "(erosion potential) at 60m resolution. Only valid "
+                    "(non-NaN) days are counted. Not yet used in any HSI "
+                    "calculation."
+                ),
+            },
+        ],
+        "bss_deposition_days": [
+            hsi.bss_deposition_days_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "count",
+                "long_name": "bed shear stress days below 0.2 Pa",
+                "description": (
+                    "Annual count of days with bed shear stress at or below "
+                    "0.2 Pa (deposition potential) at 60m resolution. Only "
+                    "valid (non-NaN) days are counted. Not yet used in any "
+                    "HSI calculation."
+                ),
+            },
+        ],
+        "dissolved_oxygen_july_sept_min_21d": [
+            hsi.dissolved_oxygen_july_sept_min_21d_60m,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "mg/L",
+                "long_name": (
+                    "Annual July-September minimum of 21-day rolling-mean "
+                    "dissolved oxygen"
+                ),
+                "description": (
+                    "Minimum over July-September of the 21-day rolling mean "
+                    "of daily dissolved oxygen, at 60m resolution. Distinct "
+                    "from 'dissolved_oxygen_july_sept_min', which is the mean "
+                    "of the monthly minimums."
                 ),
             },
         ],

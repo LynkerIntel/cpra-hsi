@@ -1,10 +1,13 @@
 """Convert NetCDF files to Zarr stores (1:1).
 
 Every .nc file found recursively under the input directory is converted
-to a .zarr store with the same name. The subfolder layout is mirrored
-under the output directory (e.g. ``input/STAGE/file.nc`` →
-``output/STAGE/file.zarr``). Optionally reprojects each dataset to match
-the grid of a reference raster using ``rioxarray.reproject_match()``.
+to a .zarr store. The subfolder layout is mirrored under the output
+directory (e.g. ``input/STAGE/file.nc`` → ``output/STAGE/file.zarr``).
+Optionally reprojects each dataset to match the grid of a reference
+raster using ``rioxarray.reproject_match()``.
+
+Malformed tokens in the store name are corrected on the way out — see
+``_STEM_FIXES``.
 
 Usage:
     python scripts/nc_to_zarr.py /data/hydro/mike_stage/
@@ -23,6 +26,38 @@ import cftime
 import pandas as pd
 import rioxarray  # dont remove
 import xarray as xr
+
+
+# Some deliveries spell a token differently to the AMP naming convention
+# that ``veg_transition._get_hydro_netcdf_path`` reconstructs when it looks
+# for an input store. That token is a fixed literal in the path builder, so
+# a store keeping the delivered spelling is simply never found. Correcting
+# it here leaves the source .nc files untouched.
+#
+# Only malformed spellings of the *same* product belong here — never a
+# token that would retitle one product as another.
+_STEM_FIXES = (
+    # flow-scenario token: delivered as "X", built as "FX"
+    ("_X_99_99_", "_FX_99_99_"),
+)
+
+
+def _standardize_stem(stem: str) -> str:
+    """Return *stem* with non-conforming AMP naming tokens corrected.
+
+    Parameters
+    ----------
+    stem : str
+        Input filename without its extension.
+
+    Returns
+    -------
+    str
+        The corrected stem, unchanged if it already conforms.
+    """
+    for delivered, expected in _STEM_FIXES:
+        stem = stem.replace(delivered, expected)
+    return stem
 
 
 def _open_dataset_with_time_fix(nc_path: Path, **kwargs) -> xr.Dataset:
@@ -160,10 +195,18 @@ def convert_file(
         print(f"  Renaming variables: {var_rename}")
         ds = ds.rename(var_rename)
 
-    ds = ds.chunk({"time": time_chunks})
+    # Static 2D rasters (e.g. HEC-RAS FLUX) have no time dimension; they
+    # keep the "auto" chunking chosen at open.
+    if "time" in ds.dims:
+        ds = ds.chunk({"time": time_chunks})
 
     if match_raster is not None:
         ds = _reproject_match(ds, match_raster)
+
+    # the title attribute mirrors the file name; keep it in step with any
+    # correction applied to the store name
+    if ds.attrs.get("title") == nc_path.stem:
+        ds.attrs["title"] = output_path.stem
 
     print(f"  Writing {output_path.name}...")
     ds.to_zarr(output_path, mode="w")
@@ -249,7 +292,10 @@ def nc_to_zarr(
     results = []
     for nc_file in nc_files:
         rel = nc_file.relative_to(input_dir)
-        out = output_dir / rel.with_suffix(".zarr")
+        stem = _standardize_stem(rel.stem)
+        if stem != rel.stem:
+            print(f"  Correcting store name: {rel.stem} -> {stem}")
+        out = output_dir / rel.parent / f"{stem}.zarr"
         out.parent.mkdir(parents=True, exist_ok=True)
         result = convert_file(nc_file, out, time_chunks, match_raster)
         results.append(result)

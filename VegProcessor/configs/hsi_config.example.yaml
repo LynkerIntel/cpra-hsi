@@ -11,6 +11,10 @@ raster_data:
   veg_type_path: # AMP_VEGH_WY99_328_D_00_10_ANN_G900_AB_O_V12.nc - VegTransition model output NetCDF
   wpu_grid_path: # WPU_id_60m.tif - 60m domain with pixels labeled by WPU
   flotant_marsh_raster: # AMP_lndtyp_60m_Nearest_Resample.tif - Flotant marsh classification raster
+  bay_mask_raster: # AMP_bays_60m.tif - 60m raster of bay extent (bay pixels == 1).
+  # D3D RUNS ONLY: ignored (with a warning) for HEC and MIK. Excludes bays from the
+  # final HSI of the species whose module calls `bay_mask()` (catfish, blackcrappie,
+  # bass, gizzardshad, alligator, crawfish). Leave blank to disable bay masking.
 
   # ---- Hydro input zarrs ----
   # All hydro variable zarrs typically live in a single folder. The
@@ -29,6 +33,7 @@ raster_data:
   velocity_input_path: *hydro_dir
   flowexch_input_path: *hydro_dir
   ssc_input_path: *hydro_dir
+  bss_input_path: *hydro_dir
   do_input_path: *hydro_dir
   sedflux_input_path: *hydro_dir
 
@@ -68,6 +73,7 @@ metadata:
     VELOCITY: V1
     FLOWEXCH: V1
     SSC: V1
+    BSS: V2
     DO: V1
     SEDFLUX: V1 # appended to 60m HSI output if sedflux_input_path is set
   sea_level_condition: "328" # Sea level rise scenario (e.g., "000" for baseline, "328" for 1.08ft/0.328m SLR)

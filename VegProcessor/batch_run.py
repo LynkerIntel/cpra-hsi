@@ -410,9 +410,11 @@ def main():
         for config in veg_config_files:
             try:
                 print(f"Running VegTransition model for config: {config}")
-                veg = VegTransition(config_file=config)
-                veg.run()
-                veg.post_process()
+                # `with` detaches the run's log handlers on the way out, so
+                # the next config does not also write into this run's log
+                with VegTransition(config_file=config) as veg:
+                    veg.run()
+                    veg.post_process()
                 print(
                     f"Successfully completed VegTransition model for: {config}"
                 )
@@ -443,9 +445,9 @@ def main():
         for config in hsi_config_files:
             try:
                 print(f"Running HSI model for config: {config}")
-                hsi = HSI(config_file=config)
-                hsi.run()
-                hsi.post_process()
+                with HSI(config_file=config) as hsi:
+                    hsi.run()
+                    hsi.post_process()
                 print(f"Successfully completed HSI model for: {config}")
             except Exception as e:
                 print(f"ERROR: HSI model failed for config: {config}")

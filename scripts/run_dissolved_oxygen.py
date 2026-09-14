@@ -16,6 +16,10 @@ Usage:
         --data-dir /Users/dillonragar/data/cpra \\
         --group G400 --wy 22 --slr 328 \\
         --input-version V2 --output-version V3
+
+``--dem-path`` / ``--domain-path`` default to the DEM and model-domain
+rasters under ``--data-dir``; pass them explicitly when the zarr stores live
+on a different disk from the static grid rasters.
 """
 
 import argparse
@@ -35,6 +39,10 @@ from xgboost import XGBRegressor
 DEFAULT_MODEL_PATH = (
     "/Users/dillonragar/data/cpra/ml_out/xgb_dissolved_oxygen.json"
 )
+
+# Static grid rasters, resolved relative to --data-dir unless overridden.
+DEM_FILENAME = "60m_dem_1280_3200_padded.tif"
+DOMAIN_FILENAME = "D3D_model_domain.tif"
 
 # Column order of the feature matrix built in predict_do. inplace_predict()
 # takes a bare array and matches columns by POSITION, silently ignoring names,
@@ -215,6 +223,8 @@ def predict_do(
     predictors_out: bool,
     device: str = "auto",
     model_path: str = DEFAULT_MODEL_PATH,
+    dem_path: str | None = None,
+    domain_path: str | None = None,
 ):
     """Run daily dissolved oxygen prediction and save to NetCDF."""
     device = resolve_device(device)
@@ -222,8 +232,17 @@ def predict_do(
     temperature_path = resolve_store(data_dir, f"{stem}_WTEMP_{input_version}")
     depth_path = resolve_store(data_dir, f"{stem}_STAGE_{input_version}")
     velocity_path = resolve_store(data_dir, f"{stem}_VELOCITY_{input_version}")
-    dem_path = f"{data_dir}/60m_dem_1280_3200_padded.tif"
-    domain_path = f"{data_dir}/D3D_model_domain.tif"
+    dem_path = dem_path or f"{data_dir}/{DEM_FILENAME}"
+    domain_path = domain_path or f"{data_dir}/{DOMAIN_FILENAME}"
+    for flag, label, path in (
+        ("--dem-path", "DEM", dem_path),
+        ("--domain-path", "model domain", domain_path),
+    ):
+        if not os.path.exists(path):
+            raise FileNotFoundError(
+                f"{label} raster not found: {path}. Pass {flag} when the "
+                "static rasters do not live under --data-dir."
+            )
     output_dir = f"{data_dir}/data_staging/do"
     output_stem = (
         f"AMP_XGB_WY{wy}_{slr}_FX_99_99_DLY_{group}_AB_O_DO_{output_version}"
@@ -526,6 +545,22 @@ def parse_args() -> argparse.Namespace:
         help="Path to the trained XGBoost DO model JSON.",
     )
     parser.add_argument(
+        "--dem-path",
+        default=None,
+        help=(
+            "Path to the 60m DEM GeoTIFF. Defaults to "
+            f"<data-dir>/{DEM_FILENAME}."
+        ),
+    )
+    parser.add_argument(
+        "--domain-path",
+        default=None,
+        help=(
+            "Path to the model domain mask GeoTIFF. Defaults to "
+            f"<data-dir>/{DOMAIN_FILENAME}."
+        ),
+    )
+    parser.add_argument(
         "--device",
         choices=["auto", "cpu", "cuda"],
         default="auto",
@@ -552,6 +587,8 @@ if __name__ == "__main__":
             predictors_out=args.predictors_out,
             device=args.device,
             model_path=args.model_path,
+            dem_path=args.dem_path,
+            domain_path=args.domain_path,
         )
         completed = True
     finally:

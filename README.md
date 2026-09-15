@@ -187,14 +187,35 @@ For running multiple scenarios (e.g., multiple hydrologic models, SLR conditions
 
 #### Setting Up Batch Runs
 
-1. **Put the configs for the batch in a single directory.** The script discovers
-   configs by filename prefix within that directory — no editing of
-   `batch_run.py` is required:
+1. **Put the configs for the batch in a directory.** The script discovers
+   configs by filename prefix — no editing of `batch_run.py` is required:
 
    - `veg_*.yaml` → run as `VegTransition`
    - `hsi_*.yaml` → run as `HSI`
 
-   Any other `.yaml` files in the directory are ignored.
+   Any other `.yaml` files are ignored.
+
+   The search is **recursive**, so the directory may either hold the configs
+   directly or group them into one subdirectory per run:
+
+   ```
+   staging_pool/
+   ├── G400/
+   │   ├── veg_d3d_config_base_dry.yaml
+   │   └── hsi_d3d_config_base_dry.yaml
+   └── G401/
+       ├── veg_d3d_config_base_dry.yaml
+       └── hsi_d3d_config_base_dry.yaml
+   ```
+
+   Passing `staging_pool/` runs everything underneath it. Configs are processed
+   grouped by subdirectory, and are reported by their path relative to the
+   directory you passed, so repeated filenames stay distinguishable.
+
+   Because every run in the batch writes under its config's `output_base`,
+   the script refuses to start if two configs resolve to the same output path
+   — the usual cause is copying a run subdirectory without bumping
+   `metadata.output_group`.
 
 2. **Run the batch script**, passing the config directory as the only argument:
 
@@ -206,10 +227,15 @@ uv run batch_run.py /path/to/configs/
 3. **Follow the interactive prompts**:
 
 ```
-Found 4 veg configs and 4 hsi configs in /path/to/configs
+Found 24 veg configs and 24 hsi configs in /path/to/configs
+  G400: 4 veg, 4 hsi
+  G401: 4 veg, 4 hsi
+  ...
 Do you want to run Veg models? (y/n): y
 Do you want to run HSI models? (y/n): y
 ```
+
+(The per-subdirectory breakdown is printed only when the configs are nested.)
 
 If you answer "n" to both, you'll be prompted to validate existing outputs instead:
 

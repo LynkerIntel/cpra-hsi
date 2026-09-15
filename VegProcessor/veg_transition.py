@@ -1298,8 +1298,6 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
-                "flood_pulse",
-                "low_water_refuge",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1405,21 +1403,6 @@ class VegTransition:
             f"{self.file_name}_wpu_vegtype_timeseries.csv",
         )
         df.to_csv(veg_outpath)
-
-        # -------- WPU Quality of Fisheries Habitat Metric CSV Summaries --------
-        logging.info("Calculating WPU habitat metrics sums.")
-
-        df_habitat = utils.wpu_habitat_sums(
-            ds_hab=ds[["low_water_refuge", "flood_pulse"]],
-            zones=wpu,
-            pulse_freq_metric=self.pulse_freq_metric,
-        )
-
-        hab_outpath = os.path.join(
-            self.run_metadata_dir,
-            f"{self.file_name}_wpu_habitat_timeseries.csv",
-        )
-        df_habitat.to_csv(hab_outpath, index=False)
 
         # -------- Full Domain Vegetation Type CSV Summaries --------
 
@@ -1647,5 +1630,3 @@ class VegTransition:
         self.qc_may_water_depth = None
         self.qc_june_water_depth = None
         gc.collect()
-
-

@@ -556,6 +556,7 @@ class HSI(vt.VegTransition):
         self.dissolved_oxygen_july_sept_min_21d_60m = (
             metrics.get_water_quality_metric(self.dissolved_oxygen)
         )
+
         # veg based vars ----------------------------------------------
         self._calculate_pct_cover()
         self._calculate_mast_percentage()
@@ -2427,6 +2428,7 @@ class HSI(vt.VegTransition):
         self._write_sedflux_waterbody_means_csv()
         self._write_wpu_hsi_means_csv()
         self._write_wpu_hsi_habitat_units_csv()
+        self._write_wpu_fisheries_habitat_csv()
         self._convert_outputs_to_cogs()
         self._collect_cogs_to_shared_dir()
         self._logger.info("HSI post-processing complete.")
@@ -2525,6 +2527,29 @@ class HSI(vt.VegTransition):
             f"{self.file_name}_wpu_hsi_habitat_units.csv",
         )
         df_habitat_units.to_csv(outpath, index=False)
+
+    def _write_wpu_fisheries_habitat_csv(self) -> None:
+        """Compute WPU quality of fisheries habitat metrics
+        (low water refuge and flood pulse) CSV summaries"""
+        self._logger.info("Calculating WPU fisheries habitat metrics sums.")
+        with xr.open_dataset(
+            self.netcdf_filepath_60m, decode_timedelta=False
+        ) as ds:
+            ds_60m = ds.load()
+
+        wpu_grid = self._load_wpu_grid().load()
+
+        df_habitat = utils.wpu_habitat_sums(
+            ds_hab=ds_60m[["low_water_refuge", "flood_pulse"]],
+            zones=wpu_grid,
+            pulse_freq_metric=self.pulse_freq_metric,
+        )
+
+        outpath = os.path.join(
+            self.run_metadata_dir,
+            f"{self.file_name}_wpu_habitat_timeseries.csv",
+        )
+        df_habitat.to_csv(outpath, index=False)
 
     # SEDFLUX is a post-process-only access pattern: it is not consumed by any
     # HSI suitability model, only assembled here and written to the 60m output.

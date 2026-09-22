@@ -79,6 +79,11 @@ uv sync
 
 Activate the environment:
 
+Windows (Git Bash):
+```bash
+source .venv/Scripts/activate
+```
+macOS / Linux:
 ```bash
 source .venv/bin/activate
 ```
@@ -355,7 +360,7 @@ These are the steps required to make finished runs available to Royal / CPRA:
     ```python
     import matplotlib.pyplot as plt
 
-    plt.matshow(hsi.alligator.si_1) # np.ndarray
+    plt.matshow(hsi.alligator.si_1)  # np.ndarray
     plt.colorbar()
     ```
 

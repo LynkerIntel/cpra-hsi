@@ -331,7 +331,8 @@ dependencies = [
     { name = "cftime" },
     { name = "dask" },
     { name = "datacube" },
-    { name = "gdal" },
+    { name = "gdal", version = "3.13.3", source = { registry = "C:/Users/LilianaHernandezGonz/Downloads" }, marker = "sys_platform != 'win32'" },
+    { name = "gdal", version = "3.13.3", source = { url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl" }, marker = "sys_platform == 'win32'" },
     { name = "geocube" },
     { name = "geopandas" },
     { name = "h5netcdf" },
@@ -370,7 +371,8 @@ requires-dist = [
     { name = "cupy-cuda12x", extras = ["ctk"], marker = "sys_platform == 'linux' and extra == 'gpu'", specifier = ">=13.3.0" },
     { name = "dask", specifier = ">=2026.1.2" },
     { name = "datacube", specifier = ">=1.9.9,<1.9.13" },
-    { name = "gdal", specifier = ">=3.13.3,<3.14" },
+    { name = "gdal", marker = "sys_platform != 'win32'", specifier = ">=3.13.3,<3.14" },
+    { name = "gdal", marker = "sys_platform == 'win32'", url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl" },
     { name = "geocube", specifier = ">=0.7.1" },
     { name = "geopandas", specifier = ">=1.1.2" },
     { name = "h5netcdf", specifier = ">=1.8.1" },
@@ -679,8 +681,27 @@ wheels = [
 [[package]]
 name = "gdal"
 version = "3.13.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/64/78639efe3f1df027f0028e1faf9719dae609b9fd02d4ffd6c2dd7a9a9757/gdal-3.13.3.tar.gz", hash = "sha256:af547af72d2a153d658c1deb2fe595eccb38c18f3d9d298882fbdeee9806a6d2", size = 940613, upload-time = "2026-08-18T09:32:21.609Z" }
+source = { registry = "C:/Users/LilianaHernandezGonz/Downloads" }
+resolution-markers = [
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'emscripten' and sys_platform != 'win32'",
+]
+
+[[package]]
+name = "gdal"
+version = "3.13.3"
+source = { url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl" }
+resolution-markers = [
+    "platform_machine == 'ARM64' and sys_platform == 'win32'",
+    "platform_machine != 'ARM64' and sys_platform == 'win32'",
+]
+wheels = [
+    { url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl", hash = "sha256:081ddbb1c3a31b5e716f773552d232ecd0957023725a6c8d35cc22fd93052081" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "numpy", marker = "extra == 'numpy'", specifier = ">1.0.0" }]
+provides-extras = ["numpy"]
 
 [[package]]
 name = "geoalchemy2"

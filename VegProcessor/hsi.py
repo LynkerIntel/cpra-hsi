@@ -574,7 +574,7 @@ class HSI(vt.VegTransition):
         self._calculate_connectivity()
         self._calculate_shrub_scrub_midstory()
 
-        # quality of fisheries habiat metrics -------------------------
+        # quality of fisheries habitat metrics -------------------------
         self.flood_pulse = self.calculate_flood_pulse()
         self.low_water_refuge = self.calculate_low_water_refuge()
         self.pulse_freq_metric.append(

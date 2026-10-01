@@ -21,7 +21,11 @@ Usage:
 import argparse
 import gc
 import os
-import resource
+
+try:
+    import resource
+except ImportError:
+    resource = None
 import sys
 import time
 
@@ -383,8 +387,13 @@ def predict_do(
             # do_arr is np.empty, so its pages fault in as the loop fills it:
             # RSS peaks on the LAST iteration, not the first. Printing it makes
             # an OOM-kill visible as a climb instead of a silent death.
-            maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            peak_gb = maxrss / (1024**3 if sys.platform == "darwin" else 1024**2)
+            if resource is not None and hasattr(resource, "getrusage"):
+                maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                peak_gb = maxrss / (
+                    1024**3 if sys.platform == "darwin" else 1024**2
+                )
+            else:
+                peak_gb = 0.0  # Windows fallback
             print(
                 f"  [{i + 1}/{n_days}] {date_str} — "
                 f"{elapsed:.1f}s elapsed, ~{remaining:.1f}s remaining, "

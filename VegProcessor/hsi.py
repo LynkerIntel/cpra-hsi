@@ -158,6 +158,15 @@ class HSI(vt.VegTransition):
         self.pct_cover_veg = None
         self._load_blue_crab_lookup()
 
+        # Fisheries habitat metrics
+        self.dem_at_blr = utils.get_raster_value_at_point(
+            self.dem_path, 626304.02, 3350717.43
+        )
+        self.flood_pulse = None
+        self.low_water_refuge = None
+        self.flood_pulse_freq = 0
+        self.pulse_freq_metric = []
+
         # HSI Variables
         self.pct_open_water = None
         self.water_temperature = None  # the source xr.dataset
@@ -564,6 +573,16 @@ class HSI(vt.VegTransition):
         self._calculate_story_assignment()
         self._calculate_connectivity()
         self._calculate_shrub_scrub_midstory()
+
+        # quality of fisheries habiat metrics -------------------------
+        self.flood_pulse = self.calculate_flood_pulse()
+        self.low_water_refuge = self.calculate_low_water_refuge()
+        self.pulse_freq_metric.append(
+            {
+                "timestep": date,
+                "flood_pulse_frequency": float(self.flood_pulse_freq),
+            }
+        )
 
         # run ---------------------------------------------------------
         if self.run_hsi:

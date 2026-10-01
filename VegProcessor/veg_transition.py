@@ -1456,6 +1456,8 @@ class VegTransition:
         """
         self._logger.info("Calculating Flood Pulse Inundation.")
 
+        hydro_mask = ~np.isnan(self.hydro_domain) & (self.hydro_domain > 0)
+
         # Define the Butte LaRose (BLR) gage coordinates and analysis months
         blr_gage_x, blr_gage_y = 626304.02, 3350717.43
         pulse_months = [12, 1, 2, 3, 4, 5]
@@ -1521,7 +1523,7 @@ class VegTransition:
         pulse_extent = np.full(
             self.hydro_domain.shape, np.nan, dtype=np.float32
         )
-        pulse_extent[self.hydro_domain] = 0.0
+        pulse_extent[hydro_mask] = 0.0
 
         # Map flood pulse extent only if the gage trigger is satisfied
         if 121 <= self.flood_pulse_freq <= 157:
@@ -1536,7 +1538,7 @@ class VegTransition:
 
             # Only include veg clasess we model (16-24)
             habitat_mask = (self.veg_type >= 16) & (self.veg_type <= 24)
-            valid_mask = self.hydro_domain & habitat_mask
+            valid_mask = hydro_mask & habitat_mask
 
             # Flooded and not Open Water
             pulse_extent[valid_mask & is_flooded] = 1.0

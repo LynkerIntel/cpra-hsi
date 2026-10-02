@@ -1298,8 +1298,6 @@ class VegTransition:
                 "veg_type",
                 "maturity",
                 "salinity_annual_mean",
-                "flood_pulse",
-                "low_water_refuge",
             ]
 
         with xr.open_dataset(self.netcdf_filepath, cache=False) as ds:
@@ -1406,21 +1404,6 @@ class VegTransition:
         )
         df.to_csv(veg_outpath)
 
-        # -------- WPU Quality of Fisheries Habitat Metric CSV Summaries --------
-        logging.info("Calculating WPU habitat metrics sums.")
-
-        df_habitat = utils.wpu_habitat_sums(
-            ds_hab=ds[["low_water_refuge", "flood_pulse"]],
-            zones=wpu,
-            pulse_freq_metric=self.pulse_freq_metric,
-        )
-
-        hab_outpath = os.path.join(
-            self.run_metadata_dir,
-            f"{self.file_name}_wpu_habitat_timeseries.csv",
-        )
-        df_habitat.to_csv(hab_outpath, index=False)
-
         # -------- Full Domain Vegetation Type CSV Summaries --------
 
         logging.info("Calculating full-domain veg type sums.")
@@ -1472,6 +1455,8 @@ class VegTransition:
         Extent is generated only if BLR Gage Stage (WSE) > 3.6m for 121-157 days.
         """
         self._logger.info("Calculating Flood Pulse Inundation.")
+
+        hydro_mask = ~np.isnan(self.hydro_domain) & (self.hydro_domain > 0)
 
         # Define the Butte LaRose (BLR) gage coordinates and analysis months
         blr_gage_x, blr_gage_y = 626304.02, 3350717.43
@@ -1538,7 +1523,7 @@ class VegTransition:
         pulse_extent = np.full(
             self.hydro_domain.shape, np.nan, dtype=np.float32
         )
-        pulse_extent[self.hydro_domain] = 0.0
+        pulse_extent[hydro_mask] = 0.0
 
         # Map flood pulse extent only if the gage trigger is satisfied
         if 121 <= self.flood_pulse_freq <= 157:
@@ -1553,7 +1538,7 @@ class VegTransition:
 
             # Only include veg clasess we model (16-24)
             habitat_mask = (self.veg_type >= 16) & (self.veg_type <= 24)
-            valid_mask = self.hydro_domain & habitat_mask
+            valid_mask = hydro_mask & habitat_mask
 
             # Flooded and not Open Water
             pulse_extent[valid_mask & is_flooded] = 1.0
@@ -1647,5 +1632,3 @@ class VegTransition:
         self.qc_may_water_depth = None
         self.qc_june_water_depth = None
         gc.collect()
-
-

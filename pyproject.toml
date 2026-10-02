@@ -51,3 +51,8 @@ line-length = 79
 dev = [
     "ipykernel>=7.2.0",
 ]
+
+[tool.uv.sources]
+gdal = [
+  { url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl", marker = "sys_platform == 'win32'" }
+]

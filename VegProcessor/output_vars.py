@@ -1848,6 +1848,24 @@ def get_hsi_60m_variables(hsi):
                 ),
             },
         ],
+        "flood_pulse": [
+            hsi.flood_pulse,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "binary",
+                "long_name": "flood pulse extent",
+            },
+        ],
+        "low_water_refuge": [
+            hsi.low_water_refuge,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "binary",
+                "long_name": "low water refuge extent",
+            },
+        ],
         "dissolved_oxygen_july_sept_min_21d": [
             hsi.dissolved_oxygen_july_sept_min_21d_60m,
             np.float32,
@@ -1911,24 +1929,6 @@ def get_veg_variables(veg):
                 "grid_mapping": "spatial_ref",
                 "units": "ppt",
                 "long_name": "water salinity",
-            },
-        ],
-        "flood_pulse": [
-            veg.flood_pulse,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "binary",
-                "long_name": "flood pulse extent",
-            },
-        ],
-        "low_water_refuge": [
-            veg.low_water_refuge,
-            np.float32,
-            {
-                "grid_mapping": "spatial_ref",
-                "units": "binary",
-                "long_name": "low water refuge extent",
             },
         ],
         # QC variables below

@@ -34,80 +34,200 @@ run_one() {
   fi
 }
 
+# ------ G085 -----------------------------------------------------------
+# run_one "G085 WY06 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 06 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G085 WY06 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 06 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G085 WY20 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 20 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G085 WY20 SLR328" \
+#   --data-dir 'Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 20 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G085 WY22 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 22 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G085 WY22 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G085' \
+#   --group G085 --wy 22 --slr 328 \
+#   --input-version V2 --output-version V4
+
 
 # ------ G401 -----------------------------------------------------------
 # run_one "G401 WY06 SLR000" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 06 --slr 000 \
 #   --input-version V2 --output-version V4
 
 # run_one "G401 WY06 SLR328" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 06 --slr 328 \
 #   --input-version V2 --output-version V4
 
 # run_one "G401 WY20 SLR000" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 20 --slr 000 \
 #   --input-version V2 --output-version V4
 
 # run_one "G401 WY20 SLR328" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 20 --slr 328 \
 #   --input-version V2 --output-version V4
 
 # run_one "G401 WY22 SLR000" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 22 --slr 000 \
 #   --input-version V2 --output-version V4
 
 # run_one "G401 WY22 SLR328" \
-#   --data-dir '/Volumes/Extreme SSD/cpra/G401_zarr' \
+#   --data-dir '/Volumes/dmr-disk/cpra/G401_zarr' \
 #   --group G401 --wy 22 --slr 328 \
 #   --input-version V2 --output-version V4
 
+# # ------ G403 -----------------------------------------------------------
+# run_one "G403 WY06 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 06 --slr 000 \
+#   --input-version V2 --output-version V4
 
-# ------ G408 -----------------------------------------------------------
-run_one "G408 WY06 SLR000" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+# run_one "G403 WY06 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 06 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G403 WY20 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 20 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G403 WY20 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 20 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G403 WY22 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 22 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G403 WY22 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G403' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G403 --wy 22 --slr 328 \
+#   --input-version V2 --output-version V4
+
+
+
+# # ------ G408 -----------------------------------------------------------
+# run_one "G408 WY06 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 06 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G408 WY06 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 06 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G408 WY20 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 20 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G408 WY20 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 20 --slr 328 \
+#   --input-version V2 --output-version V4
+
+# run_one "G408 WY22 SLR000" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 22 --slr 000 \
+#   --input-version V2 --output-version V4
+
+# run_one "G408 WY22 SLR328" \
+#   --data-dir '/Volumes/dmr-disk/cpra/G408' \
+#   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
+#   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
+#   --group G408 --wy 22 --slr 328 \
+#   --input-version V2 --output-version V4
+
+
+
+# ------ G410 -----------------------------------------------------------
+run_one "G410 WY06 SLR000" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 06 --slr 000 \
+  --group G410 --wy 06 --slr 000 \
   --input-version V2 --output-version V4
 
-run_one "G408 WY06 SLR328" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+run_one "G410 WY06 SLR328" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 06 --slr 328 \
+  --group G410 --wy 06 --slr 328 \
   --input-version V2 --output-version V4
 
-run_one "G408 WY20 SLR000" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+run_one "G410 WY20 SLR000" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 20 --slr 000 \
+  --group G410 --wy 20 --slr 000 \
   --input-version V2 --output-version V4
 
-run_one "G408 WY20 SLR328" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+run_one "G410 WY20 SLR328" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 20 --slr 328 \
+  --group G410 --wy 20 --slr 328 \
   --input-version V2 --output-version V4
 
-run_one "G408 WY22 SLR000" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+run_one "G410 WY22 SLR000" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 22 --slr 000 \
+  --group G410 --wy 22 --slr 000 \
   --input-version V2 --output-version V4
 
-run_one "G408 WY22 SLR328" \
-  --data-dir '/Volumes/dmr-disk/cpra/G408' \
+run_one "G410 WY22 SLR328" \
+  --data-dir '/Volumes/dmr-disk/cpra/G410' \
   --dem-path /Users/dillonragar/data/cpra/60m_dem_1280_3200_padded.tif \
   --domain-path /Users/dillonragar/data/cpra/D3D_model_domain.tif \
-  --group G408 --wy 22 --slr 328 \
+  --group G410 --wy 22 --slr 328 \
   --input-version V2 --output-version V4
 
 

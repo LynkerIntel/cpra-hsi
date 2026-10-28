@@ -1384,6 +1384,177 @@ class VegTransition:
 
     #     # for each timestep, output TIF? or do they want a figure?
 
+    def generate_year_0_wva_extents_netcdf(
+        self,
+        output_path: str = None,
+    ) -> xr.Dataset:
+        """
+        Generates a standalone Year 0 (initial condition) 480m NetCDF file
+        for BLH and Swamp extent metrics from the initial 60m vegetation raster.
+        """
+        self._logger.info("Exporting Year 0 WVA extent metrics NetCDF...")
+
+        if output_path is None:
+            output_path = os.path.join(
+                self.output_dir_path,
+                f"{self.file_name}_wva_extents_y0_480m.nc",
+            )
+
+        from rasterio.enums import Resampling
+
+        da = xr.open_dataarray(self.dem_path)
+        da = da.squeeze(drop="band")
+        da = da.rio.write_crs("EPSG:6344")
+
+        da_480 = da.rio.reproject(
+            da.rio.crs,
+            resolution=480,
+            resampling=Resampling.average,
+        )
+        x_480 = da_480.coords["x"].values
+        y_480 = da_480.coords["y"].values
+
+        veg_da = xr.DataArray(
+            self.initial_veg_type,
+            dims=("y", "x"),
+            coords={"y": da.coords["y"], "x": da.coords["x"]},
+        )
+
+        # Coarsen 60m pixels to 480m cells
+        pct_ii = (
+            utils.generate_pct_cover_custom(
+                veg_da, veg_types=[18], y=8, x=8, boundary="pad"
+            )
+            .to_numpy()
+            .astype(np.float32)
+        )
+        pct_iii = (
+            utils.generate_pct_cover_custom(
+                veg_da, veg_types=[17], y=8, x=8, boundary="pad"
+            )
+            .to_numpy()
+            .astype(np.float32)
+        )
+        pct_iv = (
+            utils.generate_pct_cover_custom(
+                veg_da, veg_types=[16], y=8, x=8, boundary="pad"
+            )
+            .to_numpy()
+            .astype(np.float32)
+        )
+        pct_v = (
+            utils.generate_pct_cover_custom(
+                veg_da, veg_types=[15], y=8, x=8, boundary="pad"
+            )
+            .to_numpy()
+            .astype(np.float32)
+        )
+
+        hydro_domain_480 = self._load_hydro_domain_raster(cell=True)
+        domain_mask_480 = ~np.isnan(hydro_domain_480)
+
+        # Mask the 480m arrays to match the model domain
+        pct_ii = np.where(domain_mask_480, pct_ii, np.nan)
+        pct_iii = np.where(domain_mask_480, pct_iii, np.nan)
+        pct_iv = np.where(domain_mask_480, pct_iv, np.nan)
+        pct_v = np.where(domain_mask_480, pct_v, np.nan)
+
+        ds_y0 = xr.Dataset(
+            data_vars={
+                "pct_zone_ii_y0": (
+                    ["y", "x"],
+                    pct_ii,
+                    {
+                        "grid_mapping": "spatial_ref",
+                        "units": "percent",
+                        "long_name": (
+                            "Year 0 Percentage Cover of Bottomland Hardwood Zone II"
+                        ),
+                    },
+                ),
+                "pct_zone_iii_y0": (
+                    ["y", "x"],
+                    pct_iii,
+                    {
+                        "grid_mapping": "spatial_ref",
+                        "units": "percent",
+                        "long_name": (
+                            "Year 0 Percentage Cover of Bottomland Hardwood Zone III"
+                        ),
+                    },
+                ),
+                "pct_zone_iv_y0": (
+                    ["y", "x"],
+                    pct_iv,
+                    {
+                        "grid_mapping": "spatial_ref",
+                        "units": "percent",
+                        "long_name": (
+                            "Year 0 Percentage Cover of Bottomland Hardwood Zone IV"
+                        ),
+                    },
+                ),
+                "pct_zone_v_y0": (
+                    ["y", "x"],
+                    pct_v,
+                    {
+                        "grid_mapping": "spatial_ref",
+                        "units": "percent",
+                        "long_name": (
+                            "Year 0 Percentage Cover of Swamp Zone V"
+                        ),
+                    },
+                ),
+            },
+            coords={
+                "x": (
+                    "x",
+                    x_480,
+                    {
+                        "units": "m",
+                        "long_name": "Easting",
+                        "standard_name": "projection_x_coordinate",
+                    },
+                ),
+                "y": (
+                    "y",
+                    y_480,
+                    {
+                        "units": "m",
+                        "long_name": "Northing",
+                        "standard_name": "projection_y_coordinate",
+                    },
+                ),
+            },
+            attrs={
+                "title": "WVA Extent Metrics Year 0 (480m)",
+                "description": (
+                    "Initial condition extent percentages for BLH (Zones II-IV) and Swamp (Zone V)"
+                ),
+            },
+        )
+
+        ds_y0 = ds_y0.rio.set_spatial_dims(x_dim="x", y_dim="y")
+        ds_y0 = ds_y0.rio.write_crs("EPSG:6344")
+        ds_y0 = ds_y0.rio.write_coordinate_system()
+
+        ds_y0 = ds_y0.rio.write_transform(da_480.rio.transform())
+
+        ds_y0 = ds_y0.rio.write_grid_mapping("spatial_ref")
+
+        for var in ds_y0.data_vars:
+            ds_y0[var].encoding.update({"zlib": True, "complevel": 4})
+
+        ds_y0["x"].encoding["_FillValue"] = None
+        ds_y0["y"].encoding["_FillValue"] = None
+        ds_y0["spatial_ref"].encoding["_FillValue"] = None
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        ds_y0.to_netcdf(output_path)
+        ds_y0.close()
+
+        return ds_y0
+
     def post_process(self):
         """After a run has been executed, this method generates a summary
         timeseries, and saves it as CSV in the "run-metadata" directory.

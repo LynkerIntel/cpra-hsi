@@ -264,7 +264,7 @@ class BlackCrappieHSI:
                 self.v1_max_monthly_avg_summer_turbidity < 190
             )
             si_1[mask_3] = (
-                -0.0005 * (self.v1_max_monthly_avg_summer_turbidity[mask_3])
+                -0.005 * (self.v1_max_monthly_avg_summer_turbidity[mask_3])
             ) + 0.95
 
             # condition 4

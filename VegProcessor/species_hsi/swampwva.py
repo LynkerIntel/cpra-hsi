@@ -264,23 +264,24 @@ class SwampHSI:
         else:
             # scoring for 16 flood duration and flow exchange combinations
             # dictionary keys: (flood_dur, flow_exch)
-            # flood dur mapping: 1=Temp/None, 2=Seasonal, 3=Semi-Perm, 4=Permanent
+            # flood dur mapping: 1=Temporary, 2=Seasonal, 3=Semi-Perm, 4=Permanent
+            # (never-flooded/dewatered cells are classified as 4, not 1)
             # flow exch mapping: 4=High, 3=Moderate, 2=Low, 1=None
 
             si3_score = {
-                (1, 4): 0.9,  # Temp/None, High
+                (1, 4): 0.9,  # Temporary, High
                 (2, 4): 1.00,  # Seasonal, High
                 (3, 4): 0.75,  # Sem-Perm, High
                 (4, 4): 0.65,  # Permanent, High
-                (1, 3): 0.75,  # Temp/None, Moderate
+                (1, 3): 0.75,  # Temporary, Moderate
                 (2, 3): 0.85,  # Seasonal, Moderate
                 (3, 3): 0.65,  # Sem-Perm, Moderate
                 (4, 3): 0.45,  # Permanent, Moderate
-                (1, 2): 0.65,  # Temp/None, Low
+                (1, 2): 0.65,  # Temporary, Low
                 (2, 2): 0.7,  # Seasonal, Low
                 (3, 2): 0.45,  # Sem-Perm, Low
                 (4, 2): 0.3,  # Permanent, Low
-                (1, 1): 0.4,  # Temp/None, None
+                (1, 1): 0.4,  # Temporary, None
                 (2, 1): 0.5,  # Seasonal, None
                 (3, 1): 0.25,  # Sem-Perm, None
                 (4, 1): 0.1,  # Permanent, None

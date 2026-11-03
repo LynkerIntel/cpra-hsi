@@ -1095,8 +1095,11 @@ class HSI(vt.VegTransition):
         Uses daily depth data (self.water_depth) to count days with depth > 0,
         then classifies into integer categories. Breakpoints differ by habitat:
 
-        BLH:   1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
-        Swamp: 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+        BLH:   1=Temporary (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+        Swamp: 1=Temporary (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+
+        Cells with zero wet days are dewatered and classified as 4
+        (Permanently Flooded/Dewatered), not 1.
 
         Parameters
         ----------
@@ -1122,19 +1125,26 @@ class HSI(vt.VegTransition):
         wet_days_np = wet_days_480.to_numpy()
 
         if habitat == "blh":
-            # 1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
+            # 1=Temporary (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
             flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
             flood_duration[wet_days_np >= 42] = 2
             flood_duration[wet_days_np >= 84] = 3
             flood_duration[wet_days_np >= 179] = 4
         elif habitat == "swamp":
-            # 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+            # 1=Temporary (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
             flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
             flood_duration[wet_days_np >= 148] = 2
             flood_duration[wet_days_np >= 166] = 3
             flood_duration[wet_days_np >= 179] = 4
         else:
             raise ValueError(f"Unknown habitat type: {habitat}")
+
+        # Never-flooded cells are dewatered, not temporarily flooded. The source
+        # definition of category 4 is "Permanently Flooded/Dewatered": water covers
+        # the substrate all year, OR water no longer covers it at all. Without this,
+        # a cell with zero wet days falls into the open-ended bottom bin and scores
+        # as Temporary (the most suitable row) instead of Permanent (the least).
+        flood_duration[wet_days_np == 0] = 4
 
         self._logger.info(
             "Flood duration (%s) classification complete.", habitat

@@ -1613,7 +1613,8 @@ def get_hsi_480m_variables(hsi):
                 "long_name": "flood duration category (BLH)",
                 "description": (
                     "Flood duration classification for bottomland hardwood. "
-                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                    "1=Temporary, 2=Seasonal, 3=Semi-Permanent, "
+                    "4=Permanent/Dewatered."
                 ),
             },
         ],
@@ -1626,7 +1627,8 @@ def get_hsi_480m_variables(hsi):
                 "long_name": "flood duration category (Swamp)",
                 "description": (
                     "Flood duration classification for swamp. "
-                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                    "1=Temporary, 2=Seasonal, 3=Semi-Permanent, "
+                    "4=Permanent/Dewatered."
                 ),
             },
         ],

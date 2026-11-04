@@ -1090,13 +1090,28 @@ class HSI(vt.VegTransition):
         return da_coarse.to_numpy()
 
     def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
-        """Classify flood duration per 480m cell based on annual wet day count.
+        """Classify flood duration per 480m cell based on wet day count.
 
-        Uses daily depth data (self.water_depth) to count days with depth > 0,
-        then classifies into integer categories. Breakpoints differ by habitat:
+        Follows the WVA specs (USACE RPEDS 2018), which count "days stage above
+        soil level" during the GROWING SEASON (April-September, 183 days) only.
+        Breakpoints differ by habitat:
 
-        BLH:   1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
-        Swamp: 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+            BLH:   None (0-4),  Temporary (5-41),   Seasonal (42-83),
+                   Semi-Perm (84-178),              Permanent (179-183)
+            Swamp: None (0-19), Temporary (20-147), Seasonal (148-165),
+                   Semi-Perm (166-178),             Permanent (179-183)
+
+        Both specs list five duration classes but their SI matrices have four
+        rows: "None" (a dewatered site) scores on the "Permanently Flooded/
+        Dewatered" row, so both ends of the range map to category 4. Without
+        that, a dry cell would fall into the open-ended bottom bin and score as
+        Temporary (the most suitable row) instead of Permanent (the least).
+
+        NOTE: the swamp deck writes the two lowest classes as "None 0-20" and
+        "Temporary 20-147", which double-claims day 20. We treat 20 as the first
+        Temporary day, giving a clean partition of 0-183. Flipping that is a
+        one-character change (`< 20` -> `<= 20`) but moves affected cells
+        between the best and worst rows of the matrix.
 
         Parameters
         ----------
@@ -1114,30 +1129,43 @@ class HSI(vt.VegTransition):
             )
             return None
 
-        depth = self.water_depth["height"]
+        if habitat not in ("blh", "swamp"):
+            raise ValueError(f"Unknown habitat type: {habitat}")
+
+        # subset to growing season (April–September); both specs count days
+        # above soil level during the growing season only
+        depth_src = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin([4, 5, 6, 7, 8, 9])
+        )
+
+        depth = depth_src["height"]
         wet_days = (depth > 0).sum(dim="time")
 
         # coarsen to 480m — average wet day count across 8x8 block
         wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
         wet_days_np = wet_days_480.to_numpy()
 
+        # category 1 (Temporary) is the default; higher bins overwrite it in
+        # ascending order, then the dry tail is reassigned to category 4.
+        flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+
         if habitat == "blh":
-            # 1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
-            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
             flood_duration[wet_days_np >= 42] = 2
             flood_duration[wet_days_np >= 84] = 3
             flood_duration[wet_days_np >= 179] = 4
-        elif habitat == "swamp":
-            # 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
-            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            # None (0-4 days) scores on the Permanent/Dewatered row
+            flood_duration[wet_days_np < 5] = 4
+        else:
             flood_duration[wet_days_np >= 148] = 2
             flood_duration[wet_days_np >= 166] = 3
             flood_duration[wet_days_np >= 179] = 4
-        else:
-            raise ValueError(f"Unknown habitat type: {habitat}")
+            # None (0-19 days) scores on the Permanent/Dewatered row
+            flood_duration[wet_days_np < 20] = 4
 
         self._logger.info(
-            "Flood duration (%s) classification complete.", habitat
+            "Flood duration (%s) classification complete, counted over "
+            "growing season (Apr-Sep).",
+            habitat,
         )
         return flood_duration
 
@@ -1815,7 +1843,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.water_depth.sel(
             time=self.water_depth["time"].dt.month.isin(months)
@@ -1968,7 +1996,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.salinity.sel(
             time=self.salinity["time"].dt.month.isin(months)
@@ -1978,11 +2006,13 @@ class HSI(vt.VegTransition):
         elif method == "max":
             da = filtered_ds.max(dim="time", skipna=True)["salinity"]
         elif method == "upper-pctile-mean":
-            # 67th percentile (upper 33% is above this)
-            threshold = filtered_ds.quantile(0.67)
-            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")[
-                "salinity"
-            ]
+            # mean of the upper 33% of each pixel's OWN values over the period
+            # of record, so the 67th-percentile threshold is per-pixel, not
+            # one scalar for the whole domain
+            sal = filtered_ds["salinity"]
+            threshold = sal.quantile(0.67, dim="time")
+            da = sal.where(sal >= threshold).mean(dim="time", skipna=True)
+            da = da.drop_vars("quantile")
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()

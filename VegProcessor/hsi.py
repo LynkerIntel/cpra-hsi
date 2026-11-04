@@ -1843,7 +1843,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.water_depth.sel(
             time=self.water_depth["time"].dt.month.isin(months)
@@ -1996,7 +1996,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.salinity.sel(
             time=self.salinity["time"].dt.month.isin(months)
@@ -2006,11 +2006,13 @@ class HSI(vt.VegTransition):
         elif method == "max":
             da = filtered_ds.max(dim="time", skipna=True)["salinity"]
         elif method == "upper-pctile-mean":
-            # 67th percentile (upper 33% is above this)
-            threshold = filtered_ds.quantile(0.67)
-            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")[
-                "salinity"
-            ]
+            # mean of the upper 33% of each pixel's OWN values over the period
+            # of record, so the 67th-percentile threshold is per-pixel, not
+            # one scalar for the whole domain
+            sal = filtered_ds["salinity"]
+            threshold = sal.quantile(0.67, dim="time")
+            da = sal.where(sal >= threshold).mean(dim="time", skipna=True)
+            da = da.drop_vars("quantile")
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()

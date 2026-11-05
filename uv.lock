@@ -331,7 +331,7 @@ dependencies = [
     { name = "cftime" },
     { name = "dask" },
     { name = "datacube" },
-    { name = "gdal", version = "3.13.3", source = { registry = "C:/Users/LilianaHernandezGonz/Downloads" }, marker = "sys_platform != 'win32'" },
+    { name = "gdal", version = "3.13.3", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
     { name = "gdal", version = "3.13.3", source = { url = "https://github.com/cgohlke/geospatial-wheels/releases/download/v2026.8.20/GDAL-3.13.3-cp313-cp313-win_amd64.whl" }, marker = "sys_platform == 'win32'" },
     { name = "geocube" },
     { name = "geopandas" },
@@ -681,7 +681,7 @@ wheels = [
 [[package]]
 name = "gdal"
 version = "3.13.3"
-source = { registry = "C:/Users/LilianaHernandezGonz/Downloads" }
+source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "sys_platform == 'emscripten'",
     "sys_platform != 'emscripten' and sys_platform != 'win32'",

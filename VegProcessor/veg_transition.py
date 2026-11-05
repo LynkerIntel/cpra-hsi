@@ -1466,6 +1466,7 @@ class VegTransition:
                     pct_ii,
                     {
                         "grid_mapping": "spatial_ref",
+                        "coordinates": "spatial_ref",
                         "units": "percent",
                         "long_name": (
                             "Year 0 Percentage Cover of Bottomland Hardwood Zone II"
@@ -1477,6 +1478,7 @@ class VegTransition:
                     pct_iii,
                     {
                         "grid_mapping": "spatial_ref",
+                        "coordinates": "spatial_ref",
                         "units": "percent",
                         "long_name": (
                             "Year 0 Percentage Cover of Bottomland Hardwood Zone III"
@@ -1488,6 +1490,7 @@ class VegTransition:
                     pct_iv,
                     {
                         "grid_mapping": "spatial_ref",
+                        "coordinates": "spatial_ref",
                         "units": "percent",
                         "long_name": (
                             "Year 0 Percentage Cover of Bottomland Hardwood Zone IV"
@@ -1499,6 +1502,7 @@ class VegTransition:
                     pct_v,
                     {
                         "grid_mapping": "spatial_ref",
+                        "coordinates": "spatial_ref",
                         "units": "percent",
                         "long_name": (
                             "Year 0 Percentage Cover of Swamp Zone V"
@@ -1536,18 +1540,16 @@ class VegTransition:
 
         ds_y0 = ds_y0.rio.set_spatial_dims(x_dim="x", y_dim="y")
         ds_y0 = ds_y0.rio.write_crs("EPSG:6344")
+
         ds_y0 = ds_y0.rio.write_coordinate_system()
-
-        ds_y0 = ds_y0.rio.write_transform(da_480.rio.transform())
-
-        ds_y0 = ds_y0.rio.write_grid_mapping("spatial_ref")
 
         for var in ds_y0.data_vars:
             ds_y0[var].encoding.update({"zlib": True, "complevel": 4})
 
         ds_y0["x"].encoding["_FillValue"] = None
         ds_y0["y"].encoding["_FillValue"] = None
-        ds_y0["spatial_ref"].encoding["_FillValue"] = None
+        if "spatial_ref" in ds_y0:
+            ds_y0["spatial_ref"].encoding["_FillValue"] = None
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         ds_y0.to_netcdf(output_path)

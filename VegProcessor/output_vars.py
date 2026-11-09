@@ -1017,6 +1017,21 @@ def get_hsi_480m_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_vegetated_bluecrab": [
+            hsi.pct_vegetated_bluecrab,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent modeled cover (bluecrab)",
+                "description": (
+                    "Percent cover of veg types 15-26, i.e. everything we "
+                    "model including open water, distinct from "
+                    "`pct_vegetated` (types 15-25). Used to mask upland "
+                    "cells out of the bluecrab HSI."
+                ),
+            },
+        ],
         "pct_soft_mast": [
             hsi.pct_soft_mast,
             np.float32,

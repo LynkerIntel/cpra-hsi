@@ -28,7 +28,7 @@ class BlueCrabHSI:
     v1c_bluecrab_lookup_table: pd.DataFrame
 
     # masking arrs
-    pct_vegetated: np.ndarray
+    pct_vegetated_bluecrab: np.ndarray
     pct_blh: np.ndarray
     pct_water: np.ndarray
 
@@ -49,7 +49,7 @@ class BlueCrabHSI:
             v1c_bluecrab_lookup_table=hsi_instance.blue_crab_lookup_table,
             dem_480=hsi_instance.dem_480,
             hydro_domain_480=hsi_instance.hydro_domain_480,
-            pct_vegetated=hsi_instance.pct_vegetated,
+            pct_vegetated_bluecrab=hsi_instance.pct_vegetated_bluecrab,
             pct_blh=hsi_instance.pct_blh,
             pct_water=hsi_instance.pct_water,
         )
@@ -99,7 +99,10 @@ class BlueCrabHSI:
         self._logger.info(
             "Masking blue crab HSI to allowed vegtypes, with defaults."
         )
-        mask_1 = self.pct_vegetated < 10
+        # upland = <10% cover of the classes we model (15-26). Open water
+        # (26) counts as modeled cover here, so a mostly-open-water cell is
+        # not upland.
+        mask_1 = self.pct_vegetated_bluecrab < 10
         hsi[mask_1] = np.nan
         mask_2 = self.pct_blh == 100
         hsi[mask_2] = 0

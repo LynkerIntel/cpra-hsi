@@ -230,6 +230,7 @@ class HSI(vt.VegTransition):
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
+        self.pct_vegetated_bluecrab = None  # for masking bluecrab HSI only
         self.water_depth_april_june_mean = None
 
         # tree mast
@@ -1279,6 +1280,15 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
+        ds_vegetated_bluecrab = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[
+                v for v in range(15, 27)
+            ],  # everything we model, incl. open water (15-26)
+            x=8,
+            y=8,
+            boundary="pad",
+        )
         ds_emergent_veg = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[
@@ -1343,6 +1353,9 @@ class HSI(vt.VegTransition):
         self.pct_water = ds_water.to_numpy()
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
+        # Everything we model, incl. open water 15-26. Used only to flag
+        # upland cells for bluecrab; open water is NOT upland.
+        self.pct_vegetated_bluecrab = ds_vegetated_bluecrab.to_numpy()
         self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
         self.pct_vegetated_bass = ds_pct_vegetated_bass.to_numpy()

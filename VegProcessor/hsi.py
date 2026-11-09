@@ -2193,6 +2193,12 @@ class HSI(vt.VegTransition):
         Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
         with radius=4 (i.e. 240m).
 
+        Uses the current timestep's veg type, not initial conditions: black bear
+        V6 is not one of the variables fixed at initial conditions (only V8 is),
+        so the forest/nonforest edge must track vegetation change over the
+        simulation. Matches `_calculate_connectivity`, which uses the same
+        `forest_types` against `self.veg_type`.
+
         TODO: confirm forest pixels
 
         parameters
@@ -2203,7 +2209,7 @@ class HSI(vt.VegTransition):
         self._logger.info("Calculating percent non-forested near forest.")
         forest_types = [15, 16, 17, 18]
         near_forest_mask = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,
+            landcover_arr=self.veg_type,
             landtype_true=forest_types,
             radius=radius,
             include_source=False,  # only non-forested pixels NEAR forested

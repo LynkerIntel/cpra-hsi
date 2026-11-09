@@ -1258,8 +1258,8 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "%",
-                "long_name": "edge pixels",
-                "description": "Percentage of water edge pixels (static)",
+                "long_name": "marsh edge pixels",
+                "description": "Percentage of cell that is marsh edge, i.e. land pixels adjacent to open water (static)",
             },
         ],
         "pct_has_mast": [

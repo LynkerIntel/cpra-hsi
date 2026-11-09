@@ -1675,6 +1675,15 @@ class HSI(vt.VegTransition):
     def _calculate_edge(self) -> np.ndarray:
         """
         Calculate percent of 480m cell that is marsh edge.
+
+        Edge is a *land* pixel adjacent to open water: a pixel that holds
+        a valid (non-NaN) vegetation type other than open water, and that
+        has open water as one of its four cardinal neighbors. Open water
+        pixels are excluded from the edge set itself — without that
+        exclusion every water pixel in the interior of a water body counts
+        as edge, which drives an all-water cell to 100% edge and saturates
+        the alligator SI_4 (which tops out at 22% edge) across most of the
+        domain.
         """
         # Load veg base and use as template to create arrays for the main state variables
         initial_veg = self._load_veg_initial_raster(xarray=True)
@@ -1692,11 +1701,17 @@ class HSI(vt.VegTransition):
             initial_veg.shift(y=-1, fill_value=fill_value),  # up
         ]
 
-        # Combine all neighbor comparisons
-        edge_pixels = xr.concat(
-            [(neighbor == open_water) for neighbor in neighbors],
-            dim="direction",
-        ).any(dim="direction")
+        # a pixel is land if it carries a valid veg type that isn't water
+        is_land = initial_veg.notnull() & (initial_veg != open_water)
+
+        # Combine all neighbor comparisons, then keep only land pixels
+        edge_pixels = (
+            xr.concat(
+                [(neighbor == open_water) for neighbor in neighbors],
+                dim="direction",
+            ).any(dim="direction")
+            & is_land
+        )
 
         logging.info("Calculating percent of water edge pixels in cell.")
         # get pct of cell that is edge

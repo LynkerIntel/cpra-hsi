@@ -224,7 +224,7 @@ class CrawfishHSI:
                 self.v2_mean_water_depth_jan_aug <= 274
             )
             si_2[mask_4] = 1.5 - (
-                0.00457 * self.v2_mean_water_depth_jan_aug[mask_4]
+                0.00547 * self.v2_mean_water_depth_jan_aug[mask_4]
             )
 
             if np.any(np.isclose(si_2, 999.0, atol=1e-5)):

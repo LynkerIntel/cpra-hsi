@@ -1017,6 +1017,21 @@ def get_hsi_480m_variables(hsi):
                 "description": "",
             },
         ],
+        "pct_vegetated_bluecrab": [
+            hsi.pct_vegetated_bluecrab,
+            np.float32,
+            {
+                "grid_mapping": "spatial_ref",
+                "units": "%",
+                "long_name": "percent modeled cover (bluecrab)",
+                "description": (
+                    "Percent cover of veg types 15-26, i.e. everything we "
+                    "model including open water, distinct from "
+                    "`pct_vegetated` (types 15-25). Used to mask upland "
+                    "cells out of the bluecrab HSI."
+                ),
+            },
+        ],
         "pct_soft_mast": [
             hsi.pct_soft_mast,
             np.float32,
@@ -1258,8 +1273,8 @@ def get_hsi_480m_variables(hsi):
             {
                 "grid_mapping": "spatial_ref",
                 "units": "%",
-                "long_name": "edge pixels",
-                "description": "Percentage of water edge pixels (static)",
+                "long_name": "marsh edge pixels",
+                "description": "Percentage of cell that is marsh edge, i.e. land pixels adjacent to open water (static)",
             },
         ],
         "pct_has_mast": [
@@ -1613,7 +1628,8 @@ def get_hsi_480m_variables(hsi):
                 "long_name": "flood duration category (BLH)",
                 "description": (
                     "Flood duration classification for bottomland hardwood. "
-                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                    "1=Temporary, 2=Seasonal, 3=Semi-Permanent, "
+                    "4=Permanent/Dewatered."
                 ),
             },
         ],
@@ -1626,7 +1642,8 @@ def get_hsi_480m_variables(hsi):
                 "long_name": "flood duration category (Swamp)",
                 "description": (
                     "Flood duration classification for swamp. "
-                    "1=Temp/None, 2=Seasonal, 3=Semi-Permanent, 4=Permanent."
+                    "1=Temporary, 2=Seasonal, 3=Semi-Permanent, "
+                    "4=Permanent/Dewatered."
                 ),
             },
         ],

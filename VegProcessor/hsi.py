@@ -230,6 +230,7 @@ class HSI(vt.VegTransition):
 
         # only var to def for hec-ras 2.12.24  (separating (a)prt veg and (b)depth)
         self.pct_vegetated = None
+        self.pct_vegetated_bluecrab = None  # for masking bluecrab HSI only
         self.water_depth_april_june_mean = None
 
         # tree mast
@@ -1090,13 +1091,28 @@ class HSI(vt.VegTransition):
         return da_coarse.to_numpy()
 
     def _calculate_flood_duration(self, habitat: str) -> np.ndarray:
-        """Classify flood duration per 480m cell based on annual wet day count.
+        """Classify flood duration per 480m cell based on wet day count.
 
-        Uses daily depth data (self.water_depth) to count days with depth > 0,
-        then classifies into integer categories. Breakpoints differ by habitat:
+        Follows the WVA specs (USACE RPEDS 2018), which count "days stage above
+        soil level" during the GROWING SEASON (April-September, 183 days) only.
+        Breakpoints differ by habitat:
 
-        BLH:   1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
-        Swamp: 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
+            BLH:   None (0-4),  Temporary (5-41),   Seasonal (42-83),
+                   Semi-Perm (84-178),              Permanent (179-183)
+            Swamp: None (0-19), Temporary (20-147), Seasonal (148-165),
+                   Semi-Perm (166-178),             Permanent (179-183)
+
+        Both specs list five duration classes but their SI matrices have four
+        rows: "None" (a dewatered site) scores on the "Permanently Flooded/
+        Dewatered" row, so both ends of the range map to category 4. Without
+        that, a dry cell would fall into the open-ended bottom bin and score as
+        Temporary (the most suitable row) instead of Permanent (the least).
+
+        NOTE: the swamp deck writes the two lowest classes as "None 0-20" and
+        "Temporary 20-147", which double-claims day 20. We treat 20 as the first
+        Temporary day, giving a clean partition of 0-183. Flipping that is a
+        one-character change (`< 20` -> `<= 20`) but moves affected cells
+        between the best and worst rows of the matrix.
 
         Parameters
         ----------
@@ -1114,30 +1130,43 @@ class HSI(vt.VegTransition):
             )
             return None
 
-        depth = self.water_depth["height"]
+        if habitat not in ("blh", "swamp"):
+            raise ValueError(f"Unknown habitat type: {habitat}")
+
+        # subset to growing season (April–September); both specs count days
+        # above soil level during the growing season only
+        depth_src = self.water_depth.sel(
+            time=self.water_depth["time"].dt.month.isin([4, 5, 6, 7, 8, 9])
+        )
+
+        depth = depth_src["height"]
         wet_days = (depth > 0).sum(dim="time")
 
         # coarsen to 480m — average wet day count across 8x8 block
         wet_days_480 = wet_days.coarsen(y=8, x=8, boundary="pad").mean()
         wet_days_np = wet_days_480.to_numpy()
 
+        # category 1 (Temporary) is the default; higher bins overwrite it in
+        # ascending order, then the dry tail is reassigned to category 4.
+        flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+
         if habitat == "blh":
-            # 1=Temp/None (<42), 2=Seasonal (42-83), 3=Semi-Perm (84-178), 4=Permanent (179+)
-            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
             flood_duration[wet_days_np >= 42] = 2
             flood_duration[wet_days_np >= 84] = 3
             flood_duration[wet_days_np >= 179] = 4
-        elif habitat == "swamp":
-            # 1=Temp/None (<148), 2=Seasonal (148-165), 3=Semi-Perm (166-178), 4=Permanent (179+)
-            flood_duration = np.ones(wet_days_np.shape, dtype=np.int8)
+            # None (0-4 days) scores on the Permanent/Dewatered row
+            flood_duration[wet_days_np < 5] = 4
+        else:
             flood_duration[wet_days_np >= 148] = 2
             flood_duration[wet_days_np >= 166] = 3
             flood_duration[wet_days_np >= 179] = 4
-        else:
-            raise ValueError(f"Unknown habitat type: {habitat}")
+            # None (0-19 days) scores on the Permanent/Dewatered row
+            flood_duration[wet_days_np < 20] = 4
 
         self._logger.info(
-            "Flood duration (%s) classification complete.", habitat
+            "Flood duration (%s) classification complete, counted over "
+            "growing season (Apr-Sep).",
+            habitat,
         )
         return flood_duration
 
@@ -1251,6 +1280,15 @@ class HSI(vt.VegTransition):
             y=8,
             boundary="pad",
         )
+        ds_vegetated_bluecrab = utils.generate_pct_cover_custom(
+            data_array=self.veg_type,
+            veg_types=[
+                v for v in range(15, 27)
+            ],  # everything we model, incl. open water (15-26)
+            x=8,
+            y=8,
+            boundary="pad",
+        )
         ds_emergent_veg = utils.generate_pct_cover_custom(
             data_array=self.veg_type,
             veg_types=[
@@ -1315,6 +1353,9 @@ class HSI(vt.VegTransition):
         self.pct_water = ds_water.to_numpy()
         # Vegetated 15-25
         self.pct_vegetated = ds_vegetated.to_numpy()
+        # Everything we model, incl. open water 15-26. Used only to flag
+        # upland cells for bluecrab; open water is NOT upland.
+        self.pct_vegetated_bluecrab = ds_vegetated_bluecrab.to_numpy()
         self.pct_emergent_veg_bluecrab = ds_emergent_veg_bluecrab.to_numpy()
         # Emergent Vegetation 15-23 (marshes, fresh shrubs, blh an swamp)
         self.pct_vegetated_bass = ds_pct_vegetated_bass.to_numpy()
@@ -1647,6 +1688,15 @@ class HSI(vt.VegTransition):
     def _calculate_edge(self) -> np.ndarray:
         """
         Calculate percent of 480m cell that is marsh edge.
+
+        Edge is a *land* pixel adjacent to open water: a pixel that holds
+        a valid (non-NaN) vegetation type other than open water, and that
+        has open water as one of its four cardinal neighbors. Open water
+        pixels are excluded from the edge set itself — without that
+        exclusion every water pixel in the interior of a water body counts
+        as edge, which drives an all-water cell to 100% edge and saturates
+        the alligator SI_4 (which tops out at 22% edge) across most of the
+        domain.
         """
         # Load veg base and use as template to create arrays for the main state variables
         initial_veg = self._load_veg_initial_raster(xarray=True)
@@ -1664,11 +1714,17 @@ class HSI(vt.VegTransition):
             initial_veg.shift(y=-1, fill_value=fill_value),  # up
         ]
 
-        # Combine all neighbor comparisons
-        edge_pixels = xr.concat(
-            [(neighbor == open_water) for neighbor in neighbors],
-            dim="direction",
-        ).any(dim="direction")
+        # a pixel is land if it carries a valid veg type that isn't water
+        is_land = initial_veg.notnull() & (initial_veg != open_water)
+
+        # Combine all neighbor comparisons, then keep only land pixels
+        edge_pixels = (
+            xr.concat(
+                [(neighbor == open_water) for neighbor in neighbors],
+                dim="direction",
+            ).any(dim="direction")
+            & is_land
+        )
 
         logging.info("Calculating percent of water edge pixels in cell.")
         # get pct of cell that is edge
@@ -1815,7 +1871,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.water_depth.sel(
             time=self.water_depth["time"].dt.month.isin(months)
@@ -1968,7 +2024,7 @@ class HSI(vt.VegTransition):
             to one year) and then upscaled to 480m.
         """
         if not months:
-            months = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         filtered_ds = self.salinity.sel(
             time=self.salinity["time"].dt.month.isin(months)
@@ -1978,11 +2034,13 @@ class HSI(vt.VegTransition):
         elif method == "max":
             da = filtered_ds.max(dim="time", skipna=True)["salinity"]
         elif method == "upper-pctile-mean":
-            # 67th percentile (upper 33% is above this)
-            threshold = filtered_ds.quantile(0.67)
-            da = filtered_ds.where(filtered_ds >= threshold).mean(dim="time")[
-                "salinity"
-            ]
+            # mean of the upper 33% of each pixel's OWN values over the period
+            # of record, so the 67th-percentile threshold is per-pixel, not
+            # one scalar for the whole domain
+            sal = filtered_ds["salinity"]
+            threshold = sal.quantile(0.67, dim="time")
+            da = sal.where(sal >= threshold).mean(dim="time", skipna=True)
+            da = da.drop_vars("quantile")
 
         da_coarse = da.coarsen(y=8, x=8, boundary="pad").mean()
         return da_coarse.to_numpy()
@@ -2148,6 +2206,12 @@ class HSI(vt.VegTransition):
         Computes non-forested pixels within a disk-shaped neighborhood of forest pixels,
         with radius=4 (i.e. 240m).
 
+        Uses the current timestep's veg type, not initial conditions: black bear
+        V6 is not one of the variables fixed at initial conditions (only V8 is),
+        so the forest/nonforest edge must track vegetation change over the
+        simulation. Matches `_calculate_connectivity`, which uses the same
+        `forest_types` against `self.veg_type`.
+
         TODO: confirm forest pixels
 
         parameters
@@ -2158,7 +2222,7 @@ class HSI(vt.VegTransition):
         self._logger.info("Calculating percent non-forested near forest.")
         forest_types = [15, 16, 17, 18]
         near_forest_mask = self._calculate_near_landtype(
-            landcover_arr=self.initial_veg_type,
+            landcover_arr=self.veg_type,
             landtype_true=forest_types,
             radius=radius,
             include_source=False,  # only non-forested pixels NEAR forested

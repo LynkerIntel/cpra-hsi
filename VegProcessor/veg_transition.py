@@ -409,7 +409,6 @@ class VegTransition:
                 self.brackish_marsh["veg_type"],
                 self.saline_marsh["veg_type"],
                 self.water["veg_type"],
-                self.static_veg,
             )
         )
 
@@ -1216,15 +1215,16 @@ class VegTransition:
         self._logger.info(
             "Adding initial vegetation conditions to timestep zero."
         )
-        ds["veg_type"].loc[{"time": time_range[0]}] = (
-            self.initial_veg_type.astype(np.float32)
-        )
+        ds["veg_type"].loc[{"time": time_range[0]}] = np.where(
+            self.hydro_domain, self.initial_veg_type, np.nan
+        ).astype(np.float32)
+
         self._logger.info(
-            "Addining initial maturity conditions to timestep zero."
+            "Adding initial maturity conditions to timestep zero."
         )
-        ds["maturity"].loc[{"time": time_range[0]}] = self.maturity.astype(
-            np.float32
-        )
+        ds["maturity"].loc[{"time": time_range[0]}] = np.where(
+            self.hydro_domain, self.maturity, np.nan
+        ).astype(np.float32)
 
         ds = ds.rio.write_crs("EPSG:6344")
         ds["veg_type"].encoding = {"zlib": True, "complevel": 4}

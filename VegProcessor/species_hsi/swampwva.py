@@ -127,21 +127,44 @@ class SwampHSI:
 
     def swamp_blh_mask(self, si_array: np.ndarray) -> np.ndarray:
         """To apply the Swamp WVA, at least 33% forest cover (Zone II to V)
-        has to be present of which greater than 60% is in Zone II.
+        has to be present, of which greater than 60% is in Zone II.
         This applies a mask to each SI array where these conditions are not met.
         These areas are given an SI = 'no data'
+
+        Both criteria must hold, so a cell is masked when EITHER fails.
+
+        The "of which" share is Zone II as a fraction of the forested cover,
+        not of the cell: `pct_zone_ii` and `pct_swamp_bottom_hardwood` are both
+        percentages of the 480m cell, and Zone II (18) is a subset of the
+        Zone II-V group (15-18). Comparing `pct_zone_ii` to 60 directly would
+        test Zone II against the whole cell, which a cell can only pass if it
+        is already 60% forested — that is strictly weaker than the 33% cover
+        criterion and so carries no information.
         """
         # hydro domain mask
         si_array = np.where(np.isnan(self.hydro_domain_480), np.nan, si_array)
 
-        if self.pct_swamp_bottom_hardwood is not None:
-            swamp_blh_mask = (self.pct_swamp_bottom_hardwood < 33) & (
-                self.pct_zone_ii < 60
+        if self.pct_swamp_bottom_hardwood is None or self.pct_zone_ii is None:
+            raise ValueError(
+                "Percent swamp blh and percent zone ii must be provided."
             )
-            si_array[swamp_blh_mask] = np.nan
 
-        else:
-            raise ValueError("Percent swamp blh must be provided.")
+        pct_forest = np.asarray(
+            self.pct_swamp_bottom_hardwood, dtype=np.float64
+        )
+        pct_zone_ii = np.asarray(self.pct_zone_ii, dtype=np.float64)
+
+        # Zone II as a share of forested cover. Cells with no forest cover
+        # score 0, and fail the 33% cover criterion regardless.
+        pct_zone_ii_of_forest = np.divide(
+            pct_zone_ii,
+            pct_forest,
+            out=np.zeros_like(pct_forest),
+            where=pct_forest > 0,
+        )
+
+        swamp_blh_mask = (pct_forest < 33) | (pct_zone_ii_of_forest <= 0.60)
+        si_array[swamp_blh_mask] = np.nan
 
         return si_array
 
